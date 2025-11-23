@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -101,12 +102,13 @@ def test_docker_trigger_runs_command(monkeypatch) -> None:
     recorded = {}
 
     monkeypatch.setattr("playbook.kometa_trigger.shutil.which", lambda _: "/usr/bin/docker")
+    monkeypatch.setattr("playbook.kometa_trigger.Path.exists", lambda _path: True)
 
-    def fake_run(cmd, **kwargs):
+    def fake_popen(cmd, **kwargs):
         recorded["cmd"] = cmd
-        return SimpleNamespace(returncode=0, stdout="ok", stderr="")
+        return SimpleNamespace(stdout=io.StringIO("ok\n"), wait=lambda: 0)
 
-    monkeypatch.setattr("playbook.kometa_trigger.subprocess.run", fake_run)
+    monkeypatch.setattr("playbook.kometa_trigger.subprocess.Popen", fake_popen)
 
     assert trigger.trigger() is True
     assert recorded["cmd"][:3] == ["docker", "run", "--rm"]
@@ -127,12 +129,13 @@ def test_docker_trigger_execs_into_container(monkeypatch) -> None:
 
     recorded = {}
     monkeypatch.setattr("playbook.kometa_trigger.shutil.which", lambda _: "/usr/bin/docker")
+    monkeypatch.setattr("playbook.kometa_trigger.Path.exists", lambda _path: True)
 
-    def fake_run(cmd, **kwargs):
+    def fake_popen(cmd, **kwargs):
         recorded["cmd"] = cmd
-        return SimpleNamespace(returncode=0, stdout="", stderr="")
+        return SimpleNamespace(stdout=io.StringIO(""), wait=lambda: 0)
 
-    monkeypatch.setattr("playbook.kometa_trigger.subprocess.run", fake_run)
+    monkeypatch.setattr("playbook.kometa_trigger.subprocess.Popen", fake_popen)
 
     assert trigger.trigger() is True
     assert recorded["cmd"][:3] == ["docker", "exec", "kometa"]

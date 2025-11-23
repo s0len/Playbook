@@ -56,6 +56,7 @@
     - [Triggering Kometa After Ingests](#triggering-kometa-after-ingests)
       - [Kubernetes CronJob trigger](#kubernetes-cronjob-trigger)
       - [Docker Run trigger](#docker-run-trigger)
+      - [Manual trigger CLI](#manual-trigger-cli)
   - [Downloading Sports with Autobrr](#downloading-sports-with-autobrr)
     - [Basic Autobrr setup](#basic-autobrr-setup)
     - [Example regexes](#example-regexes)
@@ -498,7 +499,7 @@ libraries:
 
 ### Triggering Kometa After Ingests
 
-Playbook can nudge Kometa automatically after each ingest cycle. Configure it once under `settings.kometa_trigger` and it will fire immediately after the first _new_ file is linked so duplicate runs are avoided.
+Playbook can nudge Kometa automatically after each ingest cycle. Configure it once under `settings.kometa_trigger` and it will fire immediately after the first _new_ file is linked so duplicate runs are avoided. Set `per_batch: true` if you prefer to trigger once per processor run (e.g., for filesystem watcher batches where files might already exist).
 
 #### Kubernetes CronJob trigger
 
@@ -554,6 +555,17 @@ docker run --rm \
 
 Add any additional Kometa CLI flags to `docker.extra_args`, and mount a different config path/container path if needed. Logs from the container are captured and surfaced in `playbook.log`, so failures stand out quickly.
 
+**Docker prerequisites inside the Playbook container**
+
+- Mount the Docker socket so the daemon is reachable: `-v /var/run/docker.sock:/var/run/docker.sock`.
+- Mount the client binaries into the container (paths vary, discover them with `command -v docker` and `command -v com.docker.cli` on macOS):
+  ```bash
+  -v $(command -v docker):/usr/local/bin/docker \
+  -v $(command -v com.docker.cli):/usr/local/bin/com.docker.cli
+  ```
+
+Without these mounts the trigger will log clear errors (look for `Kometa docker trigger requires...`).
+
 Already running Kometa in Docker Compose? Set `docker.container_name` (plus optional `exec_python` / `exec_script`) and Playbook will switch to `docker exec` instead of launching a new container:
 
 ```bash
@@ -565,6 +577,17 @@ docker exec kometa \
 ```
 
 All other fields (`libraries`, `extra_args`, environment overrides) still apply, so you can reuse the same knobs regardless of whether you spin up a fresh container or exec into an existing one.
+For absolute control you can provide `docker.exec_command` (a list such as `["python3", "/app/kometa/kometa.py"]`), in which case Playbook appends your `libraries`/`extra_args` without any shell gymnastics.
+
+#### Manual trigger CLI
+
+Need to test the integration without running the full ingest loop? Use the dedicated CLI helper:
+
+```bash
+python -m playbook.cli kometa-trigger --config /config/playbook.yaml --mode docker
+```
+
+It loads your config, instantiates the trigger, and logs the full docker command/output to `playbook.log` (or whatever `--log-file` you specify), making it easy to diagnose missing mounts or permissions.
 
 ## Downloading Sports with Autobrr
 

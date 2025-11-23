@@ -73,6 +73,7 @@ settings:
   kometa_trigger:
     enabled: false
     mode: kubernetes         # kubernetes | docker
+    per_batch: false         # When true, trigger once per run even if no brand-new files were seen.
     namespace: media
     cronjob_name: kometa-sport
     job_name_prefix: kometa-sport-triggered-by-playbook
@@ -86,9 +87,15 @@ settings:
       extra_args: []         # Additional CLI args (e.g. '--config', '/config/config.yml')
       remove_container: true
       interactive: false
-      # container_name: kometa   # Uncomment to exec into an already-running container instead of docker run
+      # Set container_name to reuse an existing Kometa container (docker exec mode)
+      # container_name: kometa
       # exec_python: python3
       # exec_script: /app/kometa/kometa.py
+      # exec_command: []      # Optional explicit command list, e.g. ["python3", "/app/kometa/kometa.py"]
+      # Make sure your Playbook container can reach Docker:
+      #   - Mount the socket:   -v /var/run/docker.sock:/var/run/docker.sock
+      #   - Mount the binaries: -v $(which docker):/usr/local/bin/docker
+      #   - On macOS, also mount com.docker.cli (command -v com.docker.cli)
 
   ####################################################################
   # DEFAULT DESTINATION TEMPLATES

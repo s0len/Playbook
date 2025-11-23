@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import textwrap
 
+import pytest
+
 from playbook.config import AppConfig, load_config
 
 
@@ -117,6 +119,7 @@ def test_kometa_trigger_settings_round_trip(tmp_path) -> None:
           cache_dir: "{tmp_path / 'cache'}"
           kometa_trigger:
             enabled: true
+            per_batch: true
             namespace: custom
             cronjob_name: custom-sport
             job_name_prefix: manual-run
@@ -132,6 +135,7 @@ def test_kometa_trigger_settings_round_trip(tmp_path) -> None:
     trigger = config.settings.kometa_trigger
 
     assert trigger.enabled is True
+    assert trigger.per_batch is True
     assert trigger.namespace == "custom"
     assert trigger.cronjob_name == "custom-sport"
     assert trigger.job_name_prefix == "manual-run"
@@ -220,4 +224,62 @@ def test_kometa_trigger_docker_exec_settings(tmp_path) -> None:
     assert trigger.docker_container_name == "kometa"
     assert trigger.docker_exec_python == "python"
     assert trigger.docker_exec_script == "/opt/kometa.py"
+
+
+def test_kometa_trigger_exec_command(tmp_path) -> None:
+    config_path = tmp_path / "playbook.yaml"
+    write_yaml(
+        config_path,
+        f"""
+        settings:
+          source_dir: "{tmp_path / 'source'}"
+          destination_dir: "{tmp_path / 'dest'}"
+          cache_dir: "{tmp_path / 'cache'}"
+          kometa_trigger:
+            enabled: true
+            mode: docker
+            docker:
+              exec_command:
+                - python3
+                - /app/kometa/kometa.py
+
+        sports:
+          - id: demo
+            metadata:
+              url: https://example.com/demo.yaml
+        """,
+    )
+
+    config = load_config(config_path)
+    trigger = config.settings.kometa_trigger
+
+    assert trigger.docker_exec_command == ["python3", "/app/kometa/kometa.py"]
+
+
+def test_kometa_trigger_exec_command_conflict(tmp_path) -> None:
+    config_path = tmp_path / "playbook.yaml"
+    write_yaml(
+        config_path,
+        f"""
+        settings:
+          source_dir: "{tmp_path / 'source'}"
+          destination_dir: "{tmp_path / 'dest'}"
+          cache_dir: "{tmp_path / 'cache'}"
+          kometa_trigger:
+            enabled: true
+            mode: docker
+            docker:
+              exec_command:
+                - python3
+              exec_python: sh
+
+        sports:
+          - id: demo
+            metadata:
+              url: https://example.com/demo.yaml
+        """,
+    )
+
+    with pytest.raises(ValueError):
+        load_config(config_path)
 

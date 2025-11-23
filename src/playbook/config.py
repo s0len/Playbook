@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import datetime as dt
 import re
+import shlex
 from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -87,6 +88,7 @@ class KometaTriggerSettings:
     namespace: str = "media"
     cronjob_name: str = "kometa-sport"
     job_name_prefix: str = "kometa-sport-triggered-by-playbook"
+    per_batch: bool = False
     docker_binary: str = "docker"
     docker_image: str = "kometateam/kometa"
     docker_config_path: Optional[str] = None
@@ -100,6 +102,7 @@ class KometaTriggerSettings:
     docker_container_name: Optional[str] = None
     docker_exec_python: str = "python3"
     docker_exec_script: str = "/app/kometa/kometa.py"
+    docker_exec_command: Optional[List[str]] = None
 
 
 @dataclass(slots=True)
@@ -387,6 +390,7 @@ def _build_kometa_trigger_settings(data: Dict[str, Any]) -> KometaTriggerSetting
     namespace_raw = str(data.get("namespace", "media")).strip()
     cronjob_raw = str(data.get("cronjob_name", "kometa-sport")).strip()
     mode_raw = str(data.get("mode", "kubernetes")).strip().lower()
+    per_batch = bool(data.get("per_batch", False))
 
     namespace = namespace_raw or "media"
     cronjob_name = cronjob_raw or "kometa-sport"
@@ -427,6 +431,21 @@ def _build_kometa_trigger_settings(data: Dict[str, Any]) -> KometaTriggerSetting
         container_name = str(container_name).strip() or None
     exec_python = str(docker_raw.get("exec_python", "python3")).strip() or "python3"
     exec_script = str(docker_raw.get("exec_script", "/app/kometa/kometa.py")).strip() or "/app/kometa/kometa.py"
+    exec_command_raw = docker_raw.get("exec_command")
+    docker_exec_command: Optional[List[str]]
+    if exec_command_raw is None:
+        docker_exec_command = None
+    else:
+        if isinstance(exec_command_raw, str):
+            docker_exec_command = shlex.split(exec_command_raw.strip())
+        else:
+            docker_exec_command = _ensure_string_list(exec_command_raw, field_name="kometa_trigger.docker.exec_command")
+        if not docker_exec_command:
+            docker_exec_command = None
+    if docker_exec_command and ("exec_python" in docker_raw or "exec_script" in docker_raw):
+        raise ValueError(
+            "Please specify either 'kometa_trigger.docker.exec_command' or the exec_python/exec_script fields, not both."
+        )
 
     return KometaTriggerSettings(
         enabled=bool(data.get("enabled", False)),
@@ -434,6 +453,7 @@ def _build_kometa_trigger_settings(data: Dict[str, Any]) -> KometaTriggerSetting
         namespace=namespace,
         cronjob_name=cronjob_name,
         job_name_prefix=job_name_prefix,
+        per_batch=per_batch,
         docker_binary=str(docker_raw.get("binary", "docker")).strip() or "docker",
         docker_image=str(docker_raw.get("image", "kometateam/kometa")).strip() or "kometateam/kometa",
         docker_config_path=docker_config_path,
@@ -447,6 +467,7 @@ def _build_kometa_trigger_settings(data: Dict[str, Any]) -> KometaTriggerSetting
         docker_container_name=container_name,
         docker_exec_python=exec_python,
         docker_exec_script=exec_script,
+        docker_exec_command=docker_exec_command,
     )
 
 

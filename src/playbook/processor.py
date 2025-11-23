@@ -322,6 +322,7 @@ class Processor:
                     self._log_detailed_summary(stats, level=level)
             elif has_issues:
                 self._log_detailed_summary(stats)
+            self._trigger_per_batch_if_needed(stats)
             return stats
         finally:
             self.metadata_http_cache.save()
@@ -966,6 +967,23 @@ class Processor:
             "playbook/destination": event.destination,
         }
         triggered = self._kometa_trigger.trigger(extra_labels=labels, extra_annotations=annotations)
+        if triggered:
+            self._kometa_trigger_fired = True
+
+    def _trigger_per_batch_if_needed(self, stats: ProcessingStats) -> None:
+        trigger_settings = self.config.settings.kometa_trigger
+        if (
+            not trigger_settings.per_batch
+            or self._kometa_trigger_fired
+            or not self._kometa_trigger.enabled
+            or self.config.settings.dry_run
+            or stats.processed <= 0
+        ):
+            return
+        triggered = self._kometa_trigger.trigger(
+            extra_labels={"trigger-mode": "per-batch"},
+            extra_annotations={"playbook/per-batch": "true"},
+        )
         if triggered:
             self._kometa_trigger_fired = True
 

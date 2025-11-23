@@ -3,11 +3,13 @@ from __future__ import annotations
 import copy
 import datetime as dt
 import logging
+import os
 import re
 import secrets
 import shlex
 import shutil
 import subprocess
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .config import KometaTriggerSettings
@@ -251,47 +253,32 @@ class KometaDockerTrigger(_BaseKometaTrigger):
             return False
 
         binary = self._settings.docker_binary or "docker"
-        if shutil.which(binary) is None:
-            LOGGER.error("Docker binary '%s' not found on PATH; skipping Kometa trigger", binary)
+        if not self._ensure_binary(binary):
             return False
 
         use_exec = bool(self._settings.docker_container_name)
-        if not use_exec and not self._settings.docker_config_path:
+        config_path = self._settings.docker_config_path
+        if not use_exec and not config_path:
             LOGGER.error(
                 "Kometa docker trigger requires 'kometa_trigger.docker.config_path' when launching a new container"
             )
             return False
 
-        if use_exec:
-            command = self._build_exec_command(binary)
-        else:
-            command = self._build_run_command(binary, self._settings.docker_config_path or "")
-
-        LOGGER.debug("Running Kometa docker command: %s", " ".join(shlex.quote(part) for part in command))
+        command = (
+            self._build_exec_command(binary)
+            if use_exec
+            else self._build_run_command(binary, config_path or "")
+        )
 
         try:
-            result = subprocess.run(
-                command,
-                check=False,
-                capture_output=True,
-                text=True,
-            )
+            exit_code = self._stream_command(command)
         except OSError as exc:
             LOGGER.error("Failed to start Kometa docker trigger: %s", exc)
             return False
 
-        if result.returncode != 0:
-            stderr = (result.stderr or "").strip()
-            LOGGER.error(
-                "Kometa docker trigger exited with code %s%s",
-                result.returncode,
-                f": {stderr}" if stderr else "",
-            )
+        if exit_code != 0:
+            LOGGER.error("Kometa docker command exited with status %s", exit_code)
             return False
-
-        stdout = (result.stdout or "").strip()
-        if stdout:
-            LOGGER.debug("Kometa docker output:\n%s", stdout)
 
         if use_exec:
             LOGGER.info(
@@ -306,6 +293,38 @@ class KometaDockerTrigger(_BaseKometaTrigger):
                 self._settings.docker_libraries or "(all configured libraries)",
             )
         return True
+
+    def _ensure_binary(self, binary: str) -> bool:
+        if shutil.which(binary) is None:
+            LOGGER.error(
+                "Docker binary '%s' not found on PATH. Mount it into the container (e.g. -v $(which docker):/usr/local/bin/docker).",
+                binary,
+            )
+            return False
+        if not os.environ.get("DOCKER_HOST") and not Path("/var/run/docker.sock").exists():
+            LOGGER.warning(
+                "Docker socket /var/run/docker.sock not found. Mount it with '-v /var/run/docker.sock:/var/run/docker.sock' so Playbook can reach the Docker daemon."
+            )
+        return True
+
+    def _stream_command(self, command: list[str]) -> int:
+        LOGGER.debug("Running Kometa docker command: %s", " ".join(shlex.quote(part) for part in command))
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+        assert process.stdout is not None
+        try:
+            for raw_line in process.stdout:
+                line = raw_line.rstrip()
+                if line:
+                    LOGGER.info("Kometa | %s", line)
+        finally:
+            process.stdout.close()
+        return process.wait()
 
     def _build_run_command(self, binary: str, config_path: str) -> list[str]:
         command: list[str] = [binary, "run"]
@@ -326,7 +345,7 @@ class KometaDockerTrigger(_BaseKometaTrigger):
 
         image = self._settings.docker_image or "kometateam/kometa"
         command.append(image)
-        command.extend(self._kometa_cli_args())
+        command.extend(self._compose_inner_command())
         return command
 
     def _build_exec_command(self, binary: str) -> list[str]:
@@ -342,11 +361,19 @@ class KometaDockerTrigger(_BaseKometaTrigger):
             command.extend(["-e", f"{key}={value}"])
 
         command.append(container)
-        python_bin = self._settings.docker_exec_python or "python3"
-        script_path = self._settings.docker_exec_script or "/app/kometa/kometa.py"
-        command.extend([python_bin, script_path])
-        command.extend(self._kometa_cli_args())
+        command.extend(self._compose_inner_command())
         return command
+
+    def _compose_inner_command(self) -> list[str]:
+        exec_command = self._settings.docker_exec_command
+        if exec_command:
+            base = list(exec_command)
+        else:
+            python_bin = self._settings.docker_exec_python or "python3"
+            script_path = self._settings.docker_exec_script or "/app/kometa/kometa.py"
+            base = [python_bin, script_path]
+        base.extend(self._kometa_cli_args())
+        return base
 
     def _kometa_cli_args(self) -> list[str]:
         args: list[str] = []
