@@ -65,6 +65,39 @@ settings:
     reconcile_interval: 900 # Run a full scan every N seconds even if no events arrive. Set 0 to disable.
 
   ####################################################################
+  # KOMETA CRONJOB TRIGGER (OPTIONAL)
+  ####################################################################
+  # Enable this to have Playbook kick Kometa right after the first newly ingested
+  # file each run. You can point it at the in-cluster CronJob or fall back to a
+  # simple `docker run` command when you're not on Kubernetes.
+  kometa_trigger:
+    enabled: false
+    mode: kubernetes         # kubernetes | docker
+    per_batch: false         # When true, trigger once per run even if no brand-new files were seen.
+    namespace: media
+    cronjob_name: kometa-sport
+    job_name_prefix: kometa-sport-triggered-by-playbook
+    docker:
+      binary: docker
+      image: kometateam/kometa
+      config_path: /absolute/path/to/kometa/config
+      container_path: /config
+      volume_mode: rw
+      libraries: "Sports|TV Shows - 4K"
+      extra_args: []         # Additional CLI args (e.g. '--config', '/config/config.yml')
+      remove_container: true
+      interactive: false
+      # Set container_name to reuse an existing Kometa container (docker exec mode)
+      # container_name: kometa
+      # exec_python: python3
+      # exec_script: /app/kometa/kometa.py
+      # exec_command: []      # Optional explicit command list, e.g. ["python3", "/app/kometa/kometa.py"]
+      # Make sure your Playbook container can reach Docker:
+      #   - Mount the socket:   -v /var/run/docker.sock:/var/run/docker.sock
+      #   - Mount the binaries: -v $(which docker):/usr/local/bin/docker
+      #   - On macOS, also mount com.docker.cli (command -v com.docker.cli)
+
+  ####################################################################
   # DEFAULT DESTINATION TEMPLATES
   ####################################################################
   # These templates are used for every sport unless overridden under that sport's `destination` block.

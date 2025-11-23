@@ -92,6 +92,51 @@ CONFIG_SCHEMA: Dict[str, Any] = {
                     },
                     "additionalProperties": True,
                 },
+                "kometa_trigger": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {"type": "boolean"},
+                        "mode": {"type": "string", "enum": ["kubernetes", "docker"]},
+                        "per_batch": {"type": "boolean"},
+                        "namespace": {"type": "string"},
+                        "cronjob_name": {"type": "string"},
+                        "job_name_prefix": {"type": "string"},
+                        "docker": {
+                            "type": "object",
+                            "properties": {
+                                "binary": {"type": "string"},
+                                "image": {"type": "string"},
+                                "config_path": {"type": "string"},
+                                "container_path": {"type": "string"},
+                                "volume_mode": {"type": "string"},
+                                "libraries": {"type": "string"},
+                                "container_name": {"type": "string"},
+                                "exec_python": {"type": "string"},
+                                "exec_script": {"type": "string"},
+                                "exec_command": {
+                                    "oneOf": [
+                                        {"type": "array", "items": {"type": "string"}},
+                                        {"type": "string"},
+                                    ]
+                                },
+                                "extra_args": {
+                                    "oneOf": [
+                                        {"type": "array", "items": {"type": "string"}},
+                                        {"type": "string"},
+                                    ]
+                                },
+                                "env": {
+                                    "type": "object",
+                                    "additionalProperties": {"type": "string"},
+                                },
+                                "remove_container": {"type": "boolean"},
+                                "interactive": {"type": "boolean"},
+                            },
+                            "additionalProperties": True,
+                        },
+                    },
+                    "additionalProperties": True,
+                },
             },
             "additionalProperties": True,
         },

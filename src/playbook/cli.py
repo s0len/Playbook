@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import difflib
 import logging
 import os
@@ -14,6 +15,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from .config import AppConfig, Settings, load_config
+from .kometa_trigger import build_kometa_trigger
 from .processor import Processor, TraceOptions
 from .utils import load_yaml_file
 from .validation import ValidationIssue, validate_config_data
@@ -56,8 +58,11 @@ def _env_int(name: str) -> Tuple[Optional[int], bool]:
 
 def parse_args(argv: Optional[Tuple[str, ...]] = None) -> argparse.Namespace:
     arguments = list(argv or sys.argv[1:])
-    if arguments and arguments[0] == "validate-config":
-        return _parse_validate_args(arguments[1:])
+    if arguments:
+        if arguments[0] == "validate-config":
+            return _parse_validate_args(arguments[1:])
+        if arguments[0] == "kometa-trigger":
+            return _parse_trigger_args(arguments[1:])
     return _parse_run_args(arguments)
 
 
@@ -139,6 +144,40 @@ def _parse_validate_args(arguments: list[str]) -> argparse.Namespace:
     )
     namespace = parser.parse_args(arguments)
     namespace.command = "validate-config"
+    return namespace
+
+
+def _parse_trigger_args(arguments: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Trigger Kometa manually via Playbook")
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path(os.getenv("CONFIG_PATH", "/config/playbook.yaml")),
+        help="Path to the YAML configuration file",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["docker", "kubernetes"],
+        help="Override kometa_trigger.mode for this invocation",
+    )
+    parser.add_argument("--verbose", action="store_true", help="Enable debug logging on the console")
+    parser.add_argument(
+        "--log-level",
+        choices=LOG_LEVEL_CHOICES,
+        help="Log level for the persistent log file (default INFO, or DEBUG when --verbose)",
+    )
+    parser.add_argument(
+        "--console-level",
+        choices=LOG_LEVEL_CHOICES,
+        help="Log level for console output (defaults to --log-level)",
+    )
+    parser.add_argument(
+        "--log-file",
+        type=Path,
+        help="Path to the persistent log file (default ./playbook.log or $LOG_FILE)",
+    )
+    namespace = parser.parse_args(arguments)
+    namespace.command = "kometa-trigger"
     return namespace
 
 
@@ -363,6 +402,69 @@ def _execute_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_kometa_trigger(args: argparse.Namespace) -> int:
+    if not args.config.exists():
+        LOGGER.error("Configuration file %s does not exist", args.config)
+        return 1
+
+    log_dir_env = os.getenv("LOG_DIR")
+    log_file_env = os.getenv("LOG_FILE")
+    if args.log_file:
+        log_file = args.log_file
+    elif log_dir_env:
+        log_file = Path(log_dir_env) / "playbook.log"
+    elif log_file_env:
+        log_file = Path(log_file_env)
+    else:
+        log_file = Path("playbook.log")
+
+    log_level_env = os.getenv("LOG_LEVEL")
+    console_level_env = os.getenv("CONSOLE_LEVEL")
+    resolved_log_level = (args.log_level or log_level_env or ("DEBUG" if args.verbose else "INFO")).upper()
+    if args.console_level:
+        resolved_console_level = args.console_level.upper()
+    elif console_level_env:
+        resolved_console_level = console_level_env.upper()
+    elif args.verbose:
+        resolved_console_level = "DEBUG"
+    else:
+        resolved_console_level = None
+
+    configure_logging(resolved_log_level, log_file, resolved_console_level)
+
+    try:
+        config = load_config(args.config)
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.exception("Failed to load configuration: %s", exc)
+        return 1
+
+    trigger_settings = dataclasses.replace(config.settings.kometa_trigger)
+    if args.mode:
+        trigger_settings.mode = args.mode
+        trigger_settings.enabled = True
+
+    if not trigger_settings.enabled:
+        LOGGER.error(
+            "Kometa trigger is disabled in the configuration. Enable it or supply --mode to force a trigger."
+        )
+        return 1
+
+    trigger = build_kometa_trigger(trigger_settings)
+    if not trigger.enabled:
+        LOGGER.error(
+            "Kometa trigger mode '%s' is not available or misconfigured. Check your settings.", trigger_settings.mode
+        )
+        return 1
+
+    LOGGER.info("Triggering Kometa manually using mode '%s'", trigger_settings.mode or "(unspecified)")
+    success = trigger.trigger()
+    if success:
+        LOGGER.info("Kometa trigger completed successfully")
+        return 0
+    LOGGER.error("Kometa trigger failed; see logs above for details")
+    return 2
+
+
 def run_validate_config(args: argparse.Namespace) -> int:
     config_path: Path = args.config
     if not config_path.exists():
@@ -468,6 +570,8 @@ def main(argv: Optional[Tuple[str, ...]] = None) -> int:
     args = parse_args(argv)
     if getattr(args, "command", "run") == "validate-config":
         return run_validate_config(args)
+    if getattr(args, "command", "run") == "kometa-trigger":
+        return run_kometa_trigger(args)
     return _execute_run(args)
 
 

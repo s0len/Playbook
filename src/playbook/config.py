@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import datetime as dt
 import re
+import shlex
 from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -81,6 +82,30 @@ class WatcherSettings:
 
 
 @dataclass(slots=True)
+class KometaTriggerSettings:
+    enabled: bool = False
+    mode: str = "kubernetes"  # kubernetes | docker
+    namespace: str = "media"
+    cronjob_name: str = "kometa-sport"
+    job_name_prefix: str = "kometa-sport-triggered-by-playbook"
+    per_batch: bool = False
+    docker_binary: str = "docker"
+    docker_image: str = "kometateam/kometa"
+    docker_config_path: Optional[str] = None
+    docker_config_container_path: str = "/config"
+    docker_volume_mode: str = "rw"
+    docker_libraries: Optional[str] = None
+    docker_extra_args: List[str] = field(default_factory=list)
+    docker_env: Dict[str, str] = field(default_factory=dict)
+    docker_remove_container: bool = True
+    docker_interactive: bool = False
+    docker_container_name: Optional[str] = None
+    docker_exec_python: str = "python3"
+    docker_exec_script: str = "/app/kometa/kometa.py"
+    docker_exec_command: Optional[List[str]] = None
+
+
+@dataclass(slots=True)
 class SportConfig:
     id: str
     name: str
@@ -109,6 +134,7 @@ class Settings:
     discord_webhook_url: Optional[str] = None
     notifications: NotificationSettings = field(default_factory=NotificationSettings)
     file_watcher: WatcherSettings = field(default_factory=WatcherSettings)
+    kometa_trigger: KometaTriggerSettings = field(default_factory=KometaTriggerSettings)
 
 
 @dataclass(slots=True)
@@ -355,6 +381,96 @@ def _build_watcher_settings(data: Dict[str, Any]) -> WatcherSettings:
     )
 
 
+def _build_kometa_trigger_settings(data: Dict[str, Any]) -> KometaTriggerSettings:
+    if not data:
+        return KometaTriggerSettings()
+    if not isinstance(data, dict):
+        raise ValueError("'kometa_trigger' must be provided as a mapping when specified")
+
+    namespace_raw = str(data.get("namespace", "media")).strip()
+    cronjob_raw = str(data.get("cronjob_name", "kometa-sport")).strip()
+    mode_raw = str(data.get("mode", "kubernetes")).strip().lower()
+    per_batch = bool(data.get("per_batch", False))
+
+    namespace = namespace_raw or "media"
+    cronjob_name = cronjob_raw or "kometa-sport"
+    default_prefix = f"{cronjob_name}-triggered-by-playbook"
+
+    job_name_prefix = str(data.get("job_name_prefix", default_prefix)).strip() or default_prefix
+
+    docker_raw = data.get("docker", {}) or {}
+    if not isinstance(docker_raw, dict):
+        raise ValueError("'kometa_trigger.docker' must be provided as a mapping when specified")
+
+    docker_config_path = docker_raw.get("config_path")
+    if docker_config_path is not None:
+        docker_config_path = str(docker_config_path).strip() or None
+
+    docker_libraries = docker_raw.get("libraries")
+    if docker_libraries is not None:
+        docker_libraries = str(docker_libraries).strip() or None
+
+    extra_args_raw = docker_raw.get("extra_args", []) or []
+    if isinstance(extra_args_raw, str):
+        extra_args_raw = [extra_args_raw]
+    elif not isinstance(extra_args_raw, list):
+        raise ValueError("'kometa_trigger.docker.extra_args' must be provided as a list when specified")
+    docker_extra_args = _ensure_string_list(extra_args_raw, field_name="kometa_trigger.docker.extra_args")
+
+    docker_env_raw = docker_raw.get("env", {}) or {}
+    if not isinstance(docker_env_raw, dict):
+        raise ValueError("'kometa_trigger.docker.env' must be provided as a mapping when specified")
+    docker_env: Dict[str, str] = {}
+    for key, value in docker_env_raw.items():
+        docker_env[str(key)] = "" if value is None else str(value)
+
+    volume_mode = str(docker_raw.get("volume_mode", "rw")).strip() or "rw"
+    container_path_raw = str(docker_raw.get("container_path", "/config")).strip() or "/config"
+    container_name = docker_raw.get("container_name")
+    if container_name is not None:
+        container_name = str(container_name).strip() or None
+    exec_python = str(docker_raw.get("exec_python", "python3")).strip() or "python3"
+    exec_script = str(docker_raw.get("exec_script", "/app/kometa/kometa.py")).strip() or "/app/kometa/kometa.py"
+    exec_command_raw = docker_raw.get("exec_command")
+    docker_exec_command: Optional[List[str]]
+    if exec_command_raw is None:
+        docker_exec_command = None
+    else:
+        if isinstance(exec_command_raw, str):
+            docker_exec_command = shlex.split(exec_command_raw.strip())
+        else:
+            docker_exec_command = _ensure_string_list(exec_command_raw, field_name="kometa_trigger.docker.exec_command")
+        if not docker_exec_command:
+            docker_exec_command = None
+    if docker_exec_command and ("exec_python" in docker_raw or "exec_script" in docker_raw):
+        raise ValueError(
+            "Please specify either 'kometa_trigger.docker.exec_command' or the exec_python/exec_script fields, not both."
+        )
+
+    return KometaTriggerSettings(
+        enabled=bool(data.get("enabled", False)),
+        mode=mode_raw or "kubernetes",
+        namespace=namespace,
+        cronjob_name=cronjob_name,
+        job_name_prefix=job_name_prefix,
+        per_batch=per_batch,
+        docker_binary=str(docker_raw.get("binary", "docker")).strip() or "docker",
+        docker_image=str(docker_raw.get("image", "kometateam/kometa")).strip() or "kometateam/kometa",
+        docker_config_path=docker_config_path,
+        docker_config_container_path=container_path_raw,
+        docker_volume_mode=volume_mode,
+        docker_libraries=docker_libraries,
+        docker_extra_args=docker_extra_args,
+        docker_env=docker_env,
+        docker_remove_container=bool(docker_raw.get("remove_container", True)),
+        docker_interactive=bool(docker_raw.get("interactive", False)),
+        docker_container_name=container_name,
+        docker_exec_python=exec_python,
+        docker_exec_script=exec_script,
+        docker_exec_command=docker_exec_command,
+    )
+
+
 def _build_settings(data: Dict[str, Any]) -> Settings:
     destination_defaults = DestinationTemplates(
         root_template=data.get("destination", {}).get("root_template", "{show_title}"),
@@ -418,6 +534,7 @@ def _build_settings(data: Dict[str, Any]) -> Settings:
     destination_dir = Path(data.get("destination_dir", "/data/destination")).expanduser()
     cache_dir = Path(data.get("cache_dir", "/data/cache")).expanduser()
     watcher_settings = _build_watcher_settings(data.get("file_watcher", {}) or {})
+    kometa_trigger = _build_kometa_trigger_settings(data.get("kometa_trigger", {}) or {})
 
     return Settings(
         source_dir=source_dir,
@@ -431,6 +548,7 @@ def _build_settings(data: Dict[str, Any]) -> Settings:
         discord_webhook_url=discord_webhook_url,
         notifications=notifications,
         file_watcher=watcher_settings,
+        kometa_trigger=kometa_trigger,
     )
 
 

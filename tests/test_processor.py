@@ -6,7 +6,7 @@ from typing import Dict, List
 
 import pytest
 
-from playbook.config import AppConfig, MetadataConfig, PatternConfig, Settings, SportConfig
+from playbook.config import AppConfig, KometaTriggerSettings, MetadataConfig, PatternConfig, Settings, SportConfig
 from playbook.metadata import (
     MetadataChangeResult,
     MetadataFingerprintStore,
@@ -14,7 +14,7 @@ from playbook.metadata import (
     ShowFingerprint,
     compute_show_fingerprint,
 )
-from playbook.models import Episode, Season, Show
+from playbook.models import Episode, ProcessingStats, Season, Show
 from playbook.processor import Processor
 from playbook.utils import sanitize_component
 
@@ -456,4 +456,82 @@ def test_should_suppress_sample_variants() -> None:
     assert Processor._should_suppress_sample_ignored(Path("nba.sample.1080p.web.h264-gametime.mkv"))
     assert not Processor._should_suppress_sample_ignored(Path("nba.sampleshow.1080p.mkv"))
     assert not Processor._should_suppress_sample_ignored(Path("nba.example.1080p.mkv"))
+
+
+def test_processor_triggers_per_batch_when_enabled(tmp_path, monkeypatch) -> None:
+    cache_dir = tmp_path / "cache"
+    source_dir = tmp_path / "source"
+    dest_dir = tmp_path / "dest"
+    cache_dir.mkdir()
+    source_dir.mkdir()
+    dest_dir.mkdir()
+
+    kometa_settings = KometaTriggerSettings(enabled=True, per_batch=True)
+    settings = Settings(
+        source_dir=source_dir,
+        destination_dir=dest_dir,
+        cache_dir=cache_dir,
+        kometa_trigger=kometa_settings,
+    )
+    config = AppConfig(settings=settings, sports=[])
+
+    class DummyTrigger:
+        def __init__(self) -> None:
+            self.enabled = True
+            self.calls = 0
+
+        def trigger(self, *_, **__) -> bool:
+            self.calls += 1
+            return True
+
+    dummy_trigger = DummyTrigger()
+    monkeypatch.setattr("playbook.processor.build_kometa_trigger", lambda _settings: dummy_trigger)
+
+    processor = Processor(config, enable_notifications=False)
+    stats = ProcessingStats(processed=2)
+
+    processor._kometa_trigger = dummy_trigger
+    processor._kometa_trigger_fired = False
+    processor._trigger_per_batch_if_needed(stats)
+
+    assert dummy_trigger.calls == 1
+
+
+def test_processor_per_batch_skips_when_no_activity(tmp_path, monkeypatch) -> None:
+    cache_dir = tmp_path / "cache"
+    source_dir = tmp_path / "source"
+    dest_dir = tmp_path / "dest"
+    cache_dir.mkdir()
+    source_dir.mkdir()
+    dest_dir.mkdir()
+
+    kometa_settings = KometaTriggerSettings(enabled=True, per_batch=True)
+    settings = Settings(
+        source_dir=source_dir,
+        destination_dir=dest_dir,
+        cache_dir=cache_dir,
+        kometa_trigger=kometa_settings,
+    )
+    config = AppConfig(settings=settings, sports=[])
+
+    class DummyTrigger:
+        def __init__(self) -> None:
+            self.enabled = True
+            self.calls = 0
+
+        def trigger(self, *_, **__) -> bool:
+            self.calls += 1
+            return True
+
+    dummy_trigger = DummyTrigger()
+    monkeypatch.setattr("playbook.processor.build_kometa_trigger", lambda _settings: dummy_trigger)
+
+    processor = Processor(config, enable_notifications=False)
+    stats = ProcessingStats(processed=0)
+
+    processor._kometa_trigger = dummy_trigger
+    processor._kometa_trigger_fired = False
+    processor._trigger_per_batch_if_needed(stats)
+
+    assert dummy_trigger.calls == 0
 

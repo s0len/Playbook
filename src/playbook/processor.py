@@ -13,6 +13,7 @@ from rich.progress import Progress
 
 from .cache import CachedFileRecord, MetadataHttpCache, ProcessedFileCache
 from .config import AppConfig, SportConfig
+from .kometa_trigger import build_kometa_trigger
 from .matcher import PatternRuntime, compile_patterns, match_file_to_episode
 from .metadata import (
     MetadataChangeResult,
@@ -70,6 +71,8 @@ class Processor:
             default_discord_webhook=settings.discord_webhook_url if enable_notifications else None,
             enabled=enable_notifications,
         )
+        self._kometa_trigger = build_kometa_trigger(settings.kometa_trigger)
+        self._kometa_trigger_fired = False
         self._previous_summary: Optional[Tuple[int, int, int]] = None
         self._metadata_changed_sports: List[Tuple[str, str]] = []
         self._metadata_change_map: Dict[str, MetadataChangeResult] = {}
@@ -220,6 +223,7 @@ class Processor:
         LOGGER.debug(self._format_log("Processed File Cache Cleared"))
 
     def run_once(self) -> ProcessingStats:
+        self._kometa_trigger_fired = False
         self.processed_cache.prune_missing_sources()
         runtimes = self._load_sports()
         self._stale_destinations = {}
@@ -318,6 +322,7 @@ class Processor:
                     self._log_detailed_summary(stats, level=level)
             elif has_issues:
                 self._log_detailed_summary(stats)
+            self._trigger_per_batch_if_needed(stats)
             return stats
         finally:
             self.metadata_http_cache.save()
@@ -919,6 +924,7 @@ class Processor:
             )
             event.action = link_mode
             event.replaced = replace_existing
+            self._maybe_trigger_kometa(event)
             return event
         else:
             failure_message = f"Failed to link {match.source_path} -> {destination}: {result.reason}"
@@ -944,6 +950,42 @@ class Processor:
             event.skip_reason = failure_message
             event.event_type = "error"
             return event
+
+    def _maybe_trigger_kometa(self, event: NotificationEvent) -> None:
+        if (
+            self._kometa_trigger_fired
+            or not self._kometa_trigger.enabled
+            or self.config.settings.dry_run
+            or event.event_type != "new"
+        ):
+            return
+
+        labels = {
+            "sport-id": event.sport_id,
+        }
+        annotations = {
+            "playbook/destination": event.destination,
+        }
+        triggered = self._kometa_trigger.trigger(extra_labels=labels, extra_annotations=annotations)
+        if triggered:
+            self._kometa_trigger_fired = True
+
+    def _trigger_per_batch_if_needed(self, stats: ProcessingStats) -> None:
+        trigger_settings = self.config.settings.kometa_trigger
+        if (
+            not trigger_settings.per_batch
+            or self._kometa_trigger_fired
+            or not self._kometa_trigger.enabled
+            or self.config.settings.dry_run
+            or stats.processed <= 0
+        ):
+            return
+        triggered = self._kometa_trigger.trigger(
+            extra_labels={"trigger-mode": "per-batch"},
+            extra_annotations={"playbook/per-batch": "true"},
+        )
+        if triggered:
+            self._kometa_trigger_fired = True
 
     def _should_overwrite_existing(self, match: SportFileMatch) -> bool:
         source_name = match.source_path.name.lower()
