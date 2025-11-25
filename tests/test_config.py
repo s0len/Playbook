@@ -283,3 +283,28 @@ def test_kometa_trigger_exec_command_conflict(tmp_path) -> None:
     with pytest.raises(ValueError):
         load_config(config_path)
 
+
+def test_notifications_mentions_mapping(tmp_path) -> None:
+    config_path = tmp_path / "playbook.yaml"
+    write_yaml(
+        config_path,
+        f"""
+        settings:
+          source_dir: "{tmp_path / 'source'}"
+          destination_dir: "{tmp_path / 'dest'}"
+          cache_dir: "{tmp_path / 'cache'}"
+          notifications:
+            mentions:
+              demo: " <@&42> "
+              default: "@here"
+
+        sports:
+          - id: demo
+            metadata:
+              url: https://example.com/demo.yaml
+        """,
+    )
+
+    config = load_config(config_path)
+    assert config.settings.notifications.mentions == {"demo": "<@&42>", "default": "@here"}
+

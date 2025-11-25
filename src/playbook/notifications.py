@@ -279,6 +279,7 @@ class DiscordTarget(NotificationTarget):
         indicator = self._event_indicator(event.event_type)
         prefix = f"{indicator} " if indicator else ""
         content = self._trim(prefix + self._render_content(event), 2000)
+        content = self._apply_mention_prefix(content, event.sport_id, limit=2000)
         return {"content": content, "embeds": [embed]}
 
     def _build_batch_payload(self, request: BatchRequest, now: datetime) -> Dict[str, Any]:
@@ -337,6 +338,7 @@ class DiscordTarget(NotificationTarget):
             f"{request.sport_name} updates for {request.bucket_date.isoformat()}: {total} item{'s' if total != 1 else ''}",
             limit=2000,
         )
+        content = self._apply_mention_prefix(content, request.sport_id, limit=2000)
         return {"content": content, "embeds": [embed]}
 
     def _render_content(self, event: NotificationEvent) -> str:
@@ -427,6 +429,23 @@ class DiscordTarget(NotificationTarget):
         if not text:
             return None
         return {"name": self._trim(name, 256), "value": text, "inline": inline}
+
+    def _mention_for_sport(self, sport_id: Optional[str]) -> Optional[str]:
+        mentions = getattr(self._settings, "mentions", {}) or {}
+        if not mentions:
+            return None
+        if sport_id:
+            mention = mentions.get(str(sport_id))
+            if mention:
+                return mention
+        return mentions.get("default")
+
+    def _apply_mention_prefix(self, text: str, sport_id: Optional[str], *, limit: int) -> str:
+        mention = self._mention_for_sport(sport_id)
+        if not mention:
+            return text
+        combined = f"{mention} {text}".strip()
+        return self._trim(combined, limit)
 
     @staticmethod
     def _event_indicator(event_type: Optional[str]) -> str:

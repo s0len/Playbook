@@ -82,6 +82,34 @@ def test_notification_service_sends_discord_message(tmp_path, monkeypatch) -> No
     assert destination_field["value"] == "Demo"
 
 
+def test_notification_service_mentions_opt_in_roles(tmp_path, monkeypatch) -> None:
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        mentions={"demo": "<@&42>"},
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        default_discord_webhook="https://discord.test/webhook",
+        enabled=True,
+    )
+
+    calls: List[Dict[str, Any]] = []
+
+    def fake_request(method, url, json=None, timeout=None, headers=None):
+        calls.append({"method": method, "url": url, "json": json})
+        return FakeResponse(204)
+
+    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+
+    service.notify(_build_event())
+
+    payload = calls[0]["json"]
+    assert payload["content"].startswith("<@&42> [NEW] Demo Sport: Qualifying")
+
+
 def test_notification_service_batches_discord_messages(tmp_path, monkeypatch) -> None:
     settings = NotificationSettings(batch_daily=True, flush_time=dt.time(hour=0, minute=0))
     service = NotificationService(
@@ -116,6 +144,42 @@ def test_notification_service_batches_discord_messages(tmp_path, monkeypatch) ->
     assert state_path.exists()
     state = json.loads(state_path.read_text())
     assert state["demo"]["message_id"] == "message123"
+
+
+def test_notification_service_mentions_apply_to_batches(tmp_path, monkeypatch) -> None:
+    settings = NotificationSettings(
+        batch_daily=True,
+        flush_time=dt.time(hour=0, minute=0),
+        mentions={"default": "@here"},
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        default_discord_webhook="https://discord.test/webhook",
+        enabled=True,
+    )
+
+    responses = [
+        FakeResponse(200, {"id": "message123"}),
+        FakeResponse(200, {"id": "message123"}),
+    ]
+    calls: List[Dict[str, Any]] = []
+
+    def fake_request(method, url, json=None, timeout=None, headers=None):
+        calls.append({"method": method, "url": url, "json": json})
+        return responses.pop(0)
+
+    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+
+    service.notify(_build_event(destination="Demo-1.mkv"))
+    service.notify(_build_event(destination="Demo-2.mkv"))
+
+    first_payload = calls[0]["json"]
+    assert first_payload["content"].startswith("@here Demo Sport updates")
+
+    state_path = tmp_path / "state" / "discord-batches.json"
+    assert state_path.exists()
 
 
 def test_notification_service_handles_rate_limiting(tmp_path, monkeypatch) -> None:

@@ -69,6 +69,7 @@ class NotificationSettings:
     flush_time: dt.time = field(default_factory=lambda: dt.time(hour=0, minute=0))
     targets: List[Dict[str, Any]] = field(default_factory=list)
     throttle: Dict[str, int] = field(default_factory=dict)
+    mentions: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -523,11 +524,27 @@ def _build_settings(data: Dict[str, Any]) -> Settings:
         except (TypeError, ValueError) as exc:  # noqa: PERF203
             raise ValueError(f"'notifications.throttle[{key}]' must be an integer") from exc
 
+    mentions_raw = notifications_raw.get("mentions", {}) or {}
+    if not isinstance(mentions_raw, dict):
+        raise ValueError("'notifications.mentions' must be provided as a mapping when specified")
+    mentions: Dict[str, str] = {}
+    for key, value in mentions_raw.items():
+        if value is None:
+            continue
+        mention = str(value).strip()
+        if not mention:
+            continue
+        key_str = str(key).strip()
+        if not key_str:
+            continue
+        mentions[key_str] = mention
+
     notifications = NotificationSettings(
         batch_daily=bool(notifications_raw.get("batch_daily", False)),
         flush_time=flush_time,
         targets=targets,
         throttle=throttle,
+        mentions=mentions,
     )
 
     source_dir = Path(data.get("source_dir", "/data/source")).expanduser()
