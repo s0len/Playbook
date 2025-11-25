@@ -5485,6 +5485,19 @@ pattern_sets:
       destination_root_template: "{show_title}"
       season_dir_template: "{season_number:02d} {season_title}"
       filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+    - description: Premier League matchweek releases
+      # Example: EPL.2025.26.Arsenal.vs.Tottenham.1080pEN50fps.mkv
+      regex: >-
+        (?i)^(?:EPL|English\.?Premier\.?League|Premier\.?League)\.(?P<year>\d{4})\.(?P<matchweek>\d{1,2})\.(?P<matchup>(?P<away>[A-Za-z0-9&'-]+(?:\.[A-Za-z0-9&'-]+){0,5})\.(?P<separator>Vs|vs|VS|V|v)\.(?P<home>[A-Za-z0-9&'-]+(?:\.(?!(?:<suffix_token>|<extension>)(?:$|\.))[A-Za-z0-9&'-]+){0,5}))(?:\.(?:<suffix_token>|[^.]+))*\.(?P<extension><extension>)$
+      season_selector:
+        mode: round
+        group: matchweek
+      episode_selector:
+        group: matchup
+        allow_fallback_to_title: true
+      destination_root_template: "{show_title}"
+      season_dir_template: "{season_number:02d} {season_title}"
+      filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
 
   # ------------------------------------------------------------------
   # Figure Skating Grand Prix releases
