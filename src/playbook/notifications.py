@@ -275,8 +275,6 @@ class DiscordTarget(NotificationTarget):
             "fields": [field for field in self._fields_for_event(event) if field is not None],
             "footer": {"text": "Playbook"},
         }
-        if event.summary:
-            embed["description"] = self._trim(str(event.summary), 2048)
 
         indicator = self._event_indicator(event.event_type)
         prefix = f"{indicator} " if indicator else ""
@@ -342,31 +340,27 @@ class DiscordTarget(NotificationTarget):
         return {"content": content, "embeds": [embed]}
 
     def _render_content(self, event: NotificationEvent) -> str:
-        destination_label = self._destination_label(event.destination)
-        label_suffix = f" — {destination_label}" if destination_label else ""
-        if event.action == "skipped":
+        base = f"{event.sport_name}: {event.episode}"
+        if event.event_type == "error":
             reason = f" — {event.skip_reason}" if event.skip_reason else ""
-            return f"{event.sport_name}: {event.episode} ({event.session}) [skipped]{label_suffix}{reason}"
-        if event.action == "error":
-            reason = f" — {event.skip_reason}" if event.skip_reason else ""
-            return f"{event.sport_name}: {event.episode} ({event.session}) [error]{label_suffix}{reason}"
-        if event.action == "dry-run":
-            return f"{event.sport_name}: {event.episode} ({event.session}) [dry-run]{label_suffix}"
-
-        replaced = " (replaced existing)" if event.replaced else ""
-        return f"{event.sport_name}: {event.episode} ({event.session}) [{event.action}]{label_suffix}{replaced}"
+            return f"{base}{reason}"
+        if event.event_type == "changed" and event.replaced:
+            return f"{base} (updated existing copy)"
+        if event.event_type == "changed":
+            return f"{base} (updated)"
+        if event.event_type == "dry-run":
+            return f"{base} (dry run)"
+        if event.replaced:
+            return f"{base} (replaced existing)"
+        return base
 
     def _fields_for_event(self, event: NotificationEvent) -> List[Optional[Dict[str, Any]]]:
+        destination_label = self._destination_label(event.destination) or event.destination
         fields = [
             self._embed_field("Sport", event.sport_name, inline=True),
             self._embed_field("Season", event.season, inline=True),
-            self._embed_field("Session", event.session, inline=True),
             self._embed_field("Episode", event.episode, inline=True),
-            self._embed_field(
-                "Action",
-                f"{event.action} ({event.link_mode}){' – replaced' if event.replaced else ''}",
-                inline=True,
-            ),
+            self._embed_field("Destination", destination_label, inline=False),
         ]
         if event.skip_reason:
             fields.append(self._embed_field("Reason", event.skip_reason, inline=False))

@@ -72,6 +72,14 @@ def test_notification_service_sends_discord_message(tmp_path, monkeypatch) -> No
     assert request["url"] == "https://discord.test/webhook"
     payload = request["json"]
     assert payload["embeds"][0]["fields"][0]["value"] == "Demo Sport"
+    assert payload["content"] == "[NEW] Demo Sport: Qualifying"
+    embed = payload["embeds"][0]
+    assert "description" not in embed
+    field_names = [field["name"] for field in embed["fields"]]
+    assert "Session" not in field_names
+    assert "Action" not in field_names
+    destination_field = next(field for field in embed["fields"] if field["name"] == "Destination")
+    assert destination_field["value"] == "Demo"
 
 
 def test_notification_service_batches_discord_messages(tmp_path, monkeypatch) -> None:
