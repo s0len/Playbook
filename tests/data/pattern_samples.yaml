@@ -60,6 +60,13 @@ samples:
             - title: "Early Prelims"
             - title: "Prelims"
             - title: "Main Card"
+        - key: "3"
+          title: "UFC 265 Lewis vs Gane"
+          round_number: 3
+          episodes:
+            - title: "Early Prelims"
+            - title: "Prelims"
+            - title: "Main Card"
     filenames:
       - value: "UFC.321.Aspinall.vs.Gane.Main.Card.1080p.WEB-DL.H264.Fight-BB.mkv"
         expect_episode: "Main Card"
@@ -87,6 +94,10 @@ samples:
         expect_episode: "Main Card"
       - value: "UFC 284 Volkanovski vs Makhachev SHREDDiE 1080p WEB.mp4"
         expect_episode: "Main Card"
+      - value: "UFC.265.Lewis.vs.Gane.1080p.WEB.h264-VERUM.mkv"
+        expect_episode: "Main Card"
+      - value: "UFC 265 Lewis vs Gane 1080p WEB h264 VERUM.mkv"
+        expect_episode: "Main Card"
 
   - description: "UFC Fight Night releases resolve"
     sport:
@@ -108,12 +119,21 @@ samples:
           episodes:
             - title: "Prelims"
             - title: "Main Card"
+        - title: "UFC Fight Night 265 Tsarukyan vs Hooker"
+          round_number: 3
+          episodes:
+            - title: "Prelims"
+            - title: "Main Card"
     filenames:
       - value: "UFC.Fight.Night.263.Garcia.vs.Onama.WEB-DL.H264.Fight-BB.mkv"
         expect_episode: "Main Card"
       - value: "UFC.Fight.Night.262.de.Ridder.vs.Allen.Prelims.WEB-DL.H264.Fight-BB.mkv"
         expect_episode: "Prelims"
       - value: "UFC.Fight.Night.262.de.Ridder.vs.Allen.WEB-DL.H264.Fight-BB.mkv"
+        expect_episode: "Main Card"
+      - value: "ufc.fight.night.265.tsarukyan.vs.hooker.1080p.web.h264-verum.mkv"
+        expect_episode: "Main Card"
+      - value: "UFC Fight Night 265 Tsarukyan vs Hooker 1080p WEB h264 VERUM.mkv"
         expect_episode: "Main Card"
 
   - description: "UEFA Champions League 2025 match samples"

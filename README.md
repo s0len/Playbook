@@ -365,7 +365,7 @@ Key fields:
 
 - **`regex`** – Must supply the capture groups consumed by selectors and templates (e.g., `round`, `session`, `location`).
 - **`season_selector`** – Maps captures to a season. Supported modes: `round`, `key`, `title`, `sequential`. Add `offset` or `mapping` for fine-grained control.
-- **`episode_selector`** – Chooses which capture identifies an episode. `allow_fallback_to_title` lets the matcher fall back to fuzzy title comparisons.
+- **`episode_selector`** – Chooses which capture identifies an episode. `allow_fallback_to_title` lets the matcher fall back to fuzzy title comparisons, and `default_value` forces a canonical session when the regex doesn’t capture one (useful for release groups that omit `Prelims`/`Main Card` tags).
 - **`session_aliases`** – Augment metadata aliases with release-specific tokens (case-insensitive, normalized).
 - **`priority`** – Lower numbers win when multiple patterns match the same file (defaults to `100`).
 - **`destination_*` overrides** – Apply sport- or pattern-specific templates without touching global settings.

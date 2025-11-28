@@ -205,6 +205,10 @@ def _select_episode(
     group = pattern_config.episode_selector.group
     raw_value = match_groups.get(group)
     if raw_value is None:
+        default_value = pattern_config.episode_selector.default_value
+        if default_value:
+            raw_value = default_value
+    if raw_value is None:
         if pattern_config.episode_selector.allow_fallback_to_title:
             for candidate in reversed(sorted(session_lookup.keys(), key=len)):
                 if candidate and candidate in normalize_token(" ".join(match_groups.values())):

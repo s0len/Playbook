@@ -26,6 +26,7 @@ class SeasonSelector:
 class EpisodeSelector:
     group: str = "session"
     allow_fallback_to_title: bool = True
+    default_value: Optional[str] = None
 
 
 @dataclass(slots=True)
@@ -159,6 +160,7 @@ def _build_episode_selector(data: Dict[str, Any]) -> EpisodeSelector:
     return EpisodeSelector(
         group=data.get("group", "session"),
         allow_fallback_to_title=bool(data.get("allow_fallback_to_title", True)),
+        default_value=(str(data["default_value"]).strip() if data.get("default_value") else None),
     )
 
 

@@ -134,6 +134,7 @@ pattern_sets:
   #         group: year
   #       episode_selector:
   #         group: session
+#         default_value: "Main Card"   # Optional fallback when the regex omits a session.
 
 ######################################################################
 # Sports - tie pattern sets to metadata, variants, and overrides

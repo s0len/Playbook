@@ -199,6 +199,7 @@ CONFIG_SCHEMA: Dict[str, Any] = {
             "properties": {
                 "group": {"type": "string"},
                 "allow_fallback_to_title": {"type": "boolean"},
+                "default_value": {"type": ["string", "null"]},
             },
             "additionalProperties": True,
         },
