@@ -946,7 +946,8 @@ class NotificationService:
     ) -> List[NotificationTarget]:
         targets: List[NotificationTarget] = []
         configs = list(targets_raw)
-        if not configs and default_discord_webhook:
+        has_discord_target = any(entry.get("type", "").lower() == "discord" for entry in configs)
+        if default_discord_webhook and not has_discord_target:
             configs.append(
                 {
                     "type": "discord",

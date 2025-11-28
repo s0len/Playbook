@@ -286,6 +286,8 @@ notifications:
     default: "@everyone"           # optional fallback when no explicit entry exists
 ```
 
+If you set `settings.discord_webhook_url` (or `DISCORD_WEBHOOK_URL`), Playbook now inserts an equivalent `targets: - type: discord` entry behind the scenes—even when other targets (Autoscan, Slack, etc.) are configured—so the env var path behaves just like an explicit target definition. Add more `targets` entries when you need extra Discord channels or other integrations.
+
 #### Notification targets & Autoscan
 
 `notifications.targets` lets you fan out the same event to multiple destinations. Supported `type` values today are:
