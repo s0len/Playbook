@@ -271,6 +271,46 @@ def test_notification_service_appends_default_discord_target(tmp_path, monkeypat
     assert "https://example.com/webhook" in urls
 
 
+def test_discord_targets_support_per_target_mentions(tmp_path, monkeypatch) -> None:
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        mentions={"default": "@here"},
+        targets=[
+            {
+                "type": "discord",
+                "webhook_url": "https://discord.test/a",
+                "mentions": {"demo": " <@&1> "},
+            },
+            {
+                "type": "discord",
+                "webhook_url": "https://discord.test/b",
+            },
+        ],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        default_discord_webhook=None,
+        enabled=True,
+    )
+
+    calls: List[Dict[str, Any]] = []
+
+    def fake_request(method, url, json=None, timeout=None, headers=None):
+        calls.append({"url": url, "json": json})
+        return FakeResponse(204)
+
+    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+
+    service.notify(_build_event())
+
+    by_url = {call["url"]: call["json"]["content"] for call in calls}
+    assert by_url["https://discord.test/a"].startswith("<@&1>")
+    assert by_url["https://discord.test/b"].startswith("@here")
+
+
 def test_notification_service_handles_rate_limiting(tmp_path, monkeypatch) -> None:
     settings = NotificationSettings(batch_daily=False, flush_time=dt.time(hour=0, minute=0))
     service = NotificationService(

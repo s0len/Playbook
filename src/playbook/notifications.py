@@ -223,6 +223,26 @@ class NotificationTarget:
         raise NotImplementedError
 
 
+def _normalize_mentions_map(value: Any) -> Dict[str, str]:
+    if not value:
+        return {}
+    if not isinstance(value, dict):
+        LOGGER.warning("Ignoring discord target mentions because value is not a mapping")
+        return {}
+    mentions: Dict[str, str] = {}
+    for key, raw_value in value.items():
+        if raw_value is None:
+            continue
+        key_str = str(key).strip()
+        if not key_str:
+            continue
+        mention = str(raw_value).strip()
+        if not mention:
+            continue
+        mentions[key_str] = mention
+    return mentions
+
+
 class DiscordTarget(NotificationTarget):
     name = "discord"
 
@@ -233,6 +253,7 @@ class DiscordTarget(NotificationTarget):
         cache_dir: Path,
         settings: NotificationSettings,
         batch: Optional[bool] = None,
+        mentions: Optional[Dict[str, str]] = None,
     ) -> None:
         self.webhook_url = webhook_url.strip() if isinstance(webhook_url, str) else None
         self._settings = settings
@@ -242,6 +263,7 @@ class DiscordTarget(NotificationTarget):
             self._batcher = NotificationBatcher(cache_dir, settings)
         else:
             self._batcher = None
+        self._mentions_override = dict(mentions or {})
 
     def enabled(self) -> bool:
         return bool(self.webhook_url)
@@ -432,7 +454,10 @@ class DiscordTarget(NotificationTarget):
         return {"name": self._trim(name, 256), "value": text, "inline": inline}
 
     def _mention_for_sport(self, sport_id: Optional[str]) -> Optional[str]:
-        mentions = getattr(self._settings, "mentions", {}) or {}
+        base_mentions = getattr(self._settings, "mentions", {}) or {}
+        mentions = dict(base_mentions)
+        if self._mentions_override:
+            mentions.update(self._mentions_override)
         if not mentions:
             return None
 
@@ -962,12 +987,14 @@ class NotificationService:
                 webhook = entry.get("webhook_url") or default_discord_webhook
                 if webhook:
                     batch = entry.get("batch")
+                    mentions_override = _normalize_mentions_map(entry.get("mentions"))
                     targets.append(
                         DiscordTarget(
                             webhook,
                             cache_dir=cache_dir,
                             settings=self._settings,
                             batch=batch if batch is not None else entry.get("batch_daily"),
+                            mentions=mentions_override if mentions_override else None,
                         )
                     )
                 else:

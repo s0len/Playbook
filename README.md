@@ -284,6 +284,17 @@ notifications:
     premier_league: "<@&123456789012345678>"
     formula1: "<@&222333444555666777>"   # Automatically applies to formula1_2025, formula1_2026, etc.
     default: "@everyone"           # optional fallback when no explicit entry exists
+
+notifications:
+  targets:
+    - type: discord
+      webhook_url: https://discord.com/api/webhooks/...
+      mentions:
+        formula1: "<@&999>"        # Overrides/extends the global mentions for this webhook only.
+    - type: discord
+      webhook_url: https://discord.com/api/webhooks/alt
+      mentions:
+        premier_league: "<@&1234>"
 ```
 
 If you set `settings.discord_webhook_url` (or `DISCORD_WEBHOOK_URL`), Playbook now inserts an equivalent `targets: - type: discord` entry behind the scenes—even when other targets (Autoscan, Slack, etc.) are configured—so the env var path behaves just like an explicit target definition. Add more `targets` entries when you need extra Discord channels or other integrations.
