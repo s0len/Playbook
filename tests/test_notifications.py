@@ -182,6 +182,36 @@ def test_notification_service_mentions_apply_to_batches(tmp_path, monkeypatch) -
     assert state_path.exists()
 
 
+def test_notification_service_mentions_handle_variant_ids(tmp_path, monkeypatch) -> None:
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        mentions={"premier_league": "<@&123>"},
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        default_discord_webhook="https://discord.test/webhook",
+        enabled=True,
+    )
+
+    calls: List[Dict[str, Any]] = []
+
+    def fake_request(method, url, json=None, timeout=None, headers=None):
+        calls.append({"method": method, "url": url, "json": json})
+        return FakeResponse(204)
+
+    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+
+    event = _build_event()
+    event.sport_id = "premier_league_2025_26"
+    service.notify(event)
+
+    payload = calls[0]["json"]
+    assert payload["content"].startswith("<@&123> [NEW]")
+
+
 def test_notification_service_mentions_support_wildcards(tmp_path, monkeypatch) -> None:
     settings = NotificationSettings(
         batch_daily=False,

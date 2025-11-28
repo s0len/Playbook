@@ -438,10 +438,19 @@ class DiscordTarget(NotificationTarget):
 
         if sport_id:
             sport_id_str = str(sport_id)
+
+            # 1. Exact match
             mention = mentions.get(sport_id_str)
             if mention:
                 return mention
 
+            # 2. Parent prefixes (e.g., "premier_league" for "premier_league_2025_26")
+            for candidate in self._sport_prefixes(sport_id_str):
+                mention = mentions.get(candidate)
+                if mention:
+                    return mention
+
+            # 3. Wildcard patterns
             wildcard_matches = [
                 (pattern, value)
                 for pattern, value in mentions.items()
@@ -464,6 +473,14 @@ class DiscordTarget(NotificationTarget):
     @staticmethod
     def _is_wildcard(value: str) -> bool:
         return any(char in value for char in "*?[")
+
+    @staticmethod
+    def _sport_prefixes(sport_id: str) -> List[str]:
+        parts = sport_id.split("_")
+        prefixes: List[str] = []
+        for end in range(len(parts) - 1, 0, -1):
+            prefixes.append("_".join(parts[:end]))
+        return prefixes
 
     @staticmethod
     def _event_indicator(event_type: Optional[str]) -> str:

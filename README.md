@@ -276,13 +276,13 @@ Start with `config/playbook.sample.yaml`. The schema mirrors `playbook.config` d
 
 When `discord_webhook_url` is set (or `DISCORD_WEBHOOK_URL` is exported), Playbook will post a short embed to that channel each time a new file is linked or copied into the library. Enable `notifications.batch_daily` if you prefer a single rolling message per sport/day: the first processed file creates the message, later files edit it in place with cumulative details. Use `notifications.flush_time` to control when the “day” ends (useful for overnight events).
 
-Use `notifications.mentions` to opt specific Discord roles or users into certain sports. Entries are keyed by the sport’s ID (plus an optional `default` fallback) and the value is any mentionable string (`<@&ROLE_ID>`, `@here`, etc.). Keys can include shell-style wildcards (e.g. `formula1_*`) so a single entry can cover every yearly variant of the same league. Playbook prepends the mention to both single-event and batched messages, so subscribers only get pinged for the sports they care about:
+Use `notifications.mentions` to opt specific Discord roles or users into certain sports. Entries are keyed by the sport’s ID (plus an optional `default` fallback) and the value is any mentionable string (`<@&ROLE_ID>`, `@here`, etc.). Keys can include shell-style wildcards (e.g. `formula1_*`), and Playbook automatically falls back to the base ID before any variant suffix (`premier_league` also covers `premier_league_2025_26`). Mentions are prepended to both single-event and batched messages, so subscribers only get pinged for the sports they care about:
 
 ```yaml
 notifications:
   mentions:
     premier_league: "<@&123456789012345678>"
-    formula1: "<@&222333444555666777>"
+    formula1: "<@&222333444555666777>"   # Automatically applies to formula1_2025, formula1_2026, etc.
     default: "@everyone"           # optional fallback when no explicit entry exists
 ```
 
