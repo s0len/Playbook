@@ -33,9 +33,8 @@ settings:
   link_mode: hardlink     # Global default for linking: hardlink | copy | symlink.
 
   ####################################################################
-  # NOTIFICATIONS (OPTIONAL)
+  # NOTIFICATIONS
   ####################################################################
-  discord_webhook_url: ${DISCORD_WEBHOOK_URL:-} # Discord webhook for processed notifications. Leave empty to disable.
   notifications:
     batch_daily: false    # When true, send one message per sport/day and edit it with new entries instead of posting each file.
     flush_time: "00:00"   # Local HH:MM (or HH:MM:SS) boundary for the batching day rollover. Useful for overnight events.
@@ -43,9 +42,9 @@ settings:
       premier_league: "<@&123456789012345678>" # Replace with your role ID. Automatically covers variants like premier_league_2025_26.
       formula1: "<@&222333444555666777>"      # Variant IDs (formula1_2025, formula1_2026, etc.) inherit this mention automatically.
       # default: "@here"   # Uncomment for a fallback mention when a sport ID isn’t listed.
-    targets:              # Optional explicit targets. Leave empty to fall back to `discord_webhook_url`.
+    targets:              # Define at least one target (Discord, Slack, webhook, Autoscan, etc.).
       - type: discord
-        webhook_url: ${DISCORD_WEBHOOK_URL:-} # Override the default webhook per target (optional).
+        webhook_url: ${DISCORD_WEBHOOK_URL:-https://discord.com/api/webhooks/...}
         mentions:          # Override/extend global mentions just for this webhook.
           formula1: "<@&222333444555666777>"
       - type: autoscan

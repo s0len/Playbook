@@ -47,7 +47,6 @@ CONFIG_SCHEMA: Dict[str, Any] = {
                 "skip_existing": {"type": "boolean"},
                 "poll_interval": {"type": "integer"},
                 "link_mode": {"type": "string", "enum": _LINK_MODES},
-                "discord_webhook_url": {"type": ["string", "null"]},
                 "destination": {
                     "type": "object",
                     "properties": {

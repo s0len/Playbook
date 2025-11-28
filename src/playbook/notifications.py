@@ -893,7 +893,6 @@ class NotificationService:
         *,
         cache_dir: Path,
         destination_dir: Path,
-        default_discord_webhook: Optional[str],
         enabled: bool = True,
     ) -> None:
         self._settings = settings
@@ -901,7 +900,6 @@ class NotificationService:
         self._targets = self._build_targets(
             settings.targets,
             cache_dir,
-            default_discord_webhook,
             destination_dir,
         )
         self._throttle_map = settings.throttle
@@ -966,25 +964,15 @@ class NotificationService:
         self,
         targets_raw: List[Dict[str, Any]],
         cache_dir: Path,
-        default_discord_webhook: Optional[str],
         destination_dir: Path,
     ) -> List[NotificationTarget]:
         targets: List[NotificationTarget] = []
         configs = list(targets_raw)
-        has_discord_target = any(entry.get("type", "").lower() == "discord" for entry in configs)
-        if default_discord_webhook and not has_discord_target:
-            configs.append(
-                {
-                    "type": "discord",
-                    "webhook_url": default_discord_webhook,
-                    "batch": self._settings.batch_daily,
-                }
-            )
 
         for entry in configs:
             target_type = entry.get("type", "").lower()
             if target_type == "discord":
-                webhook = entry.get("webhook_url") or default_discord_webhook
+                webhook = entry.get("webhook_url")
                 if webhook:
                     batch = entry.get("batch")
                     mentions_override = _normalize_mentions_map(entry.get("mentions"))

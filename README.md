@@ -263,7 +263,6 @@ Start with `config/playbook.sample.yaml`. The schema mirrors `playbook.config` d
 | `skip_existing` | Leave destination files untouched unless a higher-priority release arrives. | `true` |
 | `poll_interval` | Seconds between passes when running continuously. `0` means run once. | `0` |
 | `link_mode` | Default link behavior: `hardlink`, `copy`, or `symlink`. | `hardlink` |
-| `discord_webhook_url` | Optional Discord webhook URL for processed-file notifications. Set via config or `DISCORD_WEBHOOK_URL`. | `null` |
 | `notifications.batch_daily` | When `true`, queue per-sport notifications for the day and edit a single Discord message instead of posting every file. | `false` |
 | `notifications.flush_time` | Local time boundary (`HH:MM`) used to roll daily batches forward. Entries before this time count toward the previous day. | `"00:00"` |
 | `notifications.mentions` | Map `sport_id` (supports glob patterns, plus `default`) to a Discord mention string (role ID, `@here`, etc.) to prepend to matching notifications. | `{}` |
@@ -274,7 +273,7 @@ Start with `config/playbook.sample.yaml`. The schema mirrors `playbook.config` d
 | `file_watcher.reconcile_interval` | Forces a full scan every _N_ seconds even if no events arrive, ensuring missed events are caught. | `900` |
 | `destination.*` | Default templates for root folder, season folder, and filename. | See sample |
 
-When `discord_webhook_url` is set (or `DISCORD_WEBHOOK_URL` is exported), Playbook will post a short embed to that channel each time a new file is linked or copied into the library. Enable `notifications.batch_daily` if you prefer a single rolling message per sport/day: the first processed file creates the message, later files edit it in place with cumulative details. Use `notifications.flush_time` to control when the “day” ends (useful for overnight events).
+Define Discord notifications under `notifications.targets`: each entry describes a destination (single-event or batched) and can have its own mention overrides. Enable `notifications.batch_daily` if you prefer a rolling per-day embed instead of individual posts. Use `notifications.flush_time` to control when the “day” ends (useful for overnight events).
 
 Use `notifications.mentions` to opt specific Discord roles or users into certain sports. Entries are keyed by the sport’s ID (plus an optional `default` fallback) and the value is any mentionable string (`<@&ROLE_ID>`, `@here`, etc.). Keys can include shell-style wildcards (e.g. `formula1_*`), and Playbook automatically falls back to the base ID before any variant suffix (`premier_league` also covers `premier_league_2025_26`). Mentions are prepended to both single-event and batched messages, so subscribers only get pinged for the sports they care about:
 
@@ -288,7 +287,7 @@ notifications:
 notifications:
   targets:
     - type: discord
-      webhook_url: https://discord.com/api/webhooks/...
+      webhook_url: ${DISCORD_WEBHOOK_URL:-}   # Pull from env vars if you like.
       mentions:
         formula1: "<@&999>"        # Overrides/extends the global mentions for this webhook only.
     - type: discord
@@ -297,7 +296,7 @@ notifications:
         premier_league: "<@&1234>"
 ```
 
-If you set `settings.discord_webhook_url` (or `DISCORD_WEBHOOK_URL`), Playbook now inserts an equivalent `targets: - type: discord` entry behind the scenes—even when other targets (Autoscan, Slack, etc.) are configured—so the env var path behaves just like an explicit target definition. Add more `targets` entries when you need extra Discord channels or other integrations.
+Older releases supported `settings.discord_webhook_url`; that field has been removed. If it still exists in your config you'll get a startup error — move the value into `notifications.targets` as shown above.
 
 #### Notification targets & Autoscan
 

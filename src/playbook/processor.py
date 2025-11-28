@@ -68,7 +68,6 @@ class Processor:
             settings.notifications,
             cache_dir=settings.cache_dir,
             destination_dir=settings.destination_dir,
-            default_discord_webhook=settings.discord_webhook_url if enable_notifications else None,
             enabled=enable_notifications,
         )
         self._kometa_trigger = build_kometa_trigger(settings.kometa_trigger)

@@ -133,7 +133,6 @@ class Settings:
     poll_interval: int = 0
     default_destination: DestinationTemplates = field(default_factory=DestinationTemplates)
     link_mode: str = "hardlink"
-    discord_webhook_url: Optional[str] = None
     notifications: NotificationSettings = field(default_factory=NotificationSettings)
     file_watcher: WatcherSettings = field(default_factory=WatcherSettings)
     kometa_trigger: KometaTriggerSettings = field(default_factory=KometaTriggerSettings)
@@ -484,11 +483,11 @@ def _build_settings(data: Dict[str, Any]) -> Settings:
         ),
     )
 
-    raw_webhook = data.get("discord_webhook_url")
-    if isinstance(raw_webhook, str):
-        discord_webhook_url = raw_webhook.strip() or None
-    else:
-        discord_webhook_url = raw_webhook if raw_webhook else None
+    if "discord_webhook_url" in data:
+        raise ValueError(
+            "'settings.discord_webhook_url' has been removed. "
+            "Please configure Discord webhooks under 'settings.notifications.targets' instead."
+        )
 
     notifications_raw = data.get("notifications", {}) or {}
     if not isinstance(notifications_raw, dict):
@@ -564,7 +563,6 @@ def _build_settings(data: Dict[str, Any]) -> Settings:
         poll_interval=int(data.get("poll_interval", 0)),
         default_destination=destination_defaults,
         link_mode=data.get("link_mode", "hardlink"),
-        discord_webhook_url=discord_webhook_url,
         notifications=notifications,
         file_watcher=watcher_settings,
         kometa_trigger=kometa_trigger,
