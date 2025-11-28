@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fnmatch
 import json
 import logging
 import smtplib
@@ -434,10 +435,22 @@ class DiscordTarget(NotificationTarget):
         mentions = getattr(self._settings, "mentions", {}) or {}
         if not mentions:
             return None
+
         if sport_id:
-            mention = mentions.get(str(sport_id))
+            sport_id_str = str(sport_id)
+            mention = mentions.get(sport_id_str)
             if mention:
                 return mention
+
+            wildcard_matches = [
+                (pattern, value)
+                for pattern, value in mentions.items()
+                if self._is_wildcard(pattern) and fnmatch.fnmatchcase(sport_id_str, pattern)
+            ]
+            if wildcard_matches:
+                wildcard_matches.sort(key=lambda item: len(item[0]), reverse=True)
+                return wildcard_matches[0][1]
+
         return mentions.get("default")
 
     def _apply_mention_prefix(self, text: str, sport_id: Optional[str], *, limit: int) -> str:
@@ -445,7 +458,12 @@ class DiscordTarget(NotificationTarget):
         if not mention:
             return text
         combined = f"{mention} {text}".strip()
+        LOGGER.debug("Applying mention '%s' to sport '%s'", mention, sport_id)
         return self._trim(combined, limit)
+
+    @staticmethod
+    def _is_wildcard(value: str) -> bool:
+        return any(char in value for char in "*?[")
 
     @staticmethod
     def _event_indicator(event_type: Optional[str]) -> str:
@@ -875,6 +893,7 @@ class NotificationService:
                 )
                 return
 
+        successes: List[str] = []
         for target in self._targets:
             if not target.enabled():
                 continue
@@ -882,8 +901,24 @@ class NotificationService:
                 target.send(event)
             except Exception as exc:  # pragma: no cover - defensive logging
                 LOGGER.warning("Notification target %s failed: %s", target.name, exc)
+            else:
+                successes.append(target.name)
 
         self._last_sent[event.sport_id] = event.timestamp
+        if successes:
+            LOGGER.info(
+                "Notification dispatched | sport=%s episode=%s event=%s targets=%s",
+                event.sport_id,
+                event.episode,
+                event.event_type,
+                ", ".join(successes),
+            )
+        else:
+            LOGGER.debug(
+                "Notification skipped or failed for %s (%s) - no targets succeeded",
+                event.sport_id,
+                event.event_type,
+            )
 
     def _build_targets(
         self,

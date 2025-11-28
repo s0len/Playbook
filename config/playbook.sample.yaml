@@ -41,7 +41,7 @@ settings:
     flush_time: "00:00"   # Local HH:MM (or HH:MM:SS) boundary for the batching day rollover. Useful for overnight events.
     mentions:             # Optional: ping specific Discord roles/users per sport (or use 'default' as a fallback).
       premier_league: "<@&123456789012345678>" # Replace with your role ID (Discord -> Enable Developer Mode -> copy role ID).
-      formula1: "<@&222333444555666777>"
+      formula1_*: "<@&222333444555666777>"    # Wildcards (via shell-style globs) cover yearly variants like formula1_2025.
       # default: "@here"   # Uncomment for a fallback mention when a sport ID isn’t listed.
     targets:              # Optional explicit targets. Leave empty to fall back to `discord_webhook_url`.
       - type: discord

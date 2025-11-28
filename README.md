@@ -266,7 +266,7 @@ Start with `config/playbook.sample.yaml`. The schema mirrors `playbook.config` d
 | `discord_webhook_url` | Optional Discord webhook URL for processed-file notifications. Set via config or `DISCORD_WEBHOOK_URL`. | `null` |
 | `notifications.batch_daily` | When `true`, queue per-sport notifications for the day and edit a single Discord message instead of posting every file. | `false` |
 | `notifications.flush_time` | Local time boundary (`HH:MM`) used to roll daily batches forward. Entries before this time count toward the previous day. | `"00:00"` |
-| `notifications.mentions` | Map `sport_id` (or `default`) to a Discord mention string (role ID, `@here`, etc.) to prepend to matching notifications. | `{}` |
+| `notifications.mentions` | Map `sport_id` (supports glob patterns, plus `default`) to a Discord mention string (role ID, `@here`, etc.) to prepend to matching notifications. | `{}` |
 | `file_watcher.enabled` | When `true`, Playbook watches the filesystem for changes rather than sleeping for `poll_interval`. | `false` |
 | `file_watcher.paths` | Directories to observe; defaults to `source_dir` when empty. Relative entries resolve under `source_dir`. | `[]` |
 | `file_watcher.include` / `ignore` | Glob filters to allow/skip events (e.g. ignore `*.part`). | `[]` / `["*.part","*.tmp"]` |
@@ -276,7 +276,7 @@ Start with `config/playbook.sample.yaml`. The schema mirrors `playbook.config` d
 
 When `discord_webhook_url` is set (or `DISCORD_WEBHOOK_URL` is exported), Playbook will post a short embed to that channel each time a new file is linked or copied into the library. Enable `notifications.batch_daily` if you prefer a single rolling message per sport/day: the first processed file creates the message, later files edit it in place with cumulative details. Use `notifications.flush_time` to control when the “day” ends (useful for overnight events).
 
-Use `notifications.mentions` to opt specific Discord roles or users into certain sports. Entries are keyed by the sport’s ID (plus an optional `default` fallback) and the value is any mentionable string (`<@&ROLE_ID>`, `@here`, etc.). Playbook prepends the mention to both single-event and batched messages, so subscribers only get pinged for the sports they care about:
+Use `notifications.mentions` to opt specific Discord roles or users into certain sports. Entries are keyed by the sport’s ID (plus an optional `default` fallback) and the value is any mentionable string (`<@&ROLE_ID>`, `@here`, etc.). Keys can include shell-style wildcards (e.g. `formula1_*`) so a single entry can cover every yearly variant of the same league. Playbook prepends the mention to both single-event and batched messages, so subscribers only get pinged for the sports they care about:
 
 ```yaml
 notifications:
