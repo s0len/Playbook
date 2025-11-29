@@ -209,7 +209,7 @@ class Processor:
         self.processed_cache.save()
         LOGGER.debug(self._format_log("Processed File Cache Cleared"))
 
-    def run_once(self) -> ProcessingStats:
+    def process_all(self) -> ProcessingStats:
         self._kometa_trigger_fired = False
         self.processed_cache.prune_missing_sources()
         runtimes = self._load_sports()

@@ -130,7 +130,6 @@ class Settings:
     cache_dir: Path
     dry_run: bool = False
     skip_existing: bool = True
-    poll_interval: int = 0
     default_destination: DestinationTemplates = field(default_factory=DestinationTemplates)
     link_mode: str = "hardlink"
     notifications: NotificationSettings = field(default_factory=NotificationSettings)
@@ -560,7 +559,6 @@ def _build_settings(data: Dict[str, Any]) -> Settings:
         cache_dir=cache_dir,
         dry_run=bool(data.get("dry_run", False)),
         skip_existing=bool(data.get("skip_existing", True)),
-        poll_interval=int(data.get("poll_interval", 0)),
         default_destination=destination_defaults,
         link_mode=data.get("link_mode", "hardlink"),
         notifications=notifications,

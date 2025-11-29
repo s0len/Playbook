@@ -45,7 +45,6 @@ CONFIG_SCHEMA: Dict[str, Any] = {
                 "cache_dir": {"type": "string"},
                 "dry_run": {"type": "boolean"},
                 "skip_existing": {"type": "boolean"},
-                "poll_interval": {"type": "integer"},
                 "link_mode": {"type": "string", "enum": _LINK_MODES},
                 "destination": {
                     "type": "object",

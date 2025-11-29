@@ -78,7 +78,7 @@ Key ideas:
 - Metadata is fetched once, normalized into `Show → Season → Episode` objects, and cached with TTLs.
 - Regex-based pattern packs map release filenames to metadata elements, including round/session aliasing.
 - Deterministic templating generates safe, Plex-friendly folder and file names.
-- Runtime switches (CLI flags and env vars) let you control dry-runs, polling intervals, logging, and target directories without editing the config.
+- Runtime switches (CLI flags and env vars) let you control dry-runs, watcher mode, logging, and target directories without editing the config.
 
 ## Why Playbook?
 
@@ -209,14 +209,13 @@ spec:
               tag: develop@sha256:586d8e06fae7d156d47130ed18b1a619a47d2c5378345e3f074ee6c282f09f02
               pullPolicy: Always
             env:
-              RUN_ONCE: false
+              WATCH_MODE: true
               LOG_LEVEL: INFO
               CONFIG_PATH: /config/playbook.yaml
               CACHE_DIR: /settings/cache
               LOG_DIR: /settings/logs
               SOURCE_DIR: /data/torrents/sport
               DESTINATION_DIR: /data/media/sport
-              PROCESS_INTERVAL: 60
             envFrom:
               - secretRef:
                   name: playbook-secret
@@ -245,7 +244,7 @@ Quick checklist:
 - Create a `playbook-secret` with any sensitive values (`kubectl create secret generic ... --from-literal=API_TOKEN=...`).
 - Mount a `playbook-configmap` containing your `playbook.yaml` (or use an `externalSecret`).
 - Backing storage: either bind an existing PVC (`settings`) for cache/logs or swap in another persistence strategy. The NFS block mounts downloads and media libraries.
-- Flip `RUN_ONCE`/`PROCESS_INTERVAL` for batch vs. continuous runs; the CLI picks up the same env vars as the Docker image.
+- Enable `file_watcher.enabled` (or set `WATCH_MODE=true`) to keep Playbook running continuously; leave it disabled for ad-hoc batch runs.
 - Add `reloader.stakater.com/auto: "true"` (already in the example) to hot-reload when the config map changes.
 
 ## Configuration Deep Dive
@@ -261,12 +260,11 @@ Start with `config/playbook.sample.yaml`. The schema mirrors `playbook.config` d
 | `cache_dir` | Metadata cache directory (`metadata/<sha1>.json`). Safe to delete to force refetch. | `/data/cache` |
 | `dry_run` | When `true`, logs intent but skips filesystem writes. | `false` |
 | `skip_existing` | Leave destination files untouched unless a higher-priority release arrives. | `true` |
-| `poll_interval` | Seconds between passes when running continuously. `0` means run once. | `0` |
 | `link_mode` | Default link behavior: `hardlink`, `copy`, or `symlink`. | `hardlink` |
 | `notifications.batch_daily` | When `true`, queue per-sport notifications for the day and edit a single Discord message instead of posting every file. | `false` |
 | `notifications.flush_time` | Local time boundary (`HH:MM`) used to roll daily batches forward. Entries before this time count toward the previous day. | `"00:00"` |
 | `notifications.mentions` | Map `sport_id` (supports glob patterns, plus `default`) to a Discord mention string (role ID, `@here`, etc.) to prepend to matching notifications. | `{}` |
-| `file_watcher.enabled` | When `true`, Playbook watches the filesystem for changes rather than sleeping for `poll_interval`. | `false` |
+| `file_watcher.enabled` | When `true`, Playbook keeps running and reacts to filesystem events; when `false`, the CLI performs a single pass and exits. | `false` |
 | `file_watcher.paths` | Directories to observe; defaults to `source_dir` when empty. Relative entries resolve under `source_dir`. | `[]` |
 | `file_watcher.include` / `ignore` | Glob filters to allow/skip events (e.g. ignore `*.part`). | `[]` / `["*.part","*.tmp"]` |
 | `file_watcher.debounce_seconds` | Minimum seconds between watcher-triggered runs. Batches bursts of events into a single processor pass. | `5` |
@@ -327,7 +325,7 @@ notifications:
 
 Every successful `new`/`changed` event sends the parent directory of the destination file as a `dir` query parameter. Add more rewrite entries if Autoscan lives inside a container with different mount points.
 
-Enable `file_watcher.enabled` to react to filesystem events instead of blind polling. The watcher listens for `create`, `modify`, and `move` events under `source_dir` (or the directories listed in `file_watcher.paths`). Globs in `include`/`ignore` cull noisy files, `debounce_seconds` batches rapid-fire events into a single processor run, and `reconcile_interval` guarantees a periodic full scan just in case the platform drops events.
+Enable `file_watcher.enabled` to react to filesystem events instead of relying on periodic scans. The watcher listens for `create`, `modify`, and `move` events under `source_dir` (or the directories listed in `file_watcher.paths`). Globs in `include`/`ignore` cull noisy files, `debounce_seconds` batches rapid-fire events into a single processor run, and `reconcile_interval` guarantees a periodic full scan just in case the platform drops events.
 
 ### 2. Sport Entries
 
@@ -434,14 +432,12 @@ Each variant inherits the base config, tweaks fields from the variant block, and
 |----------|-------------|---------|-------|
 | `--config PATH` | `CONFIG_PATH` | `/config/playbook.yaml` | Path to the YAML config. |
 | `--dry-run` | `DRY_RUN` | Inherits `settings.dry_run` | Force no-write mode. |
-| `--once` | `RUN_ONCE` | `true` unless overridden | Loop continuously when `false` _and_ `poll_interval > 0`. |
-| `--interval SECONDS` | `PROCESS_INTERVAL` | `settings.poll_interval` | Polling interval for continuous mode. |
 | `--verbose` | `VERBOSE` / `DEBUG` | `false` | Enables console DEBUG output. |
 | `--log-level LEVEL` | `LOG_LEVEL` | `INFO` (or `DEBUG` with `--verbose`) | File log level. |
 | `--console-level LEVEL` | `CONSOLE_LEVEL` | matches file level | Console log level. |
 | `--log-file PATH` | `LOG_FILE` / `LOG_DIR` | `./playbook.log` | Rotates to `*.previous` on start. |
 | `--clear-processed-cache` | `CLEAR_PROCESSED_CACHE` | `false` | Truthy to reset processed file cache before processing. |
-| `--watch` | `WATCH_MODE=true` | `settings.file_watcher.enabled` | Force filesystem watcher mode (ignores `poll_interval`). |
+| `--watch` | `WATCH_MODE=true` | `settings.file_watcher.enabled` | Force filesystem watcher mode (keep Playbook running). |
 | `--no-watch` | `WATCH_MODE=false` | `false` | Disable watcher mode even if the config enables it. |
 
 Environment variables always win over config defaults, and CLI flags win over environment variables.
@@ -460,12 +456,11 @@ Continuous mode example:
 
 ```bash
 docker run -d \
-  -e RUN_ONCE=false \
-  -e PROCESS_INTERVAL=900 \
-  ghcr.io/s0len/playbook:latest --interval 600
+  -e WATCH_MODE=true \
+  ghcr.io/s0len/playbook:latest --watch
 ```
 
-The CLI will sleep for `600` seconds between passes (flag) unless `PROCESS_INTERVAL` forces a different value.
+Playbook stays alive and reruns automatically whenever the watcher observes filesystem changes (or when the reconcile timer forces a full scan). Use `--no-watch` (or `WATCH_MODE=false`) for single-pass batch runs.
 
 ## Logging & Observability
 
@@ -699,7 +694,7 @@ Using `TV Shows` + `Plex Series Scanner` + `Personal Media Shows` ensures Plex t
 - **Metadata looks stale:** Delete the cache directory (`rm -rf /var/cache/playbook/metadata`) or lower `ttl_hours`.
 - **Hardlinks fail:** Set `link_mode: copy` (globally or per sport) when crossing filesystems or writing to SMB/NFS shares.
 - **Pattern matches but wrong season:** Adjust `season_selector` mappings or use `season_overrides` to force numbers for exhibitions/pre-season events.
-- **Need to re-run immediately:** Set `RUN_ONCE=true` (or use `--once`) to force a single pass even if `poll_interval` > 0.
+- **Need to re-run immediately:** Run `python -m playbook.cli --no-watch ...` (or set `WATCH_MODE=false`) to perform an on-demand single pass even if your watcher deployment is already running.
 
 ## Development
 

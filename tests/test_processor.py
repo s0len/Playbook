@@ -177,11 +177,11 @@ def test_processor_removes_changed_entries_when_metadata_changes(tmp_path, monke
         tracking_remove,
     )
 
-    processor.run_once()
+    processor.process_all()
     assert remove_calls == []
     assert call_counter["value"] == 1
 
-    processor.run_once()
+    processor.process_all()
     assert len(remove_calls) == 1
     demo_change = remove_calls[0]["demo"]
     assert demo_change.changed_seasons == set()
@@ -314,7 +314,7 @@ def test_metadata_change_relinks_and_removes_old_destination(tmp_path, monkeypat
     monkeypatch.setattr("playbook.processor.load_show", fake_load_show)
 
     processor = Processor(config, enable_notifications=False)
-    processor.run_once()
+    processor.process_all()
 
     old_destination = (
         settings.destination_dir
@@ -324,7 +324,7 @@ def test_metadata_change_relinks_and_removes_old_destination(tmp_path, monkeypat
     )
     assert old_destination.exists()
 
-    processor.run_once()
+    processor.process_all()
 
     new_destination = (
         settings.destination_dir
@@ -385,7 +385,7 @@ def test_skips_mac_resource_fork_files(tmp_path, monkeypatch) -> None:
     )
 
     processor = Processor(config, enable_notifications=False)
-    stats = processor.run_once()
+    stats = processor.process_all()
 
     assert stats.processed == 1
     assert stats.skipped == 0
@@ -440,7 +440,7 @@ def test_destination_stays_within_root_for_hostile_metadata(tmp_path, monkeypatc
     )
 
     processor = Processor(config, enable_notifications=False)
-    stats = processor.run_once()
+    stats = processor.process_all()
 
     assert stats.processed == 1
     files = [path for path in settings.destination_dir.rglob("*") if path.is_file()]
@@ -519,7 +519,7 @@ def test_symlink_sources_are_skipped(tmp_path, monkeypatch) -> None:
     )
 
     processor = Processor(config, enable_notifications=False)
-    stats = processor.run_once()
+    stats = processor.process_all()
 
     assert stats.processed == 1
     assert stats.skipped == 0

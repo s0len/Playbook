@@ -6,7 +6,6 @@ import difflib
 import logging
 import os
 import sys
-import time
 import traceback
 from pathlib import Path
 from typing import Optional, Tuple
@@ -46,16 +45,6 @@ def _env_bool(name: str) -> Optional[bool]:
     return _parse_env_bool(os.getenv(name))
 
 
-def _env_int(name: str) -> Tuple[Optional[int], bool]:
-    raw = os.getenv(name)
-    if raw is None or not raw.strip():
-        return None, False
-    try:
-        return int(raw), False
-    except ValueError:
-        return None, True
-
-
 def parse_args(argv: Optional[Tuple[str, ...]] = None) -> argparse.Namespace:
     arguments = list(argv or sys.argv[1:])
     if arguments:
@@ -75,13 +64,6 @@ def _parse_run_args(arguments: list[str]) -> argparse.Namespace:
         help="Path to the YAML configuration file",
     )
     parser.add_argument("--dry-run", action="store_true", help="Execute without writing to destination")
-    parser.add_argument("--once", action="store_true", help="Run a single pass and exit")
-    parser.add_argument(
-        "--interval",
-        type=int,
-        default=None,
-        help="Polling interval in seconds when running continuously",
-    )
     parser.add_argument("--verbose", action="store_true", help="Enable debug logging on the console")
     parser.add_argument(
         "--log-level",
@@ -260,18 +242,6 @@ def apply_runtime_overrides(config: AppConfig, args: argparse.Namespace) -> None
         dry_run = env_dry_run
     config.settings.dry_run = bool(dry_run)
 
-    interval = args.interval if args.interval is not None else config.settings.poll_interval
-    env_interval, invalid_interval = _env_int("PROCESS_INTERVAL")
-    if invalid_interval:
-        LOGGER.warning(
-            "Invalid integer for PROCESS_INTERVAL: %s",
-            os.getenv("PROCESS_INTERVAL"),
-        )
-    if env_interval is not None:
-        interval = env_interval
-    if interval is not None:
-        config.settings.poll_interval = interval
-
     source_override = os.getenv("SOURCE_DIR")
     dest_override = os.getenv("DESTINATION_DIR")
     cache_override = os.getenv("CACHE_DIR")
@@ -363,15 +333,10 @@ def _execute_run(args: argparse.Namespace) -> int:
             LOGGER.info("Notifications disabled for this run because the processed cache was cleared")
         processor.clear_processed_cache()
 
-    env_run_once = _env_bool("RUN_ONCE")
-    default_run_once = True if env_run_once is None else env_run_once
-    once = args.once or default_run_once
-    interval = config.settings.poll_interval
-
     LOGGER.info("Starting Playbook%s", " (dry-run)" if config.settings.dry_run else "")
 
     watcher_settings = config.settings.file_watcher
-    if watcher_settings.enabled and not once:
+    if watcher_settings.enabled:
         try:
             FileWatcherLoop(processor, watcher_settings).run_forever()
         except WatchdogUnavailableError as exc:
@@ -380,20 +345,10 @@ def _execute_run(args: argparse.Namespace) -> int:
         except KeyboardInterrupt:
             LOGGER.info("Interrupted by user")
         return 0
-    if watcher_settings.enabled and once:
-        LOGGER.warning("--once requested; skipping filesystem watcher and running a single pass instead.")
 
+    LOGGER.info("Filesystem watcher disabled; running a single processing pass.")
     try:
-        while True:
-            processor.run_once()
-            if once:
-                break
-            if interval <= 0:
-                LOGGER.info("No polling interval configured; exiting after one pass")
-                break
-            if LOGGER.isEnabledFor(logging.DEBUG):
-                LOGGER.debug("Sleeping for %s seconds", interval)
-            time.sleep(interval)
+        processor.process_all()
     except KeyboardInterrupt:
         LOGGER.info("Interrupted by user")
     return 0

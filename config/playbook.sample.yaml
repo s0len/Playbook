@@ -29,7 +29,6 @@ settings:
   ####################################################################
   dry_run: false          # When true, identify matches and log actions without touching the filesystem.
   skip_existing: true     # When true, leave destinations alone unless a better (e.g. PROPER/REPACK) source is detected.
-  poll_interval: 0        # Seconds between passes in watch mode. Use 0 to run once and exit.
   link_mode: hardlink     # Global default for linking: hardlink | copy | symlink.
 
   ####################################################################
@@ -67,7 +66,7 @@ settings:
   # FILESYSTEM WATCHER (OPTIONAL)
   ####################################################################
   file_watcher:
-    enabled: false        # When true, rely on filesystem events instead of fixed poll intervals.
+    enabled: false        # When true, Playbook stays running and reacts to filesystem events automatically. When false, the CLI runs a single pass and exits.
     paths: []             # Directories to watch; defaults to source_dir when empty. Relative paths resolve under source_dir.
     include: []           # Optional glob filters (e.g. "*.mkv") to limit which files trigger a run.
     ignore:               # Globs that should never trigger a run.
