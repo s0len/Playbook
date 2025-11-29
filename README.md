@@ -629,34 +629,34 @@ These are examples that pair well with the built-in pattern packs and metadata f
 
 ```text
 # Premier League (EPL) 1080p releases by NiGHTNiNJAS
-EPL.*1080p.*NiGHTNiNJAS
+epl.*1080p.*nightninjas
 
 # Formula 1 multi-session weekends by MWR
 (F1|Formula.*1).*\d{4}.Round\d+.*[^.]+\.*?(Drivers.*Press.*Conference|Weekend.*Warm.*Up|FP\d?|Practice|Sprint.Qualifying|Sprint|Qualifying|Pre.Qualifying|Post.Qualifying|Race|Pre.Race|Post.Race|Sprint.Race|Feature.*Race).*1080p.*MWR
 
 # Formula E by MWR
-[Ff][Oo][Rr][Mm][Uu][Ll][Aa][Ee]\.\d{4}\.Round\d+\.(?:[A-Za-z]+(?:\.[A-Za-z]+)?)\.(?:Preview.Show|[Qq]ualifying|[Rr]ace)\..*h264.*-MWR
+formulae\.\d{4}\.round\d+\.(?:[A-Za-z]+(?:\.[A-Za-z]+)?)\.(?:preview.show|qualifying|race)\..*h264.*-mwr
 
 # IndyCar by MWR
-[Ii][Nn][Dd][Yy][Cc][Aa][Rr].*\d{4}\.Round\d+\.(?:[A-Za-z]+(?:\.[A-Za-z]+)?)\.(?:[Qq]ualifying|[Rr]ace)\..*h264.*-MWR
+indycar.*\d{4}\.round\d+\.(?:[A-Za-z]+(?:\.[A-Za-z]+)?)\.(?:qualifying|race)\..*h264.*-MWR
 
 # Isle of Man TT by DNU
-[Ii]sle.[Oo]f.[Mm]an.[Tt][Tt].*DNU
+isle.of.man.tt.*DNU
 
 # MotoGP by DNU
-([Mm][Oo][Tt][Oo][Gg][Pp]).*\d{4}.*Round\d.*((FP\d?|[Pp][Rr][Aa][Cc][Tt][Ii][Cc][Ee]|[Ss][Pp][Rr][Ii][Nn][Tt]|[Qq][Uu][Aa][Ll][Ii][Ff][Yy][Ii][Nn][Gg]|Q1|Q2|[Rr][Aa][Cc][Ee])).*DNU
+motogp.*\d{4}.*round\d.*((fp\d?|practice|sprint|qualifying|q1|q2|race)).*DNU
 
 # NBA 1080p by GAMETiME
-NBA.*1080p.*GAMETiME
+nba.*1080p.*gametime
 
 # NFL by NiGHTNiNJAS
-NFL.*NiGHTNiNJAS
+nfl.*nightninjas
 
 # UFC by VERUM
-[Uu][Ff][Cc][ ._-]?\d{3}.*[Vv][Ee][Rr][Uu][Mm]
+ufc[ ._-].*?\d{3}.*verum
 
 # WorldSBK / WorldSSP / WorldSSP300 by MWR
-([Ww][Ss][Bb][Kk]|[Ww][Ss][Ss][Pp]|[Ww][Ss][Ss][Pp]300)\.\d{4}\.Round\d+\.[^.]+\.(FP\d?|[Ss]eason\.[Pp]review|[Ss]uperpole|[Rr]ace\.[Oo]ne|[Rr]ace\.[Tt]wo|[Ww]arm\.[Uu]p(\.[Oo]ne|\.[Tt]wo)?|[Ww]eekend\.[Hh]ighlights)\..*h264..*MWR
+(wsbk|wssp|wssp300).*\d{4}.round\d+.[^.]+.(fp\d?|season.preview|superpole|race.one|race.two|war.up(one|two)?|weekend.highlights).*h264.*mwr
 ```
 
 UFC releases must now include the matchup slug (e.g., `UFC 322 Della Maddalena vs Makhachev`) so Playbook can align each file with the correct metadata season. Event numbers alone are ignored by the new title-based matching.

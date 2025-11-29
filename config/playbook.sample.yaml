@@ -232,12 +232,12 @@ sports:
     variants:
       - year: 2025
         metadata:
-          url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/indycar/2025.yaml
+          url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/indycar-series/2025.yaml
           show_key: NTT IndyCar Series 2025
           ttl_hours: 24
       - year: 2026
         metadata:
-          url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/indycar/2026.yaml
+          url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/indycar-series/2026.yaml
           show_key: NTT IndyCar Series 2026
           ttl_hours: 24
 
