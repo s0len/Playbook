@@ -421,6 +421,7 @@ def match_file_to_episode(
     *,
     diagnostics: Optional[List[Tuple[str, str]]] = None,
     trace: Optional[Dict[str, Any]] = None,
+    suppress_warnings: bool = False,
 ) -> Optional[Dict[str, object]]:
     matched_patterns = 0
     failed_resolutions: List[str] = []
@@ -482,7 +483,7 @@ def match_file_to_episode(
             )
             LOGGER.debug("Season not resolved for file %s with pattern %s", filename, pattern_runtime.config.regex)
             failed_resolutions.append(message)
-            severity = "ignored" if sport.allow_unmatched else "warning"
+            severity = "ignored" if (sport.allow_unmatched or suppress_warnings) else "warning"
             record(severity, message)
             if trace_attempts is not None:
                 trace_attempts.append(
@@ -535,7 +536,7 @@ def match_file_to_episode(
                 pattern_runtime.config.regex,
             )
             failed_resolutions.append(message)
-            severity = "ignored" if sport.allow_unmatched else "warning"
+            severity = "ignored" if (sport.allow_unmatched or suppress_warnings) else "warning"
             record(severity, message)
             if trace_attempts is not None:
                 trace_entry = {
@@ -593,7 +594,7 @@ def match_file_to_episode(
             }
         return result
     if failed_resolutions:
-        log_fn = LOGGER.debug if sport.allow_unmatched else LOGGER.warning
+        log_fn = LOGGER.debug if (sport.allow_unmatched or suppress_warnings) else LOGGER.warning
         log_fn(
             "File %s matched %d pattern(s) but could not resolve:%s%s",
             filename,
@@ -605,7 +606,7 @@ def match_file_to_episode(
             f"Matched {matched_patterns} pattern(s) but could not resolve: "
             f"{'; '.join(failed_resolutions)}"
         )
-        severity = "ignored" if sport.allow_unmatched else "warning"
+        severity = "ignored" if (sport.allow_unmatched or suppress_warnings) else "warning"
         record(severity, message)
         if trace is not None:
             trace["status"] = "unresolved"

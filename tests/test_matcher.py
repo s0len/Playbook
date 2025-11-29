@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import logging
 from typing import Dict, List, Tuple
+
+import pytest
 
 from playbook.config import (
     DestinationTemplates,
@@ -94,6 +97,36 @@ def test_match_file_to_episode_warns_when_season_missing() -> None:
     severity, message = diagnostics[0]
     assert severity == "warning"
     assert "season not resolved" in message
+
+
+def test_match_file_to_episode_suppresses_warnings_when_requested(caplog) -> None:
+    pattern = PatternConfig(
+        regex=r"(?i)^(?P<round>\d+)[._-]*(?P<session>[A-Z0-9]+)",
+        season_selector=SeasonSelector(mode="round", group="round"),
+        priority=10,
+    )
+
+    sport = build_sport([pattern])
+    show, _ = build_show()
+
+    patterns = compile_patterns(sport)
+
+    diagnostics: List[Tuple[str, str]] = []
+    caplog.set_level(logging.WARNING, logger="playbook.matcher")
+    result = match_file_to_episode(
+        "99.fp1.release.mkv",
+        sport,
+        show,
+        patterns,
+        diagnostics=diagnostics,
+        suppress_warnings=True,
+    )
+
+    assert result is None
+    assert diagnostics
+    severity, _ = diagnostics[0]
+    assert severity == "ignored"
+    assert not any(record.levelno >= logging.WARNING for record in caplog.records)
 
 
 def test_match_file_to_episode_includes_trace_details() -> None:

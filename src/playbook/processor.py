@@ -272,7 +272,7 @@ class Processor:
                 for source_path in filtered_source_files:
                     handled, diagnostics = self._process_single_file(source_path, runtimes, stats)
                     if not handled:
-                        if self._should_suppress_sample_ignored(source_path):
+                        if is_sample_file:
                             stats.register_ignored(suppressed_reason="sample")
                         else:
                             detail = self._format_ignored_detail(source_path, diagnostics)
@@ -388,6 +388,7 @@ class Processor:
         suffix = source_path.suffix.lower()
         matching_runtimes = [runtime for runtime in runtimes if suffix in runtime.extensions]
         ignored_reasons: List[Tuple[str, str, Optional[str]]] = []
+        is_sample_file = self._should_suppress_sample_ignored(source_path)
 
         if not matching_runtimes:
             message = f"No configured sport accepts extension '{suffix or '<no extension>'}'"
@@ -445,6 +446,7 @@ class Processor:
                 runtime.patterns,
                 diagnostics=detection_messages,
                 trace=trace_context,
+                suppress_warnings=is_sample_file,
             )
             if trace_context is not None:
                 trace_context["diagnostics"] = [
