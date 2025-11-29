@@ -24,7 +24,7 @@ from .watcher import FileWatcherLoop, WatchdogUnavailableError
 LOGGER = logging.getLogger(__name__)
 CONSOLE = Console()
 LOG_LEVEL_CHOICES = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
-LOG_RECORD_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+LOG_RECORD_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s\n%(message)s\n"
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}

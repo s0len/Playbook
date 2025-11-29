@@ -469,11 +469,10 @@ The CLI will sleep for `600` seconds between passes (flag) unless `PROCESS_INTER
 
 ## Logging & Observability
 
-- Logs stream to the console with rich formatting and to `playbook.log` on disk.
-- On each run, the previous log rotates to `playbook.log.previous`.
-- `VERBOSE=true` or `--verbose` enables DEBUG-level diagnostics, including pattern/alias decisions.
-- Summaries include processed/skipped/ignored counts; enable DEBUG to see per-file reasons and warnings.
-- `LOG_DIR=/var/log/playbook` is honored by the Docker entrypoint, keeping container logs persistent.
+- Log entries now use a multi-line block layout (timestamp + header + aligned key/value pairs) so dense sections breathe.
+- INFO-level runs show grouped counts per sport/source; add `--verbose`/`LOG_LEVEL=DEBUG` to expand into per-file diagnostics.
+- Each pass ends with a `Run Recap` block (duration, totals, Kometa trigger state, destination samples) for quick scanning.
+- On each run, the previous log rotates to `playbook.log.previous`, and `LOG_DIR=/var/log/playbook` keeps files persistent.
 
 ## Directory Conventions
 

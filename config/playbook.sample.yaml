@@ -33,6 +33,13 @@ settings:
   link_mode: hardlink     # Global default for linking: hardlink | copy | symlink.
 
   ####################################################################
+  # LOGGING
+  ####################################################################
+  # Logs now default to a human-friendly block layout with blank lines between sections.
+  # Use VERBOSE=true or LOG_LEVEL=DEBUG when you want per-file diagnostics; INFO keeps
+  # the log airy by only showing grouped counts per sport/source.
+
+  ####################################################################
   # NOTIFICATIONS
   ####################################################################
   notifications:
