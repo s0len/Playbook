@@ -23,8 +23,6 @@ COPY README.md LICENSE /app/
 RUN chmod +x /entrypoint.sh
 
 ENV CONFIG_PATH=/config/playbook.yaml \
-    PROCESS_INTERVAL=0 \
-    RUN_ONCE=true \
     DRY_RUN=false
 
 ENV PYTHONPATH=/app/src

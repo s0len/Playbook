@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Dict, List
 
@@ -38,6 +39,20 @@ def _build_raw_metadata(episode_number: int) -> dict:
             }
         }
     }
+
+
+def _make_processor(tmp_path, *, dry_run: bool = True) -> Processor:
+    settings = Settings(
+        source_dir=tmp_path / "source",
+        destination_dir=tmp_path / "dest",
+        cache_dir=tmp_path / "cache",
+        dry_run=dry_run,
+    )
+    settings.source_dir.mkdir(parents=True, exist_ok=True)
+    settings.destination_dir.mkdir(parents=True, exist_ok=True)
+    settings.cache_dir.mkdir(parents=True, exist_ok=True)
+    config = AppConfig(settings=settings, sports=[])
+    return Processor(config, enable_notifications=False)
 
 
 def test_metadata_fingerprint_tracks_episode_changes(tmp_path) -> None:
@@ -162,11 +177,11 @@ def test_processor_removes_changed_entries_when_metadata_changes(tmp_path, monke
         tracking_remove,
     )
 
-    processor.run_once()
+    processor.process_all()
     assert remove_calls == []
     assert call_counter["value"] == 1
 
-    processor.run_once()
+    processor.process_all()
     assert len(remove_calls) == 1
     demo_change = remove_calls[0]["demo"]
     assert demo_change.changed_seasons == set()
@@ -176,6 +191,70 @@ def test_processor_removes_changed_entries_when_metadata_changes(tmp_path, monke
     assert demo_change.invalidate_all is False
     assert call_counter["value"] == 2
     assert processor.metadata_fingerprints.get("demo") == fingerprint_v2
+
+
+def test_detailed_summary_groups_counts_with_info(tmp_path, caplog) -> None:
+    processor = _make_processor(tmp_path)
+    stats = ProcessingStats()
+    detail_token = "IGNORED_DETAIL_ENTRY"
+    stats.register_ignored(detail_token, sport_id="sport-a")
+    stats.register_warning("demo: sport-a: warn", sport_id="sport-a")
+    stats.register_error("demo: sport-a: error", sport_id="sport-a")
+    stats.register_skipped("skip reason", is_error=False)
+
+    from playbook import processor as processor_module
+
+    original_level = processor_module.LOGGER.level
+    processor_module.LOGGER.setLevel(logging.INFO)
+    try:
+        with caplog.at_level(logging.INFO, logger="playbook.processor"):
+            processor._log_detailed_summary(stats)
+    finally:
+        processor_module.LOGGER.setLevel(original_level)
+
+    text = caplog.text
+    assert "Detailed Summary" in text
+    assert "sport-a: 1 entry" in text
+    assert detail_token not in text
+    assert "Run with --verbose for per-warning details." in text
+
+
+def test_detailed_summary_shows_details_with_debug(tmp_path, caplog) -> None:
+    processor = _make_processor(tmp_path)
+    stats = ProcessingStats()
+    detail_token = "IGNORED_DETAIL_ENTRY"
+    stats.register_ignored(detail_token, sport_id="sport-a")
+    stats.register_warning("demo: sport-a: warn", sport_id="sport-a")
+
+    from playbook import processor as processor_module
+
+    original_level = processor_module.LOGGER.level
+    processor_module.LOGGER.setLevel(logging.DEBUG)
+    try:
+        with caplog.at_level(logging.DEBUG, logger="playbook.processor"):
+            processor._log_detailed_summary(stats, level=logging.DEBUG)
+    finally:
+        processor_module.LOGGER.setLevel(original_level)
+
+    text = caplog.text
+    assert detail_token in text
+    assert "demo: sport-a: warn" in text
+
+
+def test_run_recap_lists_destinations(tmp_path, caplog) -> None:
+    processor = _make_processor(tmp_path)
+    stats = ProcessingStats()
+    stats.register_processed()
+    processor._touched_destinations = {"Demo/Season 01/Race.mkv"}
+    processor._kometa_trigger_fired = True
+
+    with caplog.at_level(logging.INFO, logger="playbook.processor"):
+        processor._log_run_recap(stats, duration=1.25)
+
+    text = caplog.text
+    assert "Run Recap" in text
+    assert "Kometa Triggered" in text and "yes" in text
+    assert "Demo/Season 01/Race.mkv" in text
 
 
 def test_metadata_change_relinks_and_removes_old_destination(tmp_path, monkeypatch) -> None:
@@ -235,7 +314,7 @@ def test_metadata_change_relinks_and_removes_old_destination(tmp_path, monkeypat
     monkeypatch.setattr("playbook.processor.load_show", fake_load_show)
 
     processor = Processor(config, enable_notifications=False)
-    processor.run_once()
+    processor.process_all()
 
     old_destination = (
         settings.destination_dir
@@ -245,7 +324,7 @@ def test_metadata_change_relinks_and_removes_old_destination(tmp_path, monkeypat
     )
     assert old_destination.exists()
 
-    processor.run_once()
+    processor.process_all()
 
     new_destination = (
         settings.destination_dir
@@ -306,7 +385,7 @@ def test_skips_mac_resource_fork_files(tmp_path, monkeypatch) -> None:
     )
 
     processor = Processor(config, enable_notifications=False)
-    stats = processor.run_once()
+    stats = processor.process_all()
 
     assert stats.processed == 1
     assert stats.skipped == 0
@@ -361,7 +440,7 @@ def test_destination_stays_within_root_for_hostile_metadata(tmp_path, monkeypatc
     )
 
     processor = Processor(config, enable_notifications=False)
-    stats = processor.run_once()
+    stats = processor.process_all()
 
     assert stats.processed == 1
     files = [path for path in settings.destination_dir.rglob("*") if path.is_file()]
@@ -440,7 +519,7 @@ def test_symlink_sources_are_skipped(tmp_path, monkeypatch) -> None:
     )
 
     processor = Processor(config, enable_notifications=False)
-    stats = processor.run_once()
+    stats = processor.process_all()
 
     assert stats.processed == 1
     assert stats.skipped == 0
@@ -458,7 +537,7 @@ def test_should_suppress_sample_variants() -> None:
     assert not Processor._should_suppress_sample_ignored(Path("nba.example.1080p.mkv"))
 
 
-def test_processor_triggers_per_batch_when_enabled(tmp_path, monkeypatch) -> None:
+def test_processor_triggers_post_run_when_needed(tmp_path, monkeypatch) -> None:
     cache_dir = tmp_path / "cache"
     source_dir = tmp_path / "source"
     dest_dir = tmp_path / "dest"
@@ -466,7 +545,7 @@ def test_processor_triggers_per_batch_when_enabled(tmp_path, monkeypatch) -> Non
     source_dir.mkdir()
     dest_dir.mkdir()
 
-    kometa_settings = KometaTriggerSettings(enabled=True, per_batch=True)
+    kometa_settings = KometaTriggerSettings(enabled=True)
     settings = Settings(
         source_dir=source_dir,
         destination_dir=dest_dir,
@@ -492,12 +571,13 @@ def test_processor_triggers_per_batch_when_enabled(tmp_path, monkeypatch) -> Non
 
     processor._kometa_trigger = dummy_trigger
     processor._kometa_trigger_fired = False
-    processor._trigger_per_batch_if_needed(stats)
+    processor._kometa_trigger_needed = True
+    processor._trigger_post_run_trigger_if_needed(stats)
 
     assert dummy_trigger.calls == 1
 
 
-def test_processor_per_batch_skips_when_no_activity(tmp_path, monkeypatch) -> None:
+def test_processor_post_run_skips_when_not_needed(tmp_path, monkeypatch) -> None:
     cache_dir = tmp_path / "cache"
     source_dir = tmp_path / "source"
     dest_dir = tmp_path / "dest"
@@ -505,7 +585,7 @@ def test_processor_per_batch_skips_when_no_activity(tmp_path, monkeypatch) -> No
     source_dir.mkdir()
     dest_dir.mkdir()
 
-    kometa_settings = KometaTriggerSettings(enabled=True, per_batch=True)
+    kometa_settings = KometaTriggerSettings(enabled=True)
     settings = Settings(
         source_dir=source_dir,
         destination_dir=dest_dir,
@@ -531,7 +611,8 @@ def test_processor_per_batch_skips_when_no_activity(tmp_path, monkeypatch) -> No
 
     processor._kometa_trigger = dummy_trigger
     processor._kometa_trigger_fired = False
-    processor._trigger_per_batch_if_needed(stats)
+    processor._kometa_trigger_needed = False
+    processor._trigger_post_run_trigger_if_needed(stats)
 
     assert dummy_trigger.calls == 0
 

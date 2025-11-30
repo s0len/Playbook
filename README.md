@@ -56,6 +56,7 @@
     - [Triggering Kometa After Ingests](#triggering-kometa-after-ingests)
       - [Kubernetes CronJob trigger](#kubernetes-cronjob-trigger)
       - [Docker Run trigger](#docker-run-trigger)
+        - [Docker prerequisites inside the Playbook container](#docker-prerequisites-inside-the-playbook-container)
       - [Manual trigger CLI](#manual-trigger-cli)
   - [Downloading Sports with Autobrr](#downloading-sports-with-autobrr)
     - [Basic Autobrr setup](#basic-autobrr-setup)
@@ -78,7 +79,7 @@ Key ideas:
 - Metadata is fetched once, normalized into `Show → Season → Episode` objects, and cached with TTLs.
 - Regex-based pattern packs map release filenames to metadata elements, including round/session aliasing.
 - Deterministic templating generates safe, Plex-friendly folder and file names.
-- Runtime switches (CLI flags and env vars) let you control dry-runs, polling intervals, logging, and target directories without editing the config.
+- Runtime switches (CLI flags and env vars) let you control dry-runs, watcher mode, logging, and target directories without editing the config.
 
 ## Why Playbook?
 
@@ -209,14 +210,13 @@ spec:
               tag: develop@sha256:586d8e06fae7d156d47130ed18b1a619a47d2c5378345e3f074ee6c282f09f02
               pullPolicy: Always
             env:
-              RUN_ONCE: false
+              WATCH_MODE: true
               LOG_LEVEL: INFO
               CONFIG_PATH: /config/playbook.yaml
               CACHE_DIR: /settings/cache
               LOG_DIR: /settings/logs
               SOURCE_DIR: /data/torrents/sport
               DESTINATION_DIR: /data/media/sport
-              PROCESS_INTERVAL: 60
             envFrom:
               - secretRef:
                   name: playbook-secret
@@ -245,7 +245,7 @@ Quick checklist:
 - Create a `playbook-secret` with any sensitive values (`kubectl create secret generic ... --from-literal=API_TOKEN=...`).
 - Mount a `playbook-configmap` containing your `playbook.yaml` (or use an `externalSecret`).
 - Backing storage: either bind an existing PVC (`settings`) for cache/logs or swap in another persistence strategy. The NFS block mounts downloads and media libraries.
-- Flip `RUN_ONCE`/`PROCESS_INTERVAL` for batch vs. continuous runs; the CLI picks up the same env vars as the Docker image.
+- Enable `file_watcher.enabled` (or set `WATCH_MODE=true`) to keep Playbook running continuously; leave it disabled for ad-hoc batch runs.
 - Add `reloader.stakater.com/auto: "true"` (already in the example) to hot-reload when the config map changes.
 
 ## Configuration Deep Dive
@@ -261,19 +261,41 @@ Start with `config/playbook.sample.yaml`. The schema mirrors `playbook.config` d
 | `cache_dir` | Metadata cache directory (`metadata/<sha1>.json`). Safe to delete to force refetch. | `/data/cache` |
 | `dry_run` | When `true`, logs intent but skips filesystem writes. | `false` |
 | `skip_existing` | Leave destination files untouched unless a higher-priority release arrives. | `true` |
-| `poll_interval` | Seconds between passes when running continuously. `0` means run once. | `0` |
 | `link_mode` | Default link behavior: `hardlink`, `copy`, or `symlink`. | `hardlink` |
-| `discord_webhook_url` | Optional Discord webhook URL for processed-file notifications. Set via config or `DISCORD_WEBHOOK_URL`. | `null` |
 | `notifications.batch_daily` | When `true`, queue per-sport notifications for the day and edit a single Discord message instead of posting every file. | `false` |
 | `notifications.flush_time` | Local time boundary (`HH:MM`) used to roll daily batches forward. Entries before this time count toward the previous day. | `"00:00"` |
-| `file_watcher.enabled` | When `true`, Playbook watches the filesystem for changes rather than sleeping for `poll_interval`. | `false` |
+| `notifications.mentions` | Map `sport_id` (supports glob patterns, plus `default`) to a Discord mention string (role ID, `@here`, etc.) to prepend to matching notifications. | `{}` |
+| `file_watcher.enabled` | When `true`, Playbook keeps running and reacts to filesystem events; when `false`, the CLI performs a single pass and exits. | `false` |
 | `file_watcher.paths` | Directories to observe; defaults to `source_dir` when empty. Relative entries resolve under `source_dir`. | `[]` |
 | `file_watcher.include` / `ignore` | Glob filters to allow/skip events (e.g. ignore `*.part`). | `[]` / `["*.part","*.tmp"]` |
 | `file_watcher.debounce_seconds` | Minimum seconds between watcher-triggered runs. Batches bursts of events into a single processor pass. | `5` |
 | `file_watcher.reconcile_interval` | Forces a full scan every _N_ seconds even if no events arrive, ensuring missed events are caught. | `900` |
 | `destination.*` | Default templates for root folder, season folder, and filename. | See sample |
 
-When `discord_webhook_url` is set (or `DISCORD_WEBHOOK_URL` is exported), Playbook will post a short embed to that channel each time a new file is linked or copied into the library. Enable `notifications.batch_daily` if you prefer a single rolling message per sport/day: the first processed file creates the message, later files edit it in place with cumulative details. Use `notifications.flush_time` to control when the “day” ends (useful for overnight events).
+Define Discord notifications under `notifications.targets`: each entry describes a destination (single-event or batched) and can have its own mention overrides. Enable `notifications.batch_daily` if you prefer a rolling per-day embed instead of individual posts. Use `notifications.flush_time` to control when the “day” ends (useful for overnight events).
+
+Use `notifications.mentions` to opt specific Discord roles or users into certain sports. Entries are keyed by the sport’s ID (plus an optional `default` fallback) and the value is any mentionable string (`<@&ROLE_ID>`, `@here`, etc.). Keys can include shell-style wildcards (e.g. `formula1_*`), and Playbook automatically falls back to the base ID before any variant suffix (`premier_league` also covers `premier_league_2025_26`). Mentions are prepended to both single-event and batched messages, so subscribers only get pinged for the sports they care about:
+
+```yaml
+notifications:
+  mentions:
+    premier_league: "<@&123456789012345678>"
+    formula1: "<@&222333444555666777>"   # Automatically applies to formula1_2025, formula1_2026, etc.
+    default: "@everyone"           # optional fallback when no explicit entry exists
+
+notifications:
+  targets:
+    - type: discord
+      webhook_url: ${DISCORD_WEBHOOK_URL}   # Pull from env vars if you like.
+      mentions:
+        formula1: "<@&999>"        # Overrides/extends the global mentions for this webhook only.
+    - type: discord
+      webhook_url: https://discord.com/api/webhooks/alt
+      mentions:
+        premier_league: "<@&1234>"
+```
+
+Older releases supported `settings.discord_webhook_url`; that field has been removed. If it still exists in your config you'll get a startup error — move the value into `notifications.targets` as shown above.
 
 #### Notification targets & Autoscan
 
@@ -304,7 +326,7 @@ notifications:
 
 Every successful `new`/`changed` event sends the parent directory of the destination file as a `dir` query parameter. Add more rewrite entries if Autoscan lives inside a container with different mount points.
 
-Enable `file_watcher.enabled` to react to filesystem events instead of blind polling. The watcher listens for `create`, `modify`, and `move` events under `source_dir` (or the directories listed in `file_watcher.paths`). Globs in `include`/`ignore` cull noisy files, `debounce_seconds` batches rapid-fire events into a single processor run, and `reconcile_interval` guarantees a periodic full scan just in case the platform drops events.
+Enable `file_watcher.enabled` to react to filesystem events instead of relying on periodic scans. The watcher listens for `create`, `modify`, and `move` events under `source_dir` (or the directories listed in `file_watcher.paths`). Globs in `include`/`ignore` cull noisy files, `debounce_seconds` batches rapid-fire events into a single processor run, and `reconcile_interval` guarantees a periodic full scan just in case the platform drops events.
 
 ### 2. Sport Entries
 
@@ -354,7 +376,7 @@ Key fields:
 
 - **`regex`** – Must supply the capture groups consumed by selectors and templates (e.g., `round`, `session`, `location`).
 - **`season_selector`** – Maps captures to a season. Supported modes: `round`, `key`, `title`, `sequential`. Add `offset` or `mapping` for fine-grained control.
-- **`episode_selector`** – Chooses which capture identifies an episode. `allow_fallback_to_title` lets the matcher fall back to fuzzy title comparisons.
+- **`episode_selector`** – Chooses which capture identifies an episode. `allow_fallback_to_title` lets the matcher fall back to fuzzy title comparisons, and `default_value` forces a canonical session when the regex doesn’t capture one (useful for release groups that omit `Prelims`/`Main Card` tags).
 - **`session_aliases`** – Augment metadata aliases with release-specific tokens (case-insensitive, normalized).
 - **`priority`** – Lower numbers win when multiple patterns match the same file (defaults to `100`).
 - **`destination_*` overrides** – Apply sport- or pattern-specific templates without touching global settings.
@@ -411,14 +433,12 @@ Each variant inherits the base config, tweaks fields from the variant block, and
 |----------|-------------|---------|-------|
 | `--config PATH` | `CONFIG_PATH` | `/config/playbook.yaml` | Path to the YAML config. |
 | `--dry-run` | `DRY_RUN` | Inherits `settings.dry_run` | Force no-write mode. |
-| `--once` | `RUN_ONCE` | `true` unless overridden | Loop continuously when `false` _and_ `poll_interval > 0`. |
-| `--interval SECONDS` | `PROCESS_INTERVAL` | `settings.poll_interval` | Polling interval for continuous mode. |
 | `--verbose` | `VERBOSE` / `DEBUG` | `false` | Enables console DEBUG output. |
 | `--log-level LEVEL` | `LOG_LEVEL` | `INFO` (or `DEBUG` with `--verbose`) | File log level. |
 | `--console-level LEVEL` | `CONSOLE_LEVEL` | matches file level | Console log level. |
 | `--log-file PATH` | `LOG_FILE` / `LOG_DIR` | `./playbook.log` | Rotates to `*.previous` on start. |
 | `--clear-processed-cache` | `CLEAR_PROCESSED_CACHE` | `false` | Truthy to reset processed file cache before processing. |
-| `--watch` | `WATCH_MODE=true` | `settings.file_watcher.enabled` | Force filesystem watcher mode (ignores `poll_interval`). |
+| `--watch` | `WATCH_MODE=true` | `settings.file_watcher.enabled` | Force filesystem watcher mode (keep Playbook running). |
 | `--no-watch` | `WATCH_MODE=false` | `false` | Disable watcher mode even if the config enables it. |
 
 Environment variables always win over config defaults, and CLI flags win over environment variables.
@@ -437,20 +457,18 @@ Continuous mode example:
 
 ```bash
 docker run -d \
-  -e RUN_ONCE=false \
-  -e PROCESS_INTERVAL=900 \
-  ghcr.io/s0len/playbook:latest --interval 600
+  -e WATCH_MODE=true \
+  ghcr.io/s0len/playbook:latest --watch
 ```
 
-The CLI will sleep for `600` seconds between passes (flag) unless `PROCESS_INTERVAL` forces a different value.
+Playbook stays alive and reruns automatically whenever the watcher observes filesystem changes (or when the reconcile timer forces a full scan). Use `--no-watch` (or `WATCH_MODE=false`) for single-pass batch runs.
 
 ## Logging & Observability
 
-- Logs stream to the console with rich formatting and to `playbook.log` on disk.
-- On each run, the previous log rotates to `playbook.log.previous`.
-- `VERBOSE=true` or `--verbose` enables DEBUG-level diagnostics, including pattern/alias decisions.
-- Summaries include processed/skipped/ignored counts; enable DEBUG to see per-file reasons and warnings.
-- `LOG_DIR=/var/log/playbook` is honored by the Docker entrypoint, keeping container logs persistent.
+- Log entries now use a multi-line block layout (timestamp + header + aligned key/value pairs) so dense sections breathe.
+- INFO-level runs show grouped counts per sport/source; add `--verbose`/`LOG_LEVEL=DEBUG` to expand into per-file diagnostics.
+- Each pass ends with a `Run Recap` block (duration, totals, Kometa trigger state, destination samples) for quick scanning.
+- On each run, the previous log rotates to `playbook.log.previous`, and `LOG_DIR=/var/log/playbook` keeps files persistent.
 
 ## Directory Conventions
 
@@ -499,7 +517,7 @@ libraries:
 
 ### Triggering Kometa After Ingests
 
-Playbook can nudge Kometa automatically after each ingest cycle. Configure it once under `settings.kometa_trigger` and it will fire immediately after the first _new_ file is linked so duplicate runs are avoided. Set `per_batch: true` if you prefer to trigger once per processor run (e.g., for filesystem watcher batches where files might already exist).
+Playbook can nudge Kometa automatically after each ingest cycle. Configure it once under `settings.kometa_trigger` and it will fire once at the end of every processor run whenever at least one brand-new file was linked, so duplicate runs are avoided automatically.
 
 #### Kubernetes CronJob trigger
 
@@ -555,10 +573,11 @@ docker run --rm \
 
 Add any additional Kometa CLI flags to `docker.extra_args`, and mount a different config path/container path if needed. Logs from the container are captured and surfaced in `playbook.log`, so failures stand out quickly.
 
-**Docker prerequisites inside the Playbook container**
+##### Docker prerequisites inside the Playbook container
 
 - Mount the Docker socket so the daemon is reachable: `-v /var/run/docker.sock:/var/run/docker.sock`.
 - Mount the client binaries into the container (paths vary, discover them with `command -v docker` and `command -v com.docker.cli` on macOS):
+
   ```bash
   -v $(command -v docker):/usr/local/bin/docker \
   -v $(command -v com.docker.cli):/usr/local/bin/com.docker.cli
@@ -612,34 +631,34 @@ These are examples that pair well with the built-in pattern packs and metadata f
 
 ```text
 # Premier League (EPL) 1080p releases by NiGHTNiNJAS
-EPL.*1080p.*NiGHTNiNJAS
+epl.*1080p.*nightninjas
 
 # Formula 1 multi-session weekends by MWR
 (F1|Formula.*1).*\d{4}.Round\d+.*[^.]+\.*?(Drivers.*Press.*Conference|Weekend.*Warm.*Up|FP\d?|Practice|Sprint.Qualifying|Sprint|Qualifying|Pre.Qualifying|Post.Qualifying|Race|Pre.Race|Post.Race|Sprint.Race|Feature.*Race).*1080p.*MWR
 
 # Formula E by MWR
-[Ff][Oo][Rr][Mm][Uu][Ll][Aa][Ee]\.\d{4}\.Round\d+\.(?:[A-Za-z]+(?:\.[A-Za-z]+)?)\.(?:Preview.Show|[Qq]ualifying|[Rr]ace)\..*h264.*-MWR
+formulae\.\d{4}\.round\d+\.(?:[A-Za-z]+(?:\.[A-Za-z]+)?)\.(?:preview.show|qualifying|race)\..*h264.*-mwr
 
 # IndyCar by MWR
-[Ii][Nn][Dd][Yy][Cc][Aa][Rr].*\d{4}\.Round\d+\.(?:[A-Za-z]+(?:\.[A-Za-z]+)?)\.(?:[Qq]ualifying|[Rr]ace)\..*h264.*-MWR
+indycar.*\d{4}\.round\d+\.(?:[A-Za-z]+(?:\.[A-Za-z]+)?)\.(?:qualifying|race)\..*h264.*-MWR
 
 # Isle of Man TT by DNU
-[Ii]sle.[Oo]f.[Mm]an.[Tt][Tt].*DNU
+isle.of.man.tt.*DNU
 
 # MotoGP by DNU
-([Mm][Oo][Tt][Oo][Gg][Pp]).*\d{4}.*Round\d.*((FP\d?|[Pp][Rr][Aa][Cc][Tt][Ii][Cc][Ee]|[Ss][Pp][Rr][Ii][Nn][Tt]|[Qq][Uu][Aa][Ll][Ii][Ff][Yy][Ii][Nn][Gg]|Q1|Q2|[Rr][Aa][Cc][Ee])).*DNU
+motogp.*\d{4}.*round\d.*((fp\d?|practice|sprint|qualifying|q1|q2|race)).*DNU
 
 # NBA 1080p by GAMETiME
-NBA.*1080p.*GAMETiME
+nba.*1080p.*gametime
 
 # NFL by NiGHTNiNJAS
-NFL.*NiGHTNiNJAS
+nfl.*nightninjas
 
 # UFC by VERUM
-[Uu][Ff][Cc][ ._-]?\d{3}.*[Vv][Ee][Rr][Uu][Mm]
+ufc[ ._-].*?\d{3}.*verum
 
 # WorldSBK / WorldSSP / WorldSSP300 by MWR
-([Ww][Ss][Bb][Kk]|[Ww][Ss][Ss][Pp]|[Ww][Ss][Ss][Pp]300)\.\d{4}\.Round\d+\.[^.]+\.(FP\d?|[Ss]eason\.[Pp]review|[Ss]uperpole|[Rr]ace\.[Oo]ne|[Rr]ace\.[Tt]wo|[Ww]arm\.[Uu]p(\.[Oo]ne|\.[Tt]wo)?|[Ww]eekend\.[Hh]ighlights)\..*h264..*MWR
+(wsbk|wssp|wssp300).*\d{4}.round\d+.[^.]+.(fp\d?|season.preview|superpole|race.one|race.two|war.up(one|two)?|weekend.highlights).*h264.*mwr
 ```
 
 UFC releases must now include the matchup slug (e.g., `UFC 322 Della Maddalena vs Makhachev`) so Playbook can align each file with the correct metadata season. Event numbers alone are ignored by the new title-based matching.
@@ -677,7 +696,7 @@ Using `TV Shows` + `Plex Series Scanner` + `Personal Media Shows` ensures Plex t
 - **Metadata looks stale:** Delete the cache directory (`rm -rf /var/cache/playbook/metadata`) or lower `ttl_hours`.
 - **Hardlinks fail:** Set `link_mode: copy` (globally or per sport) when crossing filesystems or writing to SMB/NFS shares.
 - **Pattern matches but wrong season:** Adjust `season_selector` mappings or use `season_overrides` to force numbers for exhibitions/pre-season events.
-- **Need to re-run immediately:** Set `RUN_ONCE=true` (or use `--once`) to force a single pass even if `poll_interval` > 0.
+- **Need to re-run immediately:** Run `python -m playbook.cli --no-watch ...` (or set `WATCH_MODE=false`) to perform an on-demand single pass even if your watcher deployment is already running.
 
 ## Development
 

@@ -45,9 +45,7 @@ CONFIG_SCHEMA: Dict[str, Any] = {
                 "cache_dir": {"type": "string"},
                 "dry_run": {"type": "boolean"},
                 "skip_existing": {"type": "boolean"},
-                "poll_interval": {"type": "integer"},
                 "link_mode": {"type": "string", "enum": _LINK_MODES},
-                "discord_webhook_url": {"type": ["string", "null"]},
                 "destination": {
                     "type": "object",
                     "properties": {
@@ -97,7 +95,6 @@ CONFIG_SCHEMA: Dict[str, Any] = {
                     "properties": {
                         "enabled": {"type": "boolean"},
                         "mode": {"type": "string", "enum": ["kubernetes", "docker"]},
-                        "per_batch": {"type": "boolean"},
                         "namespace": {"type": "string"},
                         "cronjob_name": {"type": "string"},
                         "job_name_prefix": {"type": "string"},
@@ -199,6 +196,7 @@ CONFIG_SCHEMA: Dict[str, Any] = {
             "properties": {
                 "group": {"type": "string"},
                 "allow_fallback_to_title": {"type": "boolean"},
+                "default_value": {"type": ["string", "null"]},
             },
             "additionalProperties": True,
         },

@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from fnmatch import fnmatch
@@ -14,6 +16,7 @@ from rich.progress import Progress
 from .cache import CachedFileRecord, MetadataHttpCache, ProcessedFileCache
 from .config import AppConfig, SportConfig
 from .kometa_trigger import build_kometa_trigger
+from .logging_utils import LogBlockBuilder, render_fields_block
 from .matcher import PatternRuntime, compile_patterns, match_file_to_episode
 from .metadata import (
     MetadataChangeResult,
@@ -68,41 +71,26 @@ class Processor:
             settings.notifications,
             cache_dir=settings.cache_dir,
             destination_dir=settings.destination_dir,
-            default_discord_webhook=settings.discord_webhook_url if enable_notifications else None,
             enabled=enable_notifications,
         )
         self._kometa_trigger = build_kometa_trigger(settings.kometa_trigger)
         self._kometa_trigger_fired = False
+        self._kometa_trigger_needed = False
         self._previous_summary: Optional[Tuple[int, int, int]] = None
         self._metadata_changed_sports: List[Tuple[str, str]] = []
         self._metadata_change_map: Dict[str, MetadataChangeResult] = {}
         self._stale_destinations: Dict[str, Path] = {}
         self._stale_records: Dict[str, CachedFileRecord] = {}
         self._metadata_fetch_stats = MetadataFetchStatistics()
+        self._touched_destinations: Set[str] = set()
 
     @staticmethod
     def _format_log(event: str, fields: Optional[Mapping[str, object]] = None) -> str:
-        lines = [event]
-        if fields:
-            items = list(fields.items())
-            width = max((len(str(key)) for key, _ in items), default=0)
-            for key, value in items:
-                text = "" if value is None else str(value)
-                lines.append(f"  {str(key):<{width}}: {text}")
-        return "\n".join(lines)
+        return render_fields_block(event, fields or {}, pad_top=True)
 
     @staticmethod
     def _format_inline_log(event: str, fields: Optional[Mapping[str, object]] = None) -> str:
-        if not fields:
-            return event
-
-        items = list(fields.items())
-        width = max((len(str(key)) for key, _ in items), default=0)
-        formatted = []
-        for key, value in items:
-            text = "" if value is None else str(value)
-            formatted.append(f"{str(key):<{width}}: {text}")
-        return f"{event} | " + " | ".join(formatted)
+        return render_fields_block(event, fields or {}, pad_top=False)
 
     def _load_sports(self) -> List[SportRuntime]:
         runtimes: List[SportRuntime] = []
@@ -222,8 +210,9 @@ class Processor:
         self.processed_cache.save()
         LOGGER.debug(self._format_log("Processed File Cache Cleared"))
 
-    def run_once(self) -> ProcessingStats:
+    def process_all(self) -> ProcessingStats:
         self._kometa_trigger_fired = False
+        self._kometa_trigger_needed = False
         self.processed_cache.prune_missing_sources()
         runtimes = self._load_sports()
         self._stale_destinations = {}
@@ -249,6 +238,8 @@ class Processor:
             }
             self._stale_records = removed_records
         stats = ProcessingStats()
+        self._touched_destinations = set()
+        run_started = time.perf_counter()
 
         try:
             all_source_files = list(self._gather_source_files(stats))
@@ -281,13 +272,20 @@ class Processor:
             with Progress(disable=not LOGGER.isEnabledFor(logging.DEBUG)) as progress:
                 task_id = progress.add_task("Processing", total=file_count)
                 for source_path in filtered_source_files:
-                    handled, diagnostics = self._process_single_file(source_path, runtimes, stats)
+                    is_sample_file = self._should_suppress_sample_ignored(source_path)
+                    handled, diagnostics = self._process_single_file(
+                        source_path,
+                        runtimes,
+                        stats,
+                        is_sample_file=is_sample_file,
+                    )
                     if not handled:
-                        if self._should_suppress_sample_ignored(source_path):
+                        if is_sample_file:
                             stats.register_ignored(suppressed_reason="sample")
                         else:
                             detail = self._format_ignored_detail(source_path, diagnostics)
-                            stats.register_ignored(detail)
+                            sport_id = next((sport for _, _, sport in diagnostics if sport), None)
+                            stats.register_ignored(detail, sport_id=sport_id)
                     progress.advance(task_id, 1)
 
             summary_counts = (stats.processed, stats.skipped, stats.ignored)
@@ -322,7 +320,9 @@ class Processor:
                     self._log_detailed_summary(stats, level=level)
             elif has_issues:
                 self._log_detailed_summary(stats)
-            self._trigger_per_batch_if_needed(stats)
+            self._trigger_post_run_trigger_if_needed(stats)
+            duration = time.perf_counter() - run_started
+            self._log_run_recap(stats, duration)
             return stats
         finally:
             self.metadata_http_cache.save()
@@ -392,14 +392,16 @@ class Processor:
         source_path: Path,
         runtimes: List[SportRuntime],
         stats: ProcessingStats,
-    ) -> Tuple[bool, List[Tuple[str, str]]]:
+        *,
+        is_sample_file: bool = False,
+    ) -> Tuple[bool, List[Tuple[str, str, Optional[str]]]]:
         suffix = source_path.suffix.lower()
         matching_runtimes = [runtime for runtime in runtimes if suffix in runtime.extensions]
-        ignored_reasons: List[Tuple[str, str]] = []
+        ignored_reasons: List[Tuple[str, str, Optional[str]]] = []
 
         if not matching_runtimes:
             message = f"No configured sport accepts extension '{suffix or '<no extension>'}'"
-            ignored_reasons.append(("ignored", message))
+            ignored_reasons.append(("ignored", message, None))
             LOGGER.debug(
                 self._format_log(
                     "Ignoring File",
@@ -423,8 +425,7 @@ class Processor:
             if not self._matches_globs(source_path, runtime.sport):
                 patterns = runtime.sport.source_globs or ["*"]
                 message = f"Excluded by source_globs {patterns}"
-                tagged_message = f"{runtime.sport.id}: {message}"
-                ignored_reasons.append(("ignored", tagged_message))
+                ignored_reasons.append(("ignored", message, runtime.sport.id))
                 LOGGER.debug(
                     self._format_log(
                         "Ignoring File For Sport",
@@ -454,6 +455,7 @@ class Processor:
                 runtime.patterns,
                 diagnostics=detection_messages,
                 trace=trace_context,
+                suppress_warnings=is_sample_file,
             )
             if trace_context is not None:
                 trace_context["diagnostics"] = [
@@ -482,7 +484,7 @@ class Processor:
                             },
                         )
                     )
-                    stats.register_skipped(message, is_error=True)
+                    stats.register_skipped(message, is_error=True, sport_id=runtime.sport.id)
                     if trace_context is not None:
                         trace_context["status"] = "error"
                         trace_context["error"] = str(exc)
@@ -523,8 +525,7 @@ class Processor:
                 detection_messages.append(("ignored", "No matching pattern resolved to an episode"))
 
             for severity, message in detection_messages:
-                tagged_message = f"{runtime.sport.id}: {message}"
-                ignored_reasons.append((severity, tagged_message))
+                ignored_reasons.append((severity, message, runtime.sport.id))
                 LOGGER.debug(
                     self._format_log(
                         "Ignoring Detection",
@@ -537,9 +538,15 @@ class Processor:
                     )
                 )
                 if severity == "warning":
-                    stats.register_warning(f"{source_path.name}: {tagged_message}")
+                    stats.register_warning(
+                        f"{source_path.name}: {runtime.sport.id}: {message}",
+                        sport_id=runtime.sport.id,
+                    )
                 elif severity == "error":
-                    stats.errors.append(f"{source_path.name}: {tagged_message}")
+                    stats.register_error(
+                        f"{source_path.name}: {runtime.sport.id}: {message}",
+                        sport_id=runtime.sport.id,
+                    )
             if trace_context is not None:
                 trace_context.setdefault("status", "ignored")
                 self._persist_trace(trace_context)
@@ -583,62 +590,143 @@ class Processor:
         )
         return trace_path
 
-    def _format_ignored_detail(self, source_path: Path, diagnostics: List[Tuple[str, str]]) -> str:
+    def _format_ignored_detail(
+        self,
+        source_path: Path,
+        diagnostics: List[Tuple[str, str, Optional[str]]],
+    ) -> str:
         if not diagnostics:
-            return f"{source_path.name}: ignored with no diagnostics"
+            return f"{source_path.name}\n  - [IGNORED] No diagnostics recorded"
 
-        collapsed: List[str] = []
-        for severity, message in diagnostics:
+        lines = [source_path.name]
+        seen: Set[str] = set()
+        for severity, message, sport_id in diagnostics:
+            key = f"{severity}:{sport_id}:{message}"
+            if key in seen:
+                continue
+            seen.add(key)
             prefix = severity.upper()
-            collapsed.append(f"[{prefix}] {message}")
-
-        unique = list(dict.fromkeys(collapsed))
-        details = "; ".join(unique)
-        return f"{source_path.name}: {details}"
+            if sport_id:
+                lines.append(f"  - [{prefix}] {sport_id}: {message}")
+            else:
+                lines.append(f"  - [{prefix}] {message}")
+        return "\n".join(lines)
 
     def _log_detailed_summary(self, stats: ProcessingStats, *, level: int = logging.INFO) -> None:
-        def _format_lines(items: List[str]) -> str:
-            if not items:
-                return "    (none)"
-            unique_items = list(dict.fromkeys(items))
-            return "\n".join(f"    - {item}" for item in unique_items)
+        show_entries = LOGGER.isEnabledFor(logging.DEBUG)
+        builder = LogBlockBuilder("Detailed Summary", pad_top=True)
+        builder.add_fields(
+            {
+                "Processed": stats.processed,
+                "Skipped": stats.skipped,
+                "Ignored": stats.ignored,
+                "Warnings": len(stats.warnings),
+                "Errors": len(stats.errors),
+            }
+        )
 
-        ignored_details = stats.ignored_details
-        suppressed_non_video_count = 0
-        if level >= logging.INFO:
-            filtered_ignored: List[str] = []
-            for detail in ignored_details:
-                if "No configured sport accepts extension" in detail:
-                    suppressed_non_video_count += 1
-                else:
-                    filtered_ignored.append(detail)
-            ignored_details = filtered_ignored
+        if show_entries:
+            builder.add_section("Errors", stats.errors)
+            builder.add_section("Warnings", stats.warnings)
+            builder.add_section("Skipped", stats.skipped_details)
+            builder.add_section("Ignored", self._filtered_ignored_details(stats))
+        else:
+            builder.add_section(
+                "Errors",
+                self._summarize_counts(stats.errors_by_sport, len(stats.errors), "error"),
+            )
+            builder.add_section(
+                "Warnings",
+                self._summarize_counts(stats.warnings_by_sport, len(stats.warnings), "warning"),
+            )
+            builder.add_section(
+                "Skipped",
+                self._summarize_messages(stats.skipped_details),
+            )
+            builder.add_section(
+                "Ignored",
+                self._summarize_counts(stats.ignored_by_sport, stats.ignored, "ignored"),
+            )
 
-        suppressed_labels: List[str] = []
-        if suppressed_non_video_count:
-            suppressed_labels.append(f"{suppressed_non_video_count} suppressed non-video")
-        suppressed_samples = stats.suppressed_ignored_samples
-        if suppressed_samples:
-            label = "sample" if suppressed_samples == 1 else "samples"
-            suppressed_labels.append(f"{suppressed_samples} suppressed {label}")
+        LOGGER.log(level, builder.render())
 
-        ignored_suffix = ""
-        if suppressed_labels:
-            ignored_suffix = ", " + ", ".join(suppressed_labels)
+    def _log_run_recap(self, stats: ProcessingStats, duration: float) -> None:
+        destinations = sorted(self._touched_destinations)
+        builder = LogBlockBuilder("Run Recap")
+        builder.add_fields(
+            {
+                "Duration": f"{duration:.2f}s",
+                "Processed": stats.processed,
+                "Skipped": stats.skipped,
+                "Ignored": stats.ignored,
+                "Warnings": len(stats.warnings),
+                "Errors": len(stats.errors),
+                "Destinations": len(destinations),
+                "Kometa Triggered": "yes" if self._kometa_trigger_fired else "no",
+            }
+        )
+        builder.add_section(
+            "Destinations (sample)",
+            destinations[:5],
+            empty_label="(none)",
+        )
+        if stats.errors:
+            builder.add_section(
+                "Follow-Ups",
+                ["Resolve errors above before next run."],
+            )
+        LOGGER.info(builder.render())
 
-        summary_lines = [
-            "Detailed Summary",
-            f"  Errors ({len(stats.errors)}):",
-            _format_lines(stats.errors),
-            f"  Warnings ({len(stats.warnings)}):",
-            _format_lines(stats.warnings),
-            f"  Skipped ({len(stats.skipped_details)}):",
-            _format_lines(stats.skipped_details),
-            f"  Ignored ({len(ignored_details)}{ignored_suffix}):",
-            _format_lines(ignored_details),
-        ]
+    @staticmethod
+    def _filtered_ignored_details(stats: ProcessingStats) -> List[str]:
+        filtered: List[str] = []
+        suppressed_non_video = 0
+        for detail in stats.ignored_details:
+            if "No configured sport accepts extension" in detail:
+                suppressed_non_video += 1
+                continue
+            filtered.append(detail)
+        if stats.suppressed_ignored_samples:
+            label = "sample" if stats.suppressed_ignored_samples == 1 else "samples"
+            filtered.append(f"(Suppressed {stats.suppressed_ignored_samples} {label})")
+        if suppressed_non_video:
+            noun = "item" if suppressed_non_video == 1 else "items"
+            filtered.append(f"(Suppressed {suppressed_non_video} non-video {noun})")
+        return filtered
 
-        LOGGER.log(level, "\n".join(summary_lines))
+    @staticmethod
+    def _summarize_counts(counts: Dict[str, int], total: int, label: str) -> List[str]:
+        if total <= 0:
+            return []
+        lines: List[str] = []
+        if counts:
+            ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+            for sport, value in ordered:
+                suffix = "entry" if value == 1 else "entries"
+                lines.append(f"{sport}: {value} {suffix}")
+        remainder = total - sum(counts.values())
+        if remainder > 0:
+            suffix = "entry" if remainder == 1 else "entries"
+            lines.append(f"other: {remainder} {suffix}")
+        lines.append(f"Run with --verbose for per-{label} details.")
+        return lines
+
+    @staticmethod
+    def _summarize_messages(entries: List[str], *, limit: int = 5) -> List[str]:
+        if not entries:
+            return []
+        counter = Counter(entries)
+        ordered = sorted(counter.items(), key=lambda item: (-item[1], item[0]))
+        lines: List[str] = []
+        for text, count in ordered[:limit]:
+            prefix = f"{count}× " if count > 1 else ""
+            lines.append(f"{prefix}{text}")
+        remaining = len(ordered) - limit
+        if remaining > 0:
+            lines.append(f"... {remaining} more (use --verbose for full list)")
+        else:
+            lines.append("Run with --verbose for per-file details.")
+        return lines
 
     @staticmethod
     def _has_activity(stats: ProcessingStats) -> bool:
@@ -831,7 +919,7 @@ class Processor:
                         dry_run=settings.dry_run,
                     )
                     skip_message = f"Destination exists: {destination} (source {match.source_path})"
-                    stats.register_skipped(skip_message, is_error=False)
+                    stats.register_skipped(skip_message, is_error=False, sport_id=match.sport.id)
                     if not settings.dry_run:
                         self.processed_cache.mark_processed(
                             match.source_path,
@@ -867,6 +955,7 @@ class Processor:
                     stats.register_skipped(
                         f"Failed to replace destination {destination}: {exc}",
                         is_error=True,
+                        sport_id=match.sport.id,
                     )
                     event.action = "error"
                     event.skip_reason = f"failed-to-remove: {exc}"
@@ -902,6 +991,7 @@ class Processor:
 
         if settings.dry_run:
             stats.register_processed()
+            self._record_destination_touch(destination)
             event.action = "dry-run"
             event.event_type = "dry-run"
             event.replaced = replace_existing
@@ -910,6 +1000,7 @@ class Processor:
         result = link_file(match.source_path, destination, mode=link_mode)
         if result.created:
             stats.register_processed()
+            self._record_destination_touch(destination)
             self.processed_cache.mark_processed(
                 match.source_path,
                 destination,
@@ -924,11 +1015,12 @@ class Processor:
             )
             event.action = link_mode
             event.replaced = replace_existing
-            self._maybe_trigger_kometa(event)
+            if not settings.dry_run:
+                self._kometa_trigger_needed = True
             return event
         else:
             failure_message = f"Failed to link {match.source_path} -> {destination}: {result.reason}"
-            stats.register_skipped(failure_message)
+            stats.register_skipped(failure_message, sport_id=match.sport.id)
             if result.reason == "destination-exists":
                 self.processed_cache.mark_processed(
                     match.source_path,
@@ -951,41 +1043,22 @@ class Processor:
             event.event_type = "error"
             return event
 
-    def _maybe_trigger_kometa(self, event: NotificationEvent) -> None:
+    def _trigger_post_run_trigger_if_needed(self, stats: ProcessingStats) -> None:
         if (
             self._kometa_trigger_fired
             or not self._kometa_trigger.enabled
             or self.config.settings.dry_run
-            or event.event_type != "new"
-        ):
-            return
-
-        labels = {
-            "sport-id": event.sport_id,
-        }
-        annotations = {
-            "playbook/destination": event.destination,
-        }
-        triggered = self._kometa_trigger.trigger(extra_labels=labels, extra_annotations=annotations)
-        if triggered:
-            self._kometa_trigger_fired = True
-
-    def _trigger_per_batch_if_needed(self, stats: ProcessingStats) -> None:
-        trigger_settings = self.config.settings.kometa_trigger
-        if (
-            not trigger_settings.per_batch
-            or self._kometa_trigger_fired
-            or not self._kometa_trigger.enabled
-            or self.config.settings.dry_run
+            or not self._kometa_trigger_needed
             or stats.processed <= 0
         ):
             return
         triggered = self._kometa_trigger.trigger(
-            extra_labels={"trigger-mode": "per-batch"},
-            extra_annotations={"playbook/per-batch": "true"},
+            extra_labels={"trigger-mode": "post-run"},
+            extra_annotations={"playbook/post-run": "true"},
         )
         if triggered:
             self._kometa_trigger_fired = True
+            self._kometa_trigger_needed = False
 
     def _should_overwrite_existing(self, match: SportFileMatch) -> bool:
         source_name = match.source_path.name.lower()
@@ -1129,6 +1202,9 @@ class Processor:
         except ValueError:
             return str(destination)
         return str(relative)
+
+    def _record_destination_touch(self, destination: Path) -> None:
+        self._touched_destinations.add(self._format_relative_destination(destination))
 
     def _cleanup_old_destination(
         self,

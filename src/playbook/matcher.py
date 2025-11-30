@@ -205,6 +205,10 @@ def _select_episode(
     group = pattern_config.episode_selector.group
     raw_value = match_groups.get(group)
     if raw_value is None:
+        default_value = pattern_config.episode_selector.default_value
+        if default_value:
+            raw_value = default_value
+    if raw_value is None:
         if pattern_config.episode_selector.allow_fallback_to_title:
             for candidate in reversed(sorted(session_lookup.keys(), key=len)):
                 if candidate and candidate in normalize_token(" ".join(match_groups.values())):
@@ -417,6 +421,7 @@ def match_file_to_episode(
     *,
     diagnostics: Optional[List[Tuple[str, str]]] = None,
     trace: Optional[Dict[str, Any]] = None,
+    suppress_warnings: bool = False,
 ) -> Optional[Dict[str, object]]:
     matched_patterns = 0
     failed_resolutions: List[str] = []
@@ -478,7 +483,7 @@ def match_file_to_episode(
             )
             LOGGER.debug("Season not resolved for file %s with pattern %s", filename, pattern_runtime.config.regex)
             failed_resolutions.append(message)
-            severity = "ignored" if sport.allow_unmatched else "warning"
+            severity = "ignored" if (sport.allow_unmatched or suppress_warnings) else "warning"
             record(severity, message)
             if trace_attempts is not None:
                 trace_attempts.append(
@@ -531,7 +536,7 @@ def match_file_to_episode(
                 pattern_runtime.config.regex,
             )
             failed_resolutions.append(message)
-            severity = "ignored" if sport.allow_unmatched else "warning"
+            severity = "ignored" if (sport.allow_unmatched or suppress_warnings) else "warning"
             record(severity, message)
             if trace_attempts is not None:
                 trace_entry = {
@@ -589,7 +594,7 @@ def match_file_to_episode(
             }
         return result
     if failed_resolutions:
-        log_fn = LOGGER.debug if sport.allow_unmatched else LOGGER.warning
+        log_fn = LOGGER.debug if (sport.allow_unmatched or suppress_warnings) else LOGGER.warning
         log_fn(
             "File %s matched %d pattern(s) but could not resolve:%s%s",
             filename,
@@ -601,7 +606,7 @@ def match_file_to_episode(
             f"Matched {matched_patterns} pattern(s) but could not resolve: "
             f"{'; '.join(failed_resolutions)}"
         )
-        severity = "ignored" if sport.allow_unmatched else "warning"
+        severity = "ignored" if (sport.allow_unmatched or suppress_warnings) else "warning"
         record(severity, message)
         if trace is not None:
             trace["status"] = "unresolved"

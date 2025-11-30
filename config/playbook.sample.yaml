@@ -29,19 +29,30 @@ settings:
   ####################################################################
   dry_run: false          # When true, identify matches and log actions without touching the filesystem.
   skip_existing: true     # When true, leave destinations alone unless a better (e.g. PROPER/REPACK) source is detected.
-  poll_interval: 0        # Seconds between passes in watch mode. Use 0 to run once and exit.
   link_mode: hardlink     # Global default for linking: hardlink | copy | symlink.
 
   ####################################################################
-  # NOTIFICATIONS (OPTIONAL)
+  # LOGGING
   ####################################################################
-  discord_webhook_url: ${DISCORD_WEBHOOK_URL:-} # Discord webhook for processed notifications. Leave empty to disable.
+  # Logs now default to a human-friendly block layout with blank lines between sections.
+  # Use VERBOSE=true or LOG_LEVEL=DEBUG when you want per-file diagnostics; INFO keeps
+  # the log airy by only showing grouped counts per sport/source.
+
+  ####################################################################
+  # NOTIFICATIONS
+  ####################################################################
   notifications:
     batch_daily: false    # When true, send one message per sport/day and edit it with new entries instead of posting each file.
     flush_time: "00:00"   # Local HH:MM (or HH:MM:SS) boundary for the batching day rollover. Useful for overnight events.
-    targets:              # Optional explicit targets. Leave empty to fall back to `discord_webhook_url`.
+    mentions:             # Optional: ping specific Discord roles/users per sport (or use 'default' as a fallback).
+      premier_league: "<@&123456789012345678>" # Replace with your role ID. Automatically covers variants like premier_league_2025_26.
+      formula1: "<@&222333444555666777>"      # Variant IDs (formula1_2025, formula1_2026, etc.) inherit this mention automatically.
+      # default: "@here"   # Uncomment for a fallback mention when a sport ID isn’t listed.
+    targets:              # Define at least one target (Discord, Slack, webhook, Autoscan, etc.).
       - type: discord
-        webhook_url: ${DISCORD_WEBHOOK_URL:-} # Override the default webhook per target (optional).
+        webhook_url: ${DISCORD_WEBHOOK_URL}
+        mentions:          # Override/extend global mentions just for this webhook.
+          formula1: "<@&222333444555666777>"
       - type: autoscan
         url: ${AUTOSCAN_URL:-http://autoscan:3030} # Base Autoscan URL; delete this block if not using Autoscan.
         trigger: manual       # Autoscan trigger name; `manual` works with the built-in manual endpoint.
@@ -55,7 +66,7 @@ settings:
   # FILESYSTEM WATCHER (OPTIONAL)
   ####################################################################
   file_watcher:
-    enabled: false        # When true, rely on filesystem events instead of fixed poll intervals.
+    enabled: false        # When true, Playbook stays running and reacts to filesystem events automatically. When false, the CLI runs a single pass and exits.
     paths: []             # Directories to watch; defaults to source_dir when empty. Relative paths resolve under source_dir.
     include: []           # Optional glob filters (e.g. "*.mkv") to limit which files trigger a run.
     ignore:               # Globs that should never trigger a run.
@@ -73,7 +84,6 @@ settings:
   kometa_trigger:
     enabled: false
     mode: kubernetes         # kubernetes | docker
-    per_batch: false         # When true, trigger once per run even if no brand-new files were seen.
     namespace: media
     cronjob_name: kometa-sport
     job_name_prefix: kometa-sport-triggered-by-playbook
@@ -130,6 +140,7 @@ pattern_sets:
   #         group: year
   #       episode_selector:
   #         group: session
+#         default_value: "Main Card"   # Optional fallback when the regex omits a session.
 
 ######################################################################
 # Sports - tie pattern sets to metadata, variants, and overrides
@@ -220,12 +231,12 @@ sports:
     variants:
       - year: 2025
         metadata:
-          url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/indycar/2025.yaml
+          url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/indycar-series/2025.yaml
           show_key: NTT IndyCar Series 2025
           ttl_hours: 24
       - year: 2026
         metadata:
-          url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/indycar/2026.yaml
+          url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/indycar-series/2026.yaml
           show_key: NTT IndyCar Series 2026
           ttl_hours: 24
 

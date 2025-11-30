@@ -26,6 +26,7 @@ class SeasonSelector:
 class EpisodeSelector:
     group: str = "session"
     allow_fallback_to_title: bool = True
+    default_value: Optional[str] = None
 
 
 @dataclass(slots=True)
@@ -69,6 +70,7 @@ class NotificationSettings:
     flush_time: dt.time = field(default_factory=lambda: dt.time(hour=0, minute=0))
     targets: List[Dict[str, Any]] = field(default_factory=list)
     throttle: Dict[str, int] = field(default_factory=dict)
+    mentions: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -88,7 +90,6 @@ class KometaTriggerSettings:
     namespace: str = "media"
     cronjob_name: str = "kometa-sport"
     job_name_prefix: str = "kometa-sport-triggered-by-playbook"
-    per_batch: bool = False
     docker_binary: str = "docker"
     docker_image: str = "kometateam/kometa"
     docker_config_path: Optional[str] = None
@@ -128,10 +129,8 @@ class Settings:
     cache_dir: Path
     dry_run: bool = False
     skip_existing: bool = True
-    poll_interval: int = 0
     default_destination: DestinationTemplates = field(default_factory=DestinationTemplates)
     link_mode: str = "hardlink"
-    discord_webhook_url: Optional[str] = None
     notifications: NotificationSettings = field(default_factory=NotificationSettings)
     file_watcher: WatcherSettings = field(default_factory=WatcherSettings)
     kometa_trigger: KometaTriggerSettings = field(default_factory=KometaTriggerSettings)
@@ -158,6 +157,7 @@ def _build_episode_selector(data: Dict[str, Any]) -> EpisodeSelector:
     return EpisodeSelector(
         group=data.get("group", "session"),
         allow_fallback_to_title=bool(data.get("allow_fallback_to_title", True)),
+        default_value=(str(data["default_value"]).strip() if data.get("default_value") else None),
     )
 
 
@@ -390,7 +390,6 @@ def _build_kometa_trigger_settings(data: Dict[str, Any]) -> KometaTriggerSetting
     namespace_raw = str(data.get("namespace", "media")).strip()
     cronjob_raw = str(data.get("cronjob_name", "kometa-sport")).strip()
     mode_raw = str(data.get("mode", "kubernetes")).strip().lower()
-    per_batch = bool(data.get("per_batch", False))
 
     namespace = namespace_raw or "media"
     cronjob_name = cronjob_raw or "kometa-sport"
@@ -453,7 +452,6 @@ def _build_kometa_trigger_settings(data: Dict[str, Any]) -> KometaTriggerSetting
         namespace=namespace,
         cronjob_name=cronjob_name,
         job_name_prefix=job_name_prefix,
-        per_batch=per_batch,
         docker_binary=str(docker_raw.get("binary", "docker")).strip() or "docker",
         docker_image=str(docker_raw.get("image", "kometateam/kometa")).strip() or "kometateam/kometa",
         docker_config_path=docker_config_path,
@@ -481,11 +479,11 @@ def _build_settings(data: Dict[str, Any]) -> Settings:
         ),
     )
 
-    raw_webhook = data.get("discord_webhook_url")
-    if isinstance(raw_webhook, str):
-        discord_webhook_url = raw_webhook.strip() or None
-    else:
-        discord_webhook_url = raw_webhook if raw_webhook else None
+    if "discord_webhook_url" in data:
+        raise ValueError(
+            "'settings.discord_webhook_url' has been removed. "
+            "Please configure Discord webhooks under 'settings.notifications.targets' instead."
+        )
 
     notifications_raw = data.get("notifications", {}) or {}
     if not isinstance(notifications_raw, dict):
@@ -523,11 +521,27 @@ def _build_settings(data: Dict[str, Any]) -> Settings:
         except (TypeError, ValueError) as exc:  # noqa: PERF203
             raise ValueError(f"'notifications.throttle[{key}]' must be an integer") from exc
 
+    mentions_raw = notifications_raw.get("mentions", {}) or {}
+    if not isinstance(mentions_raw, dict):
+        raise ValueError("'notifications.mentions' must be provided as a mapping when specified")
+    mentions: Dict[str, str] = {}
+    for key, value in mentions_raw.items():
+        if value is None:
+            continue
+        mention = str(value).strip()
+        if not mention:
+            continue
+        key_str = str(key).strip()
+        if not key_str:
+            continue
+        mentions[key_str] = mention
+
     notifications = NotificationSettings(
         batch_daily=bool(notifications_raw.get("batch_daily", False)),
         flush_time=flush_time,
         targets=targets,
         throttle=throttle,
+        mentions=mentions,
     )
 
     source_dir = Path(data.get("source_dir", "/data/source")).expanduser()
@@ -542,10 +556,8 @@ def _build_settings(data: Dict[str, Any]) -> Settings:
         cache_dir=cache_dir,
         dry_run=bool(data.get("dry_run", False)),
         skip_existing=bool(data.get("skip_existing", True)),
-        poll_interval=int(data.get("poll_interval", 0)),
         default_destination=destination_defaults,
         link_mode=data.get("link_mode", "hardlink"),
-        discord_webhook_url=discord_webhook_url,
         notifications=notifications,
         file_watcher=watcher_settings,
         kometa_trigger=kometa_trigger,

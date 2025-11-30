@@ -110,7 +110,7 @@ class FileWatcherLoop:
 
                 if next_reconcile is not None and now >= next_reconcile:
                     LOGGER.info("Filesystem watcher reconcile triggered; running a full scan.")
-                    self._processor.run_once()
+                    self._processor.process_all()
                     next_reconcile = now + reconcile_interval
         finally:
             self._observer.stop()
@@ -119,11 +119,11 @@ class FileWatcherLoop:
     def _run_processor(self, pending: Set[Path]) -> None:
         sample = ", ".join(sorted({str(path.parent) for path in pending})[:3])
         LOGGER.info(
-            "Detected %d filesystem change(s)%s; running processor once.",
+            "Detected %d filesystem change(s)%s; running processor.",
             len(pending),
             f" near {sample}" if sample else "",
         )
-        self._processor.run_once()
+        self._processor.process_all()
 
     def _resolve_roots(self) -> List[Path]:
         roots = self._settings.paths or []

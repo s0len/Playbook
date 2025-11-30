@@ -99,10 +99,8 @@ require_path_setting "SOURCE_DIR" "source_dir"
 require_path_setting "DESTINATION_DIR" "destination_dir"
 require_path_setting "CACHE_DIR" "cache_dir"
 
-: "${PROCESS_INTERVAL:=0}"
-: "${RUN_ONCE:=true}"
 : "${DRY_RUN:=false}"
 
-export CONFIG_PATH SOURCE_DIR DESTINATION_DIR CACHE_DIR PROCESS_INTERVAL RUN_ONCE DRY_RUN
+export CONFIG_PATH SOURCE_DIR DESTINATION_DIR CACHE_DIR DRY_RUN
 
 exec python3 -m playbook.cli "$@"

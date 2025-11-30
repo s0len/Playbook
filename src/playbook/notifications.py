@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fnmatch
 import json
 import logging
 import smtplib
@@ -222,6 +223,26 @@ class NotificationTarget:
         raise NotImplementedError
 
 
+def _normalize_mentions_map(value: Any) -> Dict[str, str]:
+    if not value:
+        return {}
+    if not isinstance(value, dict):
+        LOGGER.warning("Ignoring discord target mentions because value is not a mapping")
+        return {}
+    mentions: Dict[str, str] = {}
+    for key, raw_value in value.items():
+        if raw_value is None:
+            continue
+        key_str = str(key).strip()
+        if not key_str:
+            continue
+        mention = str(raw_value).strip()
+        if not mention:
+            continue
+        mentions[key_str] = mention
+    return mentions
+
+
 class DiscordTarget(NotificationTarget):
     name = "discord"
 
@@ -232,6 +253,7 @@ class DiscordTarget(NotificationTarget):
         cache_dir: Path,
         settings: NotificationSettings,
         batch: Optional[bool] = None,
+        mentions: Optional[Dict[str, str]] = None,
     ) -> None:
         self.webhook_url = webhook_url.strip() if isinstance(webhook_url, str) else None
         self._settings = settings
@@ -241,6 +263,7 @@ class DiscordTarget(NotificationTarget):
             self._batcher = NotificationBatcher(cache_dir, settings)
         else:
             self._batcher = None
+        self._mentions_override = dict(mentions or {})
 
     def enabled(self) -> bool:
         return bool(self.webhook_url)
@@ -275,12 +298,11 @@ class DiscordTarget(NotificationTarget):
             "fields": [field for field in self._fields_for_event(event) if field is not None],
             "footer": {"text": "Playbook"},
         }
-        if event.summary:
-            embed["description"] = self._trim(str(event.summary), 2048)
 
         indicator = self._event_indicator(event.event_type)
         prefix = f"{indicator} " if indicator else ""
         content = self._trim(prefix + self._render_content(event), 2000)
+        content = self._apply_mention_prefix(content, event.sport_id, limit=2000)
         return {"content": content, "embeds": [embed]}
 
     def _build_batch_payload(self, request: BatchRequest, now: datetime) -> Dict[str, Any]:
@@ -339,34 +361,31 @@ class DiscordTarget(NotificationTarget):
             f"{request.sport_name} updates for {request.bucket_date.isoformat()}: {total} item{'s' if total != 1 else ''}",
             limit=2000,
         )
+        content = self._apply_mention_prefix(content, request.sport_id, limit=2000)
         return {"content": content, "embeds": [embed]}
 
     def _render_content(self, event: NotificationEvent) -> str:
-        destination_label = self._destination_label(event.destination)
-        label_suffix = f" — {destination_label}" if destination_label else ""
-        if event.action == "skipped":
+        base = f"{event.sport_name}: {event.episode}"
+        if event.event_type == "error":
             reason = f" — {event.skip_reason}" if event.skip_reason else ""
-            return f"{event.sport_name}: {event.episode} ({event.session}) [skipped]{label_suffix}{reason}"
-        if event.action == "error":
-            reason = f" — {event.skip_reason}" if event.skip_reason else ""
-            return f"{event.sport_name}: {event.episode} ({event.session}) [error]{label_suffix}{reason}"
-        if event.action == "dry-run":
-            return f"{event.sport_name}: {event.episode} ({event.session}) [dry-run]{label_suffix}"
-
-        replaced = " (replaced existing)" if event.replaced else ""
-        return f"{event.sport_name}: {event.episode} ({event.session}) [{event.action}]{label_suffix}{replaced}"
+            return f"{base}{reason}"
+        if event.event_type == "changed" and event.replaced:
+            return f"{base} (updated existing copy)"
+        if event.event_type == "changed":
+            return f"{base} (updated)"
+        if event.event_type == "dry-run":
+            return f"{base} (dry run)"
+        if event.replaced:
+            return f"{base} (replaced existing)"
+        return base
 
     def _fields_for_event(self, event: NotificationEvent) -> List[Optional[Dict[str, Any]]]:
+        destination_label = self._destination_label(event.destination) or event.destination
         fields = [
             self._embed_field("Sport", event.sport_name, inline=True),
             self._embed_field("Season", event.season, inline=True),
-            self._embed_field("Session", event.session, inline=True),
             self._embed_field("Episode", event.episode, inline=True),
-            self._embed_field(
-                "Action",
-                f"{event.action} ({event.link_mode}){' – replaced' if event.replaced else ''}",
-                inline=True,
-            ),
+            self._embed_field("Destination", destination_label, inline=False),
         ]
         if event.skip_reason:
             fields.append(self._embed_field("Reason", event.skip_reason, inline=False))
@@ -433,6 +452,60 @@ class DiscordTarget(NotificationTarget):
         if not text:
             return None
         return {"name": self._trim(name, 256), "value": text, "inline": inline}
+
+    def _mention_for_sport(self, sport_id: Optional[str]) -> Optional[str]:
+        base_mentions = getattr(self._settings, "mentions", {}) or {}
+        mentions = dict(base_mentions)
+        if self._mentions_override:
+            mentions.update(self._mentions_override)
+        if not mentions:
+            return None
+
+        if sport_id:
+            sport_id_str = str(sport_id)
+
+            # 1. Exact match
+            mention = mentions.get(sport_id_str)
+            if mention:
+                return mention
+
+            # 2. Parent prefixes (e.g., "premier_league" for "premier_league_2025_26")
+            for candidate in self._sport_prefixes(sport_id_str):
+                mention = mentions.get(candidate)
+                if mention:
+                    return mention
+
+            # 3. Wildcard patterns
+            wildcard_matches = [
+                (pattern, value)
+                for pattern, value in mentions.items()
+                if self._is_wildcard(pattern) and fnmatch.fnmatchcase(sport_id_str, pattern)
+            ]
+            if wildcard_matches:
+                wildcard_matches.sort(key=lambda item: len(item[0]), reverse=True)
+                return wildcard_matches[0][1]
+
+        return mentions.get("default")
+
+    def _apply_mention_prefix(self, text: str, sport_id: Optional[str], *, limit: int) -> str:
+        mention = self._mention_for_sport(sport_id)
+        if not mention:
+            return text
+        combined = f"{mention} {text}".strip()
+        LOGGER.debug("Applying mention '%s' to sport '%s'", mention, sport_id)
+        return self._trim(combined, limit)
+
+    @staticmethod
+    def _is_wildcard(value: str) -> bool:
+        return any(char in value for char in "*?[")
+
+    @staticmethod
+    def _sport_prefixes(sport_id: str) -> List[str]:
+        parts = sport_id.split("_")
+        prefixes: List[str] = []
+        for end in range(len(parts) - 1, 0, -1):
+            prefixes.append("_".join(parts[:end]))
+        return prefixes
 
     @staticmethod
     def _event_indicator(event_type: Optional[str]) -> str:
@@ -820,7 +893,6 @@ class NotificationService:
         *,
         cache_dir: Path,
         destination_dir: Path,
-        default_discord_webhook: Optional[str],
         enabled: bool = True,
     ) -> None:
         self._settings = settings
@@ -828,7 +900,6 @@ class NotificationService:
         self._targets = self._build_targets(
             settings.targets,
             cache_dir,
-            default_discord_webhook,
             destination_dir,
         )
         self._throttle_map = settings.throttle
@@ -862,6 +933,7 @@ class NotificationService:
                 )
                 return
 
+        successes: List[str] = []
         for target in self._targets:
             if not target.enabled():
                 continue
@@ -869,39 +941,48 @@ class NotificationService:
                 target.send(event)
             except Exception as exc:  # pragma: no cover - defensive logging
                 LOGGER.warning("Notification target %s failed: %s", target.name, exc)
+            else:
+                successes.append(target.name)
 
         self._last_sent[event.sport_id] = event.timestamp
+        if successes:
+            LOGGER.info(
+                "Notification dispatched | sport=%s episode=%s event=%s targets=%s",
+                event.sport_id,
+                event.episode,
+                event.event_type,
+                ", ".join(successes),
+            )
+        else:
+            LOGGER.debug(
+                "Notification skipped or failed for %s (%s) - no targets succeeded",
+                event.sport_id,
+                event.event_type,
+            )
 
     def _build_targets(
         self,
         targets_raw: List[Dict[str, Any]],
         cache_dir: Path,
-        default_discord_webhook: Optional[str],
         destination_dir: Path,
     ) -> List[NotificationTarget]:
         targets: List[NotificationTarget] = []
         configs = list(targets_raw)
-        if not configs and default_discord_webhook:
-            configs.append(
-                {
-                    "type": "discord",
-                    "webhook_url": default_discord_webhook,
-                    "batch": self._settings.batch_daily,
-                }
-            )
 
         for entry in configs:
             target_type = entry.get("type", "").lower()
             if target_type == "discord":
-                webhook = entry.get("webhook_url") or default_discord_webhook
+                webhook = entry.get("webhook_url")
                 if webhook:
                     batch = entry.get("batch")
+                    mentions_override = _normalize_mentions_map(entry.get("mentions"))
                     targets.append(
                         DiscordTarget(
                             webhook,
                             cache_dir=cache_dir,
                             settings=self._settings,
                             batch=batch if batch is not None else entry.get("batch_daily"),
+                            mentions=mentions_override if mentions_override else None,
                         )
                     )
                 else:

@@ -46,13 +46,19 @@ def _build_event(
     )
 
 
+_DEFAULT_TARGET = {"type": "discord", "webhook_url": "https://discord.test/webhook"}
+
+
 def test_notification_service_sends_discord_message(tmp_path, monkeypatch) -> None:
-    settings = NotificationSettings(batch_daily=False, flush_time=dt.time(hour=0, minute=0))
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        targets=[_DEFAULT_TARGET],
+    )
     service = NotificationService(
         settings,
         cache_dir=tmp_path,
         destination_dir=tmp_path,
-        default_discord_webhook="https://discord.test/webhook",
         enabled=True,
     )
 
@@ -72,15 +78,54 @@ def test_notification_service_sends_discord_message(tmp_path, monkeypatch) -> No
     assert request["url"] == "https://discord.test/webhook"
     payload = request["json"]
     assert payload["embeds"][0]["fields"][0]["value"] == "Demo Sport"
+    assert payload["content"] == "[NEW] Demo Sport: Qualifying"
+    embed = payload["embeds"][0]
+    assert "description" not in embed
+    field_names = [field["name"] for field in embed["fields"]]
+    assert "Session" not in field_names
+    assert "Action" not in field_names
+    destination_field = next(field for field in embed["fields"] if field["name"] == "Destination")
+    assert destination_field["value"] == "Demo"
 
 
-def test_notification_service_batches_discord_messages(tmp_path, monkeypatch) -> None:
-    settings = NotificationSettings(batch_daily=True, flush_time=dt.time(hour=0, minute=0))
+def test_notification_service_mentions_opt_in_roles(tmp_path, monkeypatch) -> None:
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        mentions={"demo": "<@&42>"},
+        targets=[_DEFAULT_TARGET],
+    )
     service = NotificationService(
         settings,
         cache_dir=tmp_path,
         destination_dir=tmp_path,
-        default_discord_webhook="https://discord.test/webhook",
+        enabled=True,
+    )
+
+    calls: List[Dict[str, Any]] = []
+
+    def fake_request(method, url, json=None, timeout=None, headers=None):
+        calls.append({"method": method, "url": url, "json": json})
+        return FakeResponse(204)
+
+    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+
+    service.notify(_build_event())
+
+    payload = calls[0]["json"]
+    assert payload["content"].startswith("<@&42> [NEW] Demo Sport: Qualifying")
+
+
+def test_notification_service_batches_discord_messages(tmp_path, monkeypatch) -> None:
+    settings = NotificationSettings(
+        batch_daily=True,
+        flush_time=dt.time(hour=0, minute=0),
+        targets=[_DEFAULT_TARGET],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
         enabled=True,
     )
 
@@ -110,13 +155,151 @@ def test_notification_service_batches_discord_messages(tmp_path, monkeypatch) ->
     assert state["demo"]["message_id"] == "message123"
 
 
-def test_notification_service_handles_rate_limiting(tmp_path, monkeypatch) -> None:
-    settings = NotificationSettings(batch_daily=False, flush_time=dt.time(hour=0, minute=0))
+def test_notification_service_mentions_apply_to_batches(tmp_path, monkeypatch) -> None:
+    settings = NotificationSettings(
+        batch_daily=True,
+        flush_time=dt.time(hour=0, minute=0),
+        mentions={"default": "@here"},
+        targets=[_DEFAULT_TARGET],
+    )
     service = NotificationService(
         settings,
         cache_dir=tmp_path,
         destination_dir=tmp_path,
-        default_discord_webhook="https://discord.test/webhook",
+        enabled=True,
+    )
+
+    responses = [
+        FakeResponse(200, {"id": "message123"}),
+        FakeResponse(200, {"id": "message123"}),
+    ]
+    calls: List[Dict[str, Any]] = []
+
+    def fake_request(method, url, json=None, timeout=None, headers=None):
+        calls.append({"method": method, "url": url, "json": json})
+        return responses.pop(0)
+
+    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+
+    service.notify(_build_event(destination="Demo-1.mkv"))
+    service.notify(_build_event(destination="Demo-2.mkv"))
+
+    first_payload = calls[0]["json"]
+    assert first_payload["content"].startswith("@here Demo Sport updates")
+
+    state_path = tmp_path / "state" / "discord-batches.json"
+    assert state_path.exists()
+
+
+def test_notification_service_mentions_handle_variant_ids(tmp_path, monkeypatch) -> None:
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        mentions={"premier_league": "<@&123>"},
+        targets=[_DEFAULT_TARGET],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    calls: List[Dict[str, Any]] = []
+
+    def fake_request(method, url, json=None, timeout=None, headers=None):
+        calls.append({"method": method, "url": url, "json": json})
+        return FakeResponse(204)
+
+    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+
+    event = _build_event()
+    event.sport_id = "premier_league_2025_26"
+    service.notify(event)
+
+    payload = calls[0]["json"]
+    assert payload["content"].startswith("<@&123> [NEW]")
+
+
+def test_notification_service_mentions_support_wildcards(tmp_path, monkeypatch) -> None:
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        mentions={"formula1_*": "<@&999>", "default": "@here"},
+        targets=[_DEFAULT_TARGET],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    calls: List[Dict[str, Any]] = []
+
+    def fake_request(method, url, json=None, timeout=None, headers=None):
+        calls.append({"method": method, "url": url, "json": json})
+        return FakeResponse(204)
+
+    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+
+    event = _build_event()
+    event.sport_id = "formula1_2025"
+    service.notify(event)
+
+    payload = calls[0]["json"]
+    assert payload["content"].startswith("<@&999> [NEW]")
+
+
+def test_discord_targets_support_per_target_mentions(tmp_path, monkeypatch) -> None:
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        mentions={"default": "@here"},
+        targets=[
+            {
+                "type": "discord",
+                "webhook_url": "https://discord.test/a",
+                "mentions": {"demo": " <@&1> "},
+            },
+            {
+                "type": "discord",
+                "webhook_url": "https://discord.test/b",
+            },
+        ],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    calls: List[Dict[str, Any]] = []
+
+    def fake_request(method, url, json=None, timeout=None, headers=None):
+        calls.append({"url": url, "json": json})
+        return FakeResponse(204)
+
+    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+
+    service.notify(_build_event())
+
+    by_url = {call["url"]: call["json"]["content"] for call in calls}
+    assert by_url["https://discord.test/a"].startswith("<@&1>")
+    assert by_url["https://discord.test/b"].startswith("@here")
+
+
+def test_notification_service_handles_rate_limiting(tmp_path, monkeypatch) -> None:
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        targets=[_DEFAULT_TARGET],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
         enabled=True,
     )
 
@@ -141,12 +324,15 @@ def test_notification_service_handles_rate_limiting(tmp_path, monkeypatch) -> No
 
 
 def test_notification_service_skips_non_new_events(tmp_path, monkeypatch) -> None:
-    settings = NotificationSettings(batch_daily=False, flush_time=dt.time(hour=0, minute=0))
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        targets=[_DEFAULT_TARGET],
+    )
     service = NotificationService(
         settings,
         cache_dir=tmp_path,
         destination_dir=tmp_path,
-        default_discord_webhook="https://discord.test/webhook",
         enabled=True,
     )
 
@@ -179,7 +365,6 @@ def test_autoscan_target_posts_manual_trigger(tmp_path, monkeypatch) -> None:
         settings,
         cache_dir=tmp_path,
         destination_dir=tmp_path,
-        default_discord_webhook=None,
         enabled=True,
     )
 
