@@ -90,7 +90,6 @@ class KometaTriggerSettings:
     namespace: str = "media"
     cronjob_name: str = "kometa-sport"
     job_name_prefix: str = "kometa-sport-triggered-by-playbook"
-    per_batch: bool = False
     docker_binary: str = "docker"
     docker_image: str = "kometateam/kometa"
     docker_config_path: Optional[str] = None
@@ -391,7 +390,6 @@ def _build_kometa_trigger_settings(data: Dict[str, Any]) -> KometaTriggerSetting
     namespace_raw = str(data.get("namespace", "media")).strip()
     cronjob_raw = str(data.get("cronjob_name", "kometa-sport")).strip()
     mode_raw = str(data.get("mode", "kubernetes")).strip().lower()
-    per_batch = bool(data.get("per_batch", False))
 
     namespace = namespace_raw or "media"
     cronjob_name = cronjob_raw or "kometa-sport"
@@ -454,7 +452,6 @@ def _build_kometa_trigger_settings(data: Dict[str, Any]) -> KometaTriggerSetting
         namespace=namespace,
         cronjob_name=cronjob_name,
         job_name_prefix=job_name_prefix,
-        per_batch=per_batch,
         docker_binary=str(docker_raw.get("binary", "docker")).strip() or "docker",
         docker_image=str(docker_raw.get("image", "kometateam/kometa")).strip() or "kometateam/kometa",
         docker_config_path=docker_config_path,

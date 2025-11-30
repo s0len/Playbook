@@ -56,6 +56,7 @@
     - [Triggering Kometa After Ingests](#triggering-kometa-after-ingests)
       - [Kubernetes CronJob trigger](#kubernetes-cronjob-trigger)
       - [Docker Run trigger](#docker-run-trigger)
+        - [Docker prerequisites inside the Playbook container](#docker-prerequisites-inside-the-playbook-container)
       - [Manual trigger CLI](#manual-trigger-cli)
   - [Downloading Sports with Autobrr](#downloading-sports-with-autobrr)
     - [Basic Autobrr setup](#basic-autobrr-setup)
@@ -285,7 +286,7 @@ notifications:
 notifications:
   targets:
     - type: discord
-      webhook_url: ${DISCORD_WEBHOOK_URL:-}   # Pull from env vars if you like.
+      webhook_url: ${DISCORD_WEBHOOK_URL}   # Pull from env vars if you like.
       mentions:
         formula1: "<@&999>"        # Overrides/extends the global mentions for this webhook only.
     - type: discord
@@ -516,7 +517,7 @@ libraries:
 
 ### Triggering Kometa After Ingests
 
-Playbook can nudge Kometa automatically after each ingest cycle. Configure it once under `settings.kometa_trigger` and it will fire immediately after the first _new_ file is linked so duplicate runs are avoided. Set `per_batch: true` if you prefer to trigger once per processor run (e.g., for filesystem watcher batches where files might already exist).
+Playbook can nudge Kometa automatically after each ingest cycle. Configure it once under `settings.kometa_trigger` and it will fire once at the end of every processor run whenever at least one brand-new file was linked, so duplicate runs are avoided automatically.
 
 #### Kubernetes CronJob trigger
 
@@ -572,10 +573,11 @@ docker run --rm \
 
 Add any additional Kometa CLI flags to `docker.extra_args`, and mount a different config path/container path if needed. Logs from the container are captured and surfaced in `playbook.log`, so failures stand out quickly.
 
-**Docker prerequisites inside the Playbook container**
+##### Docker prerequisites inside the Playbook container
 
 - Mount the Docker socket so the daemon is reachable: `-v /var/run/docker.sock:/var/run/docker.sock`.
 - Mount the client binaries into the container (paths vary, discover them with `command -v docker` and `command -v com.docker.cli` on macOS):
+
   ```bash
   -v $(command -v docker):/usr/local/bin/docker \
   -v $(command -v com.docker.cli):/usr/local/bin/com.docker.cli

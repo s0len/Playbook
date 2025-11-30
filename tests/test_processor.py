@@ -537,7 +537,7 @@ def test_should_suppress_sample_variants() -> None:
     assert not Processor._should_suppress_sample_ignored(Path("nba.example.1080p.mkv"))
 
 
-def test_processor_triggers_per_batch_when_enabled(tmp_path, monkeypatch) -> None:
+def test_processor_triggers_post_run_when_needed(tmp_path, monkeypatch) -> None:
     cache_dir = tmp_path / "cache"
     source_dir = tmp_path / "source"
     dest_dir = tmp_path / "dest"
@@ -545,7 +545,7 @@ def test_processor_triggers_per_batch_when_enabled(tmp_path, monkeypatch) -> Non
     source_dir.mkdir()
     dest_dir.mkdir()
 
-    kometa_settings = KometaTriggerSettings(enabled=True, per_batch=True)
+    kometa_settings = KometaTriggerSettings(enabled=True)
     settings = Settings(
         source_dir=source_dir,
         destination_dir=dest_dir,
@@ -571,12 +571,13 @@ def test_processor_triggers_per_batch_when_enabled(tmp_path, monkeypatch) -> Non
 
     processor._kometa_trigger = dummy_trigger
     processor._kometa_trigger_fired = False
-    processor._trigger_per_batch_if_needed(stats)
+    processor._kometa_trigger_needed = True
+    processor._trigger_post_run_trigger_if_needed(stats)
 
     assert dummy_trigger.calls == 1
 
 
-def test_processor_per_batch_skips_when_no_activity(tmp_path, monkeypatch) -> None:
+def test_processor_post_run_skips_when_not_needed(tmp_path, monkeypatch) -> None:
     cache_dir = tmp_path / "cache"
     source_dir = tmp_path / "source"
     dest_dir = tmp_path / "dest"
@@ -584,7 +585,7 @@ def test_processor_per_batch_skips_when_no_activity(tmp_path, monkeypatch) -> No
     source_dir.mkdir()
     dest_dir.mkdir()
 
-    kometa_settings = KometaTriggerSettings(enabled=True, per_batch=True)
+    kometa_settings = KometaTriggerSettings(enabled=True)
     settings = Settings(
         source_dir=source_dir,
         destination_dir=dest_dir,
@@ -610,7 +611,8 @@ def test_processor_per_batch_skips_when_no_activity(tmp_path, monkeypatch) -> No
 
     processor._kometa_trigger = dummy_trigger
     processor._kometa_trigger_fired = False
-    processor._trigger_per_batch_if_needed(stats)
+    processor._kometa_trigger_needed = False
+    processor._trigger_post_run_trigger_if_needed(stats)
 
     assert dummy_trigger.calls == 0
 

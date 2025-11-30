@@ -95,7 +95,6 @@ CONFIG_SCHEMA: Dict[str, Any] = {
                     "properties": {
                         "enabled": {"type": "boolean"},
                         "mode": {"type": "string", "enum": ["kubernetes", "docker"]},
-                        "per_batch": {"type": "boolean"},
                         "namespace": {"type": "string"},
                         "cronjob_name": {"type": "string"},
                         "job_name_prefix": {"type": "string"},

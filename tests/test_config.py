@@ -119,7 +119,6 @@ def test_kometa_trigger_settings_round_trip(tmp_path) -> None:
           cache_dir: "{tmp_path / 'cache'}"
           kometa_trigger:
             enabled: true
-            per_batch: true
             namespace: custom
             cronjob_name: custom-sport
             job_name_prefix: manual-run
@@ -135,7 +134,6 @@ def test_kometa_trigger_settings_round_trip(tmp_path) -> None:
     trigger = config.settings.kometa_trigger
 
     assert trigger.enabled is True
-    assert trigger.per_batch is True
     assert trigger.namespace == "custom"
     assert trigger.cronjob_name == "custom-sport"
     assert trigger.job_name_prefix == "manual-run"

@@ -50,7 +50,7 @@ settings:
       # default: "@here"   # Uncomment for a fallback mention when a sport ID isn’t listed.
     targets:              # Define at least one target (Discord, Slack, webhook, Autoscan, etc.).
       - type: discord
-        webhook_url: ${DISCORD_WEBHOOK_URL:-https://discord.com/api/webhooks/...}
+        webhook_url: ${DISCORD_WEBHOOK_URL}
         mentions:          # Override/extend global mentions just for this webhook.
           formula1: "<@&222333444555666777>"
       - type: autoscan
@@ -84,7 +84,6 @@ settings:
   kometa_trigger:
     enabled: false
     mode: kubernetes         # kubernetes | docker
-    per_batch: false         # When true, trigger once per run even if no brand-new files were seen.
     namespace: media
     cronjob_name: kometa-sport
     job_name_prefix: kometa-sport-triggered-by-playbook
