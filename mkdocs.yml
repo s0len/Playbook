@@ -1,0 +1,51 @@
+site_name: Playbook
+site_description: >-
+  Documentation for Playbook – metadata-driven automation that turns chaotic sports releases
+  into Plex-perfect TV libraries.
+site_url: https://s0len.github.io/Playbook/
+repo_url: https://github.com/s0len/playbook
+repo_name: s0len/playbook
+docs_dir: docs
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+    - search.suggest
+  palette:
+    - scheme: default
+      primary: blue
+      accent: orange
+plugins:
+  - search
+markdown_extensions:
+  - admonition
+  - def_list
+  - attr_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.snippets:
+      base_path: docs
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+nav:
+  - Introduction: index.md
+  - Getting Started: getting-started.md
+  - Configuration Guide: configuration.md
+  - Operations & Run Modes: operations.md
+  - Integrations: integrations.md
+  - Recipes & How-tos: recipes.md
+  - Troubleshooting & FAQ: troubleshooting.md
+  - Developer Guide: developer-guide.md
+  - Changelog: changelog.md
+
