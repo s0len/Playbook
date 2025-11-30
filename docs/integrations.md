@@ -2,9 +2,18 @@
 
 Playbook focuses on filesystem organization and leaves downloading, metadata enrichment, and library refreshes to the tools that already excel at those jobs. This guide summarizes the supported integrations.
 
+## Integration Overview
+
+| Integration | Purpose | Quick link |
+|-------------|---------|------------|
+| Kometa | Applies the same YAML metadata feeds Playbook uses so Plex gets canonical titles/artwork. | [Kometa Metadata](#kometa-metadata) |
+| Kometa trigger | Automatically re-runs Kometa whenever Playbook links new files. | [Kometa Triggering](#kometa-triggering) |
+| Autobrr | Automates torrent intake so Playbook always has fresh downloads to normalize. | [Autobrr Automation](#autobrr-download-automation) |
+| Plex + Autoscan | Keeps your TV library and metadata agents refreshed the moment Playbook writes new files. | [Plex Library Setup](#plex-library-setup) / [Autoscan Hooks](#autoscan-hooks) |
+
 ## Kometa Metadata
 
-Point Kometa at the same metadata YAML feeds that Playbook uses so Plex shows canonical titles, posters, and collections:
+Point Kometa at the same metadata YAML feeds that Playbook uses so Plex shows canonical titles, posters, and collections. Start by wiring a `libraries` block:
 
 ```yaml
 libraries:
@@ -28,9 +37,19 @@ libraries:
       - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/wssp300-2025.yaml
 ```
 
+1. List every metadata YAML you expect Playbook to ingest (feeds live under `s0len/meta-manager-config`).
+2. Use a single Kometa library (e.g., `Sport`) to collect all sports series; Kometa handles per-show organization via the YAML metadata.
+3. Schedule Kometa normally (cron, k8s CronJob) so it still refreshes on its own, then layer Playbook triggers for instant updates.
+
 ### Kometa Triggering from Playbook {#kometa-triggering}
 
-Configure `settings.kometa_trigger` so Playbook nudges Kometa only when new files were linked.
+Configure `settings.kometa_trigger` so Playbook nudges Kometa only when new files were linked. Trigger modes:
+
+| Mode | When to use | Requirements |
+|------|-------------|--------------|
+| `kubernetes` | Playbook and Kometa live in the same cluster. Clone an existing CronJob spec. | Service account with permission to read/clone the CronJob. |
+| `docker` | Kometa runs as a standalone container or via Docker Compose. | Mount Docker socket & binaries into the Playbook container, or run Playbook on the host. |
+| `docker exec` | Kometa is already running (`docker-compose up`). | Set `docker.container_name` (plus optional `exec_python`/`exec_script`). |
 
 #### Kubernetes CronJob Trigger
 
@@ -73,7 +92,7 @@ docker run --rm \
   --config /config/config.yml
 ```
 
-Already running Kometa via Docker Compose? Set `docker.container_name` (plus optional `exec_python` / `exec_script`) and Playbook will call `docker exec` instead of spinning up a new container.
+Already running Kometa via Docker Compose? Set `docker.container_name` (plus optional `exec_python` / `exec_script`) and Playbook will call `docker exec` instead of spinning up a new container. For absolute control, provide `docker.exec_command` (e.g., `["python3", "/app/kometa/kometa.py"]`) and Playbook will append `libraries`/`extra_args`.
 
 ##### Docker prerequisites inside the Playbook container
 
@@ -87,7 +106,14 @@ Already running Kometa via Docker Compose? Set `docker.container_name` (plus opt
 
 ##### Manual Trigger CLI
 
-Use `python -m playbook.cli kometa-trigger --config /config/playbook.yaml --mode docker` when you want to test the integration without a full ingest run. Logs are captured inside `playbook.log`.
+Use `python -m playbook.cli kometa-trigger --config /config/playbook.yaml --mode docker` when you want to test the integration without a full ingest run. Logs are captured inside `playbook.log`, so failed triggers show up alongside the main processor output. Combine it with `--verbose --log-level DEBUG` to watch the exact docker command invoked.
+
+##### Kometa troubleshooting
+
+- `Kometa trigger is disabled` – enable `settings.kometa_trigger.enabled` or pass `--mode docker` / `--mode kubernetes` to the CLI.
+- `Kometa docker trigger requires access to the Docker socket` – mount `/var/run/docker.sock` plus the Docker client binary.
+- Stuck jobs in Kubernetes? `kubectl delete job -l trigger=playbook` to clear out previous runs before trying again.
+- Need a dry run? Set `kometa_trigger.enabled: false`, run Playbook once to ensure filenames look good, then re-enable and re-run.
 
 ## Autobrr Download Automation
 
@@ -98,6 +124,12 @@ Playbook expects files to appear in `SOURCE_DIR`. When you want to automate torr
 1. Create a filter per sport (e.g., `F1 1080p MWR`, `EPL 1080p NiGHTNiNJAS`).
 2. Select trackers that carry those releases.
 3. Under **Advanced → Release names → Match releases**, paste regexes that encode sport/year/resolution/release-group.
+4. Assign a dedicated category/tag so your downloader routes sports torrents into the Playbook `SOURCE_DIR`.
+5. Use Autobrr’s `Actions` to push directly into qBittorrent/Deluge, or fire off a webhook/exec script for bespoke flows.
+
+Sample filter (partial TOML):
+
+```--8<-- "snippets/autobrr-filter.md"```
 
 ### Sample Regexes
 
@@ -133,7 +165,12 @@ ufc[ ._-].*?\d{3}.*verum
 (wsbk|wssp|wssp300).*\d{4}.round\d+.[^.]+.(fp\d?|season.preview|superpole|race.one|race.two|war.up(one|two)?|weekend.highlights).*h264.*mwr
 ```
 
-UFC releases now include the matchup slug (e.g., `UFC 322 Della Maddalena vs Makhachev`) so Playbook can align each file with the correct metadata season.
+Tips:
+
+- UFC releases now **must** include the matchup slug (e.g., `UFC 322 Della Maddalena vs Makhachev`) so Playbook can align each file with the correct metadata season.
+- Test regexes via Autobrr’s built-in tester or an interactive `ripgrep --pcre2` session before enabling filters.
+- When multiple release groups upload the same events, use Autobrr’s `required_words`/`excluded_words` to prefer trusted encoders.
+- Keep filters narrow—use separate rules for 1080p vs 2160p, English vs multi-audio, etc.—so Playbook can rely on deterministic naming.
 
 ## Plex Library Setup
 
@@ -148,21 +185,23 @@ UFC releases now include the matchup slug (e.g., `UFC 322 Della Maddalena vs Mak
 
 This pairing ensures Plex treats every season/session as canonical TV episodes while Kometa layers metadata on top.
 
+When using Kometa:
+
+- Create the library first, run a manual **Scan Library Files**, then let Kometa populate posters/collections.
+- Keep the Playbook destination mounted read-only inside Plex if you want extra protection against accidental edits.
+- Pair Plex with [Autoscan](#autoscan-hooks) to avoid delayed library scans.
+
 ## Autoscan Hooks
 
 Add an `autoscan` notification target to retrigger Plex/Emby/Jellyfin scans immediately after new files are linked:
 
-```yaml
-notifications:
-  targets:
-    - type: autoscan
-      url: http://autoscan:3030
-      trigger: manual
-      rewrite:
-        - from: /data/destination
-          to: /mnt/unionfs/Media
-```
+```--8<-- "snippets/notifications-autoscan.md"```
 
-Define additional rewrite mappings when Autoscan lives in another container or when Plex sees different mount points.
+Guidelines:
+
+- `rewrite` entries translate Playbook’s container paths into whatever Autoscan/Plex can see (add as many mappings as needed).
+- `verify_ssl: false` is handy for lab clusters using self-signed certs (flip it back to `true` in production).
+- Combine Autoscan pings with watcher mode for near-instant Plex updates—new files drop, Playbook links them, Autoscan triggers a scan.
+- Want extra resiliency? Keep one Autoscan target per Plex server/library pair so failures are isolated.
 
 Need end-to-end walkthroughs? Jump to [Recipes & How-tos](recipes.md).
