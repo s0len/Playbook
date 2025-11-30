@@ -1,18 +1,11 @@
 ```yaml
 notifications:
-  mentions:
-    formula1: "<@&222333444555666777>"
-    default: "@here"
   targets:
-    - type: discord
-      webhook_url: ${DISCORD_WEBHOOK_URL}
-      mentions:
-        formula1: "<@&999>"
     - type: autoscan
       url: http://autoscan:3030
-      trigger: manual
-      username: ${AUTOSCAN_USERNAME:-}
-      password: ${AUTOSCAN_PASSWORD:-}
+      trigger: manual            # optional; defaults to /triggers/manual
+      username: ${AUTOSCAN_USER:-}
+      password: ${AUTOSCAN_PASS:-}
       rewrite:
         - from: ${DESTINATION_DIR:-/data/destination}
           to: /mnt/unionfs/Media
