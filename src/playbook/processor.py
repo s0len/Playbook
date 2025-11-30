@@ -270,7 +270,13 @@ class Processor:
             with Progress(disable=not LOGGER.isEnabledFor(logging.DEBUG)) as progress:
                 task_id = progress.add_task("Processing", total=file_count)
                 for source_path in filtered_source_files:
-                    handled, diagnostics = self._process_single_file(source_path, runtimes, stats)
+                    is_sample_file = self._should_suppress_sample_ignored(source_path)
+                    handled, diagnostics = self._process_single_file(
+                        source_path,
+                        runtimes,
+                        stats,
+                        is_sample_file=is_sample_file,
+                    )
                     if not handled:
                         if is_sample_file:
                             stats.register_ignored(suppressed_reason="sample")
@@ -384,11 +390,12 @@ class Processor:
         source_path: Path,
         runtimes: List[SportRuntime],
         stats: ProcessingStats,
+        *,
+        is_sample_file: bool = False,
     ) -> Tuple[bool, List[Tuple[str, str, Optional[str]]]]:
         suffix = source_path.suffix.lower()
         matching_runtimes = [runtime for runtime in runtimes if suffix in runtime.extensions]
         ignored_reasons: List[Tuple[str, str, Optional[str]]] = []
-        is_sample_file = self._should_suppress_sample_ignored(source_path)
 
         if not matching_runtimes:
             message = f"No configured sport accepts extension '{suffix or '<no extension>'}'"
