@@ -44,6 +44,32 @@ notifications:
 
 Autoscan entries mirror the [manual trigger](https://github.com/Cloudbox/autoscan?tab=readme-ov-file#manual). Rewrites translate container paths to Plex-visible mount points. Every successful `new`/`changed` event sends the parent directory of the destination file.
 
+**Supported target types**
+
+- `discord` – rich embeds with optional mention overrides per webhook.
+- `slack` – simple JSON payload; add your preferred text template.
+- `webhook` – fully templatable JSON for custom receivers.
+- `email` – SMTP transport with subject/body templates.
+- `autoscan` – immediately ping Autoscan so Plex/Jellyfin rescans the destination directories.
+
+Batching knobs (`notifications.batch_daily`, `notifications.flush_time`) apply to any target that supports rolling updates (Discord embeds today). Use `notifications.mentions` to fan out role/user mentions by sport ID (supports shell-style globs), and override them per target when one destination needs custom pings.
+
+#### Autoscan example
+
+```--8<-- "snippets/notifications-autoscan.md"```
+
+Define multiple `rewrite` map entries when Autoscan lives in another container or when Plex views different mount points.
+
+### File Watcher Settings
+
+The watcher keeps Playbook alive and reacts to filesystem events instead of relying solely on periodic scans:
+
+- `file_watcher.paths` defaults to `source_dir`. List additional absolute or relative paths to watch multiple download roots.
+- `include` / `ignore` accept glob syntax. Common ignores: `["*.part", "*.tmp", "*.!qb"]`.
+- `debounce_seconds` batches bursts of events into a single processor run. Increase it when downloaders generate rapid file-change storms.
+- `reconcile_interval` performs a full scan every _N_ seconds even if the platform drops events.
+- Override `WATCH_MODE=true|false` (or use `--watch` / `--no-watch`) to force the CLI into the desired mode regardless of the config.
+
 ## 2. Sport Entries
 
 Each sport describes metadata, detection filters, and pattern packs:
@@ -77,6 +103,24 @@ Key knobs:
 - `link_mode`, `destination.*`, and notification overrides let you specialize behavior per sport.
 - `pattern_sets` pulls from `src/playbook/pattern_templates.yaml`; you can still inline `file_patterns` for overrides.
 
+**Metadata overrides**
+
+- `season_overrides` lets you force numbers/titles for special events (exhibitions, pre-season testing, etc.).
+- `metadata.ttl_hours` controls how aggressively Playbook refreshes remote YAML feeds; lower it for rapidly changing leagues.
+- `allow_unmatched: true` is useful when onboarding a new sport—you’ll still see matches in the log but without warnings.
+
+### Pattern Sets & Reuse
+
+Pattern sets bundle curated regex/alias definitions under `src/playbook/pattern_templates.yaml`. To inspect them:
+
+```bash
+rg --context 3 "pattern_sets" src/playbook/pattern_templates.yaml
+```
+
+- Reference a bundle via `pattern_sets: ["formula1", "motoGP"]`.
+- Layer sport-specific overrides by combining `pattern_sets` with inline `file_patterns`.
+- Keep experimental tweaks local until they’re stable, then upstream them by editing `pattern_templates.yaml`.
+
 ## 3. Pattern Matching
 
 Inline patterns support full regex/group control:
@@ -106,6 +150,12 @@ Reference table:
 - `session_aliases` augment metadata aliases with release-specific tokens (case-insensitive).
 - `priority` resolves collisions when multiple patterns match the same file.
 
+**Testing patterns quickly**
+
+1. Drop real release names into `tests/data/pattern_samples.yaml`.
+2. Run `pytest tests/test_pattern_samples.py` to confirm they map to the expected metadata.
+3. Use `python -m playbook.cli --config playbook.yaml --dry-run --verbose` with `--clear-processed-cache` to reprocess the same files repeatedly during tuning.
+
 ## 4. Destination Templating
 
 Templates receive a rich context assembled from metadata + regex captures:
@@ -120,6 +170,13 @@ Templates receive a rich context assembled from metadata + regex captures:
 | `source_filename`, `extension`, `relative_source` | Safe access to the original file path. |
 
 Set per-sport or per-pattern overrides (`destination.root_template`, `destination.filename_template`) whenever a league needs special formatting.
+
+Tips:
+
+- Append `{suffix}` to preserve any release-group decorations that survived sanitization.
+- Use conditionals in templates (Jinja syntax) for optional segments, e.g., `{% if episode_originally_available %}...{% endif %}`.
+- The renderer automatically normalizes whitespace and strips forbidden path characters—keep templates readable and let Playbook worry about sanitization.
+- Override `destination.season_folder_template` to group rounds (e.g., `{season_round:02} {season_title}` for touring series).
 
 ## 5. Variants & Reuse
 
