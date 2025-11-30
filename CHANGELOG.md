@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format roughly follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), with dates in `YYYY-MM-DD`.
 
-## [2025-11-30] - 2025-11-30
+## [1.3.1] - 2025-11-30
 
 ### Added
 - `match_file_to_episode` now accepts a `suppress_warnings` flag so sample file discovery can mute noisy logs, with processor wiring and regression tests covering the workflow.
