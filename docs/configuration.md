@@ -31,7 +31,8 @@ notifications:
     default: "@everyone"
   targets:
     - type: discord
-      webhook_url: ${DISCORD_WEBHOOK_URL}
+      webhook_env: DISCORD_WEBHOOK_URL
+      # webhook_url: ${DISCORD_WEBHOOK_URL}  # Optional inline expansion if your config templating supports it.
       mentions:
         formula1: "<@&999>"
     - type: autoscan
@@ -41,6 +42,8 @@ notifications:
         - from: ${DESTINATION_DIR:-/data/destination}
           to: /mnt/unionfs/Media
 ```
+
+Set `webhook_env` to the name of an environment variable (in your container/host manifest) to keep secrets out of the YAML file. Playbook resolves the value at runtime and skips the target if the variable is absent. If you already template the config file yourself you can keep using `webhook_url` with `${VAR}` syntax; both approaches continue to work.
 
 Autoscan entries mirror the [manual trigger](https://github.com/Cloudbox/autoscan?tab=readme-ov-file#manual). Rewrites translate container paths to Plex-visible mount points. Every successful `new`/`changed` event sends the parent directory of the destination file.
 

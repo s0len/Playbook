@@ -246,7 +246,7 @@ spec:
 - **Image tag**: Use `latest` for stable releases or `develop` for bleeding edge (pin to digest for reproducibility)
 - **Environment variables**: Set `SOURCE_DIR`, `DESTINATION_DIR`, `CACHE_DIR` to match your persistent volume mount paths
 - **Config file**: Mount via ConfigMap or Secret (this example uses a ConfigMap at `/config/config.yaml`)
-- **Secrets**: Store sensitive values (API keys, webhook URLs) in a `playbook-secret` and reference with `envFrom`
+- **Secrets**: Store sensitive values (API keys, webhook URLs) in a `playbook-secret`, reference it with `envFrom`, and point `notifications.targets[].webhook_env` at the relevant variable (e.g., `DISCORD_WEBHOOK_URL`)
 - **Persistent storage**: Cache directory should survive pod restarts (use PVC or NFS)
 - **Watcher mode**: Enable `WATCH_MODE=true` or `file_watcher.enabled: true` in config for continuous processing
 - **Automatic reloads**: Add `reloader.stakater.com/auto: "true"` annotation to restart when ConfigMap changes

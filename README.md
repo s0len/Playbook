@@ -294,7 +294,8 @@ notifications:
 notifications:
   targets:
     - type: discord
-      webhook_url: ${DISCORD_WEBHOOK_URL}   # Pull from env vars if you like.
+      webhook_env: DISCORD_WEBHOOK_URL      # Keep secrets in env vars/Secrets, not the config file.
+      # webhook_url: ${DISCORD_WEBHOOK_URL} # Optional inline expansion if you already template configs elsewhere.
       mentions:
         formula1: "<@&999>"        # Overrides/extends the global mentions for this webhook only.
     - type: discord
@@ -302,6 +303,8 @@ notifications:
       mentions:
         premier_league: "<@&1234>"
 ```
+
+`webhook_env` tells Playbook to read the runtime environment for the URL, so you can mount a Kubernetes/Docker secret as env vars without ever writing the secret into the ConfigMap. If you already have your own templating flow you can continue to use `webhook_url` with `${VAR}` substitution; both options are supported.
 
 Older releases supported `settings.discord_webhook_url`; that field has been removed. If it still exists in your config you'll get a startup error — move the value into `notifications.targets` as shown above.
 
