@@ -4,42 +4,71 @@
 [![Python](https://img.shields.io/badge/python-3.12%2B-3776ab.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fs0len%2Fplaybook-0db7ed.svg?logo=docker&logoColor=white)](https://github.com/users/s0len/packages/container/package/playbook)
 
+**Sonarr for Sports** – Automated file matching, renaming, and metadata for sports content in Plex.
+
 > Metadata-driven automation that turns chaotic sports releases into Plex-perfect TV libraries—no brittle scripts, just declarative YAML.
 
-## TL;DR
+## The Problem
 
-- Configure your `playbook.yaml` (copy from `config/playbook.sample.yaml` and set `SOURCE_DIR`, `DESTINATION_DIR`, and `CACHE_DIR`).
-- Dry-run the Docker image to confirm metadata downloads and filesystem access (metadata caches are still written so later runs stay warm).
-- Point Plex (or another media manager) at the destination directory once you're happy with the output.
+Love watching sports replays in Plex but hate manually renaming files and setting metadata? Traditional tools like Sonarr don't work for sports because there's no centralized database like TheTVDB. Every sport structures their seasons differently (F1 has races, UFC has events, NFL has weeks), and release groups use wildly inconsistent naming schemes.
 
-> Quick verification:
->
-> ```bash
-> docker run --rm -it \
->   -e DRY_RUN=true \
->   -e VERBOSE=true \
->   -e SOURCE_DIR="/downloads" \
->   -e DESTINATION_DIR="/library" \
->   -e CACHE_DIR="/cache" \
->   -v /config:/config \
->   -v /downloads:/data/source \
->   -v /library:/data/destination \
->   -v /cache:/var/cache/playbook \
->   ghcr.io/s0len/playbook:latest --dry-run --verbose
-> ```
+## How Playbook Solves It
+
+Playbook is a complete pipeline that bridges the gap between messy downloads and perfectly organized Plex libraries:
+
+### 1. **The Database Layer**
+
+Custom scrapers pull sports schedules from various sources (SportsDB, official APIs, manual curation) and structure them as YAML files that mirror how Plex expects TV shows: Show → Season → Episode. This is the foundation – every sport gets its own "TVDb" equivalent.
+
+### 2. **Smart File Matching** (like Sonarr)
+
+Playbook scans your downloads, parses filenames using regex patterns (built-in packs for F1, MotoGP, UFC, NFL, NBA, etc.), matches them against the YAML database, and automatically renames/moves them to your Plex library with perfect naming.
+
+### 3. **Rich Metadata** (via Kometa)
+
+The same YAML files that power matching also feed Kometa to set posters, summaries, air dates, and episode titles. One source of truth for everything.
+
+## Why It's a Game-Changer
+
+- **One YAML file** does it all: episode matching + metadata + Kometa integration
+- **Declarative**: Swap leagues, change folder structures, or add new release groups without touching Python
+- **Complete automation**: From download to Plex-ready with proper artwork and descriptions
+- **Built for sports**: Handles special cases like sprint races, prelims, qualifying sessions, and multi-part events
+
+## Quick Verification
+
+Before running for real, test with a dry-run to confirm metadata downloads and filesystem access:
+
+```bash
+docker run --rm -it \
+  -e DRY_RUN=true \
+  -e VERBOSE=true \
+  -e SOURCE_DIR="/downloads" \
+  -e DESTINATION_DIR="/library" \
+  -e CACHE_DIR="/cache" \
+  -v /config:/config \
+  -v /downloads:/data/source \
+  -v /library:/data/destination \
+  -v /cache:/var/cache/playbook \
+  ghcr.io/s0len/playbook:latest --dry-run --verbose
+```
 
 ## Table of Contents
 
 - [Playbook](#playbook)
-  - [TL;DR](#tldr)
+  - [The Problem](#the-problem)
+  - [How Playbook Solves It](#how-playbook-solves-it)
+    - [1. **The Database Layer**](#1-the-database-layer)
+    - [2. **Smart File Matching** (like Sonarr)](#2-smart-file-matching-like-sonarr)
+    - [3. **Rich Metadata** (via Kometa)](#3-rich-metadata-via-kometa)
+  - [Why It's a Game-Changer](#why-its-a-game-changer)
+  - [Quick Verification](#quick-verification)
   - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [Why Playbook?](#why-playbook)
-  - [Architecture at a Glance](#architecture-at-a-glance)
   - [Quickstart](#quickstart)
     - [Option A: Docker (Recommended)](#option-a-docker-recommended)
     - [Option B: Python Environment](#option-b-python-environment)
     - [Option C: Kubernetes (Flux HelmRelease)](#option-c-kubernetes-flux-helmrelease)
+  - [Architecture at a Glance](#architecture-at-a-glance)
   - [Configuration Deep Dive](#configuration-deep-dive)
     - [1. Global Settings](#1-global-settings)
       - [Notification targets \& Autoscan](#notification-targets--autoscan)
@@ -69,57 +98,6 @@
   - [License](#license)
   - [Support](#support)
   - [Sample Figure Skating Grand Prix Filenames](#sample-figure-skating-grand-prix-filenames)
-
-## Overview
-
-Playbook consumes authoritative metadata feeds (the same YAML used for Plex enrichment), matches downloads to the correct season and episode, and renders deterministic filenames and folder structures. Everything is driven by configuration—switch leagues, release groups, or folder formats by editing YAML, not code.
-
-Key ideas:
-
-- Metadata is fetched once, normalized into `Show → Season → Episode` objects, and cached with TTLs.
-- Regex-based pattern packs map release filenames to metadata elements, including round/session aliasing.
-- Deterministic templating generates safe, Plex-friendly folder and file names.
-- Runtime switches (CLI flags and env vars) let you control dry-runs, watcher mode, logging, and target directories without editing the config.
-
-## Why Playbook?
-
-Playbook centers on predictable, configuration-driven workflows:
-
-- **Metadata-first** – Honor official episode order, titles, and air dates straight from sanctioned YAML feeds.
-- **Point-and-configure** – Each sport lives in `playbook.yaml`; add or override patterns without touching Python.
-- **Alias intelligence** – Match `Sprint.Shootout`, `Warm.Up`, or `FP1` releases to canonical episodes via fuzzy alias tables.
-- **Deterministic libraries** – Enforce consistent naming everywhere—from folder slugs to final filenames.
-- **Cache-aware** – Requests are cached and automatically refreshed when TTLs expire, keeping repeated runs fast.
-- **Observability built-in** – Rich-powered console output, rotating log files, and detailed summaries spotlight every decision.
-- **Automation ready** – Run once, on a schedule, or inside Docker; dry-run everything before moving a single byte.
-
-## Architecture at a Glance
-
-```text
-┌────────────────┐    fetch + cache     ┌─────────────────────┐
-│ Remote YAML    │ ───────────────────▶ │ Metadata Normalizer │
-└────────────────┘                      └────────┬────────────┘
-                                               │ normalized Show/Season/Episode
-                                       ┌───────▼────────┐
-   source files + globs + aliases       │ Matching Engine │
-──────────────────────────────────────▶ │  (regex + TTL)  │
-                                       └───────┬────────┘
-                                               │ context (season, episode, templates)
-                                       ┌───────▼────────┐
-                                       │ Templating     │
-                                       │ & Sanitization │
-                                       └───────┬────────┘
-                                               │ destination path
-                                       ┌───────▼────────┐
-                                       │ Link/Copy/Sym  │
-                                       └────────────────┘
-```
-
-1. **Metadata fetch & cache**: remote YAML is downloaded with `requests`, cached on disk, and refreshed when TTLs expire.
-2. **Normalization**: structured dataclasses infer round numbers, preserve summaries, and attach aliases.
-3. **Matching**: regex capture groups, alias tables, and fuzzy matching link filenames to metadata episodes.
-4. **Templating**: rich context feeds customizable templates for root folders, season directories, and filenames.
-5. **Action**: files are hardlinked (default), copied, or symlinked into the library, respecting `skip_existing` and priority rules.
 
 ## Quickstart
 
@@ -248,6 +226,36 @@ Quick checklist:
 - Enable `file_watcher.enabled` (or set `WATCH_MODE=true`) to keep Playbook running continuously; leave it disabled for ad-hoc batch runs.
 - Add `reloader.stakater.com/auto: "true"` (already in the example) to hot-reload when the config map changes.
 
+## Architecture at a Glance
+
+Under the hood, Playbook follows this flow:
+
+```text
+┌────────────────┐    fetch + cache     ┌─────────────────────┐
+│ Remote YAML    │ ───────────────────▶ │ Metadata Normalizer │
+└────────────────┘                      └────────┬────────────┘
+                                               │ normalized Show/Season/Episode
+                                       ┌───────▼────────┐
+   source files + globs + aliases       │ Matching Engine │
+──────────────────────────────────────▶ │  (regex + TTL)  │
+                                       └───────┬────────┘
+                                               │ context (season, episode, templates)
+                                       ┌───────▼────────┐
+                                       │ Templating     │
+                                       │ & Sanitization │
+                                       └───────┬────────┘
+                                               │ destination path
+                                       ┌───────▼────────┐
+                                       │ Link/Copy/Sym  │
+                                       └────────────────┘
+```
+
+1. **Metadata fetch & cache**: remote YAML is downloaded with `requests`, cached on disk, and refreshed when TTLs expire.
+2. **Normalization**: structured dataclasses infer round numbers, preserve summaries, and attach aliases.
+3. **Matching**: regex capture groups, alias tables, and fuzzy matching link filenames to metadata episodes.
+4. **Templating**: rich context feeds customizable templates for root folders, season directories, and filenames.
+5. **Action**: files are hardlinked (default), copied, or symlinked into the library, respecting `skip_existing` and priority rules.
+
 ## Configuration Deep Dive
 
 Start with `config/playbook.sample.yaml`. The schema mirrors `playbook.config` dataclasses.
@@ -286,7 +294,8 @@ notifications:
 notifications:
   targets:
     - type: discord
-      webhook_url: ${DISCORD_WEBHOOK_URL}   # Pull from env vars if you like.
+      webhook_env: DISCORD_WEBHOOK_URL      # Keep secrets in env vars/Secrets, not the config file.
+      # webhook_url: ${DISCORD_WEBHOOK_URL} # Optional inline expansion if you already template configs elsewhere.
       mentions:
         formula1: "<@&999>"        # Overrides/extends the global mentions for this webhook only.
     - type: discord
@@ -294,6 +303,8 @@ notifications:
       mentions:
         premier_league: "<@&1234>"
 ```
+
+`webhook_env` tells Playbook to read the runtime environment for the URL, so you can mount a Kubernetes/Docker secret as env vars without ever writing the secret into the ConfigMap. If you already have your own templating flow you can continue to use `webhook_url` with `${VAR}` substitution; both options are supported.
 
 Older releases supported `settings.discord_webhook_url`; that field has been removed. If it still exists in your config you'll get a startup error — move the value into `notifications.targets` as shown above.
 

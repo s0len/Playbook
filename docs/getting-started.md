@@ -1,36 +1,41 @@
 # Getting Started
 
-This guide covers the supported deployment paths, environment prep, and the first-run checklist. Regardless of where Playbook runs, every deployment shares the same configuration file (`playbook.yaml`) and destination library layout.
+This guide walks you through installing Playbook, configuring your first sport, and verifying everything works before letting it run automatically. You can deploy via Docker (recommended), Python virtual environment, or Kubernetes.
 
-## Prerequisites
+## Quick Overview
 
-- Copy `config/playbook.sample.yaml` to your preferred location (Docker defaults to `/config/playbook.yaml`).
-- Define `SOURCE_DIR`, `DESTINATION_DIR`, and `CACHE_DIR` through environment variables or the `settings` block. The container refuses to start if these values are missing.
-- Ensure the host/container can reach the remote metadata URLs (validate with the dry-run command below).
-- Mount persistent storage for cache/log directories if you want warm starts across restarts.
+Every deployment needs three things:
 
-## Installation Paths
+1. **A config file** (`playbook.yaml`) defining which sports to process and how to match them
+2. **Three directories**: source (downloads), destination (Plex library), and cache (metadata storage)
+3. **Network access** to remote metadata URLs (SportsDB, GitHub-hosted YAML files, etc.)
+
+All deployment methods use the same config schema and produce identical folder layouts in your Plex library.
+
+## Before You Start
+
+Before installing, gather this information:
+
+- **Source directory** – where your torrent client/downloader saves files (e.g., `/downloads/sport`)
+- **Destination directory** – your Plex library path (e.g., `/library/sport`)
+- **Cache directory** – persistent storage for metadata and state (e.g., `/cache/playbook`)
+
+Then:
+
+1. Copy `config/playbook.sample.yaml` to your preferred location (Docker defaults to `/config/playbook.yaml`)
+2. Edit the config to set `SOURCE_DIR`, `DESTINATION_DIR`, and `CACHE_DIR` (or provide them as environment variables)
+3. Enable at least one sport in the `sports` section
+4. Validate your config: `playbook validate-config --config playbook.yaml --diff-sample`
+
+## Installation Methods
+
+Choose the deployment method that fits your setup. All methods use the same config file and produce identical results.
 
 ### Option A: Docker (Recommended)
 
-Run the container detached once you are ready for continuous processing:
+#### Step 1: Test with a dry-run
 
-```bash
-docker run -d \
-  --name playbook \
-  -e TZ="UTC" \
-  -e SOURCE_DIR="/downloads" \
-  -e DESTINATION_DIR="/library" \
-  -e CACHE_DIR="/cache" \
-  -v /config:/config \
-  -v /downloads:/data/source \
-  -v /library:/data/destination \
-  -v /cache:/var/cache/playbook \
-  -v /logs:/var/log/playbook \
-  ghcr.io/s0len/playbook:latest
-```
-
-Recommended first run:
+Before running continuously, validate your setup with a one-shot dry-run:
 
 ```bash
 docker run --rm -it \
@@ -39,42 +44,112 @@ docker run --rm -it \
   -e SOURCE_DIR="/downloads" \
   -e DESTINATION_DIR="/library" \
   -e CACHE_DIR="/cache" \
-  -v /config:/config \
-  -v /downloads:/data/source \
-  -v /library:/data/destination \
-  -v /cache:/var/cache/playbook \
-  -v /logs:/var/log/playbook \
-  ghcr.io/s0len/playbook:latest --dry-run --verbose
+  -v /path/to/your/config:/config \
+  -v /path/to/downloads:/downloads \
+  -v /path/to/library:/library \
+  -v /path/to/cache:/cache \
+  ghcr.io/s0len/playbook:latest
 ```
 
-Tips:
+Replace `/path/to/...` with your actual host directories. This command:
 
-- The entrypoint validates required directories before the processor starts. Missing values cause a clear error instead of silently creating `/data/...` defaults.
-- Use `LOG_LEVEL=DEBUG` or `VERBOSE=true` when you want deeper diagnostics.
-- `docker logs -f playbook` tails the structured log output.
+- Runs once and exits (`--rm`)
+- Shows what would happen without moving files (`DRY_RUN=true`)
+- Prints detailed matching logic (`VERBOSE=true`)
+- Validates config and metadata access
+
+#### Step 2: Run continuously
+
+Once the dry-run looks good, run detached:
+
+```bash
+docker run -d \
+  --name playbook \
+  -e TZ="UTC" \
+  -e SOURCE_DIR="/downloads" \
+  -e DESTINATION_DIR="/library" \
+  -e CACHE_DIR="/cache" \
+  -e WATCH_MODE=true \
+  -v /path/to/your/config:/config \
+  -v /path/to/downloads:/downloads \
+  -v /path/to/library:/library \
+  -v /path/to/cache:/cache \
+  ghcr.io/s0len/playbook:latest
+```
+
+#### Environment Variables Reference
+
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `SOURCE_DIR` | Where downloads land (required) | `/downloads` |
+| `DESTINATION_DIR` | Plex library path (required) | `/library` |
+| `CACHE_DIR` | Metadata/state storage (required) | `/cache` |
+| `WATCH_MODE` | Keep running and watch for new files | `true` |
+| `DRY_RUN` | Simulate without moving files | `true` |
+| `VERBOSE` | Detailed matching logs | `true` |
+| `LOG_LEVEL` | Logging verbosity | `DEBUG`, `INFO`, `WARNING` |
+
+#### Monitoring
+
+```bash
+# Tail live logs
+docker logs -f playbook
+
+# Check container status
+docker ps -a | grep playbook
+```
 
 ### Option B: Python Environment
 
-Use a virtual environment for local development or CI:
+Use this method for local development, testing, or if you prefer managing Python dependencies directly:
+
+#### Step 1: Create a virtual environment
 
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m playbook.cli --config /path/to/playbook.yaml --dry-run --verbose
 ```
 
-Helpful environment variables:
+#### Step 2: Validate your config
 
-- `SOURCE_DIR`, `DESTINATION_DIR`, `CACHE_DIR` mirror the Docker contract.
-- `LOG_LEVEL=DEBUG` or `VERBOSE=true` copies the container verbosity locally.
-- `WATCH_MODE=true` keeps the CLI alive with the filesystem watcher.
+```bash
+python -m playbook.cli validate-config --config /path/to/playbook.yaml --diff-sample
+```
+
+#### Step 3: Test with a dry-run
+
+```bash
+export SOURCE_DIR="/path/to/downloads"
+export DESTINATION_DIR="/path/to/library"
+export CACHE_DIR="/path/to/cache"
+
+python -m playbook.cli process --config /path/to/playbook.yaml --dry-run --verbose
+```
+
+#### Step 4: Run continuously (watcher mode)
+
+```bash
+export WATCH_MODE=true
+python -m playbook.cli watch --config /path/to/playbook.yaml
+```
+
+#### Useful Environment Variables
+
+Same as Docker – set `SOURCE_DIR`, `DESTINATION_DIR`, `CACHE_DIR`, `LOG_LEVEL`, `VERBOSE`, etc. before running commands.
 
 ### Option C: Kubernetes (Flux HelmRelease)
 
-Use the [bjw-s/app-template](https://github.com/bjw-s/helm-charts/tree/main/charts/other/app-template) chart with Flux. The example below mirrors the Docker configuration and mounts persistent cache/log directories alongside the config file:
+Use this method if you're running a Flux-based Kubernetes cluster. This example uses the [bjw-s/app-template](https://github.com/bjw-s/helm-charts/tree/main/charts/other/app-template) chart to deploy Playbook as a single-pod deployment with persistent storage:
+
+#### Prerequisites
+
+- A running Kubernetes cluster with Flux installed
+- Persistent storage provisioner (or NFS access)
+- bjw-s app-template OCIRepository configured in Flux
 
 ```yaml
+---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -85,61 +160,234 @@ spec:
   chartRef:
     kind: OCIRepository
     name: app-template
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+
   values:
+    serviceAccount:
+      playbook: {}
+
     controllers:
       main:
+        serviceAccount:
+          identifier: playbook
         type: deployment
         containers:
           app:
             image:
               repository: ghcr.io/s0len/playbook
-              tag: develop@sha256:586d8e06fae7d156d47130ed18b1a619a47d2c5378345e3f074ee6c282f09f02
+              tag: develop@sha256:6248cac4f5aeb9403a88f919e522e96291e3c93eb018c289aff4dbfef92ec5fa
               pullPolicy: Always
             env:
-              WATCH_MODE: true
-              LOG_LEVEL: INFO
-              CONFIG_PATH: /config/playbook.yaml
               CACHE_DIR: /settings/cache
-              LOG_DIR: /settings/logs
-              SOURCE_DIR: /data/torrents/sport
+              CLEAR_PROCESSED_CACHE: false
+              CONFIG_PATH: /config/config.yaml
+              DRY_RUN: false
               DESTINATION_DIR: /data/media/sport
+              LOG_DIR: /tmp
+              LOG_LEVEL: INFO
+              SOURCE_DIR: /data/torrents/sport
             envFrom:
               - secretRef:
                   name: playbook-secret
+            securityContext:
+              privileged: false
+        annotations:
+          reloader.stakater.com/auto: "true"
+
+    defaultPodOptions:
+      automountServiceAccountToken: true
+      enableServiceLinks: false
+      securityContext:
+        runAsUser: 568
+        runAsGroup: 568
+        runAsNonRoot: true
+        fsGroup: 568
+
     persistence:
       settings:
         existingClaim: playbook-settings
         globalMounts:
           - path: /settings
+            readOnly: false
+
+      tmp:
+        type: emptyDir
+        medium: Memory
+        globalMounts:
+          - path: /tmp
+
       data:
         type: nfs
         server: "${TRUENAS_IP}"
         path: /mnt/rust/data
         globalMounts:
           - path: /data
+            readOnly: false
+
       config:
         type: configMap
         name: playbook-configmap
         globalMounts:
-          - path: /config/playbook.yaml
-            subPath: playbook.yaml
+          - path: /config/config.yaml
+            subPath: config.yaml
             readOnly: true
+
 ```
 
-Checklist:
+#### Key Configuration Notes
 
-- Create a `playbook-secret` with sensitive values (`kubectl create secret generic ...`).
-- Mount a `playbook-configmap` containing your `playbook.yaml` (or source it from ExternalSecrets).
-- Provide persistent storage for cache/log directories (PVC, NFS, etc.).
-- Enable `file_watcher.enabled` (or set `WATCH_MODE=true`) when you want Playbook to keep watching.
-- Add `reloader.stakater.com/auto: "true"` if you want automatic restarts on config changes.
+- **Image tag**: Use `latest` for stable releases or `develop` for bleeding edge (pin to digest for reproducibility)
+- **Environment variables**: Set `SOURCE_DIR`, `DESTINATION_DIR`, `CACHE_DIR` to match your persistent volume mount paths
+- **Config file**: Mount via ConfigMap or Secret (this example uses a ConfigMap at `/config/config.yaml`)
+- **Secrets**: Store sensitive values (API keys, webhook URLs) in a `playbook-secret`, reference it with `envFrom`, and point `notifications.targets[].webhook_env` at the relevant variable (e.g., `DISCORD_WEBHOOK_URL`)
+- **Persistent storage**: Cache directory should survive pod restarts (use PVC or NFS)
+- **Watcher mode**: Enable `WATCH_MODE=true` or `file_watcher.enabled: true` in config for continuous processing
+- **Automatic reloads**: Add `reloader.stakater.com/auto: "true"` annotation to restart when ConfigMap changes
+
+#### Deployment Checklist
+
+1. Create the secret: `kubectl create secret generic playbook-secret --from-literal=DISCORD_WEBHOOK=https://...`
+2. Create the ConfigMap with your `playbook.yaml` content: `kubectl create configmap playbook-configmap --from-file=config.yaml=playbook.yaml`
+3. Apply the HelmRelease manifest
+4. Check logs: `kubectl logs -f deployment/playbook`
+5. Verify processing: watch destination directory for new files
 
 ## First Run Checklist
 
-1. Confirm the config validates: `python -m playbook.cli validate-config --config playbook.yaml --diff-sample`.
-2. Run a dry-run to warm caches and verify metadata downloads.
-3. Review `playbook.log` (or `docker logs`) for skipped files and Kometa/autoscan triggers.
-4. Point Plex/Kometa at the destination directory once the folder layout looks right.
-5. Enable watcher mode or CronJob scheduling only after the initial batch finishes cleanly.
+Follow these steps in order to ensure everything works before running automatically:
 
-Next step: dive into the [Configuration Guide](configuration.md) to understand every YAML knob.
+### 1. Validate Your Config
+
+```bash
+# Docker
+docker run --rm -it \
+  -v /path/to/your/config:/config \
+  ghcr.io/s0len/playbook:latest validate-config --config /config/playbook.yaml --diff-sample
+
+# Python
+python -m playbook.cli validate-config --config playbook.yaml --diff-sample
+```
+
+This command:
+
+- Checks YAML syntax and required fields
+- Validates pattern templates and matching logic
+- Shows differences from the sample config
+- Confirms metadata URLs are accessible
+
+### 2. Run a Dry-Run
+
+```bash
+# Docker
+docker run --rm -it \
+  -e DRY_RUN=true \
+  -e VERBOSE=true \
+  -e SOURCE_DIR="/downloads" \
+  -e DESTINATION_DIR="/library" \
+  -e CACHE_DIR="/cache" \
+  -v /path/to/your/config:/config \
+  -v /path/to/downloads:/downloads \
+  -v /path/to/library:/library \
+  -v /path/to/cache:/cache \
+  ghcr.io/s0len/playbook:latest
+
+# Python
+export SOURCE_DIR="/path/to/downloads"
+export DESTINATION_DIR="/path/to/library"
+export CACHE_DIR="/path/to/cache"
+python -m playbook.cli process --config playbook.yaml --dry-run --verbose
+```
+
+Look for:
+
+- **Matched files**: Confirm the pattern matched expected downloads
+- **Destination paths**: Verify the Plex folder structure looks correct
+- **Skipped files**: Understand why some files weren't processed
+- **Metadata downloads**: Check that remote YAML files loaded successfully
+
+### 3. Review Logs
+
+Check `playbook.log` (or `docker logs`) for:
+
+- Files successfully matched and their destination paths
+- Any pattern matching failures or unmatched files
+- Kometa/Autoscan trigger notifications (if enabled)
+- Cache warming progress (first run downloads all metadata)
+
+### 4. Test the Real Thing
+
+Remove `DRY_RUN=true` and run a single batch:
+
+```bash
+# Docker (one-shot)
+docker run --rm -it \
+  -e SOURCE_DIR="/downloads" \
+  -e DESTINATION_DIR="/library" \
+  -e CACHE_DIR="/cache" \
+  -v /path/to/your/config:/config \
+  -v /path/to/downloads:/downloads \
+  -v /path/to/library:/library \
+  -v /path/to/cache:/cache \
+  ghcr.io/s0len/playbook:latest
+```
+
+Verify:
+
+- Files moved to correct destination folders
+- Filenames follow Plex conventions (e.g., `S2024E05 - Round 5 - Monaco Grand Prix.mkv`)
+- Original source files cleaned up (or preserved if `preserve_source: true`)
+
+### 5. Point Plex at the Destination
+
+Add your destination directory as a TV library in Plex:
+
+- Library type: **TV Shows**
+- Scanner: **Plex Series Scanner**
+- Agent: **Plex TV Series** (metadata will be enriched by Kometa)
+
+Scan the library and confirm shows/seasons/episodes appear.
+
+### 6. Enable Continuous Processing
+
+Once everything looks good, enable watcher mode or schedule regular runs:
+
+#### Docker (detached with watcher)
+
+```bash
+docker run -d \
+  --name playbook \
+  -e WATCH_MODE=true \
+  -e SOURCE_DIR="/downloads" \
+  -e DESTINATION_DIR="/library" \
+  -e CACHE_DIR="/cache" \
+  -v /path/to/your/config:/config \
+  -v /path/to/downloads:/downloads \
+  -v /path/to/library:/library \
+  -v /path/to/cache:/cache \
+  ghcr.io/s0len/playbook:latest
+```
+
+#### Python (watcher mode)
+
+```bash
+export WATCH_MODE=true
+python -m playbook.cli watch --config playbook.yaml
+```
+
+#### Kubernetes
+
+Already running continuously with the HelmRelease
+
+## What's Next?
+
+- **[Configuration Guide](configuration.md)** – deep dive into all YAML options, pattern syntax, and templating
+- **[Integrations](integrations.md)** – connect Kometa for metadata, Autoscan for instant Plex updates, Autobrr for automatic downloads
+- **[Recipes](recipes.md)** – sport-specific examples (F1, MotoGP, UFC, etc.) and custom pattern tutorials
+- **[Troubleshooting](troubleshooting.md)** – common issues, cache resets, debugging tips

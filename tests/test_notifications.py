@@ -251,6 +251,55 @@ def test_notification_service_mentions_support_wildcards(tmp_path, monkeypatch) 
     assert payload["content"].startswith("<@&999> [NEW]")
 
 
+def test_discord_target_reads_webhook_from_env(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("PLAYBOOK_DISCORD_WEBHOOK", "https://discord.test/env")
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        targets=[{"type": "discord", "webhook_env": "PLAYBOOK_DISCORD_WEBHOOK"}],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    calls: List[Dict[str, Any]] = []
+
+    def fake_request(method, url, json=None, timeout=None, headers=None):
+        calls.append({"url": url, "json": json})
+        return FakeResponse(204)
+
+    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+
+    service.notify(_build_event())
+
+    assert calls and calls[0]["url"] == "https://discord.test/env"
+
+
+def test_discord_target_skips_when_env_missing(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("PLAYBOOK_DISCORD_WEBHOOK", raising=False)
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        targets=[{"type": "discord", "webhook_env": "PLAYBOOK_DISCORD_WEBHOOK"}],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    def fake_request(method, url, json=None, timeout=None, headers=None):
+        raise AssertionError("Request should not be sent when env var is missing")
+
+    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+
+    service.notify(_build_event())
+
+
 def test_discord_targets_support_per_target_mentions(tmp_path, monkeypatch) -> None:
     settings = NotificationSettings(
         batch_daily=False,

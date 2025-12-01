@@ -3,6 +3,7 @@ from __future__ import annotations
 import fnmatch
 import json
 import logging
+import os
 import smtplib
 import time
 from dataclasses import dataclass, field
@@ -972,7 +973,7 @@ class NotificationService:
         for entry in configs:
             target_type = entry.get("type", "").lower()
             if target_type == "discord":
-                webhook = entry.get("webhook_url")
+                webhook = self._discord_webhook_from(entry)
                 if webhook:
                     batch = entry.get("batch")
                     mentions_override = _normalize_mentions_map(entry.get("mentions"))
@@ -1018,6 +1019,30 @@ class NotificationService:
                 LOGGER.warning("Unknown notification target type '%s'", target_type or "<missing>")
 
         return [target for target in targets if target.enabled()]
+
+    def _discord_webhook_from(self, entry: Dict[str, Any]) -> Optional[str]:
+        webhook = entry.get("webhook_url")
+        if isinstance(webhook, str):
+            webhook = webhook.strip()
+        if webhook:
+            return webhook
+
+        env_name = entry.get("webhook_env") or entry.get("webhook_url_env")
+        if env_name is None:
+            return None
+
+        value: Optional[str] = None
+        env_key = str(env_name).strip()
+        if env_key:
+            raw_value = os.environ.get(env_key)
+            if raw_value:
+                value = raw_value.strip()
+            else:
+                LOGGER.warning(
+                    "Discord target env var '%s' is not set; skipping target.",
+                    env_key,
+                )
+        return value
 
     def _resolve_throttle(self, sport_id: str) -> int:
         if not self._throttle_map:
