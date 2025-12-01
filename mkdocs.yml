@@ -1,7 +1,6 @@
 site_name: Playbook
 site_description: >-
-  Documentation for Playbook – metadata-driven automation that turns chaotic sports releases
-  into Plex-perfect TV libraries.
+  Sonarr for Sports – Automated file matching, renaming, and metadata for sports content in Plex.
 site_url: https://s0len.github.io/Playbook/
 repo_url: https://github.com/s0len/playbook
 repo_name: s0len/playbook
@@ -18,8 +17,21 @@ theme:
     - search.suggest
   palette:
     - scheme: default
-      primary: blue
+      primary: indigo
       accent: orange
+      toggle:
+        icon: material/brightness-7 
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  color_mode: dark
+  user_color_mode_toggle: true
+  highlightjs: true
+  hljs_languages:
+    - yaml
+  logo: assets/logo.png
 plugins:
   - search
 markdown_extensions:
