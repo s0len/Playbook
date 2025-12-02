@@ -3,6 +3,7 @@
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12%2B-3776ab.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fs0len%2Fplaybook-0db7ed.svg?logo=docker&logoColor=white)](https://github.com/users/s0len/packages/container/package/playbook)
+[![Docs](https://img.shields.io/badge/docs-View%20Documentation-0f172a.svg?logo=book&logoColor=white)](https://s0len.github.io/Playbook/)
 
 **Sonarr for Sports** – Automated file matching, renaming, and metadata for sports content in Plex.
 
