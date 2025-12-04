@@ -14,7 +14,7 @@ Playbook is a complete pipeline that bridges the gap between messy downloads and
 Custom scrapers pull sports schedules from various sources (SportsDB, official APIs, manual curation) and structure them as YAML files that mirror how Plex expects TV shows: Show → Season → Episode. This is the foundation – every sport gets its own "TVDb" equivalent.
 
 ### 2. **Smart File Matching** (like Sonarr)
-Playbook scans your downloads, parses filenames using regex patterns (built-in packs for F1, MotoGP, UFC, NFL, NBA, etc.), matches them against the YAML database, and automatically renames/moves them to your Plex library with perfect naming.
+Playbook scans your downloads, parses filenames using regex patterns (built-in packs for F1, MotoGP, UFC, NFL, NBA, NHL, etc.), matches them against the YAML database, and automatically renames/moves them to your Plex library with perfect naming.
 
 ### 3. **Rich Metadata** (via Kometa)
 The same YAML files that power matching also feed Kometa to set posters, summaries, air dates, and episode titles. One source of truth for everything.

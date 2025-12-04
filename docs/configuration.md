@@ -148,10 +148,12 @@ file_patterns:
 Reference table:
 
 - `regex` must expose the capture groups consumed by selectors/templates.
-- `season_selector` supports `round`, `key`, `title`, and `sequential` modes plus offsets/mappings.
+- `season_selector` supports `round`, `key`, `title`, `sequential`, and `date` modes plus offsets/mappings.
 - `episode_selector` chooses which capture identifies an episode; set `allow_fallback_to_title` when a regex omits the session.
 - `session_aliases` augment metadata aliases with release-specific tokens (case-insensitive).
 - `priority` resolves collisions when multiple patterns match the same file.
+
+`value_template` lets a selector compose a derived lookup key from multiple capture groups (e.g., `{date_year}-{month:0>2}-{day:0>2}` to normalize `10 11` → `2025-11-10`). The `date` selector mode uses the formatted value to locate the season containing an episode with the same `originally_available` date—perfect for leagues scheduled by calendar days rather than round numbers.
 
 **Testing patterns quickly**
 

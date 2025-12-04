@@ -180,7 +180,7 @@ CONFIG_SCHEMA: Dict[str, Any] = {
             "properties": {
                 "mode": {
                     "type": "string",
-                    "enum": ["round", "key", "title", "sequential"],
+                    "enum": ["round", "key", "title", "sequential", "date"],
                 },
                 "group": {"type": ["string", "null"]},
                 "offset": {"type": "integer"},
@@ -188,6 +188,7 @@ CONFIG_SCHEMA: Dict[str, Any] = {
                     "type": "object",
                     "additionalProperties": {"type": "integer"},
                 },
+                "value_template": {"type": ["string", "null"]},
             },
             "additionalProperties": True,
         },

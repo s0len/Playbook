@@ -23,7 +23,7 @@ Custom scrapers pull sports schedules from various sources (SportsDB, official A
 
 ### 2. **Smart File Matching** (like Sonarr)
 
-Playbook scans your downloads, parses filenames using regex patterns (built-in packs for F1, MotoGP, UFC, NFL, NBA, etc.), matches them against the YAML database, and automatically renames/moves them to your Plex library with perfect naming.
+Playbook scans your downloads, parses filenames using regex patterns (built-in packs for F1, MotoGP, UFC, NFL, NBA, NHL, etc.), matches them against the YAML database, and automatically renames/moves them to your Plex library with perfect naming.
 
 ### 3. **Rich Metadata** (via Kometa)
 
@@ -98,6 +98,7 @@ docker run --rm -it \
   - [Roadmap](#roadmap)
   - [License](#license)
   - [Support](#support)
+  - [Sample NHL Regular Season Filenames](#sample-nhl-regular-season-filenames)
   - [Sample Figure Skating Grand Prix Filenames](#sample-figure-skating-grand-prix-filenames)
 
 ## Quickstart
@@ -663,6 +664,9 @@ motogp.*\d{4}.*round\d.*((fp\d?|practice|sprint|qualifying|q1|q2|race)).*DNU
 # NBA 1080p by GAMETiME
 nba.*1080p.*gametime
 
+# NHL RS 60fps feeds
+nhl.*rs.*(720p|1080p).*en60fps
+
 # NFL by NiGHTNiNJAS
 nfl.*nightninjas
 
@@ -731,7 +735,7 @@ pip install -r requirements.txt
 
 ## Roadmap
 
-- Additional pattern packs (MotoGP, IndyCar, NBA, NFL) with ready-to-use regex + alias tables.
+- Additional pattern packs (MotoGP, IndyCar, NBA, NFL, NHL) with ready-to-use regex + alias tables.
 - Optional webhook/websocket triggers to react to new downloads instantly.
 - Strategy plugins for bespoke numbering or archive workflows.
 - Web UI to inspect matches, stats, and activity history.
@@ -744,6 +748,15 @@ Distributed under the [GNU GPLv3](LICENSE).
 ## Support
 
 Questions, feature ideas, or metadata feed requests? [Open an issue](https://github.com/s0len/playbook/issues) or start a discussion. For bespoke integrations, reach out via the issue tracker and we can coordinate.
+
+## Sample NHL Regular Season Filenames
+
+Bundle the `nhl` pattern set with the [NHL 2025-2026 metadata feed](https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/nhl/2025-2026.yaml) to normalize releases such as:
+
+- `NHL RS 2025 New Jersey Devils vs Buffalo Sabres 28 11 720pEN60fps MSG.mkv`
+- `NHL 18-10-2025 RS Edmonton Oilers vs New Jersey Devils 1080p60_EN_MSGSN.mkv`
+- `NHL RS 2025 New Jersey Devils vs Washington Capitals 15 11 720pEN60fps MonumentalS.mkv`
+- `NHL.2025.RS.Blue.Jackets.vs.Devils.1080pEN60fps.mkv`
 
 ## Sample Figure Skating Grand Prix Filenames
 
