@@ -238,6 +238,46 @@ samples:
       - value: "NBA.2025.11.08.Miami.Heat.vs.LA.Clippers.PROPER.1080p.WEB.H264-GAMETiME.mkv"
         expect_episode: "Heat at Clippers"
 
+  - description: "NHL 2025-26 regular season samples"
+    sport:
+      id: "nhl_regular_season"
+      name: "NHL Regular Season"
+      pattern_sets:
+        - nhl
+    show:
+      key: "nhl_2025_26"
+      title: "NHL 2025-2026"
+      seasons:
+        - title: "NHL Week 3"
+          display_number: 3
+          episodes:
+            - title: "Edmonton Oilers vs New Jersey Devils"
+              originally_available: "2025-10-18"
+        - title: "NHL Week 6"
+          display_number: 6
+          episodes:
+            - title: "New Jersey Devils vs Washington Capitals"
+              originally_available: "2025-11-15"
+        - title: "NHL Week 8"
+          display_number: 8
+          episodes:
+            - title: "New Jersey Devils vs Buffalo Sabres"
+              originally_available: "2025-11-28"
+        - title: "NHL Week 15"
+          display_number: 15
+          episodes:
+            - title: "Columbus Blue Jackets vs New Jersey Devils"
+              originally_available: "2026-01-01"
+    filenames:
+      - value: "NHL RS 2025 New Jersey Devils vs Buffalo Sabres 28 11 720pEN60fps MSG.mkv"
+        expect_episode: "New Jersey Devils vs Buffalo Sabres"
+      - value: "NHL 18-10-2025 RS Edmonton Oilers vs. New Jersey Devils 1080p60_EN_MSGSN.mkv"
+        expect_episode: "Edmonton Oilers vs New Jersey Devils"
+      - value: "NHL RS 2025 New Jersey Devils vs Washington Capitals 15 11 720pEN60fps MonumentalS.mkv"
+        expect_episode: "New Jersey Devils vs Washington Capitals"
+      - value: "NHL 01-01-2026 RS Blue Jackets vs Devils 1080pEN60fps MSG.mkv"
+        expect_episode: "Columbus Blue Jackets vs New Jersey Devils"
+
   - description: "Formula 1 dot releases without venue segment"
     sport:
       id: "formula1_optional_venue"

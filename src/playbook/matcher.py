@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import difflib
 import logging
 import re
@@ -81,6 +82,7 @@ def _resolve_session_lookup(session_lookup: Dict[str, str], token: str) -> Optio
 
 from .config import PatternConfig, SeasonSelector, SportConfig
 from .models import Episode, Season, Show
+from .team_aliases import get_team_alias_map
 from .utils import normalize_token
 
 LOGGER = logging.getLogger(__name__)
@@ -120,17 +122,63 @@ def _build_session_lookup(pattern: PatternConfig, season: Season) -> Dict[str, s
     return lookup
 
 
+def _resolve_selector_value(
+    selector: SeasonSelector,
+    match_groups: Dict[str, str],
+    default_group: str,
+) -> Optional[str]:
+    if selector.value_template:
+        try:
+            formatted = selector.value_template.format(**match_groups)
+        except KeyError:
+            return None
+        formatted = formatted.strip()
+        return formatted or None
+    key = selector.group or default_group
+    if key is None:
+        return None
+    value = match_groups.get(key)
+    if value is None:
+        return None
+    return value
+
+
+_DATE_FORMATS = (
+    "%Y-%m-%d",
+    "%Y.%m.%d",
+    "%Y/%m/%d",
+    "%Y %m %d",
+    "%d-%m-%Y",
+    "%d.%m.%Y",
+    "%d/%m/%Y",
+    "%d %m %Y",
+)
+
+
+def _parse_date_string(value: str) -> Optional[dt.date]:
+    stripped = value.strip()
+    if not stripped:
+        return None
+    for fmt in _DATE_FORMATS:
+        try:
+            return dt.datetime.strptime(stripped, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
 def _select_season(show: Show, selector: SeasonSelector, match_groups: Dict[str, str]) -> Optional[Season]:
     mode = selector.mode
     if mode == "sequential":
-        index = int(match_groups.get(selector.group or "season", 0))
+        raw_value = _resolve_selector_value(selector, match_groups, "season") or "0"
+        index = int(raw_value)
         for season in show.seasons:
             if season.index == index:
                 return season
         return None
 
     if mode == "round":
-        value = match_groups.get(selector.group or "round")
+        value = _resolve_selector_value(selector, match_groups, "round")
         if value is None:
             return None
         try:
@@ -148,7 +196,7 @@ def _select_season(show: Show, selector: SeasonSelector, match_groups: Dict[str,
         return None
 
     if mode == "key":
-        key = match_groups.get(selector.group or "season")
+        key = _resolve_selector_value(selector, match_groups, "season")
         if key is None:
             return None
         for season in show.seasons:
@@ -162,7 +210,7 @@ def _select_season(show: Show, selector: SeasonSelector, match_groups: Dict[str,
         return None
 
     if mode == "title":
-        title = match_groups.get(selector.group or "season")
+        title = _resolve_selector_value(selector, match_groups, "season")
         if not title:
             return None
         if selector.aliases:
@@ -188,6 +236,19 @@ def _select_season(show: Show, selector: SeasonSelector, match_groups: Dict[str,
             desired_round = int(mapped)
             for season in show.seasons:
                 if season.round_number == desired_round or season.display_number == desired_round:
+                    return season
+        return None
+
+    if mode == "date":
+        raw_value = _resolve_selector_value(selector, match_groups, "date")
+        if not raw_value:
+            return None
+        parsed = _parse_date_string(raw_value)
+        if not parsed:
+            return None
+        for season in show.seasons:
+            for episode in season.episodes:
+                if episode.originally_available == parsed:
                     return season
         return None
 
@@ -310,6 +371,32 @@ def _select_episode(
     away_value = match_groups.get("away")
     home_value = match_groups.get("home")
     separator_value = match_groups.get("separator")
+
+    team_alias_map_name = pattern_config.metadata_filters.get("team_alias_map")
+    alias_lookup = get_team_alias_map(team_alias_map_name) if team_alias_map_name else {}
+
+    def canonicalize_team(value: Optional[str]) -> Optional[str]:
+        if not value:
+            return None
+        if not alias_lookup:
+            return None
+        normalized_team = normalize_token(value)
+        if not normalized_team:
+            return None
+        return alias_lookup.get(normalized_team)
+
+    canonical_away = canonicalize_team(away_value)
+    canonical_home = canonicalize_team(home_value)
+    if canonical_away:
+        away_value = canonical_away
+        match_groups["away"] = canonical_away
+    if canonical_home:
+        home_value = canonical_home
+        match_groups["home"] = canonical_home
+    if canonical_away and canonical_home:
+        canonical_session = f"{canonical_away} vs {canonical_home}"
+        match_groups["session"] = canonical_session
+
     if away_value and home_value:
         separator_candidates: List[str] = []
         if separator_value:
@@ -470,6 +557,8 @@ def match_file_to_episode(
         if trace is not None:
             trace["matched_patterns"] = matched_patterns
         groups = {key: value for key, value in match.groupdict().items() if value is not None}
+        if "date_year" not in groups and {"year", "month", "day"}.issubset(groups.keys()):
+            groups["date_year"] = groups["year"]
         groups_for_trace = dict(groups)
         season = _select_season(show, pattern_runtime.config.season_selector, groups)
         if not season:

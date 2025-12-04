@@ -155,6 +155,9 @@ motogp.*\d{4}.*round\d.*((fp\d?|practice|sprint|qualifying|q1|q2|race)).*DNU
 # NBA 1080p by GAMETiME
 nba.*1080p.*gametime
 
+# NHL RS 60fps feeds
+nhl.*rs.*(720p|1080p).*en60fps
+
 # NFL by NiGHTNiNJAS
 nfl.*nightninjas
 

@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format roughly follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), with dates in `YYYY-MM-DD`.
 
+## [Unreleased]
+
+### Added
+- NHL regular-season filename patterns, metadata wiring, and docs/sample config updates powered by the new `nhl` pattern set and metadata feed.
+- `SeasonSelector` now supports a `date` mode plus `value_template`, enabling calendar-date lookups that select the season containing a matching `originally_available` entry.
+- Team alias mapping utilities (with an NHL map) allow matchup strings such as "Blue Jackets vs Devils" to resolve to the canonical metadata titles.
+
+### Changed
+- Pattern sample tests understand `originally_available` timestamps so date-driven selectors can be exercised in CI.
+
 ## [1.3.1] - 2025-11-30
 
 ### Added

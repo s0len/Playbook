@@ -15,11 +15,12 @@ from .utils import load_yaml_file
 
 @dataclass(slots=True)
 class SeasonSelector:
-    mode: str = "round"  # round | key | title | sequential
+    mode: str = "round"  # round | key | title | sequential | date
     group: Optional[str] = None
     offset: int = 0
     mapping: Dict[str, int] = field(default_factory=dict)
     aliases: Dict[str, str] = field(default_factory=dict)
+    value_template: Optional[str] = None
 
 
 @dataclass(slots=True)
@@ -149,6 +150,7 @@ def _build_season_selector(data: Dict[str, Any]) -> SeasonSelector:
         offset=int(data.get("offset", 0)),
         mapping={str(k): int(v) for k, v in data.get("mapping", {}).items()},
         aliases={str(k): str(v) for k, v in data.get("aliases", {}).items()},
+        value_template=str(data["value_template"]).strip() if data.get("value_template") else None,
     )
     return selector
 

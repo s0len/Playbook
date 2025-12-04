@@ -129,7 +129,7 @@ settings:
 
 pattern_sets:
   # Built-in pattern templates load automatically from `pattern_templates.yaml`.
-  # Available names: formula1, formula_e, indycar, motogp, moto2, moto3, world_superbike, world_supersport, isle_of_man_tt, football, premier_league, ufc, uefa_champions_league, figure_skating_grand_prix.
+  # Available names: formula1, formula_e, indycar, motogp, moto2, moto3, world_superbike, world_supersport, isle_of_man_tt, football, premier_league, ufc, uefa_champions_league, nba, nhl, figure_skating_grand_prix.
   # Add custom sets below if you need overrides or extra matchers.
   # Example:
   #   my_custom_pack:
@@ -442,6 +442,24 @@ sports:
     # Use the built-in NBA template (pattern set name `nba`).
     pattern_sets:
       - nba
+
+  - id: nhl
+    name: NHL
+    enabled: true
+
+    metadata:
+      url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/nhl/2025-2026.yaml
+      show_key: NHL 2025-2026
+      ttl_hours: 24
+
+    source_globs:
+      - "NHL.*"
+      - "NHL *"
+      - "nhl.*"
+      - "nhl *"
+
+    pattern_sets:
+      - nhl
 
   - id: uefa_champions_league
     name: UEFA Champions League

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
@@ -46,10 +47,17 @@ def _build_episode(index: int, data: Dict[str, object]) -> Episode:
     aliases = data.get("aliases", []) or []
     if isinstance(aliases, str):
         aliases = [aliases]
+    original_str = data.get("originally_available")
+    original_date = None
+    if isinstance(original_str, str) and original_str.strip():
+        try:
+            original_date = dt.date.fromisoformat(original_str.strip())
+        except ValueError:
+            original_date = None
     return Episode(
         title=str(data.get("title", f"Episode {index}")),
         summary=data.get("summary"),
-        originally_available=None,
+        originally_available=original_date,
         index=index,
         metadata=dict(data),
         display_number=int(data["display_number"]) if data.get("display_number") is not None else None,

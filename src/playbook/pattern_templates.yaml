@@ -13,6 +13,7 @@ regex_tokens:
   extras: &extras_token "(?:bonus|extras?|sample|trailer)"
   suffix_token: &suffix_token "(?:(?:<resolution>|<source>|<codec>|<audio>|<network>|<release_group>|<distribution>|<bit_depth>|<language>|<quality>|<subtitle>|<extras>|pack|set|cut|remux|hybrid)(?:[-_](?:<release_group>|<codec>|<audio>|<quality>|<subtitle>))*)"
   extension: &extension_token "(?:mkv|mp4|ts|m4v|avi)"
+  matchup_team: &matchup_team_token "(?:[A-Za-z&'’À-ÖØ-öø-ÿ][A-Za-z0-9&'’À-ÖØ-öø-ÿ]*(?:[ ._-][A-Za-z&'’À-ÖØ-öø-ÿ][A-Za-z0-9&'’À-ÖØ-öø-ÿ]*){0,4})"
 
 pattern_sets:
   # ------------------------------------------------------------------
@@ -332,6 +333,42 @@ pattern_sets:
       episode_selector:
         group: matchup
         allow_fallback_to_title: true
+      destination_root_template: "{show_title}"
+      season_dir_template: "{season_number:02d} {season_title}"
+      filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
+  # ------------------------------------------------------------------
+  # NHL releases
+  # ------------------------------------------------------------------
+  nhl: &nhl_patterns
+    - description: NHL regular season spaced/dotted releases
+      # Example: NHL RS 2025 New Jersey Devils vs Buffalo Sabres 28 11 720pEN60fps MSG.mkv
+      regex: >-
+        (?i)^NHL(?:[\s._-]*RS)?[\s._-]+(?P<year>\d{4})[\s._-]+(?P<session>(?P<away><matchup_team>)[\s._-]+(?P<separator>vs\.?|v|at|@)[\s._-]+(?P<home><matchup_team>))[\s._-]+(?P<day>\d{1,2})[\s._-]+(?P<month>\d{1,2})(?:[\s._-]+(?P<date_year>\d{4}))?(?:[\s._-]+(?:<suffix_token>|[A-Za-z0-9]+))*\.(?P<extension><extension>)$
+      season_selector:
+        mode: date
+        value_template: "{date_year}-{month:0>2}-{day:0>2}"
+      episode_selector:
+        group: session
+        allow_fallback_to_title: true
+      metadata_filters:
+        team_alias_map: nhl
+      destination_root_template: "{show_title}"
+      season_dir_template: "{season_number:02d} {season_title}"
+      filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
+    - description: NHL releases with leading date
+      # Example: NHL 18-10-2025 RS Edmonton Oilers vs New Jersey Devils 1080p60_EN_MSGSN.mkv
+      regex: >-
+        (?i)^NHL[\s._-]+(?P<day>\d{1,2})[\s._-]+(?P<month>\d{1,2})[\s._-]+(?P<year>\d{4})[\s._-]+(?:RS[\s._-]+)?(?P<session>(?P<away><matchup_team>)[\s._-]+(?P<separator>vs\.?|v|at|@)[\s._-]+(?P<home><matchup_team>))(?:[\s._-]+(?:<suffix_token>|[A-Za-z0-9]+))*\.(?P<extension><extension>)$
+      season_selector:
+        mode: date
+        value_template: "{date_year}-{month:0>2}-{day:0>2}"
+      episode_selector:
+        group: session
+        allow_fallback_to_title: true
+      metadata_filters:
+        team_alias_map: nhl
       destination_root_template: "{show_title}"
       season_dir_template: "{season_number:02d} {season_title}"
       filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
