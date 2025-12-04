@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format roughly follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), with dates in `YYYY-MM-DD`.
 
+## [1.4.0] - 2025-12-04
+
+### Added
+- MkDocs-powered documentation is live at https://s0len.github.io/Playbook/ with deployment wiring captured in the docs release (#44, #52).
+- New integrations and recipe guides cover real-world automation patterns for Playbook operators (#45, #46).
+
+### Changed
+- The troubleshooting guide was rebuilt to fit the MkDocs structure and highlight the refreshed workflows (#47).
+- Operations guidance was fleshed out with day-two scenarios and runbook tips (#48).
+- The developer guide now includes deeper contributor instructions and local workflows (#49).
+- Configuration guidance was expanded to better explain advanced settings and templates (#50).
+
+### Fixed
+- Notification settings now separate environment variables from user configuration so overrides no longer leak across deploy targets (#51).
+
 ## [1.3.1] - 2025-11-30
 
 ### Added
