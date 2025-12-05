@@ -81,6 +81,7 @@ def _resolve_session_lookup(session_lookup: Dict[str, str], token: str) -> Optio
 
 
 from .config import PatternConfig, SeasonSelector, SportConfig
+from .parsers.structured_filename import StructuredName, build_canonical_filename, parse_structured_filename
 from .models import Episode, Season, Show
 from .team_aliases import get_team_alias_map
 from .utils import normalize_token
@@ -513,6 +514,149 @@ def _find_episode_across_seasons(
     return None
 
 
+_TEAM_PATTERN = re.compile(r"(?P<a>[A-Za-z0-9 .&'/-]+?)\s+(?:vs|v|at|@)\s+(?P<b>[A-Za-z0-9 .&'/-]+)", re.IGNORECASE)
+
+
+def _extract_teams_from_text(text: str, alias_lookup: Dict[str, str]) -> List[str]:
+    match = _TEAM_PATTERN.search(text)
+    if not match:
+        return []
+    teams: List[str] = []
+    for key in ("a", "b"):
+        raw_team = match.group(key)
+        normalized = normalize_token(raw_team)
+        mapped = alias_lookup.get(normalized, raw_team.strip())
+        if mapped:
+            teams.append(mapped)
+    return teams
+
+
+def _build_team_alias_lookup(show: Show, base: Dict[str, str]) -> Dict[str, str]:
+    lookup = dict(base)
+    for season in show.seasons:
+        for episode in season.episodes:
+            episode_teams = _extract_teams_from_text(episode.title, lookup)
+            for team in episode_teams:
+                token = normalize_token(team)
+                if token and token not in lookup:
+                    lookup[token] = team
+            for alias in episode.aliases:
+                alias_teams = _extract_teams_from_text(alias, lookup)
+                if episode_teams and alias_teams and len(alias_teams) == len(episode_teams):
+                    for canonical, alias_team in zip(episode_teams, alias_teams):
+                        token = normalize_token(alias_team)
+                        if token and token not in lookup:
+                            lookup[token] = canonical
+                alias_token = normalize_token(alias)
+                if alias_token and alias_token not in lookup:
+                    lookup[alias_token] = episode.title
+    return lookup
+
+
+def _score_structured_match(
+    structured: StructuredName, season: Season, episode: Episode, alias_lookup: Dict[str, str]
+) -> float:
+    score = 0.0
+    episode_teams = _extract_teams_from_text(episode.title, alias_lookup)
+    structured_tokens = {normalize_token(team) for team in structured.teams if team}
+    episode_tokens = {normalize_token(team) for team in episode_teams if team}
+
+    if structured_tokens and episode_tokens:
+        if structured_tokens == episode_tokens:
+            score += 0.75
+        else:
+            overlap = structured_tokens.intersection(episode_tokens)
+            if overlap:
+                score += 0.45 + 0.05 * len(overlap)
+    elif structured_tokens:
+        combined = normalize_token(" ".join(structured.teams))
+        if combined and _token_similarity(combined, normalize_token(episode.title)) >= 0.7:
+            score += 0.4
+
+    if structured.date and episode.originally_available == structured.date:
+        score += 0.2
+    elif structured.year and episode.originally_available and episode.originally_available.year == structured.year:
+        score += 0.1
+
+    if structured.round and (
+        season.round_number == structured.round or season.display_number == structured.round
+    ):
+        score += 0.1
+    return score
+
+
+def _structured_match(
+    filename: str,
+    sport: SportConfig,
+    show: Show,
+    diagnostics: Optional[List[Tuple[str, str]]] = None,
+    trace: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, object]]:
+    configured_aliases = get_team_alias_map(sport.team_alias_map)
+    alias_lookup = _build_team_alias_lookup(show, configured_aliases)
+
+    structured = parse_structured_filename(filename, alias_lookup)
+    if not structured:
+        return None
+
+    best: Optional[Tuple[Season, Episode]] = None
+    best_score = 0.0
+
+    for season in show.seasons:
+        for episode in season.episodes:
+            score = _score_structured_match(structured, season, episode, alias_lookup)
+            if score > best_score:
+                best_score = score
+                best = (season, episode)
+
+    if best and best_score >= 0.6:
+        season, episode = best
+        groups: Dict[str, object] = {
+            "structured_competition": structured.competition,
+            "structured_date": structured.date.isoformat() if structured.date else None,
+            "structured_matchup": structured.canonical_matchup(),
+            "structured_provider": structured.provider,
+            "structured_resolution": structured.resolution,
+            "structured_fps": structured.fps,
+            "structured_canonical": build_canonical_filename(structured),
+        }
+        groups = {key: value for key, value in groups.items() if value is not None}
+
+        pattern = PatternConfig(regex="structured", description="Structured filename matcher")
+
+        if diagnostics is not None:
+            diagnostics.append(("info", "Matched via structured filename parser"))
+
+        if trace is not None:
+            trace.setdefault("attempts", [])
+            trace["attempts"].append(
+                {"pattern": "structured", "status": "matched", "groups": dict(groups), "score": best_score}
+            )
+            trace["status"] = "matched"
+            trace["result"] = {
+                "season": {
+                    "title": season.title,
+                    "round_number": season.round_number,
+                    "display_number": season.display_number,
+                },
+                "episode": {
+                    "title": episode.title,
+                    "index": episode.index,
+                    "display_number": episode.display_number,
+                },
+                "pattern": "structured",
+            }
+
+        return {
+            "season": season,
+            "episode": episode,
+            "pattern": pattern,
+            "groups": groups,
+        }
+
+    return None
+
+
 def compile_patterns(sport: SportConfig) -> List[PatternRuntime]:
     compiled: List[PatternRuntime] = []
     for pattern in sport.patterns:
@@ -565,6 +709,17 @@ def match_file_to_episode(
         if len(season.episodes) > limit:
             titles.append("…")
         return ", ".join(titles) if titles else "none"
+
+    structured_result = _structured_match(
+        filename,
+        sport,
+        show,
+        diagnostics=diagnostics,
+        trace=trace,
+    )
+    if structured_result:
+        return structured_result
+
     for pattern_runtime in patterns:
         descriptor = pattern_runtime.config.description or pattern_runtime.config.regex
         match = pattern_runtime.regex.search(filename)

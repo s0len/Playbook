@@ -233,6 +233,7 @@ CONFIG_SCHEMA: Dict[str, Any] = {
                 "id": {"type": "string", "minLength": 1},
                 "name": {"type": "string"},
                 "enabled": {"type": "boolean"},
+                "team_alias_map": {"type": ["string", "null"]},
                 "metadata": {"$ref": "#/definitions/metadata"},
                 "pattern_sets": {
                     "type": "array",

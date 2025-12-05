@@ -447,6 +447,9 @@ sports:
     name: NHL
     enabled: true
 
+    # Built-in team alias map normalizes abbreviations (e.g., "NJD", "Caps").
+    team_alias_map: nhl
+
     metadata:
       url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/nhl/2025-2026.yaml
       show_key: NHL 2025-2026
@@ -504,6 +507,9 @@ sports:
   - id: premier_league
     name: Premier League
     enabled: true
+
+    # Built-in alias map handles common shorthand (e.g., "Man City", "Spurs").
+    team_alias_map: premier_league
 
     metadata:
       url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/premier-league/2025-2026.yaml

@@ -114,6 +114,7 @@ class SportConfig:
     enabled: bool = True
     metadata: MetadataConfig = field(default_factory=lambda: MetadataConfig(url=""))
     patterns: List[PatternConfig] = field(default_factory=list)
+    team_alias_map: Optional[str] = None
     destination: DestinationTemplates = field(default_factory=DestinationTemplates)
     source_globs: List[str] = field(default_factory=list)
     source_extensions: List[str] = field(
@@ -239,6 +240,7 @@ def _build_sport_config(
         enabled=bool(data.get("enabled", True)),
         metadata=metadata,
         patterns=patterns,
+        team_alias_map=data.get("team_alias_map"),
         destination=destination,
         source_globs=list(data.get("source_globs", [])),
         source_extensions=list(data.get("source_extensions", [".mkv", ".mp4", ".ts", ".m4v", ".avi"])),
