@@ -104,6 +104,7 @@ Key knobs:
 - `enabled` toggles sports without deleting them.
 - `source_globs` / `source_extensions` are coarse filters before any regex work happens.
 - `link_mode`, `destination.*`, and notification overrides let you specialize behavior per sport.
+- `team_alias_map` (optional) points to a built-in alias table (e.g., `premier_league`, `nhl`) used by the structured matcher to normalize shorthand like “Man City” or “NJD”.
 - `pattern_sets` pulls from `src/playbook/pattern_templates.yaml`; you can still inline `file_patterns` for overrides.
 
 **Metadata overrides**
