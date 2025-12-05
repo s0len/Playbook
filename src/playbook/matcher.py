@@ -487,6 +487,32 @@ def _select_episode(
     return None
 
 
+def _find_episode_across_seasons(
+    pattern_config: PatternConfig,
+    show: Show,
+    match_groups: Dict[str, str],
+    *,
+    exclude_season: Optional[Season] = None,
+    trace_enabled: bool = False,
+) -> Optional[Tuple[Season, Episode, Dict[str, str], Dict[str, str], Optional[Dict[str, Any]]]]:
+    for candidate in show.seasons:
+        if exclude_season and candidate is exclude_season:
+            continue
+        candidate_groups = dict(match_groups)
+        session_lookup = _build_session_lookup(pattern_config, candidate)
+        episode_trace: Optional[Dict[str, Any]] = {} if trace_enabled else None
+        episode = _select_episode(
+            pattern_config,
+            candidate,
+            session_lookup,
+            candidate_groups,
+            trace=episode_trace,
+        )
+        if episode:
+            return candidate, episode, candidate_groups, session_lookup, episode_trace
+    return None
+
+
 def compile_patterns(sport: SportConfig) -> List[PatternRuntime]:
     compiled: List[PatternRuntime] = []
     for pattern in sport.patterns:
@@ -559,8 +585,20 @@ def match_file_to_episode(
         groups = {key: value for key, value in match.groupdict().items() if value is not None}
         if "date_year" not in groups and {"year", "month", "day"}.issubset(groups.keys()):
             groups["date_year"] = groups["year"]
-        groups_for_trace = dict(groups)
+        fallback_by_matchup = bool(pattern_runtime.config.metadata_filters.get("fallback_matchup_season"))
         season = _select_season(show, pattern_runtime.config.season_selector, groups)
+        episode: Optional[Episode] = None
+        episode_trace: Optional[Dict[str, Any]] = None
+        if not season and fallback_by_matchup:
+            fallback = _find_episode_across_seasons(
+                pattern_runtime.config,
+                show,
+                groups,
+                trace_enabled=trace is not None,
+            )
+            if fallback:
+                season, episode, groups, pattern_runtime.session_lookup, episode_trace = fallback
+
         if not season:
             selector = pattern_runtime.config.season_selector
             selector_group = selector.group or selector.mode or "season"
@@ -585,21 +623,34 @@ def match_file_to_episode(
                             "group": selector.group,
                             "value": candidate_value,
                         },
-                        "groups": groups_for_trace,
+                        "groups": dict(groups),
                         "message": message,
                     }
                 )
             continue
 
-        pattern_runtime.session_lookup = _build_session_lookup(pattern_runtime.config, season)
-        episode_trace: Dict[str, Any] = {}
-        episode = _select_episode(
-            pattern_runtime.config,
-            season,
-            pattern_runtime.session_lookup,
-            groups,
-            trace=episode_trace,
-        )
+        if episode is None:
+            pattern_runtime.session_lookup = _build_session_lookup(pattern_runtime.config, season)
+            episode_trace = {}
+            episode = _select_episode(
+                pattern_runtime.config,
+                season,
+                pattern_runtime.session_lookup,
+                groups,
+                trace=episode_trace,
+            )
+
+        if not episode and fallback_by_matchup:
+            fallback = _find_episode_across_seasons(
+                pattern_runtime.config,
+                show,
+                groups,
+                exclude_season=season,
+                trace_enabled=trace is not None,
+            )
+            if fallback:
+                season, episode, groups, pattern_runtime.session_lookup, episode_trace = fallback
+
         if not episode:
             selector = pattern_runtime.config.episode_selector
             raw_value = groups.get(selector.group)
@@ -641,7 +692,7 @@ def match_file_to_episode(
                         "group": selector.group,
                         "allow_fallback_to_title": selector.allow_fallback_to_title,
                     },
-                    "groups": groups_for_trace,
+                    "groups": dict(groups),
                     "message": message,
                 }
                 if episode_trace:
@@ -649,6 +700,7 @@ def match_file_to_episode(
                 trace_attempts.append(trace_entry)
             continue
 
+        groups_for_trace = dict(groups)
         result = {
             "season": season,
             "episode": episode,
