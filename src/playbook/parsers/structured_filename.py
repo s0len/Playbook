@@ -23,6 +23,8 @@ _PROVIDER_TOKENS = {
     "sky",
     "fubo",
     "espn",
+    "espn+",
+    "espnplus",
     "tsn",
     "nbcsn",
     "fox",
@@ -59,6 +61,7 @@ class StructuredName:
 def _clean_tokens(text: str) -> str:
     normalized = re.sub(r"[._]+", " ", text)
     normalized = normalized.replace("@", " at ")
+    normalized = normalized.replace("+", " ")
     normalized = re.sub(r"\s+", " ", normalized)
     return normalized.strip()
 
@@ -121,6 +124,8 @@ def _trim_noise(segment: str) -> str:
     cleaned: List[str] = []
     for word in words:
         lowered = word.lower()
+        if lowered.isdigit():
+            break
         if lowered in _QUALITY_TOKENS:
             break
         if re.match(r"\d{3,4}p", lowered):
@@ -158,8 +163,10 @@ def _extract_resolution(text: str) -> Tuple[Optional[str], Optional[int]]:
 
 def _extract_provider(text: str) -> Optional[str]:
     lowered = text.lower()
+    normalized = lowered.replace("+", "")
     for provider in _PROVIDER_TOKENS:
-        if provider in lowered:
+        provider_clean = provider.replace("+", "")
+        if provider in lowered or provider_clean in normalized:
             return provider
     return None
 

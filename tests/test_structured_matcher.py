@@ -92,3 +92,25 @@ def test_structured_match_nhl_abbreviations() -> None:
     assert result is not None
     assert result["episode"].title == "New Jersey Devils vs Philadelphia Flyers"
 
+
+def test_structured_match_with_provider_plus_and_trailing_date_tokens() -> None:
+    sport = _sport("nhl", alias_map="nhl")
+    season = _season(
+        "nhl-week-12",
+        "Week 12",
+        [
+            _episode(
+                "Chicago Blackhawks vs Los Angeles Kings",
+                dt.date(2025, 12, 4),
+                aliases=["CHI vs LAK"],
+                index=1,
+            )
+        ],
+    )
+    show = _show("NHL 2025-26", [season])
+
+    filename = "NHL RS 2025 Chicago Blackhawks vs Los Angeles Kings 04 12 720pEN60fps ESPN+.mkv"
+    result = match_file_to_episode(filename, sport, show, patterns=[])
+    assert result is not None
+    assert result["episode"].title == "Chicago Blackhawks vs Los Angeles Kings"
+
