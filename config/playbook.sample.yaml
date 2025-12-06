@@ -109,6 +109,24 @@ settings:
       #   - On macOS, also mount com.docker.cli (command -v com.docker.cli)
 
   ####################################################################
+  # PLEX METADATA PRE-SYNC (OPTIONAL)
+  ####################################################################
+  # Push show/season/episode metadata (titles, sort titles, summaries, dates,
+  # posters, backgrounds) to Plex before Kometa runs. Uses remote metadata YAML
+  # as the source of truth. Episodes are always updated; shows/seasons update on
+  # first run or when the metadata fingerprint changes (or when force is true).
+  plex_metadata_sync:
+    enabled: false                   # Set true to run pre-sync; or PLEX_SYNC_ENABLED=true
+    url: ${PLEX_URL:-http://plex:32400}
+    token: ${PLEX_TOKEN:-}
+    library_id: ${PLEX_LIBRARY_ID:-} # Optional: prefer ID when known
+    library_name: ${PLEX_LIBRARY_NAME:-TV Shows} # Used when library_id is not set
+    timeout: ${PLEX_TIMEOUT:-15}     # Seconds
+    force: ${PLEX_FORCE:-false}      # Force show/season updates even if unchanged
+    dry_run: ${PLEX_SYNC_DRY_RUN:-false} # Log only, no Plex writes
+    sports: []                       # Optional list of sport ids to limit syncing; env PLEX_SPORTS=foo,bar
+
+  ####################################################################
   # DEFAULT DESTINATION TEMPLATES
   ####################################################################
   # These templates are used for every sport unless overridden under that sport's `destination` block.

@@ -62,6 +62,13 @@ Examples for both live in [Getting Started](getting-started.md#option-c-kubernet
 - `python -m playbook.cli kometa-trigger --config … --mode docker`  
   Triggers Kometa once without running the processor. Useful when debugging trigger failures or forcing a metadata refresh after a manual ingest.
 
+### Plex metadata pre-sync (before Kometa)
+
+- Configure under `settings.plex_metadata_sync` in `playbook.yaml` (or via env): `enabled`, `url`, `token`, `library_id` or `library_name`, optional `sports` (list of sport ids), `force`, `dry_run`, `timeout`. Env overrides: `PLEX_SYNC_ENABLED`, `PLEX_URL`, `PLEX_TOKEN`, `PLEX_LIBRARY_ID`, `PLEX_LIBRARY_NAME`, `PLEX_SPORTS` (comma-separated), `PLEX_FORCE`, `PLEX_SYNC_DRY_RUN`, `PLEX_TIMEOUT`.
+- Run `python -m playbook.plex_metadata_sync --config /config/playbook.yaml` before Kometa. Script exits early when `enabled` is false.
+- Uses Plex endpoints from `openapi.json`: `PUT /library/metadata/{ids}` for text fields and `PUT /library/metadata/{ids}/{element}` for poster/art. Episodes are always updated; shows/seasons update on first-run or when the metadata fingerprint changes (or when `force` is true).
+- Cache of fingerprints is stored in `cache_dir/state/plex-metadata-hashes.json` so only changed shows/seasons are pushed on subsequent runs.
+
 ## Logging & Observability
 
 - Logs use a multi-line block layout (timestamp, header, aligned key/value pairs) for rapid scanning.
