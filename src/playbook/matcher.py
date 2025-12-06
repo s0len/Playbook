@@ -515,6 +515,26 @@ def _find_episode_across_seasons(
 
 
 _TEAM_PATTERN = re.compile(r"(?P<a>[A-Za-z0-9 .&'/-]+?)\s+(?:vs|v|at|@)\s+(?P<b>[A-Za-z0-9 .&'/-]+)", re.IGNORECASE)
+_NOISE_PROVIDERS = {"sky", "fubo", "espn", "espn+", "espnplus", "tsn", "nbcsn", "fox", "verum"}
+
+
+def _strip_team_noise(value: str) -> str:
+    tokens = value.split()
+    cleaned: List[str] = []
+    for token in tokens:
+        lowered = token.lower()
+        if lowered.isdigit():
+            break
+        if re.match(r"\d{3,4}p", lowered):
+            break
+        if re.match(r"\d{2}fps", lowered):
+            break
+        if lowered.replace("+", "") in _NOISE_PROVIDERS:
+            break
+        if lowered in {"proper", "repack", "web", "hdtv"}:
+            break
+        cleaned.append(token)
+    return " ".join(cleaned).strip()
 
 
 def _extract_teams_from_text(text: str, alias_lookup: Dict[str, str]) -> List[str]:
@@ -523,7 +543,7 @@ def _extract_teams_from_text(text: str, alias_lookup: Dict[str, str]) -> List[st
         return []
     teams: List[str] = []
     for key in ("a", "b"):
-        raw_team = match.group(key)
+        raw_team = _strip_team_noise(match.group(key))
         normalized = normalize_token(raw_team)
         mapped = alias_lookup.get(normalized, raw_team.strip())
         if mapped:
