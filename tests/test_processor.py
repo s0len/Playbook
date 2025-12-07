@@ -246,14 +246,14 @@ def test_run_recap_lists_destinations(tmp_path, caplog) -> None:
     stats = ProcessingStats()
     stats.register_processed()
     processor._touched_destinations = {"Demo/Season 01/Race.mkv"}
-    processor._kometa_trigger_fired = True
 
     with caplog.at_level(logging.INFO, logger="playbook.processor"):
         processor._log_run_recap(stats, duration=1.25)
 
     text = caplog.text
     assert "Run Recap" in text
-    assert "Kometa Triggered" in text and "yes" in text
+    # Plex sync status is always shown (disabled when not configured)
+    assert "Plex Sync" in text
     assert "Demo/Season 01/Race.mkv" in text
 
 

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 from .pattern_templates import expand_regex_with_tokens, load_builtin_pattern_sets
-from .utils import load_yaml_file
+from .utils import load_yaml_file, validate_url
 
 
 @dataclass(slots=True)
@@ -419,9 +419,18 @@ def _build_plex_sync_settings(data: Dict[str, Any]) -> PlexSyncSettings:
         text = str(value).strip()
         return text or None
 
+    url = _clean_str(data.get("url"))
+    enabled = bool(data.get("enabled", False))
+
+    # Validate URL format if provided and enabled
+    if url and enabled and not validate_url(url):
+        raise ValueError(
+            f"'plex_metadata_sync.url' must be a valid http/https URL, got: {url}"
+        )
+
     return PlexSyncSettings(
-        enabled=bool(data.get("enabled", False)),
-        url=_clean_str(data.get("url")),
+        enabled=enabled,
+        url=url,
         token=_clean_str(data.get("token")),
         library_id=_clean_str(data.get("library_id")),
         library_name=_clean_str(data.get("library_name")),

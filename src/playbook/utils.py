@@ -8,12 +8,17 @@ import shutil
 import string
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 import yaml
 
 
 NORMALIZE_PATTERN = re.compile(r"[^a-z0-9]+")
+
+# Boolean true/false string values
+_TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+_FALSE_VALUES = frozenset({"0", "false", "no", "off"})
 
 
 def normalize_token(value: str) -> str:
@@ -128,3 +133,49 @@ def link_file(source: Path, destination: Path, mode: str = "hardlink") -> LinkRe
         return LinkResult(created=False, reason=str(exc))
 
     return LinkResult(created=True)
+
+
+def parse_env_bool(value: Optional[str]) -> Optional[bool]:
+    """Parse a boolean from an environment variable string.
+
+    Returns None if value is None or not a recognized boolean string.
+    """
+    if value is None:
+        return None
+    lowered = value.strip().lower()
+    if lowered in _TRUE_VALUES:
+        return True
+    if lowered in _FALSE_VALUES:
+        return False
+    return None
+
+
+def env_bool(name: str) -> Optional[bool]:
+    """Get a boolean from an environment variable.
+
+    Returns None if not set or not a recognized boolean string.
+    """
+    return parse_env_bool(os.getenv(name))
+
+
+def env_list(name: str, separator: str = ",") -> Optional[List[str]]:
+    """Get a list of strings from an environment variable.
+
+    Returns None if not set, empty list if set but empty.
+    """
+    raw = os.getenv(name)
+    if raw is None:
+        return None
+    parts = [part.strip() for part in raw.split(separator) if part.strip()]
+    return parts
+
+
+def validate_url(url: Optional[str]) -> bool:
+    """Validate that URL is a valid http/https URL."""
+    if not url:
+        return False
+    try:
+        parsed = urlparse(url)
+        return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+    except Exception:  # noqa: BLE001 - defensive
+        return False
