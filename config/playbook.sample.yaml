@@ -116,15 +116,17 @@ settings:
   # as the source of truth. Episodes are always updated; shows/seasons update on
   # first run or when the metadata fingerprint changes (or when force is true).
   plex_metadata_sync:
-    enabled: false                   # Set true to run pre-sync; or PLEX_SYNC_ENABLED=true
+    enabled: false                   # Set true to enable; or PLEX_SYNC_ENABLED=true
     url: ${PLEX_URL:-http://plex:32400}
     token: ${PLEX_TOKEN:-}
-    library_id: ${PLEX_LIBRARY_ID:-} # Optional: prefer ID when known
+    library_id: ${PLEX_LIBRARY_ID:-} # Optional: prefer ID for faster lookup
     library_name: ${PLEX_LIBRARY_NAME:-TV Shows} # Used when library_id is not set
-    timeout: ${PLEX_TIMEOUT:-15}     # Seconds
-    force: ${PLEX_FORCE:-false}      # Force show/season updates even if unchanged
+    timeout: ${PLEX_TIMEOUT:-15}     # HTTP timeout in seconds
+    force: ${PLEX_FORCE:-false}      # Force all updates even if unchanged
     dry_run: ${PLEX_SYNC_DRY_RUN:-false} # Log only, no Plex writes
-    sports: []                       # Optional list of sport ids to limit syncing; env PLEX_SPORTS=foo,bar
+    sports: []                       # Limit to specific sport ids; env PLEX_SPORTS=foo,bar
+    # Features: automatic retry with backoff, rate limiting, field locking,
+    # fingerprint-based change detection for shows/seasons/episodes
 
   ####################################################################
   # DEFAULT DESTINATION TEMPLATES

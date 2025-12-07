@@ -62,18 +62,45 @@ Examples for both live in [Getting Started](getting-started.md#option-c-kubernet
 - `python -m playbook.cli kometa-trigger --config … --mode docker`  
   Triggers Kometa once without running the processor. Useful when debugging trigger failures or forcing a metadata refresh after a manual ingest.
 
-### Plex metadata pre-sync (before Kometa)
+### Plex Metadata Sync
 
-- Configure under `settings.plex_metadata_sync` in `playbook.yaml` (or via env): `enabled`, `url`, `token`, `library_id` or `library_name`, optional `sports` (list of sport ids), `force`, `dry_run`, `timeout`. Env overrides: `PLEX_SYNC_ENABLED`, `PLEX_URL`, `PLEX_TOKEN`, `PLEX_LIBRARY_ID`, `PLEX_LIBRARY_NAME`, `PLEX_SPORTS` (comma-separated), `PLEX_FORCE`, `PLEX_SYNC_DRY_RUN`, `PLEX_TIMEOUT`.
-- Run `python -m playbook.plex_metadata_sync --config /config/playbook.yaml` before Kometa. Script exits early when `enabled` is false.
-- Uses Plex endpoints from `openapi.json`: `PUT /library/metadata/{ids}` for text fields and `PUT /library/metadata/{ids}/{element}` for poster/art. Episodes are always updated; shows/seasons update on first-run or when the metadata fingerprint changes (or when `force` is true).
-- Cache of fingerprints is stored in `cache_dir/state/plex-metadata-hashes.json` so only changed shows/seasons are pushed on subsequent runs.
+Playbook can push show/season/episode metadata (titles, sort titles, summaries, dates, posters, backgrounds) directly to Plex after processing files. This eliminates the need for Kometa in many cases.
+
+**Configuration** (`settings.plex_metadata_sync`):
+
+| Setting | Env Override | Description |
+|---------|--------------|-------------|
+| `enabled` | `PLEX_SYNC_ENABLED` | Enable Plex sync (default: false) |
+| `url` | `PLEX_URL` | Plex server URL (e.g., `http://plex:32400`) |
+| `token` | `PLEX_TOKEN` | Plex auth token |
+| `library_id` | `PLEX_LIBRARY_ID` | Target library section ID |
+| `library_name` | `PLEX_LIBRARY_NAME` | Target library name (used if ID not set) |
+| `timeout` | `PLEX_TIMEOUT` | HTTP timeout in seconds (default: 15) |
+| `force` | `PLEX_FORCE` | Force updates even when metadata unchanged |
+| `dry_run` | `PLEX_SYNC_DRY_RUN` | Log updates without making API calls |
+| `sports` | `PLEX_SPORTS` | Comma-separated list of sport IDs to sync |
+
+**How it works:**
+
+1. **Automatic**: When enabled, Plex sync runs automatically after file processing if any files were processed or metadata changed.
+2. **Change detection**: Uses fingerprint-based detection—shows/seasons only update when metadata changes; episodes update when their content changes.
+3. **Field locking**: Sets `{field}.locked=1` to prevent Plex agents from overwriting your custom metadata.
+4. **Rate limiting**: Built-in rate limiting and retry logic for resilient API calls.
+5. **Security**: Token passed via header (not URL query params); URLs sanitized in logs.
+
+**Manual execution:**
+
+```bash
+python -m playbook.plex_metadata_sync --config /config/playbook.yaml --verbose
+```
+
+**Fingerprint cache**: Stored in `cache_dir/state/plex-metadata-hashes.json`.
 
 ## Logging & Observability
 
 - Logs use a multi-line block layout (timestamp, header, aligned key/value pairs) for rapid scanning.
 - INFO-level runs summarize totals per sport/source; add `--verbose`/`LOG_LEVEL=DEBUG` for per-file diagnostics.
-- Each pass ends with a `Run Recap` block (duration, totals, Kometa trigger state, destination samples).
+- Each pass ends with a `Run Recap` block (duration, totals, Plex sync status, destination samples).
 - On every start, the previous log rotates to `playbook.log.previous`. Persist `/var/log/playbook` (Docker) or whatever `LOG_DIR` you choose.
 - Set `LOG_LEVEL=WARNING` (or higher) to cut down on noise for steady-state watcher deployments.
 - `PLAIN_CONSOLE_LOGS=true` forces plain text output (handy for syslog collectors); `RICH_CONSOLE_LOGS=true` forces Rich formatting even when the console isn’t a TTY.
