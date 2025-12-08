@@ -287,16 +287,12 @@ class PlexClient:
         Uses fuzzy matching to handle variations in title formatting:
         - Case insensitive
         - Normalizes hyphens, spaces, and underscores
+
+        The search is done in multiple passes to handle Plex's search behavior:
+        1. First try exact title search
+        2. Then try with simplified title (first word + numbers only)
+        3. Finally do fuzzy matching on results
         """
-        params = {
-            "type": PLEX_TYPE_SHOW,
-            "title": title,
-        }
-        response = self._request("GET", f"/library/sections/{library_id}/all", params=params)
-        payload = _parse_json_response(response)
-        metadata_entries: Iterable[Dict[str, Any]] = (
-            payload.get("MediaContainer", {}).get("Metadata") or []
-        )
 
         # Normalize for fuzzy matching (lowercase, remove hyphens/spaces/underscores)
         def normalize(text: str) -> str:
@@ -305,14 +301,48 @@ class PlexClient:
         target_normalized = normalize(title)
         target_lower = title.lower()
 
+        # Try multiple search strategies
+        search_terms = [title]
+
+        # Add simplified search term: extract first word and any numbers
+        # e.g., "NHL 2025-2026" -> "NHL 2025" (more likely to match "NHL 2025 2026")
+        import re
+        words = title.split()
+        if len(words) > 1:
+            # Try first word + first number sequence
+            first_word = words[0]
+            numbers = re.findall(r'\d+', title)
+            if numbers:
+                simplified = f"{first_word} {numbers[0]}"
+                if simplified.lower() != title.lower():
+                    search_terms.append(simplified)
+
+        all_entries: List[Dict[str, Any]] = []
+        seen_keys: set = set()
+
+        for search_term in search_terms:
+            params = {
+                "type": PLEX_TYPE_SHOW,
+                "title": search_term,
+            }
+            response = self._request("GET", f"/library/sections/{library_id}/all", params=params)
+            payload = _parse_json_response(response)
+            metadata_entries = payload.get("MediaContainer", {}).get("Metadata") or []
+
+            for entry in metadata_entries:
+                key = entry.get("ratingKey")
+                if key and key not in seen_keys:
+                    seen_keys.add(key)
+                    all_entries.append(entry)
+
         # First pass: exact match (case-insensitive)
-        for entry in metadata_entries:
+        for entry in all_entries:
             entry_title = str(entry.get("title", ""))
             if entry_title.lower() == target_lower:
                 return entry
 
         # Second pass: fuzzy match (normalized)
-        for entry in metadata_entries:
+        for entry in all_entries:
             entry_title = str(entry.get("title", ""))
             if normalize(entry_title) == target_normalized:
                 LOGGER.debug(
@@ -322,8 +352,8 @@ class PlexClient:
                 )
                 return entry
 
-        # Fall back to first result from search
-        return next(iter(metadata_entries), None)
+        # Fall back to first result if any
+        return all_entries[0] if all_entries else None
 
     def get_metadata(self, rating_key: str) -> Optional[Dict[str, Any]]:
         """Get full metadata for an item by rating key."""
