@@ -168,12 +168,24 @@ def _episode_identifier(episode: Episode) -> str:
     return f"index:{episode.index}"
 
 
+def _normalize_title(text: str) -> str:
+    """Normalize title for fuzzy matching."""
+    import re
+    # Lowercase, remove punctuation, collapse whitespace
+    text = text.lower()
+    text = re.sub(r"[^\w\s]", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
 def _match_season_key(plex_seasons: List[Dict[str, object]], season: Season) -> Optional[str]:
     """Find the Plex rating key for a season by matching index or title."""
     target_numbers = {season.display_number, season.index}
     target_numbers = {num for num in target_numbers if num is not None}
     target_title = (season.title or "").lower()
+    target_title_normalized = _normalize_title(season.title or "")
 
+    # First pass: exact index match
     for entry in plex_seasons:
         rating_key = entry.get("ratingKey")
         if not rating_key:
@@ -185,17 +197,47 @@ def _match_season_key(plex_seasons: List[Dict[str, object]], season: Season) -> 
         }
         if target_numbers & {num for num in numbers if num is not None}:
             return str(rating_key)
+
+    # Second pass: exact title match (case-insensitive)
+    for entry in plex_seasons:
+        rating_key = entry.get("ratingKey")
+        if not rating_key:
+            continue
         if target_title and str(entry.get("title") or "").lower() == target_title:
             return str(rating_key)
+
+    # Third pass: fuzzy title match (normalized)
+    for entry in plex_seasons:
+        rating_key = entry.get("ratingKey")
+        if not rating_key:
+            continue
+        entry_title_normalized = _normalize_title(str(entry.get("title") or ""))
+        if target_title_normalized and entry_title_normalized == target_title_normalized:
+            LOGGER.debug(
+                "Fuzzy matched season '%s' to Plex season '%s'",
+                season.title,
+                entry.get("title"),
+            )
+            return str(rating_key)
+
     return None
 
 
 def _match_episode_key(plex_episodes: List[Dict[str, object]], episode: Episode) -> Optional[str]:
-    """Find the Plex rating key for an episode by matching index or title."""
+    """Find the Plex rating key for an episode by matching index or title.
+
+    Uses multiple matching strategies:
+    1. Exact index match
+    2. Exact title match (case-insensitive)
+    3. Fuzzy title match (normalized - removes punctuation)
+    4. Partial title match (episode title contained in Plex title or vice versa)
+    """
     target_numbers = {episode.display_number, episode.index}
     target_numbers = {num for num in target_numbers if num is not None}
     target_title = (episode.title or "").lower()
+    target_title_normalized = _normalize_title(episode.title or "")
 
+    # First pass: exact index match
     for entry in plex_episodes:
         rating_key = entry.get("ratingKey")
         if not rating_key:
@@ -206,8 +248,50 @@ def _match_episode_key(plex_episodes: List[Dict[str, object]], episode: Episode)
         }
         if target_numbers & {num for num in numbers if num is not None}:
             return str(rating_key)
+
+    # Second pass: exact title match (case-insensitive)
+    for entry in plex_episodes:
+        rating_key = entry.get("ratingKey")
+        if not rating_key:
+            continue
         if target_title and str(entry.get("title") or "").lower() == target_title:
             return str(rating_key)
+
+    # Third pass: fuzzy title match (normalized)
+    for entry in plex_episodes:
+        rating_key = entry.get("ratingKey")
+        if not rating_key:
+            continue
+        entry_title_normalized = _normalize_title(str(entry.get("title") or ""))
+        if target_title_normalized and entry_title_normalized == target_title_normalized:
+            LOGGER.debug(
+                "Fuzzy matched episode '%s' to Plex episode '%s'",
+                episode.title,
+                entry.get("title"),
+            )
+            return str(rating_key)
+
+    # Fourth pass: partial title match (one contains the other)
+    if target_title_normalized:
+        for entry in plex_episodes:
+            rating_key = entry.get("ratingKey")
+            if not rating_key:
+                continue
+            entry_title_normalized = _normalize_title(str(entry.get("title") or ""))
+            if not entry_title_normalized:
+                continue
+            # Check if one title contains the other
+            if (
+                target_title_normalized in entry_title_normalized
+                or entry_title_normalized in target_title_normalized
+            ):
+                LOGGER.debug(
+                    "Partial matched episode '%s' to Plex episode '%s'",
+                    episode.title,
+                    entry.get("title"),
+                )
+                return str(rating_key)
+
     return None
 
 
@@ -557,6 +641,18 @@ class PlexMetadataSync:
         plex_seasons = self.client.list_children(show_rating)
         stats.api_calls += 1
 
+        # Debug: log what Plex has
+        if LOGGER.isEnabledFor(logging.DEBUG):
+            plex_season_info = [
+                f"idx={s.get('index')} title='{s.get('title')}' key={s.get('ratingKey')}"
+                for s in plex_seasons
+            ]
+            LOGGER.debug(
+                "Plex seasons for '%s': %s",
+                show.title,
+                plex_season_info[:10],  # Limit to first 10
+            )
+
         # Build season rating key cache
         season_rating_cache: Dict[str, str] = {}
         for season in show.seasons:
@@ -613,6 +709,20 @@ class PlexMetadataSync:
             if season_id not in episode_cache:
                 episode_cache[season_id] = self.client.list_children(rating_key)
                 stats.api_calls += 1
+
+                # Debug: log what Plex has for this season
+                if LOGGER.isEnabledFor(logging.DEBUG):
+                    eps = episode_cache[season_id]
+                    ep_info = [
+                        f"idx={e.get('index')} '{e.get('title', '')[:30]}'"
+                        for e in eps[:5]  # First 5
+                    ]
+                    LOGGER.debug(
+                        "Plex episodes for season '%s': %s%s",
+                        season.title,
+                        ep_info,
+                        f" ...and {len(eps) - 5} more" if len(eps) > 5 else "",
+                    )
 
             plex_episodes = episode_cache[season_id]
 
