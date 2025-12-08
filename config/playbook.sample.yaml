@@ -109,12 +109,20 @@ settings:
       #   - On macOS, also mount com.docker.cli (command -v com.docker.cli)
 
   ####################################################################
-  # PLEX METADATA PRE-SYNC (OPTIONAL)
+  # PLEX METADATA SYNC (OPTIONAL)
   ####################################################################
   # Push show/season/episode metadata (titles, sort titles, summaries, dates,
-  # posters, backgrounds) to Plex before Kometa runs. Uses remote metadata YAML
-  # as the source of truth. Episodes are always updated; shows/seasons update on
-  # first run or when the metadata fingerprint changes (or when force is true).
+  # posters, backgrounds) to Plex. Uses remote metadata YAML as the source of truth.
+  #
+  # SYNC TRIGGERS:
+  #   - New files processed (automatically syncs the affected sports)
+  #   - Metadata changed in remote YAML (fingerprint-based detection)
+  #   - First-time sync (sports that have never been synced will auto-sync)
+  #   - Force mode (force: true syncs all sports regardless of state)
+  #
+  # This "first-time sync" feature ensures that existing content in Plex gets
+  # proper metadata even if you enable sync after already having files in place.
+  # Once a sport is synced, it only re-syncs when metadata changes or force=true.
   plex_metadata_sync:
     enabled: false                   # Set true to enable; or PLEX_SYNC_ENABLED=true
     url: ${PLEX_URL:-http://plex:32400}
@@ -127,7 +135,7 @@ settings:
     sports: []                       # Limit to specific sport ids; env PLEX_SPORTS=foo,bar
     scan_wait: 5                     # Seconds to wait after triggering library scan (0 to skip)
     # Features: automatic library scan trigger, retry with backoff, rate limiting,
-    # field locking, fingerprint-based change detection for shows/seasons/episodes
+    # field locking, fingerprint-based change detection, first-time sync detection
 
   ####################################################################
   # DEFAULT DESTINATION TEMPLATES

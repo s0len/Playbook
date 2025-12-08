@@ -1174,8 +1174,14 @@ class Processor:
     def _run_plex_sync_if_needed(self, stats: ProcessingStats) -> None:
         """Run Plex metadata sync after file processing.
 
-        Only syncs sports that had activity (files processed or metadata changed),
-        unless a specific sports_filter is already set in config.
+        Sync runs when:
+        1. Files were processed (new files to sync)
+        2. Metadata changed in remote YAML
+        3. Sports have never been synced to Plex (first-time sync)
+        4. Force mode is enabled
+
+        Unless a specific sports_filter is already set, only syncs sports
+        that match one of the above criteria.
         """
         if self._plex_sync is None:
             return
@@ -1183,30 +1189,43 @@ class Processor:
         if self._plex_sync_ran:
             return
 
-        # Only run if we processed files or metadata changed
-        if stats.processed <= 0 and not self._metadata_changed_sports:
-            LOGGER.debug(
-                self._format_log(
-                    "Skipping Plex Sync",
-                    {"Reason": "No files processed and no metadata changes"},
-                )
-            )
-            return
-
         # Apply dry-run from global settings if not already set
         if self.config.settings.dry_run and not self._plex_sync.dry_run:
             self._plex_sync.dry_run = True
 
-        # Only sync sports that had activity (unless explicit filter is set)
-        if not self._plex_sync.sports_filter:
-            active_sports = set(self._sports_with_processed_files)
-            active_sports.update(sport_id for sport_id, _ in self._metadata_changed_sports)
-            if active_sports:
-                self._plex_sync.sports_filter = sorted(active_sports)
+        # Build set of sports needing sync
+        active_sports = set(self._sports_with_processed_files)
+        active_sports.update(sport_id for sport_id, _ in self._metadata_changed_sports)
+
+        # Also include sports that have never been synced to Plex
+        try:
+            sports_needing_initial_sync = self._plex_sync.get_sports_needing_sync()
+            if sports_needing_initial_sync:
                 LOGGER.debug(
-                    "Plex sync limited to sports with activity: %s",
-                    ", ".join(self._plex_sync.sports_filter),
+                    "Sports needing initial/updated Plex sync: %s",
+                    ", ".join(sorted(sports_needing_initial_sync)),
                 )
+                active_sports.update(sports_needing_initial_sync)
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.warning("Failed to check Plex sync state: %s", exc)
+
+        # Skip if no sports need syncing (and no force mode)
+        if not active_sports and not self._plex_sync.force:
+            LOGGER.debug(
+                self._format_log(
+                    "Skipping Plex Sync",
+                    {"Reason": "No files processed, no metadata changes, all sports already synced"},
+                )
+            )
+            return
+
+        # Apply sports filter (unless explicit filter is already set)
+        if not self._plex_sync.sports_filter and active_sports:
+            self._plex_sync.sports_filter = sorted(active_sports)
+            LOGGER.debug(
+                "Plex sync limited to sports with activity or needing sync: %s",
+                ", ".join(self._plex_sync.sports_filter),
+            )
 
         LOGGER.info(
             self._format_log(
