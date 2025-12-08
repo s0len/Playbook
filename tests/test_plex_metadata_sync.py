@@ -124,13 +124,34 @@ class TestResolveAssetUrl:
         url = "https://example.com/image.jpg"
         assert _resolve_asset_url("http://base", url) == url
 
-    def test_resolves_relative_path(self) -> None:
+    def test_resolves_relative_path_from_file_url(self) -> None:
+        # Base URL is a YAML file, relative path should be resolved from its directory
+        result = _resolve_asset_url(
+            "https://raw.githubusercontent.com/user/repo/main/metadata/nhl/2025.yaml",
+            "posters/nhl.jpg"
+        )
+        assert result == "https://raw.githubusercontent.com/user/repo/main/metadata/nhl/posters/nhl.jpg"
+
+    def test_resolves_relative_path_from_directory_url(self) -> None:
+        # When base URL ends with /, treat it as a directory
         result = _resolve_asset_url("http://base.com/api/", "assets/poster.jpg")
         assert result == "http://base.com/api/assets/poster.jpg"
 
     def test_handles_leading_slash(self) -> None:
-        result = _resolve_asset_url("http://base.com", "/assets/poster.jpg")
+        # Leading slash means relative to domain root
+        result = _resolve_asset_url(
+            "http://base.com/path/to/file.yaml",
+            "/assets/poster.jpg"
+        )
         assert result == "http://base.com/assets/poster.jpg"
+
+    def test_resolves_parent_directory_path(self) -> None:
+        # Should handle paths with ../
+        result = _resolve_asset_url(
+            "https://example.com/metadata/show/2025.yaml",
+            "../posters/poster.jpg"
+        )
+        assert result == "https://example.com/metadata/posters/poster.jpg"
 
 
 class TestFirst:
