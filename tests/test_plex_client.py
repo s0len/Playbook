@@ -226,8 +226,8 @@ class TestSearchShowFuzzyMatching:
             assert result is not None
             assert result["ratingKey"] == "300"
 
-    def test_no_match_returns_first_result(self) -> None:
-        """When no fuzzy match, return first search result."""
+    def test_no_match_returns_none(self) -> None:
+        """When no fuzzy match, return None (don't return unrelated shows)."""
         client = PlexClient("http://localhost:32400", "token")
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -241,9 +241,8 @@ class TestSearchShowFuzzyMatching:
 
         with patch.object(client.session, "request", return_value=mock_response):
             result = client.search_show("1", "NHL 2025-2026")
-            # Should return first result as fallback
-            assert result is not None
-            assert result["ratingKey"] == "999"
+            # Should NOT return unrelated shows - prevents Formula 1 matching Formula E
+            assert result is None
 
     def test_empty_results_returns_none(self) -> None:
         """Empty search results return None."""
