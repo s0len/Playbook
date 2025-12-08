@@ -82,11 +82,17 @@ Playbook can push show/season/episode metadata (titles, sort titles, summaries, 
 
 **How it works:**
 
-1. **Automatic**: When enabled, Plex sync runs automatically after file processing if any files were processed or metadata changed.
-2. **Change detection**: Uses fingerprint-based detection—shows/seasons only update when metadata changes; episodes update when their content changes.
-3. **Field locking**: Sets `{field}.locked=1` to prevent Plex agents from overwriting your custom metadata.
-4. **Rate limiting**: Built-in rate limiting and retry logic for resilient API calls.
-5. **Security**: Token passed via header (not URL query params); URLs sanitized in logs.
+1. **Automatic**: When enabled, Plex sync runs automatically after file processing.
+2. **Smart sync decision**: Sync runs when:
+   - New files were processed
+   - Metadata changed in remote YAML
+   - Sports have never been synced to Plex (first-time sync)
+   - Force mode is enabled
+3. **Change detection**: Uses fingerprint-based detection—shows/seasons only update when metadata changes; episodes update when their content changes.
+4. **First-time sync**: If a sport has never been synced to Plex, it will sync automatically even if no new files were processed. This ensures existing content gets proper metadata.
+5. **Field locking**: Sets `{field}.locked=1` to prevent Plex agents from overwriting your custom metadata.
+6. **Rate limiting**: Built-in rate limiting and retry logic for resilient API calls.
+7. **Security**: Token passed via header (not URL query params); URLs sanitized in logs.
 
 **Manual execution:**
 
@@ -94,7 +100,9 @@ Playbook can push show/season/episode metadata (titles, sort titles, summaries, 
 python -m playbook.plex_metadata_sync --config /config/playbook.yaml --verbose
 ```
 
-**Fingerprint cache**: Stored in `cache_dir/state/plex-metadata-hashes.json`.
+**State files** (stored in `cache_dir/state/`):
+- `plex-metadata-hashes.json`: Fingerprint cache for change detection
+- `plex-sync-state.json`: Tracks which sports have been synced to Plex
 
 ## Logging & Observability
 

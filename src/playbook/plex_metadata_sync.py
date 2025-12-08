@@ -35,6 +35,7 @@ from .plex_client import (
     PlexClient,
     PlexSyncStats,
 )
+from .plex_sync_state import PlexSyncStateStore
 from .utils import env_bool, env_list
 
 LOGGER = logging.getLogger(__name__)
@@ -405,6 +406,7 @@ class PlexMetadataSync:
         self._client: Optional[PlexClient] = None
         self._library_id_resolved: Optional[str] = None
         self._fingerprint_store: Optional[MetadataFingerprintStore] = None
+        self._sync_state_store: Optional[PlexSyncStateStore] = None
 
     @property
     def client(self) -> PlexClient:
@@ -430,6 +432,15 @@ class PlexMetadataSync:
             )
         return self._fingerprint_store
 
+    @property
+    def sync_state_store(self) -> PlexSyncStateStore:
+        """Lazily create the sync state store."""
+        if self._sync_state_store is None:
+            self._sync_state_store = PlexSyncStateStore(
+                self.config.settings.cache_dir,
+            )
+        return self._sync_state_store
+
     def resolve_library(self) -> str:
         """Resolve and cache the target library ID."""
         if self._library_id_resolved is None:
@@ -444,6 +455,29 @@ class PlexMetadataSync:
                 require_type="show",
             )
         return self._library_id_resolved
+
+    def get_sports_needing_sync(self) -> Set[str]:
+        """Get sport IDs that need syncing (never synced or metadata changed).
+
+        This allows the processor to decide whether to run sync at all.
+        """
+        sports = self._get_target_sports()
+        needing_sync: Set[str] = set()
+
+        for sport in sports:
+            # Load show to compute fingerprint
+            try:
+                show = load_show(self.config.settings, sport.metadata)
+                fingerprint = compute_show_fingerprint(show, sport.metadata)
+            except Exception as exc:  # noqa: BLE001
+                LOGGER.debug("Failed to load metadata for %s: %s", sport.id, exc)
+                continue
+
+            # Check if this sport needs syncing
+            if self.sync_state_store.needs_sync(sport.id, fingerprint.show_hash):
+                needing_sync.add(sport.id)
+
+        return needing_sync
 
     def sync_all(self, *, trigger_scan: bool = True) -> PlexSyncStats:
         """Sync all configured sports to Plex.
@@ -492,6 +526,7 @@ class PlexMetadataSync:
                 stats.errors.append(f"Sport {sport.id}: {exc}")
 
         self.fingerprint_store.save()
+        self.sync_state_store.save()  # Persist sync state
 
         if stats.has_activity():
             summary = stats.summary()
@@ -551,7 +586,18 @@ class PlexMetadataSync:
         previous_fingerprint = self.fingerprint_store.get(sport.id)
         fingerprint = compute_show_fingerprint(show, sport.metadata)
         change = self.fingerprint_store.update(sport.id, fingerprint)
-        is_first_sync = previous_fingerprint is None
+
+        # Check against sync state (tracks actual Plex syncs, not just fingerprints)
+        needs_plex_sync = self.sync_state_store.needs_sync(sport.id, fingerprint.show_hash)
+        is_first_sync = needs_plex_sync and previous_fingerprint is None
+
+        LOGGER.debug(
+            "Sport %s: needs_plex_sync=%s, fingerprint_changed=%s, is_first_sync=%s",
+            sport.id,
+            needs_plex_sync,
+            change.updated,
+            is_first_sync,
+        )
 
         # Find show in Plex
         plex_show = self.client.search_show(library_id, show.title)
@@ -570,13 +616,18 @@ class PlexMetadataSync:
 
         base_url = sport.metadata.url
 
-        # Sync show metadata
+        # Track stats before sync
+        shows_before = stats.shows_updated
+        seasons_before = stats.seasons_updated
+        episodes_before = stats.episodes_updated
+
+        # Sync show metadata (if force, first sync, or sync state says we need it)
         self._sync_show(
             show=show,
             show_rating=show_rating,
             base_url=base_url,
             change=change,
-            is_first_sync=is_first_sync,
+            is_first_sync=is_first_sync or needs_plex_sync,
             stats=stats,
         )
 
@@ -588,9 +639,23 @@ class PlexMetadataSync:
             fingerprint=fingerprint,
             previous_fingerprint=previous_fingerprint,
             change=change,
-            is_first_sync=is_first_sync,
+            is_first_sync=is_first_sync or needs_plex_sync,
             stats=stats,
         )
+
+        # Mark sport as synced if we made any updates (or dry-run would have)
+        shows_synced = stats.shows_updated - shows_before
+        seasons_synced = stats.seasons_updated - seasons_before
+        episodes_synced = stats.episodes_updated - episodes_before
+
+        if not self.dry_run:
+            self.sync_state_store.mark_synced(
+                sport.id,
+                fingerprint.show_hash,
+                shows=shows_synced,
+                seasons=seasons_synced,
+                episodes=episodes_synced,
+            )
 
     def _sync_show(
         self,
