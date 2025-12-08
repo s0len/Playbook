@@ -473,8 +473,8 @@ class PlexMetadataSync:
                 LOGGER.debug("Failed to load metadata for %s: %s", sport.id, exc)
                 continue
 
-            # Check if this sport needs syncing
-            if self.sync_state_store.needs_sync(sport.id, fingerprint.show_hash):
+            # Check if this sport needs syncing (use digest as the fingerprint)
+            if self.sync_state_store.needs_sync(sport.id, fingerprint.digest):
                 needing_sync.add(sport.id)
 
         return needing_sync
@@ -588,7 +588,7 @@ class PlexMetadataSync:
         change = self.fingerprint_store.update(sport.id, fingerprint)
 
         # Check against sync state (tracks actual Plex syncs, not just fingerprints)
-        needs_plex_sync = self.sync_state_store.needs_sync(sport.id, fingerprint.show_hash)
+        needs_plex_sync = self.sync_state_store.needs_sync(sport.id, fingerprint.digest)
         is_first_sync = needs_plex_sync and previous_fingerprint is None
 
         LOGGER.debug(
@@ -651,7 +651,7 @@ class PlexMetadataSync:
         if not self.dry_run:
             self.sync_state_store.mark_synced(
                 sport.id,
-                fingerprint.show_hash,
+                fingerprint.digest,
                 shows=shows_synced,
                 seasons=seasons_synced,
                 episodes=episodes_synced,
