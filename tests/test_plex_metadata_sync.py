@@ -294,6 +294,22 @@ class TestMapSeasonMetadata:
         assert result.summary == "The 2024 racing season"
         assert result.poster_url == "http://absolute.com/poster.jpg"
 
+    def test_url_poster_field_preferred(self) -> None:
+        """Test that url_poster (used by meta-manager YAMLs) is extracted."""
+        season = _make_season(
+            index=1,
+            title="NHL Week 1",
+            summary="Week 1 of NHL season",
+            metadata={
+                "url_poster": "https://example.com/posters/nhl/s1/poster.jpg",
+                "url_background": "https://example.com/posters/nhl/s1/background.jpg",
+            },
+        )
+        result = _map_season_metadata(season, "http://cdn.example.com")
+
+        assert result.poster_url == "https://example.com/posters/nhl/s1/poster.jpg"
+        assert result.background_url == "https://example.com/posters/nhl/s1/background.jpg"
+
 
 class TestMapEpisodeMetadata:
     def test_extracts_basic_fields(self) -> None:

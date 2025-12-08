@@ -107,8 +107,8 @@ def _map_show_metadata(show: Show, base_url: str) -> MappedMetadata:
             _first(meta, ("originally_available", "originally_available_at"))
         ),
         summary=show.summary or meta.get("summary"),
-        poster_url=_resolve_asset_url(base_url, _first(meta, ("poster", "thumb", "cover"))),
-        background_url=_resolve_asset_url(base_url, _first(meta, ("background", "art", "fanart"))),
+        poster_url=_resolve_asset_url(base_url, _first(meta, ("url_poster", "poster", "thumb", "cover"))),
+        background_url=_resolve_asset_url(base_url, _first(meta, ("url_background", "background", "art", "fanart"))),
     )
 
 
@@ -123,8 +123,8 @@ def _map_season_metadata(season: Season, base_url: str) -> MappedMetadata:
             _first(meta, ("originally_available", "originally_available_at"))
         ),
         summary=season.summary or meta.get("summary"),
-        poster_url=_resolve_asset_url(base_url, _first(meta, ("poster", "thumb", "cover"))),
-        background_url=_resolve_asset_url(base_url, _first(meta, ("background", "art", "fanart"))),
+        poster_url=_resolve_asset_url(base_url, _first(meta, ("url_poster", "poster", "thumb", "cover"))),
+        background_url=_resolve_asset_url(base_url, _first(meta, ("url_background", "background", "art", "fanart"))),
     )
 
 
@@ -140,8 +140,8 @@ def _map_episode_metadata(episode: Episode, base_url: str) -> MappedMetadata:
             or episode.originally_available
         ),
         summary=episode.summary or meta.get("summary"),
-        poster_url=_resolve_asset_url(base_url, _first(meta, ("poster", "thumb", "cover"))),
-        background_url=_resolve_asset_url(base_url, _first(meta, ("background", "art", "fanart"))),
+        poster_url=_resolve_asset_url(base_url, _first(meta, ("url_poster", "poster", "thumb", "cover"))),
+        background_url=_resolve_asset_url(base_url, _first(meta, ("url_background", "background", "art", "fanart"))),
     )
 
 
