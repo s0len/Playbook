@@ -88,17 +88,53 @@ def _parse_date(value: object) -> Optional[str]:
 
 
 def _resolve_asset_url(base_url: str, value: Optional[str]) -> Optional[str]:
-    """Resolve asset path to full URL."""
+    """Resolve asset path to full URL.
+    
+    If value is already a full URL, return it as-is.
+    If value is a relative path, resolve it relative to the base_url's directory.
+    E.g., base_url = "https://example.com/metadata/show/2025.yaml"
+          value = "posters/poster.jpg"
+          result = "https://example.com/metadata/show/posters/poster.jpg"
+    """
     if not value:
         return None
     if value.startswith(("http://", "https://")):
         return value
-    return urljoin(base_url.rstrip("/") + "/", value.lstrip("/"))
+    
+    # If value starts with /, it's relative to domain root
+    if value.startswith("/"):
+        return urljoin(base_url, value)
+    
+    # For relative paths, resolve relative to base_url's directory
+    # If base_url ends with /, it's already a directory URL
+    if base_url.endswith("/"):
+        return urljoin(base_url, value)
+    
+    # Otherwise, base_url is a file path; get its directory
+    # Add trailing slash to ensure we're treating it as a directory
+    base_dir = base_url.rsplit("/", 1)[0] + "/"
+    return urljoin(base_dir, value)
 
 
 def _map_show_metadata(show: Show, base_url: str) -> MappedMetadata:
     """Extract Plex-compatible metadata from Show object."""
     meta = show.metadata or {}
+    poster_raw = _first(meta, ("url_poster", "poster", "thumb", "cover"))
+    background_raw = _first(meta, ("url_background", "background", "art", "fanart"))
+    
+    poster_url = _resolve_asset_url(base_url, poster_raw)
+    background_url = _resolve_asset_url(base_url, background_raw)
+    
+    if LOGGER.isEnabledFor(logging.DEBUG):
+        LOGGER.debug(
+            "Mapping show '%s': poster_raw=%s -> poster_url=%s, background_raw=%s -> background_url=%s",
+            show.title,
+            poster_raw,
+            poster_url,
+            background_raw,
+            background_url,
+        )
+    
     return MappedMetadata(
         title=show.title or meta.get("title"),
         sort_title=_first(meta, ("sort_title", "sortTitle", "slug")),
@@ -107,14 +143,30 @@ def _map_show_metadata(show: Show, base_url: str) -> MappedMetadata:
             _first(meta, ("originally_available", "originally_available_at"))
         ),
         summary=show.summary or meta.get("summary"),
-        poster_url=_resolve_asset_url(base_url, _first(meta, ("url_poster", "poster", "thumb", "cover"))),
-        background_url=_resolve_asset_url(base_url, _first(meta, ("url_background", "background", "art", "fanart"))),
+        poster_url=poster_url,
+        background_url=background_url,
     )
 
 
 def _map_season_metadata(season: Season, base_url: str) -> MappedMetadata:
     """Extract Plex-compatible metadata from Season object."""
     meta = season.metadata or {}
+    poster_raw = _first(meta, ("url_poster", "poster", "thumb", "cover"))
+    background_raw = _first(meta, ("url_background", "background", "art", "fanart"))
+    
+    poster_url = _resolve_asset_url(base_url, poster_raw)
+    background_url = _resolve_asset_url(base_url, background_raw)
+    
+    if LOGGER.isEnabledFor(logging.DEBUG) and (poster_url or background_url):
+        LOGGER.debug(
+            "Mapping season '%s': poster_raw=%s -> poster_url=%s, background_raw=%s -> background_url=%s",
+            season.title,
+            poster_raw,
+            poster_url,
+            background_raw,
+            background_url,
+        )
+    
     return MappedMetadata(
         title=season.title or meta.get("title"),
         sort_title=_first(meta, ("sort_title", "sortTitle", "slug")),
@@ -123,14 +175,30 @@ def _map_season_metadata(season: Season, base_url: str) -> MappedMetadata:
             _first(meta, ("originally_available", "originally_available_at"))
         ),
         summary=season.summary or meta.get("summary"),
-        poster_url=_resolve_asset_url(base_url, _first(meta, ("url_poster", "poster", "thumb", "cover"))),
-        background_url=_resolve_asset_url(base_url, _first(meta, ("url_background", "background", "art", "fanart"))),
+        poster_url=poster_url,
+        background_url=background_url,
     )
 
 
 def _map_episode_metadata(episode: Episode, base_url: str) -> MappedMetadata:
     """Extract Plex-compatible metadata from Episode object."""
     meta = episode.metadata or {}
+    poster_raw = _first(meta, ("url_poster", "poster", "thumb", "cover"))
+    background_raw = _first(meta, ("url_background", "background", "art", "fanart"))
+    
+    poster_url = _resolve_asset_url(base_url, poster_raw)
+    background_url = _resolve_asset_url(base_url, background_raw)
+    
+    if LOGGER.isEnabledFor(logging.DEBUG) and (poster_url or background_url):
+        LOGGER.debug(
+            "Mapping episode '%s': poster_raw=%s -> poster_url=%s, background_raw=%s -> background_url=%s",
+            episode.title,
+            poster_raw,
+            poster_url,
+            background_raw,
+            background_url,
+        )
+    
     return MappedMetadata(
         title=episode.title or meta.get("title"),
         sort_title=_first(meta, ("sort_title", "sortTitle", "slug")),
@@ -140,8 +208,8 @@ def _map_episode_metadata(episode: Episode, base_url: str) -> MappedMetadata:
             or episode.originally_available
         ),
         summary=episode.summary or meta.get("summary"),
-        poster_url=_resolve_asset_url(base_url, _first(meta, ("url_poster", "poster", "thumb", "cover"))),
-        background_url=_resolve_asset_url(base_url, _first(meta, ("url_background", "background", "art", "fanart"))),
+        poster_url=poster_url,
+        background_url=background_url,
     )
 
 
@@ -344,13 +412,14 @@ def _apply_metadata(
     for attr, element, display_name in asset_mappings:
         asset_url = getattr(mapped, attr)
         if not asset_url:
+            LOGGER.debug("No %s URL found for %s (%s)", display_name, label, rating_key)
             continue
         if dry_run:
             LOGGER.info("Dry-run: would set %s %s %s to %s", label, rating_key, display_name, asset_url)
         else:
             try:
                 client.set_asset(rating_key, element, asset_url)
-                LOGGER.debug("Set %s %s for %s (%s)", label, display_name, rating_key, asset_url[:50])
+                LOGGER.info("Set %s %s for %s", display_name, label, rating_key)
                 stats.assets_updated += 1
                 stats.api_calls += 1
                 updated = True
