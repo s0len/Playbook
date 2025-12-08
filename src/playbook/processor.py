@@ -620,15 +620,21 @@ class Processor:
     def _log_detailed_summary(self, stats: ProcessingStats, *, level: int = logging.INFO) -> None:
         show_entries = LOGGER.isEnabledFor(logging.DEBUG)
         builder = LogBlockBuilder("Detailed Summary", pad_top=True)
-        builder.add_fields(
-            {
-                "Processed": stats.processed,
-                "Skipped": stats.skipped,
-                "Ignored": stats.ignored,
-                "Warnings": len(stats.warnings),
-                "Errors": len(stats.errors),
-            }
-        )
+
+        fields: Dict[str, Any] = {
+            "Processed": stats.processed,
+            "Skipped": stats.skipped,
+            "Ignored": stats.ignored,
+            "Warnings": len(stats.warnings),
+            "Errors": len(stats.errors),
+        }
+
+        # Add Plex sync stats if available
+        if self._plex_sync_stats:
+            plex_errors = len(self._plex_sync_stats.errors)
+            fields["Plex Sync Errors"] = plex_errors
+
+        builder.add_fields(fields)
 
         if show_entries:
             builder.add_section("Errors", stats.errors)
@@ -651,6 +657,13 @@ class Processor:
             builder.add_section(
                 "Ignored",
                 self._summarize_counts(stats.ignored_by_sport, stats.ignored, "ignored"),
+            )
+
+        # Always show Plex sync errors (they're important to surface)
+        if self._plex_sync_stats and self._plex_sync_stats.errors:
+            builder.add_section(
+                "Plex Sync Errors",
+                self._summarize_plex_errors(self._plex_sync_stats.errors),
             )
 
         LOGGER.log(level, builder.render())
@@ -677,6 +690,13 @@ class Processor:
                     f"{plex_summary['shows']['updated']}/{plex_summary['seasons']['updated']}/"
                     f"{plex_summary['episodes']['updated']} (show/season/ep)"
                 )
+                # Show not-found counts if any
+                not_found = (
+                    plex_summary["seasons"]["not_found"]
+                    + plex_summary["episodes"]["not_found"]
+                )
+                if not_found:
+                    plex_status += f" [{not_found} not found]"
                 if self._plex_sync_stats.errors:
                     plex_status += f" [{len(self._plex_sync_stats.errors)} errors]"
                 fields["Plex Sync"] = plex_status
@@ -698,11 +718,20 @@ class Processor:
             empty_label="(none)",
         )
 
+        # Show Plex sync errors in detail
+        if self._plex_sync_stats and self._plex_sync_stats.errors:
+            builder.add_section(
+                "Plex Sync Errors",
+                self._summarize_plex_errors(self._plex_sync_stats.errors, limit=5),
+            )
+
         follow_ups: List[str] = []
         if stats.errors:
             follow_ups.append("Resolve processing errors above before next run.")
         if self._plex_sync_stats and self._plex_sync_stats.errors:
-            follow_ups.append(f"Review {len(self._plex_sync_stats.errors)} Plex sync error(s).")
+            follow_ups.append(
+                f"Check Plex library and metadata YAML for {len(self._plex_sync_stats.errors)} sync error(s)."
+            )
 
         if follow_ups:
             builder.add_section("Follow-Ups", follow_ups)
@@ -758,6 +787,48 @@ class Processor:
             lines.append(f"... {remaining} more (use --verbose for full list)")
         else:
             lines.append("Run with --verbose for per-file details.")
+        return lines
+
+    @staticmethod
+    def _summarize_plex_errors(errors: List[str], *, limit: int = 10) -> List[str]:
+        """Summarize Plex sync errors, grouping by error type."""
+        if not errors:
+            return []
+
+        # Group errors by type (first part before colon or first few words)
+        grouped: Dict[str, List[str]] = {}
+        for error in errors:
+            # Extract error category (e.g., "Show not found", "Season not found", etc.)
+            if ":" in error:
+                category = error.split(":")[0].strip()
+            else:
+                # Use first 30 chars as category
+                category = error[:30].strip()
+            grouped.setdefault(category, []).append(error)
+
+        lines: List[str] = []
+        shown = 0
+        for category, errs in sorted(grouped.items(), key=lambda x: -len(x[1])):
+            if shown >= limit:
+                break
+            if len(errs) > 1:
+                lines.append(f"{len(errs)}× {category}")
+                # Show first example
+                example = errs[0]
+                if len(example) > 80:
+                    example = example[:77] + "..."
+                lines.append(f"    └─ e.g.: {example}")
+            else:
+                err = errs[0]
+                if len(err) > 80:
+                    err = err[:77] + "..."
+                lines.append(f"- {err}")
+            shown += 1
+
+        remaining = len(grouped) - shown
+        if remaining > 0:
+            lines.append(f"... {remaining} more error types")
+
         return lines
 
     @staticmethod

@@ -394,7 +394,7 @@ class PlexMetadataSync:
         if stats.has_activity():
             summary = stats.summary()
             LOGGER.info(
-                "Plex sync complete: shows=%d/%d seasons=%d/%d episodes=%d/%d assets=%d errors=%d",
+                "Plex sync complete: shows=%d/%d seasons=%d/%d episodes=%d/%d assets=%d",
                 summary["shows"]["updated"],
                 summary["shows"]["skipped"],
                 summary["seasons"]["updated"],
@@ -402,8 +402,22 @@ class PlexMetadataSync:
                 summary["episodes"]["updated"],
                 summary["episodes"]["skipped"],
                 summary["assets"]["updated"],
-                summary["errors"],
             )
+            # Log not-found items
+            not_found_total = summary["seasons"]["not_found"] + summary["episodes"]["not_found"]
+            if not_found_total:
+                LOGGER.warning(
+                    "Plex sync: %d season(s) and %d episode(s) not found in Plex library",
+                    summary["seasons"]["not_found"],
+                    summary["episodes"]["not_found"],
+                )
+            # Log errors
+            if stats.errors:
+                LOGGER.error("Plex sync: %d error(s) occurred", len(stats.errors))
+                for error in stats.errors[:10]:  # Show first 10
+                    LOGGER.error("  - %s", error)
+                if len(stats.errors) > 10:
+                    LOGGER.error("  ... and %d more errors", len(stats.errors) - 10)
         else:
             LOGGER.info("Plex sync complete: no updates needed")
 
