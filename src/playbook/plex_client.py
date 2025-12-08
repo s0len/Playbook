@@ -341,7 +341,7 @@ class PlexClient:
             if entry_title.lower() == target_lower:
                 return entry
 
-        # Second pass: fuzzy match (normalized)
+        # Second pass: fuzzy match (normalized - removes hyphens/spaces/underscores)
         for entry in all_entries:
             entry_title = str(entry.get("title", ""))
             if normalize(entry_title) == target_normalized:
@@ -352,8 +352,17 @@ class PlexClient:
                 )
                 return entry
 
-        # Fall back to first result if any
-        return all_entries[0] if all_entries else None
+        # Log what we found but couldn't match
+        if all_entries:
+            found_titles = [e.get("title", "?") for e in all_entries[:5]]
+            LOGGER.debug(
+                "No match for '%s' among Plex results: %s",
+                title,
+                found_titles,
+            )
+
+        # No match found - don't return unrelated results
+        return None
 
     def get_metadata(self, rating_key: str) -> Optional[Dict[str, Any]]:
         """Get full metadata for an item by rating key."""
