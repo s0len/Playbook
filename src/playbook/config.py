@@ -41,6 +41,7 @@ class PlexSyncSettings:
     force: bool = False
     dry_run: bool = False
     sports: List[str] = field(default_factory=list)
+    scan_wait: float = 5.0  # Seconds to wait after triggering library scan
 
 
 @dataclass(slots=True)
@@ -428,6 +429,12 @@ def _build_plex_sync_settings(data: Dict[str, Any]) -> PlexSyncSettings:
             f"'plex_metadata_sync.url' must be a valid http/https URL, got: {url}"
         )
 
+    scan_wait_raw = data.get("scan_wait", 5.0)
+    try:
+        scan_wait = float(scan_wait_raw)
+    except (TypeError, ValueError):
+        scan_wait = 5.0
+
     return PlexSyncSettings(
         enabled=enabled,
         url=url,
@@ -438,6 +445,7 @@ def _build_plex_sync_settings(data: Dict[str, Any]) -> PlexSyncSettings:
         force=bool(data.get("force", False)),
         dry_run=bool(data.get("dry_run", False)),
         sports=sports,
+        scan_wait=scan_wait,
     )
 
 

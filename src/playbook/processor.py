@@ -88,6 +88,7 @@ class Processor:
         self._stale_records: Dict[str, CachedFileRecord] = {}
         self._metadata_fetch_stats = MetadataFetchStatistics()
         self._touched_destinations: Set[str] = set()
+        self._sports_with_processed_files: Set[str] = set()
 
     @staticmethod
     def _format_log(event: str, fields: Optional[Mapping[str, object]] = None) -> str:
@@ -244,6 +245,7 @@ class Processor:
             self._stale_records = removed_records
         stats = ProcessingStats()
         self._touched_destinations = set()
+        self._sports_with_processed_files = set()
         run_started = time.perf_counter()
 
         try:
@@ -1095,6 +1097,7 @@ class Processor:
         if settings.dry_run:
             stats.register_processed()
             self._record_destination_touch(destination)
+            self._sports_with_processed_files.add(match.sport.id)
             event.action = "dry-run"
             event.event_type = "dry-run"
             event.replaced = replace_existing
@@ -1104,6 +1107,7 @@ class Processor:
         if result.created:
             stats.register_processed()
             self._record_destination_touch(destination)
+            self._sports_with_processed_files.add(match.sport.id)
             self.processed_cache.mark_processed(
                 match.source_path,
                 destination,
@@ -1168,7 +1172,11 @@ class Processor:
             self._kometa_trigger_needed = False
 
     def _run_plex_sync_if_needed(self, stats: ProcessingStats) -> None:
-        """Run Plex metadata sync after file processing."""
+        """Run Plex metadata sync after file processing.
+
+        Only syncs sports that had activity (files processed or metadata changed),
+        unless a specific sports_filter is already set in config.
+        """
         if self._plex_sync is None:
             return
 
@@ -1189,13 +1197,24 @@ class Processor:
         if self.config.settings.dry_run and not self._plex_sync.dry_run:
             self._plex_sync.dry_run = True
 
+        # Only sync sports that had activity (unless explicit filter is set)
+        if not self._plex_sync.sports_filter:
+            active_sports = set(self._sports_with_processed_files)
+            active_sports.update(sport_id for sport_id, _ in self._metadata_changed_sports)
+            if active_sports:
+                self._plex_sync.sports_filter = sorted(active_sports)
+                LOGGER.debug(
+                    "Plex sync limited to sports with activity: %s",
+                    ", ".join(self._plex_sync.sports_filter),
+                )
+
         LOGGER.info(
             self._format_log(
                 "Running Plex Metadata Sync",
                 {
                     "Dry Run": self._plex_sync.dry_run,
                     "Force": self._plex_sync.force,
-                    "Sports Filter": self._plex_sync.sports_filter or "(all)",
+                    "Sports": self._plex_sync.sports_filter or "(all)",
                 },
             )
         )

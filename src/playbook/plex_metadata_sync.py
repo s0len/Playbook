@@ -12,6 +12,7 @@ from __future__ import annotations
 import datetime as dt
 import logging
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
@@ -297,6 +298,7 @@ class PlexMetadataSync:
         timeout: float = 15.0,
         rate_limit_delay: float = 0.1,
         sports_filter: Optional[List[str]] = None,
+        scan_wait: Optional[float] = None,
     ) -> None:
         self.config = config
         self.dry_run = dry_run
@@ -314,6 +316,7 @@ class PlexMetadataSync:
         env_timeout = os.getenv("PLEX_TIMEOUT")
         self.timeout = float(env_timeout) if env_timeout else (timeout or plex_cfg.timeout)
         self.rate_limit_delay = rate_limit_delay
+        self.scan_wait = scan_wait if scan_wait is not None else plex_cfg.scan_wait
 
         self._client: Optional[PlexClient] = None
         self._library_id_resolved: Optional[str] = None
@@ -358,8 +361,12 @@ class PlexMetadataSync:
             )
         return self._library_id_resolved
 
-    def sync_all(self) -> PlexSyncStats:
+    def sync_all(self, *, trigger_scan: bool = True) -> PlexSyncStats:
         """Sync all configured sports to Plex.
+
+        Args:
+            trigger_scan: If True, trigger a library scan before syncing to ensure
+                Plex knows about recently processed files.
 
         Returns statistics about what was updated.
         """
@@ -376,6 +383,17 @@ class PlexMetadataSync:
         if not sports:
             LOGGER.info("No sports to sync")
             return stats
+
+        # Trigger library scan so Plex picks up newly processed files
+        if trigger_scan and not self.dry_run and self.scan_wait > 0:
+            try:
+                self.client.scan_library(library_id)
+                stats.api_calls += 1
+                # Wait for Plex to start processing
+                LOGGER.info("Waiting %.1fs for Plex to scan new files...", self.scan_wait)
+                time.sleep(self.scan_wait)
+            except PlexApiError as exc:
+                LOGGER.warning("Failed to trigger library scan: %s (continuing anyway)", exc)
 
         LOGGER.info("Starting Plex metadata sync for %d sport(s)", len(sports))
 
