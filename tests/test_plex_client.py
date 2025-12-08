@@ -167,3 +167,92 @@ class TestPlexTypeConstants:
     def test_episode_type(self) -> None:
         assert PLEX_TYPE_EPISODE == 4
 
+
+class TestSearchShowFuzzyMatching:
+    """Test fuzzy title matching in search_show."""
+
+    def test_exact_match_preferred(self) -> None:
+        """Exact case-insensitive match is preferred."""
+        client = PlexClient("http://localhost:32400", "token")
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "MediaContainer": {
+                "Metadata": [
+                    {"ratingKey": "100", "title": "NHL 2025-2026"},
+                    {"ratingKey": "200", "title": "NHL 2025 2026"},
+                ]
+            }
+        }
+
+        with patch.object(client.session, "request", return_value=mock_response):
+            result = client.search_show("1", "NHL 2025-2026")
+            assert result["ratingKey"] == "100"
+
+    def test_fuzzy_match_hyphen_vs_space(self) -> None:
+        """Fuzzy matching handles hyphen vs space differences."""
+        client = PlexClient("http://localhost:32400", "token")
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "MediaContainer": {
+                "Metadata": [
+                    {"ratingKey": "200", "title": "Nhl 2025 2026"},  # Different format
+                ]
+            }
+        }
+
+        with patch.object(client.session, "request", return_value=mock_response):
+            # Search with hyphen should still find space version
+            result = client.search_show("1", "NHL 2025-2026")
+            assert result is not None
+            assert result["ratingKey"] == "200"
+
+    def test_fuzzy_match_case_insensitive(self) -> None:
+        """Fuzzy matching is case insensitive."""
+        client = PlexClient("http://localhost:32400", "token")
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "MediaContainer": {
+                "Metadata": [
+                    {"ratingKey": "300", "title": "nba 2024 2025"},
+                ]
+            }
+        }
+
+        with patch.object(client.session, "request", return_value=mock_response):
+            result = client.search_show("1", "NBA 2024-2025")
+            assert result is not None
+            assert result["ratingKey"] == "300"
+
+    def test_no_match_returns_first_result(self) -> None:
+        """When no fuzzy match, return first search result."""
+        client = PlexClient("http://localhost:32400", "token")
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "MediaContainer": {
+                "Metadata": [
+                    {"ratingKey": "999", "title": "Completely Different Show"},
+                ]
+            }
+        }
+
+        with patch.object(client.session, "request", return_value=mock_response):
+            result = client.search_show("1", "NHL 2025-2026")
+            # Should return first result as fallback
+            assert result is not None
+            assert result["ratingKey"] == "999"
+
+    def test_empty_results_returns_none(self) -> None:
+        """Empty search results return None."""
+        client = PlexClient("http://localhost:32400", "token")
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"MediaContainer": {"Metadata": []}}
+
+        with patch.object(client.session, "request", return_value=mock_response):
+            result = client.search_show("1", "NHL 2025-2026")
+            assert result is None
+

@@ -282,7 +282,12 @@ class PlexClient:
         raise PlexApiError(f"Plex library '{library_name}'{type_msg} not found (available: {available})")
 
     def search_show(self, library_id: str, title: str) -> Optional[Dict[str, Any]]:
-        """Search for a TV show by title in a library."""
+        """Search for a TV show by title in a library.
+
+        Uses fuzzy matching to handle variations in title formatting:
+        - Case insensitive
+        - Normalizes hyphens, spaces, and underscores
+        """
         params = {
             "type": PLEX_TYPE_SHOW,
             "title": title,
@@ -292,11 +297,32 @@ class PlexClient:
         metadata_entries: Iterable[Dict[str, Any]] = (
             payload.get("MediaContainer", {}).get("Metadata") or []
         )
-        # Prefer exact match
+
+        # Normalize for fuzzy matching (lowercase, remove hyphens/spaces/underscores)
+        def normalize(text: str) -> str:
+            return text.lower().replace("-", "").replace(" ", "").replace("_", "")
+
+        target_normalized = normalize(title)
+        target_lower = title.lower()
+
+        # First pass: exact match (case-insensitive)
         for entry in metadata_entries:
-            if str(entry.get("title", "")).lower() == title.lower():
+            entry_title = str(entry.get("title", ""))
+            if entry_title.lower() == target_lower:
                 return entry
-        # Fall back to first result
+
+        # Second pass: fuzzy match (normalized)
+        for entry in metadata_entries:
+            entry_title = str(entry.get("title", ""))
+            if normalize(entry_title) == target_normalized:
+                LOGGER.debug(
+                    "Fuzzy matched Plex show '%s' to metadata title '%s'",
+                    entry_title,
+                    title,
+                )
+                return entry
+
+        # Fall back to first result from search
         return next(iter(metadata_entries), None)
 
     def get_metadata(self, rating_key: str) -> Optional[Dict[str, Any]]:
@@ -377,3 +403,24 @@ class PlexClient:
     def refresh_metadata(self, rating_key: str) -> None:
         """Trigger a metadata refresh for an item."""
         self._request("PUT", f"/library/metadata/{rating_key}/refresh")
+
+    def scan_library(self, library_id: str) -> None:
+        """Trigger a library scan to detect new/changed files.
+
+        This is important to call before syncing metadata if files were
+        recently added, so Plex knows about them.
+        """
+        LOGGER.info("Triggering Plex library scan for library %s", library_id)
+        self._request("GET", f"/library/sections/{library_id}/refresh")
+
+    def is_library_scanning(self, library_id: str) -> bool:
+        """Check if a library is currently scanning."""
+        response = self._request("GET", f"/library/sections/{library_id}")
+        payload = _parse_json_response(response)
+        container = payload.get("MediaContainer", {})
+        directories = container.get("Directory", []) or []
+        for directory in directories:
+            if str(directory.get("key")) == str(library_id):
+                return directory.get("scanning", False)
+        # Also check top-level
+        return container.get("scanning", False)
