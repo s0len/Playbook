@@ -133,7 +133,7 @@ settings:
     force: ${PLEX_FORCE:-false}      # Force all updates even if unchanged
     dry_run: ${PLEX_SYNC_DRY_RUN:-false} # Log only, no Plex writes
     sports: []                       # Limit to specific sport ids; env PLEX_SPORTS=foo,bar
-    scan_wait: 5                     # Seconds to wait after triggering library scan (0 to skip)
+    scan_wait: ${PLEX_SCAN_WAIT:-5}  # Seconds to wait after triggering library scan (0 to skip)
     # Features: automatic library scan trigger, retry with backoff, rate limiting,
     # field locking, fingerprint-based change detection, first-time sync detection
 

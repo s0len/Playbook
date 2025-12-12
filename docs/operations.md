@@ -79,6 +79,7 @@ Playbook can push show/season/episode metadata (titles, sort titles, summaries, 
 | `force` | `PLEX_FORCE` | Force updates even when metadata unchanged |
 | `dry_run` | `PLEX_SYNC_DRY_RUN` | Log updates without making API calls |
 | `sports` | `PLEX_SPORTS` | Comma-separated list of sport IDs to sync |
+| `scan_wait` | `PLEX_SCAN_WAIT` | Seconds to wait after library scan (default: 5, set 0 to skip) |
 
 **How it works:**
 
