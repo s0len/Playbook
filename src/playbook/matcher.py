@@ -23,6 +23,41 @@ def _token_similarity(candidate: str, target: str) -> float:
     return difflib.SequenceMatcher(None, candidate, target, autojunk=False).ratio()
 
 
+def _dates_within_proximity(
+    date1: Optional[dt.date], date2: Optional[dt.date], tolerance_days: int = 2
+) -> bool:
+    """Check if two dates are within the specified tolerance (in days).
+
+    Returns True if both dates are None, or if they're within tolerance.
+    Returns False if only one date is available (can't verify proximity).
+    """
+    if date1 is None and date2 is None:
+        return True
+    if date1 is None or date2 is None:
+        # Can't verify proximity if only one date is available
+        return False
+    delta = abs((date1 - date2).days)
+    return delta <= tolerance_days
+
+
+def _parse_date_from_groups(match_groups: Dict[str, str]) -> Optional[dt.date]:
+    """Extract a date from match groups (day, month, year/date_year)."""
+    day_str = match_groups.get("day")
+    month_str = match_groups.get("month")
+    year_str = match_groups.get("date_year") or match_groups.get("year")
+
+    if not (day_str and month_str and year_str):
+        return None
+
+    try:
+        day = int(day_str)
+        month = int(month_str)
+        year = int(year_str)
+        return dt.date(year, month, day)
+    except (ValueError, TypeError):
+        return None
+
+
 def _tokens_close(candidate: str, target: str) -> bool:
     if len(candidate) < 4 or len(target) < 4:
         return False
@@ -421,15 +456,45 @@ def _select_episode(
         add_lookup("venue+session", f"{venue_value} {raw_value}")
         add_lookup("session+venue", f"{raw_value} {venue_value}")
 
+    # Parse date from match groups for proximity checking
+    parsed_date = _parse_date_from_groups(match_groups)
+
     def find_episode_for_token(token: str) -> Optional[Episode]:
+        # First pass: find episodes that match the token
+        matching_episodes: List[Episode] = []
         for episode in season.episodes:
             episode_token = normalize_token(episode.title)
             if tokens_match(episode_token, token):
-                return episode
+                matching_episodes.append(episode)
+                continue
             alias_tokens = [normalize_token(alias) for alias in episode.aliases]
             if any(tokens_match(alias_token, token) for alias_token in alias_tokens):
-                return episode
-        return None
+                matching_episodes.append(episode)
+
+        if not matching_episodes:
+            return None
+
+        # If we have a date from the filename, filter by date proximity
+        if parsed_date is not None:
+            date_matched = [
+                ep for ep in matching_episodes
+                if _dates_within_proximity(parsed_date, ep.originally_available, tolerance_days=2)
+            ]
+            if date_matched:
+                # Return the closest match by date
+                return min(
+                    date_matched,
+                    key=lambda ep: abs((parsed_date - ep.originally_available).days)
+                    if ep.originally_available else 999
+                )
+            # No date-matching episodes found - this is likely a mismatch
+            # Only return a match if there's exactly one candidate (no ambiguity)
+            if len(matching_episodes) == 1:
+                return matching_episodes[0]
+            return None
+
+        # No date available, return first match (original behavior)
+        return matching_episodes[0]
 
     lookup_attempts.sort(key=lambda item: len(item[2]), reverse=True)
 
@@ -581,22 +646,31 @@ def _score_structured_match(
     structured_tokens = {normalize_token(team) for team in structured.teams if team}
     episode_tokens = {normalize_token(team) for team in episode_teams if team}
 
+    # Date proximity check - critical for sports where same teams play multiple times
+    # If both dates are available, they MUST be within proximity for a valid match
+    if structured.date and episode.originally_available:
+        if not _dates_within_proximity(structured.date, episode.originally_available, tolerance_days=2):
+            # Dates are too far apart - this is likely a different game between the same teams
+            return 0.0
+        # Dates match within proximity - this is a strong indicator
+        score += 0.4
+
     if structured_tokens and episode_tokens:
         if structured_tokens == episode_tokens:
-            score += 0.75
+            score += 0.55
         else:
             overlap = structured_tokens.intersection(episode_tokens)
             if overlap:
-                score += 0.45 + 0.05 * len(overlap)
+                score += 0.35 + 0.05 * len(overlap)
     elif structured_tokens:
         combined = normalize_token(" ".join(structured.teams))
         if combined and _token_similarity(combined, normalize_token(episode.title)) >= 0.7:
-            score += 0.4
+            score += 0.3
 
-    if structured.date and episode.originally_available == structured.date:
-        score += 0.2
-    elif structured.year and episode.originally_available and episode.originally_available.year == structured.year:
-        score += 0.1
+    # Year-only match (less specific than full date)
+    if not structured.date and structured.year and episode.originally_available:
+        if episode.originally_available.year == structured.year:
+            score += 0.1
 
     if structured.round and (
         season.round_number == structured.round or season.display_number == structured.round
