@@ -57,8 +57,43 @@ _NHL_TEAM_SYNONYMS: Dict[str, Iterable[str]] = {
 }
 
 
+_NBA_TEAM_SYNONYMS: Dict[str, Iterable[str]] = {
+    "Atlanta Hawks": ["Hawks", "Atlanta", "ATL"],
+    "Boston Celtics": ["Celtics", "Boston", "BOS"],
+    "Brooklyn Nets": ["Nets", "Brooklyn", "BKN"],
+    "Charlotte Hornets": ["Hornets", "Charlotte", "CHA"],
+    "Chicago Bulls": ["Bulls", "Chicago", "CHI"],
+    "Cleveland Cavaliers": ["Cavaliers", "Cavs", "Cleveland", "CLE"],
+    "Dallas Mavericks": ["Mavericks", "Mavs", "Dallas", "DAL"],
+    "Denver Nuggets": ["Nuggets", "Denver", "DEN"],
+    "Detroit Pistons": ["Pistons", "Detroit", "DET"],
+    "Golden State Warriors": ["Warriors", "Golden State", "GSW", "Dubs"],
+    "Houston Rockets": ["Rockets", "Houston", "HOU"],
+    "Indiana Pacers": ["Pacers", "Indiana", "IND"],
+    "Los Angeles Clippers": ["Clippers", "LA Clippers", "LAC"],
+    "Los Angeles Lakers": ["Lakers", "LA Lakers", "LAL"],
+    "Memphis Grizzlies": ["Grizzlies", "Memphis", "MEM", "Grizz"],
+    "Miami Heat": ["Heat", "Miami", "MIA"],
+    "Milwaukee Bucks": ["Bucks", "Milwaukee", "MIL"],
+    "Minnesota Timberwolves": ["Timberwolves", "Wolves", "Minnesota", "MIN"],
+    "New Orleans Pelicans": ["Pelicans", "New Orleans", "NOP", "NOLA"],
+    "New York Knicks": ["Knicks", "New York", "NYK"],
+    "Oklahoma City Thunder": ["Thunder", "Oklahoma City", "OKC"],
+    "Orlando Magic": ["Magic", "Orlando", "ORL"],
+    "Philadelphia 76ers": ["76ers", "Sixers", "Philadelphia", "PHI", "Philly"],
+    "Phoenix Suns": ["Suns", "Phoenix", "PHX"],
+    "Portland Trail Blazers": ["Trail Blazers", "Blazers", "Portland", "POR"],
+    "Sacramento Kings": ["Kings", "Sacramento", "SAC"],
+    "San Antonio Spurs": ["Spurs", "San Antonio", "SAS"],
+    "Toronto Raptors": ["Raptors", "Toronto", "TOR"],
+    "Utah Jazz": ["Jazz", "Utah", "UTA"],
+    "Washington Wizards": ["Wizards", "Washington", "WAS"],
+}
+
+
 _TEAM_ALIAS_MAPS: Dict[str, Dict[str, str]] = {
     "nhl": _build_alias_map(_NHL_TEAM_SYNONYMS),
+    "nba": _build_alias_map(_NBA_TEAM_SYNONYMS),
 }
 
 
