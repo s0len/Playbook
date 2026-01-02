@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import logging
 from typing import Dict, List, Tuple
 
@@ -12,8 +13,14 @@ from playbook.config import (
     SeasonSelector,
     SportConfig,
 )
-from playbook.matcher import compile_patterns, match_file_to_episode
+from playbook.matcher import (
+    compile_patterns,
+    match_file_to_episode,
+    _build_team_alias_lookup,
+    _score_structured_match,
+)
 from playbook.models import Episode, Season, Show
+from playbook.parsers.structured_filename import StructuredName
 from playbook.team_aliases import get_team_alias_map
 
 
@@ -160,6 +167,55 @@ def test_match_file_to_episode_includes_trace_details() -> None:
     assert matched_attempt["season"]["title"] == season.title
     assert matched_attempt["episode"]["title"] == "Qualifying"
     assert trace["messages"] == []
+
+
+def test_score_rejects_wrong_away_team() -> None:
+    """Verify that partial team overlap (one team matches, one doesn't) returns 0.0.
+
+    This tests the fix for the NBA matching bug where 'Pacers vs Celtics' could
+    incorrectly match 'Celtics vs Heat' because 'Celtics' overlaps.
+    """
+    # Create an episode for Celtics vs Heat
+    episode = Episode(
+        title="Boston Celtics vs Miami Heat",
+        summary=None,
+        originally_available=dt.date(2024, 12, 22),
+        index=1,
+    )
+
+    season = Season(
+        key="week9",
+        title="Week 9",
+        summary=None,
+        index=9,
+        episodes=[episode],
+    )
+
+    show = Show(
+        key="nba",
+        title="NBA",
+        summary=None,
+        seasons=[season],
+    )
+
+    # Build alias lookup for the show
+    alias_lookup = _build_team_alias_lookup(show, {})
+
+    # Create structured filename for Pacers vs Celtics (wrong match - only one team overlaps)
+    structured = StructuredName(
+        raw="NBA RS 2024 Indiana Pacers vs Boston Celtics 22 12",
+        date=dt.date(2024, 12, 22),
+        teams=["Indiana Pacers", "Boston Celtics"],
+    )
+
+    # Score should be 0.0 because only one team matches
+    score = _score_structured_match(structured, season, episode, alias_lookup)
+
+    assert score == 0.0, (
+        f"Expected 0.0 for partial team overlap, got {score}. "
+        "Filename has 'Pacers vs Celtics' but episode is 'Celtics vs Heat' - "
+        "only 'Celtics' overlaps, so it should not match."
+    )
 
 
 class TestNBATeamAliases:
