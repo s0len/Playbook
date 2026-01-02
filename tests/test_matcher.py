@@ -14,6 +14,7 @@ from playbook.config import (
 )
 from playbook.matcher import compile_patterns, match_file_to_episode
 from playbook.models import Episode, Season, Show
+from playbook.team_aliases import get_team_alias_map
 
 
 def build_show() -> Tuple[Show, Season]:
@@ -159,4 +160,121 @@ def test_match_file_to_episode_includes_trace_details() -> None:
     assert matched_attempt["season"]["title"] == season.title
     assert matched_attempt["episode"]["title"] == "Qualifying"
     assert trace["messages"] == []
+
+
+class TestNBATeamAliases:
+    """Tests to verify NBA team alias mapping is complete and correct."""
+
+    # All 30 NBA teams
+    NBA_TEAMS = [
+        "Atlanta Hawks",
+        "Boston Celtics",
+        "Brooklyn Nets",
+        "Charlotte Hornets",
+        "Chicago Bulls",
+        "Cleveland Cavaliers",
+        "Dallas Mavericks",
+        "Denver Nuggets",
+        "Detroit Pistons",
+        "Golden State Warriors",
+        "Houston Rockets",
+        "Indiana Pacers",
+        "Los Angeles Clippers",
+        "Los Angeles Lakers",
+        "Memphis Grizzlies",
+        "Miami Heat",
+        "Milwaukee Bucks",
+        "Minnesota Timberwolves",
+        "New Orleans Pelicans",
+        "New York Knicks",
+        "Oklahoma City Thunder",
+        "Orlando Magic",
+        "Philadelphia 76ers",
+        "Phoenix Suns",
+        "Portland Trail Blazers",
+        "Sacramento Kings",
+        "San Antonio Spurs",
+        "Toronto Raptors",
+        "Utah Jazz",
+        "Washington Wizards",
+    ]
+
+    def test_all_30_teams_have_aliases(self) -> None:
+        """Verify all 30 NBA teams are present in the alias map."""
+        alias_map = get_team_alias_map("nba")
+
+        # Get all unique canonical team names from the alias map
+        canonical_teams = set(alias_map.values())
+
+        assert len(canonical_teams) == 30, (
+            f"Expected 30 NBA teams in alias map, got {len(canonical_teams)}"
+        )
+
+        # Verify each team is present
+        for team in self.NBA_TEAMS:
+            assert team in canonical_teams, f"Team '{team}' not found in NBA alias map"
+
+    def test_common_abbreviations_resolve(self) -> None:
+        """Verify common 3-letter abbreviations resolve to correct teams."""
+        alias_map = get_team_alias_map("nba")
+
+        abbreviation_mappings = {
+            "bos": "Boston Celtics",
+            "lal": "Los Angeles Lakers",
+            "lac": "Los Angeles Clippers",
+            "gsw": "Golden State Warriors",
+            "nyk": "New York Knicks",
+            "chi": "Chicago Bulls",
+            "mia": "Miami Heat",
+            "okc": "Oklahoma City Thunder",
+        }
+
+        for abbr, expected_team in abbreviation_mappings.items():
+            assert alias_map.get(abbr) == expected_team, (
+                f"Abbreviation '{abbr}' should resolve to '{expected_team}', "
+                f"got '{alias_map.get(abbr)}'"
+            )
+
+    def test_nicknames_resolve(self) -> None:
+        """Verify team nicknames resolve to correct full names."""
+        alias_map = get_team_alias_map("nba")
+
+        nickname_mappings = {
+            "celtics": "Boston Celtics",
+            "lakers": "Los Angeles Lakers",
+            "heat": "Miami Heat",
+            "warriors": "Golden State Warriors",
+            "bulls": "Chicago Bulls",
+            "cavaliers": "Cleveland Cavaliers",
+            "cavs": "Cleveland Cavaliers",
+            "sixers": "Philadelphia 76ers",
+            "blazers": "Portland Trail Blazers",
+        }
+
+        for nickname, expected_team in nickname_mappings.items():
+            assert alias_map.get(nickname) == expected_team, (
+                f"Nickname '{nickname}' should resolve to '{expected_team}', "
+                f"got '{alias_map.get(nickname)}'"
+            )
+
+    def test_city_names_resolve(self) -> None:
+        """Verify city names resolve to correct teams."""
+        alias_map = get_team_alias_map("nba")
+
+        city_mappings = {
+            "boston": "Boston Celtics",
+            "miami": "Miami Heat",
+            "chicago": "Chicago Bulls",
+            "denver": "Denver Nuggets",
+            "phoenix": "Phoenix Suns",
+            "dallas": "Dallas Mavericks",
+            "atlanta": "Atlanta Hawks",
+            "orlando": "Orlando Magic",
+        }
+
+        for city, expected_team in city_mappings.items():
+            assert alias_map.get(city) == expected_team, (
+                f"City '{city}' should resolve to '{expected_team}', "
+                f"got '{alias_map.get(city)}'"
+            )
 
