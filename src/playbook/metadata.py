@@ -704,12 +704,20 @@ class MetadataNormalizer:
             episodes_items = list(enumerate(episodes_raw))
 
         episodes: List[Episode] = []
-        for index, (_, episode_raw) in enumerate(episodes_items):
+        for index, (episode_key, episode_raw) in enumerate(episodes_items):
             episode_dict = episode_raw or {}
             title = episode_dict.get("title") or episode_dict.get("name") or f"Episode {index+1}"
             summary = episode_dict.get("summary")
             originally_available = _parse_originally_available(episode_dict.get("originally_available"))
+
+            # display_number: prefer explicit field, fall back to dict key (e.g., "5" from episodes.5.title)
             display_number = episode_dict.get("episode_number")
+            if display_number is None and episode_key is not None:
+                try:
+                    display_number = int(episode_key)
+                except (TypeError, ValueError):
+                    pass
+
             aliases = episode_dict.get("aliases", [])
             if isinstance(aliases, str):
                 aliases = [aliases]

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 from .pattern_templates import expand_regex_with_tokens, load_builtin_pattern_sets
-from .utils import load_yaml_file
+from .utils import load_yaml_file, validate_url
 
 
 @dataclass(slots=True)
@@ -28,6 +28,20 @@ class EpisodeSelector:
     group: str = "session"
     allow_fallback_to_title: bool = True
     default_value: Optional[str] = None
+
+
+@dataclass(slots=True)
+class PlexSyncSettings:
+    enabled: bool = False
+    url: Optional[str] = None
+    token: Optional[str] = None
+    library_id: Optional[str] = None
+    library_name: Optional[str] = None
+    timeout: float = 15.0
+    force: bool = False
+    dry_run: bool = False
+    sports: List[str] = field(default_factory=list)
+    scan_wait: float = 5.0  # Seconds to wait after triggering library scan
 
 
 @dataclass(slots=True)
@@ -114,6 +128,7 @@ class SportConfig:
     enabled: bool = True
     metadata: MetadataConfig = field(default_factory=lambda: MetadataConfig(url=""))
     patterns: List[PatternConfig] = field(default_factory=list)
+    team_alias_map: Optional[str] = None
     destination: DestinationTemplates = field(default_factory=DestinationTemplates)
     source_globs: List[str] = field(default_factory=list)
     source_extensions: List[str] = field(
@@ -135,6 +150,7 @@ class Settings:
     notifications: NotificationSettings = field(default_factory=NotificationSettings)
     file_watcher: WatcherSettings = field(default_factory=WatcherSettings)
     kometa_trigger: KometaTriggerSettings = field(default_factory=KometaTriggerSettings)
+    plex_sync: PlexSyncSettings = field(default_factory=PlexSyncSettings)
 
 
 @dataclass(slots=True)
@@ -239,6 +255,7 @@ def _build_sport_config(
         enabled=bool(data.get("enabled", True)),
         metadata=metadata,
         patterns=patterns,
+        team_alias_map=data.get("team_alias_map"),
         destination=destination,
         source_globs=list(data.get("source_globs", [])),
         source_extensions=list(data.get("source_extensions", [".mkv", ".mp4", ".ts", ".m4v", ".avi"])),
@@ -380,6 +397,55 @@ def _build_watcher_settings(data: Dict[str, Any]) -> WatcherSettings:
         ignore=_ensure_string_list(data.get("ignore"), field_name="file_watcher.ignore"),
         debounce_seconds=debounce,
         reconcile_interval=reconcile,
+    )
+
+
+def _build_plex_sync_settings(data: Dict[str, Any]) -> PlexSyncSettings:
+    if not data:
+        return PlexSyncSettings()
+    if not isinstance(data, dict):
+        raise ValueError("'plex_metadata_sync' must be provided as a mapping when specified")
+
+    timeout_raw = data.get("timeout", 15.0)
+    try:
+        timeout = float(timeout_raw)
+    except (TypeError, ValueError) as exc:  # noqa: PERF203
+        raise ValueError("'plex_metadata_sync.timeout' must be a number") from exc
+
+    sports = _ensure_string_list(data.get("sports"), field_name="plex_metadata_sync.sports")
+
+    def _clean_str(value: Any) -> Optional[str]:
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text or None
+
+    url = _clean_str(data.get("url"))
+    enabled = bool(data.get("enabled", False))
+
+    # Validate URL format if provided and enabled
+    if url and enabled and not validate_url(url):
+        raise ValueError(
+            f"'plex_metadata_sync.url' must be a valid http/https URL, got: {url}"
+        )
+
+    scan_wait_raw = data.get("scan_wait", 5.0)
+    try:
+        scan_wait = float(scan_wait_raw)
+    except (TypeError, ValueError):
+        scan_wait = 5.0
+
+    return PlexSyncSettings(
+        enabled=enabled,
+        url=url,
+        token=_clean_str(data.get("token")),
+        library_id=_clean_str(data.get("library_id")),
+        library_name=_clean_str(data.get("library_name")),
+        timeout=timeout,
+        force=bool(data.get("force", False)),
+        dry_run=bool(data.get("dry_run", False)),
+        sports=sports,
+        scan_wait=scan_wait,
     )
 
 
@@ -551,6 +617,7 @@ def _build_settings(data: Dict[str, Any]) -> Settings:
     cache_dir = Path(data.get("cache_dir", "/data/cache")).expanduser()
     watcher_settings = _build_watcher_settings(data.get("file_watcher", {}) or {})
     kometa_trigger = _build_kometa_trigger_settings(data.get("kometa_trigger", {}) or {})
+    plex_sync = _build_plex_sync_settings(data.get("plex_metadata_sync", {}) or {})
 
     return Settings(
         source_dir=source_dir,
@@ -563,6 +630,7 @@ def _build_settings(data: Dict[str, Any]) -> Settings:
         notifications=notifications,
         file_watcher=watcher_settings,
         kometa_trigger=kometa_trigger,
+        plex_sync=plex_sync,
     )
 
 

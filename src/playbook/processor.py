@@ -28,6 +28,8 @@ from .metadata import (
 )
 from .models import ProcessingStats, Show, SportFileMatch
 from .notifications import NotificationEvent, NotificationService
+from .plex_client import PlexApiError
+from .plex_metadata_sync import PlexMetadataSync, PlexSyncStats, create_plex_sync_from_config
 from .templating import render_template
 from .utils import ensure_directory, link_file, normalize_token, sanitize_component, sha1_of_file, sha1_of_text, slugify
 
@@ -76,6 +78,9 @@ class Processor:
         self._kometa_trigger = build_kometa_trigger(settings.kometa_trigger)
         self._kometa_trigger_fired = False
         self._kometa_trigger_needed = False
+        self._plex_sync: Optional[PlexMetadataSync] = create_plex_sync_from_config(config)
+        self._plex_sync_stats: Optional[PlexSyncStats] = None
+        self._plex_sync_ran = False
         self._previous_summary: Optional[Tuple[int, int, int]] = None
         self._metadata_changed_sports: List[Tuple[str, str]] = []
         self._metadata_change_map: Dict[str, MetadataChangeResult] = {}
@@ -83,6 +88,7 @@ class Processor:
         self._stale_records: Dict[str, CachedFileRecord] = {}
         self._metadata_fetch_stats = MetadataFetchStatistics()
         self._touched_destinations: Set[str] = set()
+        self._sports_with_processed_files: Set[str] = set()
 
     @staticmethod
     def _format_log(event: str, fields: Optional[Mapping[str, object]] = None) -> str:
@@ -239,6 +245,7 @@ class Processor:
             self._stale_records = removed_records
         stats = ProcessingStats()
         self._touched_destinations = set()
+        self._sports_with_processed_files = set()
         run_started = time.perf_counter()
 
         try:
@@ -615,15 +622,21 @@ class Processor:
     def _log_detailed_summary(self, stats: ProcessingStats, *, level: int = logging.INFO) -> None:
         show_entries = LOGGER.isEnabledFor(logging.DEBUG)
         builder = LogBlockBuilder("Detailed Summary", pad_top=True)
-        builder.add_fields(
-            {
-                "Processed": stats.processed,
-                "Skipped": stats.skipped,
-                "Ignored": stats.ignored,
-                "Warnings": len(stats.warnings),
-                "Errors": len(stats.errors),
-            }
-        )
+
+        fields: Dict[str, Any] = {
+            "Processed": stats.processed,
+            "Skipped": stats.skipped,
+            "Ignored": stats.ignored,
+            "Warnings": len(stats.warnings),
+            "Errors": len(stats.errors),
+        }
+
+        # Add Plex sync stats if available
+        if self._plex_sync_stats:
+            plex_errors = len(self._plex_sync_stats.errors)
+            fields["Plex Sync Errors"] = plex_errors
+
+        builder.add_fields(fields)
 
         if show_entries:
             builder.add_section("Errors", stats.errors)
@@ -648,33 +661,83 @@ class Processor:
                 self._summarize_counts(stats.ignored_by_sport, stats.ignored, "ignored"),
             )
 
+        # Always show Plex sync errors (they're important to surface)
+        if self._plex_sync_stats and self._plex_sync_stats.errors:
+            builder.add_section(
+                "Plex Sync Errors",
+                self._summarize_plex_errors(self._plex_sync_stats.errors),
+            )
+
         LOGGER.log(level, builder.render())
 
     def _log_run_recap(self, stats: ProcessingStats, duration: float) -> None:
         destinations = sorted(self._touched_destinations)
         builder = LogBlockBuilder("Run Recap")
-        builder.add_fields(
-            {
-                "Duration": f"{duration:.2f}s",
-                "Processed": stats.processed,
-                "Skipped": stats.skipped,
-                "Ignored": stats.ignored,
-                "Warnings": len(stats.warnings),
-                "Errors": len(stats.errors),
-                "Destinations": len(destinations),
-                "Kometa Triggered": "yes" if self._kometa_trigger_fired else "no",
-            }
-        )
+
+        fields: Dict[str, Any] = {
+            "Duration": f"{duration:.2f}s",
+            "Processed": stats.processed,
+            "Skipped": stats.skipped,
+            "Ignored": stats.ignored,
+            "Warnings": len(stats.warnings),
+            "Errors": len(stats.errors),
+            "Destinations": len(destinations),
+        }
+
+        # Add Plex sync status
+        if self._plex_sync is not None:
+            if self._plex_sync_ran and self._plex_sync_stats:
+                plex_summary = self._plex_sync_stats.summary()
+                plex_status = (
+                    f"{plex_summary['shows']['updated']}/{plex_summary['seasons']['updated']}/"
+                    f"{plex_summary['episodes']['updated']} (show/season/ep)"
+                )
+                # Show not-found counts if any
+                not_found = (
+                    plex_summary["seasons"]["not_found"]
+                    + plex_summary["episodes"]["not_found"]
+                )
+                if not_found:
+                    plex_status += f" [{not_found} not found]"
+                if self._plex_sync_stats.errors:
+                    plex_status += f" [{len(self._plex_sync_stats.errors)} errors]"
+                fields["Plex Sync"] = plex_status
+            elif self._plex_sync.dry_run or self.config.settings.dry_run:
+                fields["Plex Sync"] = "dry-run"
+            else:
+                fields["Plex Sync"] = "skipped (no changes)"
+        else:
+            fields["Plex Sync"] = "disabled"
+
+        # Keep Kometa status for backwards compatibility (may be removed)
+        if self._kometa_trigger.enabled:
+            fields["Kometa Triggered"] = "yes" if self._kometa_trigger_fired else "no"
+
+        builder.add_fields(fields)
         builder.add_section(
             "Destinations (sample)",
             destinations[:5],
             empty_label="(none)",
         )
-        if stats.errors:
+
+        # Show Plex sync errors in detail
+        if self._plex_sync_stats and self._plex_sync_stats.errors:
             builder.add_section(
-                "Follow-Ups",
-                ["Resolve errors above before next run."],
+                "Plex Sync Errors",
+                self._summarize_plex_errors(self._plex_sync_stats.errors, limit=5),
             )
+
+        follow_ups: List[str] = []
+        if stats.errors:
+            follow_ups.append("Resolve processing errors above before next run.")
+        if self._plex_sync_stats and self._plex_sync_stats.errors:
+            follow_ups.append(
+                f"Check Plex library and metadata YAML for {len(self._plex_sync_stats.errors)} sync error(s)."
+            )
+
+        if follow_ups:
+            builder.add_section("Follow-Ups", follow_ups)
+
         LOGGER.info(builder.render())
 
     @staticmethod
@@ -726,6 +789,48 @@ class Processor:
             lines.append(f"... {remaining} more (use --verbose for full list)")
         else:
             lines.append("Run with --verbose for per-file details.")
+        return lines
+
+    @staticmethod
+    def _summarize_plex_errors(errors: List[str], *, limit: int = 10) -> List[str]:
+        """Summarize Plex sync errors, grouping by error type."""
+        if not errors:
+            return []
+
+        # Group errors by type (first part before colon or first few words)
+        grouped: Dict[str, List[str]] = {}
+        for error in errors:
+            # Extract error category (e.g., "Show not found", "Season not found", etc.)
+            if ":" in error:
+                category = error.split(":")[0].strip()
+            else:
+                # Use first 30 chars as category
+                category = error[:30].strip()
+            grouped.setdefault(category, []).append(error)
+
+        lines: List[str] = []
+        shown = 0
+        for category, errs in sorted(grouped.items(), key=lambda x: -len(x[1])):
+            if shown >= limit:
+                break
+            if len(errs) > 1:
+                lines.append(f"{len(errs)}× {category}")
+                # Show first example
+                example = errs[0]
+                if len(example) > 80:
+                    example = example[:77] + "..."
+                lines.append(f"    └─ e.g.: {example}")
+            else:
+                err = errs[0]
+                if len(err) > 80:
+                    err = err[:77] + "..."
+                lines.append(f"- {err}")
+            shown += 1
+
+        remaining = len(grouped) - shown
+        if remaining > 0:
+            lines.append(f"... {remaining} more error types")
+
         return lines
 
     @staticmethod
@@ -992,6 +1097,7 @@ class Processor:
         if settings.dry_run:
             stats.register_processed()
             self._record_destination_touch(destination)
+            self._sports_with_processed_files.add(match.sport.id)
             event.action = "dry-run"
             event.event_type = "dry-run"
             event.replaced = replace_existing
@@ -1001,6 +1107,7 @@ class Processor:
         if result.created:
             stats.register_processed()
             self._record_destination_touch(destination)
+            self._sports_with_processed_files.add(match.sport.id)
             self.processed_cache.mark_processed(
                 match.source_path,
                 destination,
@@ -1044,6 +1151,10 @@ class Processor:
             return event
 
     def _trigger_post_run_trigger_if_needed(self, stats: ProcessingStats) -> None:
+        # Run Plex metadata sync if enabled and we processed files
+        self._run_plex_sync_if_needed(stats)
+
+        # Run Kometa trigger if enabled (legacy, may be removed)
         if (
             self._kometa_trigger_fired
             or not self._kometa_trigger.enabled
@@ -1059,6 +1170,97 @@ class Processor:
         if triggered:
             self._kometa_trigger_fired = True
             self._kometa_trigger_needed = False
+
+    def _run_plex_sync_if_needed(self, stats: ProcessingStats) -> None:
+        """Run Plex metadata sync after file processing.
+
+        Sync runs when:
+        1. Files were processed (new files to sync)
+        2. Metadata changed in remote YAML
+        3. Sports have never been synced to Plex (first-time sync)
+        4. Force mode is enabled
+
+        Unless a specific sports_filter is already set, only syncs sports
+        that match one of the above criteria.
+        """
+        if self._plex_sync is None:
+            return
+
+        if self._plex_sync_ran:
+            return
+
+        # Apply dry-run from global settings if not already set
+        if self.config.settings.dry_run and not self._plex_sync.dry_run:
+            self._plex_sync.dry_run = True
+
+        # Build set of sports needing sync
+        active_sports = set(self._sports_with_processed_files)
+        active_sports.update(sport_id for sport_id, _ in self._metadata_changed_sports)
+
+        # Also include sports that have never been synced to Plex
+        try:
+            sports_needing_initial_sync = self._plex_sync.get_sports_needing_sync()
+            if sports_needing_initial_sync:
+                LOGGER.debug(
+                    "Sports needing initial/updated Plex sync: %s",
+                    ", ".join(sorted(sports_needing_initial_sync)),
+                )
+                active_sports.update(sports_needing_initial_sync)
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.warning("Failed to check Plex sync state: %s", exc)
+
+        # Skip if no sports need syncing (and no force mode)
+        if not active_sports and not self._plex_sync.force:
+            LOGGER.debug(
+                self._format_log(
+                    "Skipping Plex Sync",
+                    {"Reason": "No files processed, no metadata changes, all sports already synced"},
+                )
+            )
+            return
+
+        # Apply sports filter (unless explicit filter is already set)
+        if not self._plex_sync.sports_filter and active_sports:
+            self._plex_sync.sports_filter = sorted(active_sports)
+            LOGGER.debug(
+                "Plex sync limited to sports with activity or needing sync: %s",
+                ", ".join(self._plex_sync.sports_filter),
+            )
+
+        LOGGER.info(
+            self._format_log(
+                "Running Plex Metadata Sync",
+                {
+                    "Dry Run": self._plex_sync.dry_run,
+                    "Force": self._plex_sync.force,
+                    "Sports": self._plex_sync.sports_filter or "(all)",
+                },
+            )
+        )
+
+        try:
+            self._plex_sync_stats = self._plex_sync.sync_all()
+            self._plex_sync_ran = True
+        except PlexApiError as exc:
+            LOGGER.error(
+                self._format_log(
+                    "Plex Sync Failed",
+                    {"Error": str(exc)},
+                )
+            )
+            self._plex_sync_stats = PlexSyncStats()
+            self._plex_sync_stats.errors.append(str(exc))
+            self._plex_sync_ran = True
+        except Exception as exc:  # noqa: BLE001 - defensive
+            LOGGER.exception(
+                self._format_log(
+                    "Plex Sync Unexpected Error",
+                    {"Error": str(exc)},
+                )
+            )
+            self._plex_sync_stats = PlexSyncStats()
+            self._plex_sync_stats.errors.append(f"Unexpected: {exc}")
+            self._plex_sync_ran = True
 
     def _should_overwrite_existing(self, match: SportFileMatch) -> bool:
         source_name = match.source_path.name.lower()

@@ -137,6 +137,8 @@ Sample filter (partial TOML):
 # Premier League (EPL) 1080p releases by NiGHTNiNJAS
 epl.*1080p.*nightninjas
 
+Playbook also swallows the non-dotted drops (`EPL 2025 Fulham vs Manchester City 02 12 …`) and normalizes common nicknames (`Leeds`, `Man City`, etc.) so you can keep a single filter for every encoder variant.
+
 # Formula 1 multi-session weekends by MWR
 (F1|Formula.*1).*\d{4}.Round\d+.*[^.]+\.*?(Drivers.*Press.*Conference|Weekend.*Warm.*Up|FP\d?|Practice|Sprint.Qualifying|Sprint|Qualifying|Pre.Qualifying|Post.Qualifying|Race|Pre.Race|Post.Race|Sprint.Race|Feature.*Race).*1080p.*MWR
 

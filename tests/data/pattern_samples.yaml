@@ -258,6 +258,11 @@ samples:
           episodes:
             - title: "New Jersey Devils vs Washington Capitals"
               originally_available: "2025-11-15"
+        - title: "NHL Week 7"
+          display_number: 7
+          episodes:
+            - title: "New Jersey Devils vs Philadelphia Flyers"
+              originally_available: "2025-11-22"
         - title: "NHL Week 8"
           display_number: 8
           episodes:
@@ -277,6 +282,8 @@ samples:
         expect_episode: "New Jersey Devils vs Washington Capitals"
       - value: "NHL 01-01-2026 RS Blue Jackets vs Devils 1080pEN60fps MSG.mkv"
         expect_episode: "Columbus Blue Jackets vs New Jersey Devils"
+      - value: "NHL-2025-11-22_NJD@PHI.mkv"
+        expect_episode: "New Jersey Devils vs Philadelphia Flyers"
 
   - description: "Formula 1 dot releases without venue segment"
     sport:
@@ -466,6 +473,34 @@ samples:
                 - "Tottenham Hotspur versus Manchester United"
                 - "Tottenham Hotspur Vs Manchester United"
                 - "Tottenham.Hotspur.Vs.Manchester.United"
+        - title: "Matchweek 12"
+          display_number: 12
+          episodes: []
+        - title: "Matchweek 13"
+          display_number: 13
+          episodes: []
+        - title: "Matchweek 14"
+          display_number: 14
+          episodes:
+            - title: "Fulham vs Manchester City"
+              aliases:
+                - "Fulham v Manchester City"
+                - "Fulham versus Manchester City"
+                - "Fulham Vs Manchester City"
+                - "Fulham vs Man City"
+                - "Fulham.Vs.Manchester.City"
+            - title: "Liverpool vs Sunderland"
+              aliases:
+                - "Liverpool v Sunderland"
+                - "Liverpool versus Sunderland"
+                - "Liverpool Vs Sunderland"
+                - "Liverpool.Vs.Sunderland"
+            - title: "Leeds United vs Chelsea"
+              aliases:
+                - "Leeds vs Chelsea"
+                - "Leeds Utd vs Chelsea"
+                - "Leeds United Vs Chelsea"
+                - "Leeds.United.vs.Chelsea"
     filenames:
       - value: "epl.2025.09.20.brighton.and.hove.albion.vs.tottenham.hotspur.1080p.web.h264-nightninjas.mkv"
         expect_episode: "Brighton & Hove Albion vs Tottenham Hotspur"
@@ -477,6 +512,12 @@ samples:
         expect_episode: "Tottenham Hotspur vs Manchester United"
       - value: "EPL.2025.10.Burnley.vs.Arsenal.1080pEN50fps.mkv"
         expect_episode: "Burnley vs Arsenal"
+      - value: "EPL.2025.26.Leeds.vs.Chelsea.1080pEN60fps.mkv"
+        expect_episode: "Leeds United vs Chelsea"
+      - value: "EPL 2025 Fulham vs Manchester City 02 12 720pEN60fps Fubo.mkv"
+        expect_episode: "Fulham vs Manchester City"
+      - value: "EPL 2025 12 03 Liverpool vs Sunderland 2160p50 x264 EN SKY.mkv"
+        expect_episode: "Liverpool vs Sunderland"
 
   - description: "Figure Skating Grand Prix 2025 samples"
     sport:

@@ -23,6 +23,41 @@ def _token_similarity(candidate: str, target: str) -> float:
     return difflib.SequenceMatcher(None, candidate, target, autojunk=False).ratio()
 
 
+def _dates_within_proximity(
+    date1: Optional[dt.date], date2: Optional[dt.date], tolerance_days: int = 2
+) -> bool:
+    """Check if two dates are within the specified tolerance (in days).
+
+    Returns True if both dates are None, or if they're within tolerance.
+    Returns False if only one date is available (can't verify proximity).
+    """
+    if date1 is None and date2 is None:
+        return True
+    if date1 is None or date2 is None:
+        # Can't verify proximity if only one date is available
+        return False
+    delta = abs((date1 - date2).days)
+    return delta <= tolerance_days
+
+
+def _parse_date_from_groups(match_groups: Dict[str, str]) -> Optional[dt.date]:
+    """Extract a date from match groups (day, month, year/date_year)."""
+    day_str = match_groups.get("day")
+    month_str = match_groups.get("month")
+    year_str = match_groups.get("date_year") or match_groups.get("year")
+
+    if not (day_str and month_str and year_str):
+        return None
+
+    try:
+        day = int(day_str)
+        month = int(month_str)
+        year = int(year_str)
+        return dt.date(year, month, day)
+    except (ValueError, TypeError):
+        return None
+
+
 def _tokens_close(candidate: str, target: str) -> bool:
     if len(candidate) < 4 or len(target) < 4:
         return False
@@ -81,6 +116,7 @@ def _resolve_session_lookup(session_lookup: Dict[str, str], token: str) -> Optio
 
 
 from .config import PatternConfig, SeasonSelector, SportConfig
+from .parsers.structured_filename import StructuredName, build_canonical_filename, parse_structured_filename
 from .models import Episode, Season, Show
 from .team_aliases import get_team_alias_map
 from .utils import normalize_token
@@ -420,15 +456,45 @@ def _select_episode(
         add_lookup("venue+session", f"{venue_value} {raw_value}")
         add_lookup("session+venue", f"{raw_value} {venue_value}")
 
+    # Parse date from match groups for proximity checking
+    parsed_date = _parse_date_from_groups(match_groups)
+
     def find_episode_for_token(token: str) -> Optional[Episode]:
+        # First pass: find episodes that match the token
+        matching_episodes: List[Episode] = []
         for episode in season.episodes:
             episode_token = normalize_token(episode.title)
             if tokens_match(episode_token, token):
-                return episode
+                matching_episodes.append(episode)
+                continue
             alias_tokens = [normalize_token(alias) for alias in episode.aliases]
             if any(tokens_match(alias_token, token) for alias_token in alias_tokens):
-                return episode
-        return None
+                matching_episodes.append(episode)
+
+        if not matching_episodes:
+            return None
+
+        # If we have a date from the filename, filter by date proximity
+        if parsed_date is not None:
+            date_matched = [
+                ep for ep in matching_episodes
+                if _dates_within_proximity(parsed_date, ep.originally_available, tolerance_days=2)
+            ]
+            if date_matched:
+                # Return the closest match by date
+                return min(
+                    date_matched,
+                    key=lambda ep: abs((parsed_date - ep.originally_available).days)
+                    if ep.originally_available else 999
+                )
+            # No date-matching episodes found - this is likely a mismatch
+            # Only return a match if there's exactly one candidate (no ambiguity)
+            if len(matching_episodes) == 1:
+                return matching_episodes[0]
+            return None
+
+        # No date available, return first match (original behavior)
+        return matching_episodes[0]
 
     lookup_attempts.sort(key=lambda item: len(item[2]), reverse=True)
 
@@ -487,6 +553,204 @@ def _select_episode(
     return None
 
 
+def _find_episode_across_seasons(
+    pattern_config: PatternConfig,
+    show: Show,
+    match_groups: Dict[str, str],
+    *,
+    exclude_season: Optional[Season] = None,
+    trace_enabled: bool = False,
+) -> Optional[Tuple[Season, Episode, Dict[str, str], Dict[str, str], Optional[Dict[str, Any]]]]:
+    for candidate in show.seasons:
+        if exclude_season and candidate is exclude_season:
+            continue
+        candidate_groups = dict(match_groups)
+        session_lookup = _build_session_lookup(pattern_config, candidate)
+        episode_trace: Optional[Dict[str, Any]] = {} if trace_enabled else None
+        episode = _select_episode(
+            pattern_config,
+            candidate,
+            session_lookup,
+            candidate_groups,
+            trace=episode_trace,
+        )
+        if episode:
+            return candidate, episode, candidate_groups, session_lookup, episode_trace
+    return None
+
+
+_TEAM_PATTERN = re.compile(r"(?P<a>[A-Za-z0-9 .&'/-]+?)\s+(?:vs|v|at|@)\s+(?P<b>[A-Za-z0-9 .&'/-]+)", re.IGNORECASE)
+_NOISE_PROVIDERS = {"sky", "fubo", "espn", "espn+", "espnplus", "tsn", "nbcsn", "fox", "verum"}
+
+
+def _strip_team_noise(value: str) -> str:
+    tokens = value.split()
+    cleaned: List[str] = []
+    for token in tokens:
+        lowered = token.lower()
+        if lowered.isdigit():
+            break
+        if re.match(r"\d{3,4}p", lowered):
+            break
+        if re.match(r"\d{2}fps", lowered):
+            break
+        if lowered.replace("+", "") in _NOISE_PROVIDERS:
+            break
+        if lowered in {"proper", "repack", "web", "hdtv"}:
+            break
+        cleaned.append(token)
+    return " ".join(cleaned).strip()
+
+
+def _extract_teams_from_text(text: str, alias_lookup: Dict[str, str]) -> List[str]:
+    match = _TEAM_PATTERN.search(text)
+    if not match:
+        return []
+    teams: List[str] = []
+    for key in ("a", "b"):
+        raw_team = _strip_team_noise(match.group(key))
+        normalized = normalize_token(raw_team)
+        mapped = alias_lookup.get(normalized, raw_team.strip())
+        if mapped:
+            teams.append(mapped)
+    return teams
+
+
+def _build_team_alias_lookup(show: Show, base: Dict[str, str]) -> Dict[str, str]:
+    lookup = dict(base)
+    for season in show.seasons:
+        for episode in season.episodes:
+            episode_teams = _extract_teams_from_text(episode.title, lookup)
+            for team in episode_teams:
+                token = normalize_token(team)
+                if token and token not in lookup:
+                    lookup[token] = team
+            for alias in episode.aliases:
+                alias_teams = _extract_teams_from_text(alias, lookup)
+                if episode_teams and alias_teams and len(alias_teams) == len(episode_teams):
+                    for canonical, alias_team in zip(episode_teams, alias_teams):
+                        token = normalize_token(alias_team)
+                        if token and token not in lookup:
+                            lookup[token] = canonical
+                alias_token = normalize_token(alias)
+                if alias_token and alias_token not in lookup:
+                    lookup[alias_token] = episode.title
+    return lookup
+
+
+def _score_structured_match(
+    structured: StructuredName, season: Season, episode: Episode, alias_lookup: Dict[str, str]
+) -> float:
+    score = 0.0
+    episode_teams = _extract_teams_from_text(episode.title, alias_lookup)
+    structured_tokens = {normalize_token(team) for team in structured.teams if team}
+    episode_tokens = {normalize_token(team) for team in episode_teams if team}
+
+    # Date proximity check - critical for sports where same teams play multiple times
+    # If both dates are available, they MUST be within proximity for a valid match
+    if structured.date and episode.originally_available:
+        if not _dates_within_proximity(structured.date, episode.originally_available, tolerance_days=2):
+            # Dates are too far apart - this is likely a different game between the same teams
+            return 0.0
+        # Dates match within proximity - this is a strong indicator
+        score += 0.4
+
+    if structured_tokens and episode_tokens:
+        if structured_tokens == episode_tokens:
+            score += 0.55
+        else:
+            overlap = structured_tokens.intersection(episode_tokens)
+            if overlap:
+                score += 0.35 + 0.05 * len(overlap)
+    elif structured_tokens:
+        combined = normalize_token(" ".join(structured.teams))
+        if combined and _token_similarity(combined, normalize_token(episode.title)) >= 0.7:
+            score += 0.3
+
+    # Year-only match (less specific than full date)
+    if not structured.date and structured.year and episode.originally_available:
+        if episode.originally_available.year == structured.year:
+            score += 0.1
+
+    if structured.round and (
+        season.round_number == structured.round or season.display_number == structured.round
+    ):
+        score += 0.1
+    return score
+
+
+def _structured_match(
+    filename: str,
+    sport: SportConfig,
+    show: Show,
+    diagnostics: Optional[List[Tuple[str, str]]] = None,
+    trace: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, object]]:
+    configured_aliases = get_team_alias_map(sport.team_alias_map)
+    alias_lookup = _build_team_alias_lookup(show, configured_aliases)
+
+    structured = parse_structured_filename(filename, alias_lookup)
+    if not structured:
+        return None
+
+    best: Optional[Tuple[Season, Episode]] = None
+    best_score = 0.0
+
+    for season in show.seasons:
+        for episode in season.episodes:
+            score = _score_structured_match(structured, season, episode, alias_lookup)
+            if score > best_score:
+                best_score = score
+                best = (season, episode)
+
+    if best and best_score >= 0.6:
+        season, episode = best
+        groups: Dict[str, object] = {
+            "structured_competition": structured.competition,
+            "structured_date": structured.date.isoformat() if structured.date else None,
+            "structured_matchup": structured.canonical_matchup(),
+            "structured_provider": structured.provider,
+            "structured_resolution": structured.resolution,
+            "structured_fps": structured.fps,
+            "structured_canonical": build_canonical_filename(structured),
+        }
+        groups = {key: value for key, value in groups.items() if value is not None}
+
+        pattern = PatternConfig(regex="structured", description="Structured filename matcher")
+
+        if diagnostics is not None:
+            diagnostics.append(("info", "Matched via structured filename parser"))
+
+        if trace is not None:
+            trace.setdefault("attempts", [])
+            trace["attempts"].append(
+                {"pattern": "structured", "status": "matched", "groups": dict(groups), "score": best_score}
+            )
+            trace["status"] = "matched"
+            trace["result"] = {
+                "season": {
+                    "title": season.title,
+                    "round_number": season.round_number,
+                    "display_number": season.display_number,
+                },
+                "episode": {
+                    "title": episode.title,
+                    "index": episode.index,
+                    "display_number": episode.display_number,
+                },
+                "pattern": "structured",
+            }
+
+        return {
+            "season": season,
+            "episode": episode,
+            "pattern": pattern,
+            "groups": groups,
+        }
+
+    return None
+
+
 def compile_patterns(sport: SportConfig) -> List[PatternRuntime]:
     compiled: List[PatternRuntime] = []
     for pattern in sport.patterns:
@@ -539,6 +803,17 @@ def match_file_to_episode(
         if len(season.episodes) > limit:
             titles.append("…")
         return ", ".join(titles) if titles else "none"
+
+    structured_result = _structured_match(
+        filename,
+        sport,
+        show,
+        diagnostics=diagnostics,
+        trace=trace,
+    )
+    if structured_result:
+        return structured_result
+
     for pattern_runtime in patterns:
         descriptor = pattern_runtime.config.description or pattern_runtime.config.regex
         match = pattern_runtime.regex.search(filename)
@@ -559,8 +834,20 @@ def match_file_to_episode(
         groups = {key: value for key, value in match.groupdict().items() if value is not None}
         if "date_year" not in groups and {"year", "month", "day"}.issubset(groups.keys()):
             groups["date_year"] = groups["year"]
-        groups_for_trace = dict(groups)
+        fallback_by_matchup = bool(pattern_runtime.config.metadata_filters.get("fallback_matchup_season"))
         season = _select_season(show, pattern_runtime.config.season_selector, groups)
+        episode: Optional[Episode] = None
+        episode_trace: Optional[Dict[str, Any]] = None
+        if not season and fallback_by_matchup:
+            fallback = _find_episode_across_seasons(
+                pattern_runtime.config,
+                show,
+                groups,
+                trace_enabled=trace is not None,
+            )
+            if fallback:
+                season, episode, groups, pattern_runtime.session_lookup, episode_trace = fallback
+
         if not season:
             selector = pattern_runtime.config.season_selector
             selector_group = selector.group or selector.mode or "season"
@@ -585,21 +872,34 @@ def match_file_to_episode(
                             "group": selector.group,
                             "value": candidate_value,
                         },
-                        "groups": groups_for_trace,
+                        "groups": dict(groups),
                         "message": message,
                     }
                 )
             continue
 
-        pattern_runtime.session_lookup = _build_session_lookup(pattern_runtime.config, season)
-        episode_trace: Dict[str, Any] = {}
-        episode = _select_episode(
-            pattern_runtime.config,
-            season,
-            pattern_runtime.session_lookup,
-            groups,
-            trace=episode_trace,
-        )
+        if episode is None:
+            pattern_runtime.session_lookup = _build_session_lookup(pattern_runtime.config, season)
+            episode_trace = {}
+            episode = _select_episode(
+                pattern_runtime.config,
+                season,
+                pattern_runtime.session_lookup,
+                groups,
+                trace=episode_trace,
+            )
+
+        if not episode and fallback_by_matchup:
+            fallback = _find_episode_across_seasons(
+                pattern_runtime.config,
+                show,
+                groups,
+                exclude_season=season,
+                trace_enabled=trace is not None,
+            )
+            if fallback:
+                season, episode, groups, pattern_runtime.session_lookup, episode_trace = fallback
+
         if not episode:
             selector = pattern_runtime.config.episode_selector
             raw_value = groups.get(selector.group)
@@ -641,7 +941,7 @@ def match_file_to_episode(
                         "group": selector.group,
                         "allow_fallback_to_title": selector.allow_fallback_to_title,
                     },
-                    "groups": groups_for_trace,
+                    "groups": dict(groups),
                     "message": message,
                 }
                 if episode_trace:
@@ -649,6 +949,7 @@ def match_file_to_episode(
                 trace_attempts.append(trace_entry)
             continue
 
+        groups_for_trace = dict(groups)
         result = {
             "season": season,
             "episode": episode,
