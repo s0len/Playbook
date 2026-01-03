@@ -1,0 +1,34 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  },
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read(./**)",
+      "Write(./**)",
+      "Edit(./**)",
+      "Glob(./**)",
+      "Grep(./**)",
+      "Read(/Users/solen/GitHub/Playbook/.worktrees/001-i-want-to-improve-the-new-matcher/**)",
+      "Write(/Users/solen/GitHub/Playbook/.worktrees/001-i-want-to-improve-the-new-matcher/**)",
+      "Edit(/Users/solen/GitHub/Playbook/.worktrees/001-i-want-to-improve-the-new-matcher/**)",
+      "Glob(/Users/solen/GitHub/Playbook/.worktrees/001-i-want-to-improve-the-new-matcher/**)",
+      "Grep(/Users/solen/GitHub/Playbook/.worktrees/001-i-want-to-improve-the-new-matcher/**)",
+      "Read(/Users/solen/GitHub/Playbook/.worktrees/001-i-want-to-improve-the-new-matcher/.auto-claude/specs/001-i-want-to-improve-the-new-matcher/**)",
+      "Write(/Users/solen/GitHub/Playbook/.worktrees/001-i-want-to-improve-the-new-matcher/.auto-claude/specs/001-i-want-to-improve-the-new-matcher/**)",
+      "Edit(/Users/solen/GitHub/Playbook/.worktrees/001-i-want-to-improve-the-new-matcher/.auto-claude/specs/001-i-want-to-improve-the-new-matcher/**)",
+      "Bash(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "mcp__context7__resolve-library-id(*)",
+      "mcp__context7__get-library-docs(*)",
+      "mcp__graphiti-memory__search_nodes(*)",
+      "mcp__graphiti-memory__search_facts(*)",
+      "mcp__graphiti-memory__add_episode(*)",
+      "mcp__graphiti-memory__get_episodes(*)",
+      "mcp__graphiti-memory__get_entity_edge(*)"
+    ]
+  }
+}
