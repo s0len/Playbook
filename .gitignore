@@ -20,3 +20,6 @@ sport.log
 playbook.log
 openapi.json
 site/
+
+.auto-claude
+.worktrees
