@@ -1006,3 +1006,160 @@ def match_file_to_episode(
         if trace is not None:
             trace["status"] = "no-match"
     return None
+
+
+# --- Structured Matching Functions ---
+
+try:
+    from .parsers.structured_filename import StructuredName
+except ImportError:  # pragma: no cover
+    StructuredName = None  # type: ignore[assignment]
+
+
+def _build_team_alias_lookup(show: Show, extra_aliases: Dict[str, str]) -> Dict[str, str]:
+    """Build a lookup mapping normalized team tokens to canonical team names.
+
+    This examines episode titles and extracts potential team names, combining them
+    with any provided extra aliases (typically from a sport-specific team alias map).
+    """
+    lookup: Dict[str, str] = dict(extra_aliases) if extra_aliases else {}
+
+    for season in show.seasons:
+        for episode in season.episodes:
+            # Extract teams from episode title (assumes "Team A vs Team B" format)
+            title = episode.title
+            if " vs " in title.lower():
+                parts = re.split(r"\s+vs\.?\s+", title, flags=re.IGNORECASE)
+                for part in parts:
+                    part = part.strip()
+                    if part:
+                        normalized = normalize_token(part)
+                        if normalized:
+                            lookup.setdefault(normalized, part)
+            elif " at " in title.lower() or " @ " in title:
+                parts = re.split(r"\s+(?:at|@)\s+", title, flags=re.IGNORECASE)
+                for part in parts:
+                    part = part.strip()
+                    if part:
+                        normalized = normalize_token(part)
+                        if normalized:
+                            lookup.setdefault(normalized, part)
+
+    return lookup
+
+
+def _extract_teams_from_text(text: str, alias_lookup: Dict[str, str]) -> List[str]:
+    """Extract canonical team names from text using the alias lookup."""
+    teams: List[str] = []
+
+    # Try to parse "Team A vs Team B" format first
+    vs_patterns = [
+        r"(.+?)\s+vs\.?\s+(.+)",
+        r"(.+?)\s+at\s+(.+)",
+        r"(.+?)\s+@\s+(.+)",
+    ]
+
+    for pattern in vs_patterns:
+        match = re.match(pattern, text, re.IGNORECASE)
+        if match:
+            for group in match.groups():
+                team_text = group.strip()
+                normalized = normalize_token(team_text)
+                canonical = alias_lookup.get(normalized)
+                if canonical:
+                    teams.append(canonical)
+                elif team_text:
+                    teams.append(team_text)
+            break
+
+    return teams
+
+
+def _dates_within_proximity(
+    date1: dt.date, date2: dt.date, tolerance_days: int = 2
+) -> bool:
+    """Check if two dates are within the specified tolerance."""
+    delta = abs((date1 - date2).days)
+    return delta <= tolerance_days
+
+
+def _score_structured_match(
+    structured: "StructuredName",
+    season: Season,
+    episode: Episode,
+    alias_lookup: Dict[str, str],
+) -> float:
+    """Score how well a structured filename matches an episode.
+
+    For sports with 2-team matchups (like NBA, NHL), BOTH teams must match
+    for a positive score. Partial overlap (one team matching) returns 0.0
+    to prevent incorrect matches.
+
+    Args:
+        structured: Parsed filename with date and teams
+        season: The season being matched against
+        episode: The episode being matched against
+        alias_lookup: Mapping of normalized team names to canonical names
+
+    Returns:
+        Score from 0.0 to ~1.0 indicating match quality
+    """
+    score = 0.0
+
+    # Extract teams from episode title
+    episode_teams = _extract_teams_from_text(episode.title, alias_lookup)
+
+    # Normalize teams from both sources
+    structured_tokens: Set[str] = set()
+    for team in structured.teams:
+        if team:
+            normalized = normalize_token(team)
+            # Try to get canonical name from alias lookup
+            canonical = alias_lookup.get(normalized, team)
+            structured_tokens.add(normalize_token(canonical))
+
+    episode_tokens: Set[str] = set()
+    for team in episode_teams:
+        if team:
+            episode_tokens.add(normalize_token(team))
+
+    # Date proximity check
+    if structured.date and episode.originally_available:
+        if not _dates_within_proximity(
+            structured.date, episode.originally_available, tolerance_days=2
+        ):
+            return 0.0
+        score += 0.4
+
+    # Team matching - require BOTH teams to match for 2-team sports
+    if structured_tokens and episode_tokens:
+        # For 2-team matchups, require exact match of both teams
+        if len(structured_tokens) == 2 and len(episode_tokens) == 2:
+            if structured_tokens == episode_tokens:
+                score += 0.55
+            else:
+                # Partial overlap (one team matches, other doesn't) = reject match
+                # This prevents "Pacers vs Celtics" matching "Celtics vs Heat"
+                return 0.0
+        elif structured_tokens == episode_tokens:
+            # Exact match for any team count
+            score += 0.55
+        else:
+            # For non-standard cases, check for significant overlap
+            overlap = structured_tokens.intersection(episode_tokens)
+            if not overlap:
+                return 0.0
+            # Only give partial credit if we have more than 2 teams
+            # (e.g., tournament brackets or multi-team events)
+            if len(structured_tokens) > 2 or len(episode_tokens) > 2:
+                overlap_ratio = len(overlap) / max(
+                    len(structured_tokens), len(episode_tokens)
+                )
+                if overlap_ratio >= 0.5:
+                    score += 0.35 * overlap_ratio
+                else:
+                    return 0.0
+            else:
+                return 0.0
+
+    return score
