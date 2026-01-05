@@ -1,6 +1,6 @@
 {
   "active": true,
-  "spec": "001-i-want-to-improve-the-new-matcher",
+  "spec": "002-issues-with-develop-now-latest-can-t-run-without-r",
   "state": "complete",
   "subtasks": {
     "completed": 9,
@@ -11,15 +11,15 @@
   "phase": {
     "current": "Integration Testing",
     "id": null,
-    "total": 2
+    "total": 3
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 146,
-    "started_at": "2026-01-02T22:45:10.767852"
+    "number": 9,
+    "started_at": "2026-01-05T13:36:53.960037"
   },
-  "last_update": "2026-01-02T23:29:46.785802"
+  "last_update": "2026-01-05T14:12:47.267430"
 }
