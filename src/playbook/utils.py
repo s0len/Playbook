@@ -39,6 +39,15 @@ def clear_normalize_cache() -> None:
     normalize_token.cache_clear()
 
 
+def get_normalize_cache_info() -> functools._CacheInfo:
+    """Return cache statistics for the normalize_token LRU cache.
+
+    Returns a named tuple with fields: hits, misses, maxsize, currsize.
+    Useful for debugging and performance monitoring.
+    """
+    return normalize_token.cache_info()
+
+
 def slugify(value: str, separator: str = "-") -> str:
     """Create a slug suitable for file system usage."""
     normalized = normalize_token(value)
