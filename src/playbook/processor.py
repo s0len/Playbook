@@ -1147,7 +1147,7 @@ class Processor:
                     event.event_type = "error"
                     return event
 
-        LOGGER.info(
+        LOGGER.debug(
             self._format_log(
                 "Processed",
                 {
