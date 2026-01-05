@@ -15,6 +15,7 @@ from playbook.plex_client import (
     PlexApiError,
     PlexClient,
     PlexSyncStats,
+    SearchResult,
     validate_plex_url,
 )
 
@@ -166,6 +167,67 @@ class TestPlexTypeConstants:
 
     def test_episode_type(self) -> None:
         assert PLEX_TYPE_EPISODE == 4
+
+
+class TestSearchResult:
+    """Test SearchResult dataclass for search diagnostics."""
+
+    def test_required_fields(self) -> None:
+        """SearchResult requires searched_title and library_id."""
+        result = SearchResult(searched_title="Test Show", library_id="1")
+        assert result.searched_title == "Test Show"
+        assert result.library_id == "1"
+
+    def test_default_close_matches_empty_list(self) -> None:
+        """close_matches defaults to empty list."""
+        result = SearchResult(searched_title="Test", library_id="1")
+        assert result.close_matches == []
+
+    def test_default_result_is_none(self) -> None:
+        """result defaults to None."""
+        result = SearchResult(searched_title="Test", library_id="1")
+        assert result.result is None
+
+    def test_with_close_matches(self) -> None:
+        """SearchResult can store close match titles."""
+        result = SearchResult(
+            searched_title="NHL 2025-2026",
+            library_id="2",
+            close_matches=["NHL 2024-2025", "NHL 2023-2024"],
+        )
+        assert result.close_matches == ["NHL 2024-2025", "NHL 2023-2024"]
+
+    def test_with_result(self) -> None:
+        """SearchResult can store a matched result."""
+        metadata = {"ratingKey": "12345", "title": "The Show"}
+        result = SearchResult(
+            searched_title="The Show",
+            library_id="1",
+            result=metadata,
+        )
+        assert result.result is not None
+        assert result.result["ratingKey"] == "12345"
+        assert result.result["title"] == "The Show"
+
+    def test_all_fields(self) -> None:
+        """SearchResult stores all fields correctly."""
+        metadata = {"ratingKey": "99", "title": "Found Show"}
+        result = SearchResult(
+            searched_title="Find Show",
+            library_id="3",
+            close_matches=["Near Match 1", "Near Match 2"],
+            result=metadata,
+        )
+        assert result.searched_title == "Find Show"
+        assert result.library_id == "3"
+        assert result.close_matches == ["Near Match 1", "Near Match 2"]
+        assert result.result == metadata
+
+    def test_slots_prevents_dynamic_attributes(self) -> None:
+        """SearchResult uses slots=True, preventing dynamic attributes."""
+        result = SearchResult(searched_title="Test", library_id="1")
+        with pytest.raises(AttributeError):
+            result.arbitrary_attribute = "should fail"  # type: ignore[attr-defined]
 
 
 class TestSearchShowFuzzyMatching:
