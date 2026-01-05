@@ -404,7 +404,7 @@ def _apply_metadata(
         else:
             try:
                 if client.update_metadata(rating_key, fields, lock_fields=True):
-                    LOGGER.info("Updated %s metadata (%s)", label, rating_key)
+                    LOGGER.debug("Updated %s metadata (%s)", label, rating_key)
                     updated = True
                 stats.api_calls += 1
             except PlexApiError as exc:
@@ -432,7 +432,7 @@ def _apply_metadata(
         else:
             try:
                 client.set_asset(rating_key, element, asset_url)
-                LOGGER.info("Set %s %s for %s", display_name, label, rating_key)
+                LOGGER.debug("Set %s %s for %s", display_name, label, rating_key)
                 stats.assets_updated += 1
                 stats.api_calls += 1
                 updated = True
@@ -680,7 +680,7 @@ class PlexMetadataSync:
         stats: PlexSyncStats,
     ) -> None:
         """Sync a single sport to Plex."""
-        LOGGER.info("Syncing sport: %s (%s)", sport.id, sport.name)
+        LOGGER.debug("Syncing sport: %s (%s)", sport.id, sport.name)
 
         # Load metadata from remote YAML
         show = load_show(self.config.settings, sport.metadata)
