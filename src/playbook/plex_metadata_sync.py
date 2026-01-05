@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional, Set
 from urllib.parse import urljoin
 
 from .config import AppConfig, PlexSyncSettings, SportConfig
+from .logging_utils import LogBlockBuilder
 from .metadata import (
     MetadataChangeResult,
     MetadataFingerprintStore,
@@ -673,16 +674,26 @@ class PlexMetadataSync:
         stats.api_calls += 1
 
         if search_result.result is None:
-            close_matches_msg = ""
+            # Build enhanced log message with library context, metadata URL, and close matches
+            builder = LogBlockBuilder("Show Not Found In Plex", pad_top=True)
+            builder.add_fields({
+                "Show Title": show.title,
+                "Library ID": library_id,
+                "Metadata URL": sport.metadata.url,
+            })
             if search_result.close_matches:
-                close_matches_msg = f" (close matches: {search_result.close_matches})"
-            LOGGER.warning(
-                "Show not found in Plex: '%s' (library %s)%s",
-                show.title,
-                library_id,
-                close_matches_msg,
+                builder.add_section("Similar Shows In Plex", search_result.close_matches)
+            else:
+                builder.add_section("Similar Shows In Plex", [], empty_label="(no similar titles found)")
+            LOGGER.warning(builder.render())
+
+            # Enhanced error message for stats with actionable context
+            close_matches_str = ""
+            if search_result.close_matches:
+                close_matches_str = f" Similar: {', '.join(search_result.close_matches[:3])}"
+            stats.errors.append(
+                f"Show not found: '{show.title}' in library {library_id} (metadata: {sport.metadata.url}).{close_matches_str}"
             )
-            stats.errors.append(f"Show not found: {show.title}")
             return
 
         plex_show = search_result.result
