@@ -510,22 +510,22 @@ Add something like this to your Kometa `config.yml` (library name can be whateve
 libraries:
   Sport:
     metadata_files:
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/formula1/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/formula-e/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/indycar-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/isle-of-man-tt.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/moto2-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/moto3-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/motogp-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/nba/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/nfl/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/premier-league/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/uefa-champions-league/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/ufc/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/womens-uefa-euro.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/wsbk-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/wssp-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/wssp300-2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/formula1/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/formula-e/2025-2026.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/indycar-series/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/isle-of-man-tt.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/moto2/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/moto3/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/motogp/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/nba/2025-2026.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/nfl/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/premier-league/2025-2026.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/uefa-champions-league/2025-2026.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/ufc/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/womens-uefa-euro.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/wsbk-2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/wssp-2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/wssp300-2025.yaml
 ```
 
 ### Triggering Kometa After Ingests
