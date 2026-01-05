@@ -291,7 +291,7 @@ class PlexClient:
         type_msg = f" of type '{require_type}'" if require_type else ""
         raise PlexApiError(f"Plex library '{library_name}'{type_msg} not found (available: {available})")
 
-    def search_show(self, library_id: str, title: str) -> Optional[Dict[str, Any]]:
+    def search_show(self, library_id: str, title: str) -> SearchResult:
         """Search for a TV show by title in a library.
 
         Uses fuzzy matching to handle variations in title formatting:
@@ -302,6 +302,10 @@ class PlexClient:
         1. First try exact title search
         2. Then try with simplified title (first word + numbers only)
         3. Finally do fuzzy matching on results
+
+        Returns:
+            SearchResult with result set if match found, or close_matches
+            populated with similar titles for debugging when no match.
         """
 
         # Normalize for fuzzy matching (lowercase, remove hyphens/spaces/underscores)
@@ -316,7 +320,6 @@ class PlexClient:
 
         # Add simplified search term: extract first word and any numbers
         # e.g., "NHL 2025-2026" -> "NHL 2025" (more likely to match "NHL 2025 2026")
-        import re
         words = title.split()
         if len(words) > 1:
             # Try first word + first number sequence
@@ -349,7 +352,11 @@ class PlexClient:
         for entry in all_entries:
             entry_title = str(entry.get("title", ""))
             if entry_title.lower() == target_lower:
-                return entry
+                return SearchResult(
+                    searched_title=title,
+                    library_id=library_id,
+                    result=entry,
+                )
 
         # Second pass: fuzzy match (normalized - removes hyphens/spaces/underscores)
         for entry in all_entries:
@@ -360,19 +367,28 @@ class PlexClient:
                     entry_title,
                     title,
                 )
-                return entry
+                return SearchResult(
+                    searched_title=title,
+                    library_id=library_id,
+                    result=entry,
+                )
 
-        # Log what we found but couldn't match
-        if all_entries:
-            found_titles = [e.get("title", "?") for e in all_entries[:5]]
+        # No match found - collect close matches for diagnostics
+        close_matches = [str(e.get("title", "?")) for e in all_entries[:5]]
+
+        if close_matches:
             LOGGER.debug(
                 "No match for '%s' among Plex results: %s",
                 title,
-                found_titles,
+                close_matches,
             )
 
-        # No match found - don't return unrelated results
-        return None
+        return SearchResult(
+            searched_title=title,
+            library_id=library_id,
+            close_matches=close_matches,
+            result=None,
+        )
 
     def get_metadata(self, rating_key: str) -> Optional[Dict[str, Any]]:
         """Get full metadata for an item by rating key."""

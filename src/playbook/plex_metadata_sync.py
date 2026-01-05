@@ -669,14 +669,23 @@ class PlexMetadataSync:
         )
 
         # Find show in Plex
-        plex_show = self.client.search_show(library_id, show.title)
+        search_result = self.client.search_show(library_id, show.title)
         stats.api_calls += 1
 
-        if plex_show is None:
-            LOGGER.warning("Show not found in Plex: '%s' (library %s)", show.title, library_id)
+        if search_result.result is None:
+            close_matches_msg = ""
+            if search_result.close_matches:
+                close_matches_msg = f" (close matches: {search_result.close_matches})"
+            LOGGER.warning(
+                "Show not found in Plex: '%s' (library %s)%s",
+                show.title,
+                library_id,
+                close_matches_msg,
+            )
             stats.errors.append(f"Show not found: {show.title}")
             return
 
+        plex_show = search_result.result
         show_rating = str(plex_show.get("ratingKey"))
         if not show_rating:
             LOGGER.error("Show ratingKey missing for '%s'", show.title)
