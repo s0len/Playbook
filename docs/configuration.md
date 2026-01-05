@@ -104,6 +104,21 @@ Key knobs:
 - `enabled` toggles sports without deleting them.
 - `source_globs` / `source_extensions` are coarse filters before any regex work happens.
 - `link_mode`, `destination.*`, and notification overrides let you specialize behavior per sport.
+
+**Supported file extensions**
+
+By default, Playbook processes files with these extensions: `.mkv`, `.mp4`, `.ts`, `.m4v`, `.avi`. The `.ts` extension supports MPEG Transport Stream files commonly used in TV recordings.
+
+> **Important:** When you set `source_extensions` on a sport, it **replaces** the defaults entirely—it does not merge with them. If you override this field, include all extensions you want to match:
+>
+> ```yaml
+> source_extensions:
+>   - .mkv
+>   - .mp4
+>   - .ts   # Don't forget .ts if you have transport stream files!
+>   - .m4v
+>   - .avi
+> ```
 - `team_alias_map` (optional) points to a built-in alias table (e.g., `premier_league`, `nhl`) used by the structured matcher to normalize shorthand like “Man City” or “NJD”.
 - `pattern_sets` pulls from `src/playbook/pattern_templates.yaml`; you can still inline `file_patterns` for overrides.
 
