@@ -225,6 +225,9 @@ class ProcessedFileCache:
         try:
             stat = source_path.stat()
         except FileNotFoundError:
+            # Lazy cleanup: remove stale entry for missing source file
+            del self._records[str(source_path)]
+            self._dirty = True
             return False
 
         if stat.st_mtime_ns != record.mtime_ns or stat.st_size != record.size:
