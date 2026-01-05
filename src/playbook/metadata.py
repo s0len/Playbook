@@ -455,6 +455,37 @@ def compute_show_fingerprint(show: Show, metadata_cfg: MetadataConfig) -> ShowFi
     return ShowFingerprint(digest=digest, season_hashes=season_hashes, episode_hashes=episode_hashes)
 
 
+def compute_show_fingerprint_cached(
+    show: Show, metadata_cfg: MetadataConfig, cached_fingerprint: Optional[ShowFingerprint] = None
+) -> ShowFingerprint:
+    """Compute show fingerprint with caching optimization.
+
+    If the cached fingerprint's content_hash matches the current content hash,
+    return the cached fingerprint without recomputing season/episode hashes.
+    Otherwise, compute the full fingerprint.
+
+    Args:
+        show: The show to fingerprint
+        metadata_cfg: Metadata configuration
+        cached_fingerprint: Optional previously cached fingerprint
+
+    Returns:
+        ShowFingerprint with content_hash populated
+    """
+    current_content_hash = _compute_content_hash(show, metadata_cfg)
+
+    if cached_fingerprint is not None and cached_fingerprint.content_hash == current_content_hash:
+        return cached_fingerprint
+
+    fingerprint = compute_show_fingerprint(show, metadata_cfg)
+    return ShowFingerprint(
+        digest=fingerprint.digest,
+        season_hashes=fingerprint.season_hashes,
+        episode_hashes=fingerprint.episode_hashes,
+        content_hash=current_content_hash,
+    )
+
+
 class MetadataFetchError(RuntimeError):
     """Raised when metadata cannot be retrieved from remote or cache."""
 
