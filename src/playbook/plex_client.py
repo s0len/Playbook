@@ -123,6 +123,16 @@ class PlexSyncStats:
         }
 
 
+@dataclass(slots=True)
+class SearchResult:
+    """Capture search diagnostics for debugging failed lookups."""
+
+    searched_title: str
+    library_id: str
+    close_matches: List[str] = field(default_factory=list)
+    result: Optional[Dict[str, Any]] = None
+
+
 class PlexClient:
     """Thin wrapper around Plex HTTP endpoints defined in openapi.json.
 
