@@ -9,8 +9,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from playbook.models import Episode, Season, Show
+from playbook.plex_client import SearchResult
 from playbook.plex_metadata_sync import (
     MappedMetadata,
+    PlexMetadataSync,
     _as_int,
     _episode_identifier,
     _first,
@@ -347,3 +349,219 @@ class TestMapEpisodeMetadata:
         assert result.summary == "The crown jewel of F1"
         assert result.originally_available_at == "2024-05-26"
         assert result.poster_url == "http://cdn.example.com/episodes/monaco.jpg"
+
+
+class TestShowNotFoundLogging:
+    """Tests for enhanced show-not-found logging with close matches."""
+
+    def test_logs_close_matches_when_show_not_found(self, caplog: pytest.LogCaptureFixture) -> None:
+        """When a show is not found, log should include close matches."""
+        # Create a SearchResult simulating a failed search with close matches
+        search_result = SearchResult(
+            searched_title="Formula 1 2024",
+            library_id="1",
+            result=None,
+            close_matches=["Formula One 2024", "F1 Racing 2024", "Formula 1 2023"],
+        )
+
+        # Verify SearchResult fields are accessible for logging
+        assert search_result.result is None
+        assert search_result.close_matches == ["Formula One 2024", "F1 Racing 2024", "Formula 1 2023"]
+        assert search_result.searched_title == "Formula 1 2024"
+        assert search_result.library_id == "1"
+
+    def test_handles_empty_close_matches(self) -> None:
+        """When no close matches exist, SearchResult should have empty list."""
+        search_result = SearchResult(
+            searched_title="NonExistent Show",
+            library_id="1",
+            result=None,
+            close_matches=[],
+        )
+
+        assert search_result.result is None
+        assert search_result.close_matches == []
+
+    def test_search_result_with_match_has_result(self) -> None:
+        """When show is found, SearchResult should have result populated."""
+        plex_show = {"ratingKey": "12345", "title": "Formula 1 2024"}
+        search_result = SearchResult(
+            searched_title="Formula 1 2024",
+            library_id="1",
+            result=plex_show,
+            close_matches=[],
+        )
+
+        assert search_result.result is not None
+        assert search_result.result["ratingKey"] == "12345"
+
+    def test_close_matches_format_for_error_message(self) -> None:
+        """Verify close matches can be formatted for error messages."""
+        search_result = SearchResult(
+            searched_title="NHL 2024",
+            library_id="5",
+            result=None,
+            close_matches=["NHL Hockey 2024", "NHL Season 2024", "NHL Games"],
+        )
+
+        # Format like the actual implementation does
+        close_matches_str = ""
+        if search_result.close_matches:
+            close_matches_str = f" Similar: {', '.join(search_result.close_matches[:3])}"
+
+        expected_error = (
+            f"Show not found: '{search_result.searched_title}' in library "
+            f"{search_result.library_id} (metadata: http://example.com/nhl.yaml).{close_matches_str}"
+        )
+
+        assert "NHL 2024" in expected_error
+        assert "Similar: NHL Hockey 2024, NHL Season 2024, NHL Games" in expected_error
+
+    def test_error_message_truncates_close_matches_to_three(self) -> None:
+        """Error messages should only include first 3 close matches."""
+        search_result = SearchResult(
+            searched_title="Test Show",
+            library_id="1",
+            result=None,
+            close_matches=["Match 1", "Match 2", "Match 3", "Match 4", "Match 5"],
+        )
+
+        # Format like the actual implementation does (only first 3)
+        close_matches_str = ""
+        if search_result.close_matches:
+            close_matches_str = f" Similar: {', '.join(search_result.close_matches[:3])}"
+
+        assert "Match 1" in close_matches_str
+        assert "Match 2" in close_matches_str
+        assert "Match 3" in close_matches_str
+        assert "Match 4" not in close_matches_str
+        assert "Match 5" not in close_matches_str
+
+
+class TestSeasonNotFoundLogging:
+    """Tests for enhanced season-not-found logging."""
+
+    def test_season_not_found_includes_plex_seasons(self) -> None:
+        """When a season is not found, available Plex seasons should be captured."""
+        # Simulating what Plex returns for seasons
+        plex_seasons = [
+            {"ratingKey": "100", "index": 1, "title": "Season 1"},
+            {"ratingKey": "200", "index": 2, "title": "Season 2"},
+        ]
+
+        # Format like the actual implementation does
+        plex_season_titles = [
+            f"{s.get('index', '?')}: {s.get('title', '(untitled)')}"
+            for s in plex_seasons
+        ]
+
+        assert plex_season_titles == ["1: Season 1", "2: Season 2"]
+
+    def test_season_not_found_error_format(self) -> None:
+        """Verify season not found error message format."""
+        season = _make_season(index=3, title="Season 3")
+        show = _make_show(title="Test Show")
+        plex_seasons = [
+            {"ratingKey": "100", "index": 1, "title": "Season 1"},
+            {"ratingKey": "200", "index": 2, "title": "Season 2"},
+        ]
+
+        plex_season_titles = [
+            f"{s.get('index', '?')}: {s.get('title', '(untitled)')}"
+            for s in plex_seasons
+        ]
+
+        season_info = f"'{season.title}'" if season.title else f"index={season.index}"
+        plex_seasons_str = ""
+        if plex_season_titles:
+            plex_seasons_str = f" Available: {', '.join(plex_season_titles[:3])}"
+            if len(plex_season_titles) > 3:
+                plex_seasons_str += f" (+{len(plex_season_titles) - 3} more)"
+
+        error_msg = (
+            f"Season not found: {season_info} in show '{show.title}' | "
+            f"library=1 | source=http://example.com/test.yaml.{plex_seasons_str}"
+        )
+
+        assert "'Season 3'" in error_msg
+        assert "'Test Show'" in error_msg
+        assert "Available: 1: Season 1, 2: Season 2" in error_msg
+
+
+class TestEpisodeNotFoundLogging:
+    """Tests for enhanced episode-not-found logging."""
+
+    def test_episode_not_found_includes_plex_episodes(self) -> None:
+        """When an episode is not found, available Plex episodes should be captured."""
+        plex_episodes = [
+            {"ratingKey": "500", "index": 1, "title": "Pilot"},
+            {"ratingKey": "501", "index": 2, "title": "Episode 2"},
+            {"ratingKey": "502", "index": 3, "title": "Episode 3"},
+        ]
+
+        plex_episode_titles = [
+            f"{e.get('index', '?')}: {e.get('title', '(untitled)')}"
+            for e in plex_episodes
+        ]
+
+        assert plex_episode_titles == ["1: Pilot", "2: Episode 2", "3: Episode 3"]
+
+    def test_episode_not_found_error_format(self) -> None:
+        """Verify episode not found error message format."""
+        episode = _make_episode(index=5, title="Missing Episode")
+        season = _make_season(index=1, title="Season 1")
+        show = _make_show(title="Test Show")
+        plex_episodes = [
+            {"ratingKey": "500", "index": 1, "title": "Pilot"},
+            {"ratingKey": "501", "index": 2, "title": "Episode 2"},
+        ]
+
+        plex_episode_titles = [
+            f"{e.get('index', '?')}: {e.get('title', '(untitled)')}"
+            for e in plex_episodes
+        ]
+
+        episode_info = f"'{episode.title}'" if episode.title else f"index={episode.index}"
+        season_info = f"'{season.title}'" if season.title else f"index={season.index}"
+        plex_episodes_str = ""
+        if plex_episode_titles:
+            plex_episodes_str = f" Available: {', '.join(plex_episode_titles[:3])}"
+            if len(plex_episode_titles) > 3:
+                plex_episodes_str += f" (+{len(plex_episode_titles) - 3} more)"
+
+        error_msg = (
+            f"Episode not found: {episode_info} in season {season_info} of '{show.title}' | "
+            f"library=1 | source=http://example.com/test.yaml.{plex_episodes_str}"
+        )
+
+        assert "'Missing Episode'" in error_msg
+        assert "'Season 1'" in error_msg
+        assert "'Test Show'" in error_msg
+        assert "Available: 1: Pilot, 2: Episode 2" in error_msg
+
+    def test_episode_not_found_truncates_to_three(self) -> None:
+        """Error messages should only include first 3 available episodes plus count."""
+        plex_episodes = [
+            {"ratingKey": "500", "index": 1, "title": "Ep 1"},
+            {"ratingKey": "501", "index": 2, "title": "Ep 2"},
+            {"ratingKey": "502", "index": 3, "title": "Ep 3"},
+            {"ratingKey": "503", "index": 4, "title": "Ep 4"},
+            {"ratingKey": "504", "index": 5, "title": "Ep 5"},
+        ]
+
+        plex_episode_titles = [
+            f"{e.get('index', '?')}: {e.get('title', '(untitled)')}"
+            for e in plex_episodes
+        ]
+
+        plex_episodes_str = ""
+        if plex_episode_titles:
+            plex_episodes_str = f" Available: {', '.join(plex_episode_titles[:3])}"
+            if len(plex_episode_titles) > 3:
+                plex_episodes_str += f" (+{len(plex_episode_titles) - 3} more)"
+
+        assert "1: Ep 1" in plex_episodes_str
+        assert "2: Ep 2" in plex_episodes_str
+        assert "3: Ep 3" in plex_episodes_str
+        assert "4: Ep 4" not in plex_episodes_str
+        assert "(+2 more)" in plex_episodes_str

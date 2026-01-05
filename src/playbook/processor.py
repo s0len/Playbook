@@ -793,7 +793,11 @@ class Processor:
 
     @staticmethod
     def _summarize_plex_errors(errors: List[str], *, limit: int = 10) -> List[str]:
-        """Summarize Plex sync errors, grouping by error type."""
+        """Summarize Plex sync errors, grouping by error type.
+
+        Extracts and displays library name, metadata source URL, and close matches
+        or available items from error strings for better actionability.
+        """
         if not errors:
             return []
 
@@ -815,16 +819,25 @@ class Processor:
                 break
             if len(errs) > 1:
                 lines.append(f"{len(errs)}× {category}")
-                # Show first example
+                # Extract and display contextual information from first error
                 example = errs[0]
-                if len(example) > 80:
-                    example = example[:77] + "..."
-                lines.append(f"    └─ e.g.: {example}")
+                context_info = Processor._extract_error_context(example)
+                if context_info:
+                    lines.append(f"    └─ {context_info}")
+                else:
+                    # Fall back to truncated example
+                    if len(example) > 80:
+                        example = example[:77] + "..."
+                    lines.append(f"    └─ e.g.: {example}")
             else:
                 err = errs[0]
-                if len(err) > 80:
-                    err = err[:77] + "..."
-                lines.append(f"- {err}")
+                context_info = Processor._extract_error_context(err)
+                if context_info:
+                    lines.append(f"- {category}: {context_info}")
+                else:
+                    if len(err) > 80:
+                        err = err[:77] + "..."
+                    lines.append(f"- {err}")
             shown += 1
 
         remaining = len(grouped) - shown
@@ -832,6 +845,73 @@ class Processor:
             lines.append(f"... {remaining} more error types")
 
         return lines
+
+    @staticmethod
+    def _extract_error_context(error: str) -> Optional[str]:
+        """Extract actionable context from Plex error strings.
+
+        Parses error strings to extract library name, metadata source URL,
+        and similar/available items for display.
+
+        Returns a formatted context string or None if parsing fails.
+        """
+        # Pattern for "Show not found: '{title}' in library {library_id} (metadata: {url}). Similar: {matches}"
+        show_match = re.match(
+            r"Show not found:\s*'([^']+)'\s*in library\s*(\S+)\s*\(metadata:\s*([^)]+)\)\.?\s*(.*)",
+            error,
+        )
+        if show_match:
+            title, library_id, metadata_url, remainder = show_match.groups()
+            parts = [f"'{title}'", f"library={library_id}"]
+            # Extract similar shows if present
+            if "Similar:" in remainder:
+                similar_part = remainder.split("Similar:")[-1].strip()
+                if similar_part:
+                    parts.append(f"similar=[{similar_part}]")
+            # Truncate metadata URL for display
+            if metadata_url:
+                url_display = metadata_url
+                if len(url_display) > 40:
+                    url_display = "..." + url_display[-37:]
+                parts.append(f"source={url_display}")
+            return " | ".join(parts)
+
+        # Pattern for "Season not found: {info} in show '{title}' | library={id} | source={url}. Available: {seasons}"
+        season_match = re.match(
+            r"Season not found:\s*([^|]+)\s*in show\s*'([^']+)'\s*\|\s*library=(\S+)\s*\|\s*source=([^.]+)\.?\s*(.*)",
+            error,
+        )
+        if season_match:
+            season_info, show_title, library_id, source_url, remainder = season_match.groups()
+            parts = [f"{season_info.strip()}", f"show='{show_title}'", f"library={library_id}"]
+            # Extract available seasons if present
+            if "Available:" in remainder:
+                available_part = remainder.split("Available:")[-1].strip()
+                if available_part:
+                    parts.append(f"plex has=[{available_part}]")
+            return " | ".join(parts)
+
+        # Pattern for "Episode not found: {info} in season {season} of '{title}' | library={id} | source={url}. Available: {episodes}"
+        episode_match = re.match(
+            r"Episode not found:\s*([^|]+)\s*in season\s*([^|]+)\s*of\s*'([^']+)'\s*\|\s*library=(\S+)\s*\|\s*source=([^.]+)\.?\s*(.*)",
+            error,
+        )
+        if episode_match:
+            episode_info, season_info, show_title, library_id, source_url, remainder = episode_match.groups()
+            parts = [
+                f"{episode_info.strip()}",
+                f"season={season_info.strip()}",
+                f"show='{show_title}'",
+            ]
+            # Extract available episodes if present
+            if "Available:" in remainder:
+                available_part = remainder.split("Available:")[-1].strip()
+                if available_part:
+                    parts.append(f"plex has=[{available_part}]")
+            return " | ".join(parts)
+
+        # No pattern matched - return None to use fallback
+        return None
 
     @staticmethod
     def _has_activity(stats: ProcessingStats) -> bool:

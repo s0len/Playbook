@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional, Set
 from urllib.parse import urljoin
 
 from .config import AppConfig, PlexSyncSettings, SportConfig
+from .logging_utils import LogBlockBuilder
 from .metadata import (
     MetadataChangeResult,
     MetadataFingerprintStore,
@@ -373,10 +374,16 @@ def _apply_metadata(
     label: str,
     dry_run: bool,
     stats: PlexSyncStats,
+    library_id: Optional[str] = None,
+    metadata_url: Optional[str] = None,
 ) -> bool:
     """Apply metadata to a Plex item.
 
     Returns True if any updates were made.
+
+    Args:
+        library_id: Optional library ID for enhanced error context.
+        metadata_url: Optional metadata source URL for enhanced error context.
     """
     fields = {
         "type": type_code,
@@ -402,7 +409,13 @@ def _apply_metadata(
                 stats.api_calls += 1
             except PlexApiError as exc:
                 LOGGER.error("Failed to update %s %s: %s", label, rating_key, exc)
-                stats.errors.append(f"{label} {rating_key}: {exc}")
+                # Build error with actionable context
+                context_parts = [f"{label} (key={rating_key})"]
+                if library_id:
+                    context_parts.append(f"library={library_id}")
+                if metadata_url:
+                    context_parts.append(f"source={metadata_url}")
+                stats.errors.append(f"Metadata update failed: {' | '.join(context_parts)}: {exc}")
 
     # Handle assets: poster -> 'thumb', background -> 'art'
     asset_mappings = [
@@ -426,7 +439,15 @@ def _apply_metadata(
             except PlexApiError as exc:
                 LOGGER.error("Failed to set %s %s for %s: %s", label, display_name, rating_key, exc)
                 stats.assets_failed += 1
-                stats.errors.append(f"{label} {rating_key} {display_name}: {exc}")
+                # Build error with actionable context
+                context_parts = [f"{label} {display_name} (key={rating_key})"]
+                if library_id:
+                    context_parts.append(f"library={library_id}")
+                if metadata_url:
+                    context_parts.append(f"source={metadata_url}")
+                if asset_url:
+                    context_parts.append(f"asset_url={asset_url}")
+                stats.errors.append(f"Asset update failed: {' | '.join(context_parts)}: {exc}")
 
     return updated
 
@@ -563,7 +584,14 @@ class PlexMetadataSync:
             library_id = self.resolve_library()
         except PlexApiError as exc:
             LOGGER.error("Failed to resolve Plex library: %s", exc)
-            stats.errors.append(f"Library resolution: {exc}")
+            # Build error with actionable context showing what was searched
+            search_context = []
+            if self.library_id:
+                search_context.append(f"library_id={self.library_id}")
+            if self.library_name:
+                search_context.append(f"library_name={self.library_name}")
+            search_info = f" (searched: {', '.join(search_context)})" if search_context else ""
+            stats.errors.append(f"Library resolution failed{search_info}: {exc}")
             return stats
 
         sports = self._get_target_sports()
@@ -589,10 +617,16 @@ class PlexMetadataSync:
                 self._sync_sport(sport, library_id, stats)
             except PlexApiError as exc:
                 LOGGER.error("Plex API error for sport %s: %s", sport.id, exc)
-                stats.errors.append(f"Sport {sport.id}: {exc}")
+                stats.errors.append(
+                    f"Sport sync failed: {sport.id} | library={library_id} | "
+                    f"source={sport.metadata.url}: {exc}"
+                )
             except Exception as exc:  # noqa: BLE001
                 LOGGER.exception("Unexpected error syncing %s: %s", sport.id, exc)
-                stats.errors.append(f"Sport {sport.id}: {exc}")
+                stats.errors.append(
+                    f"Sport sync failed: {sport.id} | library={library_id} | "
+                    f"source={sport.metadata.url}: {exc}"
+                )
 
         self.fingerprint_store.save()
         self.sync_state_store.save()  # Persist sync state
@@ -669,18 +703,40 @@ class PlexMetadataSync:
         )
 
         # Find show in Plex
-        plex_show = self.client.search_show(library_id, show.title)
+        search_result = self.client.search_show(library_id, show.title)
         stats.api_calls += 1
 
-        if plex_show is None:
-            LOGGER.warning("Show not found in Plex: '%s' (library %s)", show.title, library_id)
-            stats.errors.append(f"Show not found: {show.title}")
+        if search_result.result is None:
+            # Build enhanced log message with library context, metadata URL, and close matches
+            builder = LogBlockBuilder("Show Not Found In Plex", pad_top=True)
+            builder.add_fields({
+                "Show Title": show.title,
+                "Library ID": library_id,
+                "Metadata URL": sport.metadata.url,
+            })
+            if search_result.close_matches:
+                builder.add_section("Similar Shows In Plex", search_result.close_matches)
+            else:
+                builder.add_section("Similar Shows In Plex", [], empty_label="(no similar titles found)")
+            LOGGER.warning(builder.render())
+
+            # Enhanced error message for stats with actionable context
+            close_matches_str = ""
+            if search_result.close_matches:
+                close_matches_str = f" Similar: {', '.join(search_result.close_matches[:3])}"
+            stats.errors.append(
+                f"Show not found: '{show.title}' in library {library_id} (metadata: {sport.metadata.url}).{close_matches_str}"
+            )
             return
 
+        plex_show = search_result.result
         show_rating = str(plex_show.get("ratingKey"))
         if not show_rating:
             LOGGER.error("Show ratingKey missing for '%s'", show.title)
-            stats.errors.append(f"Missing ratingKey: {show.title}")
+            stats.errors.append(
+                f"Missing ratingKey: '{show.title}' | library={library_id} | "
+                f"source={sport.metadata.url}"
+            )
             return
 
         base_url = sport.metadata.url
@@ -753,6 +809,8 @@ class PlexMetadataSync:
             label=f"show '{show.title}'",
             dry_run=self.dry_run,
             stats=stats,
+            library_id=self._library_id_resolved,
+            metadata_url=base_url,
         ):
             stats.shows_updated += 1
         else:
@@ -808,7 +866,36 @@ class PlexMetadataSync:
             rating_key = season_rating_cache.get(season_id)
 
             if not rating_key:
-                LOGGER.warning("Season not found in Plex: %s / %s", show.title, season.title)
+                # Build enhanced log message showing what seasons exist in Plex
+                builder = LogBlockBuilder("Season Not Found In Plex", pad_top=True)
+                builder.add_fields({
+                    "Show Title": show.title,
+                    "Season Title": season.title,
+                    "Season Index": season.index,
+                    "Display Number": season.display_number,
+                })
+                # Extract season info from Plex for diagnostic purposes
+                plex_season_titles = [
+                    f"{s.get('index', '?')}: {s.get('title', '(untitled)')}"
+                    for s in plex_seasons
+                ]
+                if plex_season_titles:
+                    builder.add_section("Seasons In Plex", plex_season_titles)
+                else:
+                    builder.add_section("Seasons In Plex", [], empty_label="(no seasons found)")
+                LOGGER.warning(builder.render())
+
+                # Enhanced error with actionable context
+                season_info = f"'{season.title}'" if season.title else f"index={season.index}"
+                plex_seasons_str = ""
+                if plex_season_titles:
+                    plex_seasons_str = f" Available: {', '.join(plex_season_titles[:3])}"
+                    if len(plex_season_titles) > 3:
+                        plex_seasons_str += f" (+{len(plex_season_titles) - 3} more)"
+                stats.errors.append(
+                    f"Season not found: {season_info} in show '{show.title}' | "
+                    f"library={self._library_id_resolved} | source={base_url}.{plex_seasons_str}"
+                )
                 stats.seasons_not_found += 1
                 continue
 
@@ -822,6 +909,8 @@ class PlexMetadataSync:
                     label=f"season '{season.title}'",
                     dry_run=self.dry_run,
                     stats=stats,
+                    library_id=self._library_id_resolved,
+                    metadata_url=base_url,
                 ):
                     stats.seasons_updated += 1
                 else:
@@ -872,11 +961,37 @@ class PlexMetadataSync:
                 episode_rating = _match_episode_key(plex_episodes, episode)
 
                 if not episode_rating:
-                    LOGGER.warning(
-                        "Episode not found in Plex: %s / %s / %s",
-                        show.title,
-                        season.title,
-                        episode.title,
+                    # Build enhanced log message showing what episodes exist in Plex
+                    builder = LogBlockBuilder("Episode Not Found In Plex", pad_top=True)
+                    builder.add_fields({
+                        "Show Title": show.title,
+                        "Season Title": season.title,
+                        "Episode Title": episode.title,
+                        "Episode Index": episode.index,
+                        "Display Number": episode.display_number,
+                    })
+                    # Extract episode info from Plex for diagnostic purposes
+                    plex_episode_titles = [
+                        f"{e.get('index', '?')}: {e.get('title', '(untitled)')}"
+                        for e in plex_episodes
+                    ]
+                    if plex_episode_titles:
+                        builder.add_section("Episodes In Plex", plex_episode_titles)
+                    else:
+                        builder.add_section("Episodes In Plex", [], empty_label="(no episodes found)")
+                    LOGGER.warning(builder.render())
+
+                    # Enhanced error with actionable context
+                    episode_info = f"'{episode.title}'" if episode.title else f"index={episode.index}"
+                    season_info = f"'{season.title}'" if season.title else f"index={season.index}"
+                    plex_episodes_str = ""
+                    if plex_episode_titles:
+                        plex_episodes_str = f" Available: {', '.join(plex_episode_titles[:3])}"
+                        if len(plex_episode_titles) > 3:
+                            plex_episodes_str += f" (+{len(plex_episode_titles) - 3} more)"
+                    stats.errors.append(
+                        f"Episode not found: {episode_info} in season {season_info} of '{show.title}' | "
+                        f"library={self._library_id_resolved} | source={base_url}.{plex_episodes_str}"
                     )
                     stats.episodes_not_found += 1
                     continue
@@ -907,6 +1022,8 @@ class PlexMetadataSync:
                     label=f"episode '{episode.title}'",
                     dry_run=self.dry_run,
                     stats=stats,
+                    library_id=self._library_id_resolved,
+                    metadata_url=base_url,
                 ):
                     stats.episodes_updated += 1
                 else:
