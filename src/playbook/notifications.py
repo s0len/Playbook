@@ -947,7 +947,7 @@ class NotificationService:
 
         self._last_sent[event.sport_id] = event.timestamp
         if successes:
-            LOGGER.info(
+            LOGGER.debug(
                 "Notification dispatched | sport=%s episode=%s event=%s targets=%s",
                 event.sport_id,
                 event.episode,
