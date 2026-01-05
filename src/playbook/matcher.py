@@ -118,6 +118,7 @@ def _resolve_session_lookup(session_lookup: Dict[str, str], token: str) -> Optio
 from .config import PatternConfig, SeasonSelector, SportConfig
 from .parsers.structured_filename import StructuredName, build_canonical_filename, parse_structured_filename
 from .models import Episode, Season, Show
+from .session_index import SessionLookupIndex
 from .team_aliases import get_team_alias_map
 from .utils import normalize_token
 
@@ -142,20 +143,24 @@ class PatternRuntime:
     session_lookup: Dict[str, str]
 
 
-def _build_session_lookup(pattern: PatternConfig, season: Season) -> Dict[str, str]:
-    lookup: Dict[str, str] = {}
+def _build_session_lookup(pattern: PatternConfig, season: Season) -> SessionLookupIndex:
+    index = SessionLookupIndex()
     for episode in season.episodes:
         normalized = normalize_token(episode.title)
-        lookup[normalized] = episode.title
+        index.add(normalized, episode.title)
         for alias in episode.aliases:
-            lookup[normalize_token(alias)] = episode.title
+            index.add(normalize_token(alias), episode.title)
 
     for canonical, aliases in pattern.session_aliases.items():
         normalized = normalize_token(canonical)
-        lookup.setdefault(normalized, canonical)
+        # Only add if not already present (equivalent to setdefault behavior)
+        if index.get_direct(normalized) is None:
+            index.add(normalized, canonical)
         for alias in aliases:
-            lookup.setdefault(normalize_token(alias), canonical)
-    return lookup
+            normalized_alias = normalize_token(alias)
+            if index.get_direct(normalized_alias) is None:
+                index.add(normalized_alias, canonical)
+    return index
 
 
 def _resolve_selector_value(
