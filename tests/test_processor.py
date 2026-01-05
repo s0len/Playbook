@@ -616,3 +616,62 @@ def test_processor_post_run_skips_when_not_needed(tmp_path, monkeypatch) -> None
 
     assert dummy_trigger.calls == 0
 
+
+def test_ts_extension_is_processed_correctly(tmp_path, monkeypatch) -> None:
+    """Verify .ts (MPEG Transport Stream) files are processed with default extensions."""
+    settings = Settings(
+        source_dir=tmp_path / "source",
+        destination_dir=tmp_path / "dest",
+        cache_dir=tmp_path / "cache",
+        dry_run=True,
+    )
+    settings.source_dir.mkdir(parents=True)
+    settings.destination_dir.mkdir(parents=True)
+    settings.cache_dir.mkdir(parents=True)
+
+    # Create a .ts file (MPEG Transport Stream format)
+    ts_file = settings.source_dir / "demo.r01.qualifying.ts"
+    ts_file.write_bytes(b"video")
+
+    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
+    pattern = PatternConfig(
+        regex=r"(?i)^demo\.r(?P<round>\d{2})\.(?P<session>qualifying)\.ts$",
+    )
+    # Note: source_extensions defaults to [".mkv", ".mp4", ".ts", ".m4v", ".avi"]
+    sport = SportConfig(id="demo", name="Demo", metadata=metadata_cfg, patterns=[pattern])
+    config = AppConfig(settings=settings, sports=[sport])
+
+    episode = Episode(
+        title="Qualifying",
+        summary=None,
+        originally_available=None,
+        index=1,
+        display_number=1,
+    )
+    season = Season(
+        key="01",
+        title="Season 1",
+        summary=None,
+        index=1,
+        episodes=[episode],
+        display_number=1,
+        round_number=1,
+    )
+    show = Show(key="demo", title="Demo Series", summary=None, seasons=[season])
+
+    monkeypatch.setattr("playbook.processor.load_show", lambda *args, **kwargs: show)
+    monkeypatch.setattr(
+        "playbook.processor.compute_show_fingerprint",
+        lambda *args, **kwargs: ShowFingerprint(digest="fingerprint", season_hashes={}, episode_hashes={}),
+    )
+
+    processor = Processor(config, enable_notifications=False)
+    stats = processor.process_all()
+
+    # Verify .ts file was processed successfully
+    assert stats.processed == 1
+    assert stats.skipped == 0
+    assert stats.ignored == 0
+    assert stats.errors == []
+    assert stats.warnings == []
+
