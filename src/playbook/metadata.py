@@ -208,7 +208,10 @@ class ShowFingerprint:
             if not isinstance(mapping, dict):
                 continue
             episode_hashes[str(season_key)] = {str(ep_key): str(ep_hash) for ep_key, ep_hash in mapping.items()}
-        return cls(digest=digest, season_hashes=season_hashes, episode_hashes=episode_hashes)
+        # Read content_hash if present, otherwise None for backward compatibility
+        content_hash_raw = payload.get("content_hash")
+        content_hash = str(content_hash_raw) if content_hash_raw is not None else None
+        return cls(digest=digest, season_hashes=season_hashes, episode_hashes=episode_hashes, content_hash=content_hash)
 
 
 @dataclass(slots=True)
