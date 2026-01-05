@@ -137,6 +137,14 @@ def _clean_episode_metadata(metadata: Any) -> Any:
     return dict(metadata)
 
 
+def _parse_content(text: str) -> Any:
+    """Parse content as JSON first, falling back to YAML if needed."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return yaml.safe_load(text)
+
+
 def _load_cached_metadata(cache_file: Path, ttl_hours: int, *, allow_expired: bool = False) -> Optional[Dict[str, Any]]:
     if not cache_file.exists():
         return None
