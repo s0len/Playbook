@@ -1537,7 +1537,7 @@ class Processor:
                 )
             )
         else:
-            LOGGER.info(
+            LOGGER.debug(
                 self._format_log(
                     "Removed Obsolete Destination",
                     {

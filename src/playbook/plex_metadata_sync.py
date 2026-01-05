@@ -400,7 +400,7 @@ def _apply_metadata(
 
     if len(fields) > 1:  # More than just 'type'
         if dry_run:
-            LOGGER.info("Dry-run: would update %s %s with %s", label, rating_key, fields)
+            LOGGER.debug("Dry-run: would update %s %s with %s", label, rating_key, fields)
         else:
             try:
                 if client.update_metadata(rating_key, fields, lock_fields=True):
@@ -428,7 +428,7 @@ def _apply_metadata(
             LOGGER.debug("No %s URL found for %s (%s)", display_name, label, rating_key)
             continue
         if dry_run:
-            LOGGER.info("Dry-run: would set %s %s %s to %s", label, rating_key, display_name, asset_url)
+            LOGGER.debug("Dry-run: would set %s %s %s to %s", label, rating_key, display_name, asset_url)
         else:
             try:
                 client.set_asset(rating_key, element, asset_url)
@@ -605,7 +605,7 @@ class PlexMetadataSync:
                 self.client.scan_library(library_id)
                 stats.api_calls += 1
                 # Wait for Plex to start processing
-                LOGGER.info("Waiting %.1fs for Plex to scan new files...", self.scan_wait)
+                LOGGER.debug("Waiting %.1fs for Plex to scan new files...", self.scan_wait)
                 time.sleep(self.scan_wait)
             except PlexApiError as exc:
                 LOGGER.warning("Failed to trigger library scan: %s (continuing anyway)", exc)
