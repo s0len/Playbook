@@ -616,3 +616,185 @@ def test_processor_post_run_skips_when_not_needed(tmp_path, monkeypatch) -> None
 
     assert dummy_trigger.calls == 0
 
+
+class TestSummarizePlexErrors:
+    """Tests for Processor._summarize_plex_errors."""
+
+    def test_summarize_plex_errors_empty_list(self) -> None:
+        result = Processor._summarize_plex_errors([])
+        assert result == []
+
+    def test_summarize_plex_errors_groups_by_category(self) -> None:
+        errors = [
+            "Show not found: 'F1' in library 1 (metadata: http://example.com/f1.yaml). Similar: Formula 1",
+            "Show not found: 'NBA' in library 2 (metadata: http://example.com/nba.yaml). Similar: NBA Games",
+            "Season not found: S01 in show 'Demo' | library=1 | source=http://example.com. Available: S02, S03",
+        ]
+        result = Processor._summarize_plex_errors(errors)
+
+        # Should have 2 groups: "Show not found" (2 items) and "Season not found" (1 item)
+        assert len(result) == 4  # 2 lines for show group + 2 lines for season
+        assert any("2×" in line and "Show not found" in line for line in result)
+        assert any("Season not found" in line for line in result)
+
+    def test_summarize_plex_errors_single_error_no_grouping(self) -> None:
+        errors = [
+            "Show not found: 'F1' in library 1 (metadata: http://example.com/f1.yaml). Similar: Formula 1",
+        ]
+        result = Processor._summarize_plex_errors(errors)
+
+        # Single error should not have count prefix
+        assert len(result) == 1
+        assert "×" not in result[0]
+        assert "Show not found" in result[0]
+
+    def test_summarize_plex_errors_respects_limit(self) -> None:
+        errors = [
+            "Type A: error 1",
+            "Type B: error 2",
+            "Type C: error 3",
+            "Type D: error 4",
+        ]
+        result = Processor._summarize_plex_errors(errors, limit=2)
+
+        # Should show only 2 error types and a "more" message
+        assert any("2 more error types" in line for line in result)
+
+    def test_summarize_plex_errors_extracts_show_context(self) -> None:
+        errors = [
+            "Show not found: 'Formula 1' in library 5 (metadata: http://example.com/metadata.yaml). Similar: F1, Formula One",
+        ]
+        result = Processor._summarize_plex_errors(errors)
+
+        assert len(result) == 1
+        # Should contain extracted context
+        assert "'Formula 1'" in result[0]
+        assert "library=5" in result[0]
+        assert "similar=" in result[0]
+
+    def test_summarize_plex_errors_extracts_season_context(self) -> None:
+        errors = [
+            "Season not found: S01 in show 'Demo Series' | library=3 | source=http://example.com/demo.yaml. Available: S02, S03",
+        ]
+        result = Processor._summarize_plex_errors(errors)
+
+        assert len(result) == 1
+        assert "S01" in result[0]
+        assert "show='Demo Series'" in result[0]
+        assert "library=3" in result[0]
+        assert "plex has=" in result[0]
+
+    def test_summarize_plex_errors_extracts_episode_context(self) -> None:
+        errors = [
+            "Episode not found: E05 in season S01 of 'Demo Series' | library=2 | source=http://example.com/demo.yaml. Available: E01, E02, E03",
+        ]
+        result = Processor._summarize_plex_errors(errors)
+
+        assert len(result) == 1
+        assert "E05" in result[0]
+        assert "season=S01" in result[0]
+        assert "show='Demo Series'" in result[0]
+        assert "plex has=" in result[0]
+
+    def test_summarize_plex_errors_fallback_for_unrecognized(self) -> None:
+        errors = [
+            "Unknown error format that does not match patterns",
+        ]
+        result = Processor._summarize_plex_errors(errors)
+
+        assert len(result) == 1
+        assert "Unknown error format" in result[0]
+
+    def test_summarize_plex_errors_truncates_long_errors(self) -> None:
+        long_error = "Category: " + "x" * 100
+        errors = [long_error]
+        result = Processor._summarize_plex_errors(errors)
+
+        assert len(result) == 1
+        # Should be truncated to ~80 chars with "..."
+        assert len(result[0]) < len(long_error)
+        assert "..." in result[0]
+
+
+class TestExtractErrorContext:
+    """Tests for Processor._extract_error_context."""
+
+    def test_extract_show_not_found_context(self) -> None:
+        error = "Show not found: 'Formula 1' in library 5 (metadata: http://example.com/f1.yaml). Similar: F1, Formula One"
+        result = Processor._extract_error_context(error)
+
+        assert result is not None
+        assert "'Formula 1'" in result
+        assert "library=5" in result
+        assert "similar=[F1, Formula One]" in result
+        assert "source=" in result
+
+    def test_extract_show_not_found_without_similar(self) -> None:
+        error = "Show not found: 'Demo' in library 1 (metadata: http://example.com/demo.yaml)."
+        result = Processor._extract_error_context(error)
+
+        assert result is not None
+        assert "'Demo'" in result
+        assert "library=1" in result
+        assert "similar" not in result
+
+    def test_extract_show_not_found_truncates_long_url(self) -> None:
+        long_url = "http://example.com/" + "a" * 50 + "/metadata.yaml"
+        error = f"Show not found: 'Demo' in library 1 (metadata: {long_url})."
+        result = Processor._extract_error_context(error)
+
+        assert result is not None
+        assert "..." in result  # URL should be truncated
+        assert len(result) < len(error)
+
+    def test_extract_season_not_found_context(self) -> None:
+        error = "Season not found: S01 in show 'Demo Series' | library=3 | source=http://example.com/demo.yaml. Available: S02, S03"
+        result = Processor._extract_error_context(error)
+
+        assert result is not None
+        assert "S01" in result
+        assert "show='Demo Series'" in result
+        assert "library=3" in result
+        assert "plex has=[S02, S03]" in result
+
+    def test_extract_season_not_found_without_available(self) -> None:
+        error = "Season not found: S01 in show 'Demo Series' | library=3 | source=http://example.com/demo.yaml."
+        result = Processor._extract_error_context(error)
+
+        assert result is not None
+        assert "S01" in result
+        assert "show='Demo Series'" in result
+        assert "plex has" not in result
+
+    def test_extract_episode_not_found_context(self) -> None:
+        error = "Episode not found: E05 in season S01 of 'Demo Series' | library=2 | source=http://example.com/demo.yaml. Available: E01, E02, E03"
+        result = Processor._extract_error_context(error)
+
+        assert result is not None
+        assert "E05" in result
+        assert "season=S01" in result
+        assert "show='Demo Series'" in result
+        assert "plex has=[E01, E02, E03]" in result
+
+    def test_extract_episode_not_found_without_available(self) -> None:
+        error = "Episode not found: E05 in season S01 of 'Demo Series' | library=2 | source=http://example.com/demo.yaml."
+        result = Processor._extract_error_context(error)
+
+        assert result is not None
+        assert "E05" in result
+        assert "season=S01" in result
+        assert "plex has" not in result
+
+    def test_extract_returns_none_for_unrecognized_pattern(self) -> None:
+        error = "Some random error message that doesn't match any pattern"
+        result = Processor._extract_error_context(error)
+
+        assert result is None
+
+    def test_extract_returns_none_for_partial_match(self) -> None:
+        # Error starts like show not found but doesn't have full format
+        error = "Show not found: some incomplete format"
+        result = Processor._extract_error_context(error)
+
+        assert result is None
+
