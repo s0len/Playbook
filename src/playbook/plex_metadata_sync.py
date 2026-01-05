@@ -828,7 +828,24 @@ class PlexMetadataSync:
             rating_key = season_rating_cache.get(season_id)
 
             if not rating_key:
-                LOGGER.warning("Season not found in Plex: %s / %s", show.title, season.title)
+                # Build enhanced log message showing what seasons exist in Plex
+                builder = LogBlockBuilder("Season Not Found In Plex", pad_top=True)
+                builder.add_fields({
+                    "Show Title": show.title,
+                    "Season Title": season.title,
+                    "Season Index": season.index,
+                    "Display Number": season.display_number,
+                })
+                # Extract season info from Plex for diagnostic purposes
+                plex_season_titles = [
+                    f"{s.get('index', '?')}: {s.get('title', '(untitled)')}"
+                    for s in plex_seasons
+                ]
+                if plex_season_titles:
+                    builder.add_section("Seasons In Plex", plex_season_titles)
+                else:
+                    builder.add_section("Seasons In Plex", [], empty_label="(no seasons found)")
+                LOGGER.warning(builder.render())
                 stats.seasons_not_found += 1
                 continue
 
