@@ -364,6 +364,31 @@ class MetadataFingerprintStore:
             LOGGER.error("Failed to write metadata fingerprint cache %s: %s", self.path, exc)
 
 
+def _compute_content_hash(show: Show, metadata_cfg: MetadataConfig) -> str:
+    """Compute a quick hash from show metadata and configuration.
+
+    This hash captures all inputs that affect the fingerprint:
+    - show.metadata (raw metadata content)
+    - metadata_cfg.show_key (which show in the catalog)
+    - metadata_cfg.season_overrides (season configuration overrides)
+
+    Returns a deterministic SHA1 hash string that changes when any of these inputs change.
+    """
+    content_payload = {
+        "show_key": metadata_cfg.show_key,
+        "season_overrides": metadata_cfg.season_overrides,
+        "metadata": show.metadata,
+    }
+    serialized = json.dumps(
+        content_payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=_json_default,
+    )
+    return sha1_of_text(serialized)
+
+
 def compute_show_fingerprint(show: Show, metadata_cfg: MetadataConfig) -> ShowFingerprint:
     """Compute a hash representing the effective metadata for a sport."""
 
