@@ -475,7 +475,7 @@ class PlexClient:
         This is important to call before syncing metadata if files were
         recently added, so Plex knows about them.
         """
-        LOGGER.info("Triggering Plex library scan for library %s", library_id)
+        LOGGER.debug("Triggering Plex library scan for library %s", library_id)
         self._request("GET", f"/library/sections/{library_id}/refresh")
 
     def is_library_scanning(self, library_id: str) -> bool:
