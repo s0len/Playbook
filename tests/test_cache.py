@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from playbook.cache import CachedFileRecord, ProcessedFileCache
 from playbook.metadata import MetadataChangeResult
 
@@ -104,4 +106,43 @@ def test_remove_by_metadata_changes_drops_legacy_entries_without_ownership(tmp_p
 
     assert "/videos/legacy.mkv" in removed
     assert "/videos/legacy.mkv" not in cache._records
+
+
+def test_is_processed_removes_entry_for_missing_source_file(tmp_path) -> None:
+    """Test that is_processed() lazily removes cache entries when source file is missing."""
+    cache = ProcessedFileCache(tmp_path)
+
+    # Create a path to a non-existent file
+    missing_file = tmp_path / "missing_video.mkv"
+
+    # Add a cache record for the missing file
+    cache._records[str(missing_file)] = CachedFileRecord(
+        mtime_ns=123456789,
+        size=1000,
+        destination="/library/output.mkv",
+        sport_id="demo",
+        season_key="01",
+        episode_key="episode1",
+    )
+
+    # Ensure the file doesn't exist
+    assert not missing_file.exists()
+
+    # Verify the record is initially in the cache
+    assert str(missing_file) in cache._records
+
+    # Reset dirty flag to verify it gets set
+    cache._dirty = False
+
+    # Call is_processed() on the missing file
+    result = cache.is_processed(missing_file)
+
+    # Verify the method returns False
+    assert result is False
+
+    # Verify the cache entry was removed
+    assert str(missing_file) not in cache._records
+
+    # Verify the dirty flag was set to True
+    assert cache._dirty is True
 
