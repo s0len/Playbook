@@ -909,12 +909,25 @@ class PlexMetadataSync:
                 episode_rating = _match_episode_key(plex_episodes, episode)
 
                 if not episode_rating:
-                    LOGGER.warning(
-                        "Episode not found in Plex: %s / %s / %s",
-                        show.title,
-                        season.title,
-                        episode.title,
-                    )
+                    # Build enhanced log message showing what episodes exist in Plex
+                    builder = LogBlockBuilder("Episode Not Found In Plex", pad_top=True)
+                    builder.add_fields({
+                        "Show Title": show.title,
+                        "Season Title": season.title,
+                        "Episode Title": episode.title,
+                        "Episode Index": episode.index,
+                        "Display Number": episode.display_number,
+                    })
+                    # Extract episode info from Plex for diagnostic purposes
+                    plex_episode_titles = [
+                        f"{e.get('index', '?')}: {e.get('title', '(untitled)')}"
+                        for e in plex_episodes
+                    ]
+                    if plex_episode_titles:
+                        builder.add_section("Episodes In Plex", plex_episode_titles)
+                    else:
+                        builder.add_section("Episodes In Plex", [], empty_label="(no episodes found)")
+                    LOGGER.warning(builder.render())
                     stats.episodes_not_found += 1
                     continue
 
