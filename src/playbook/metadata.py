@@ -446,7 +446,7 @@ def fetch_metadata(
         stats.record_cache_miss()
 
     stale = _load_cached_metadata(cache_file, metadata.ttl_hours, allow_expired=True)
-    LOGGER.info("Fetching metadata from %s", metadata.url)
+    LOGGER.debug("Fetching metadata from %s", metadata.url)
     headers = dict(metadata.headers or {})
 
     if http_cache:
@@ -485,7 +485,7 @@ def fetch_metadata(
         if stale is not None:
             if stats:
                 stats.record_stale_used()
-            LOGGER.info("Using stale cached metadata for %s", metadata.url)
+            LOGGER.debug("Using stale cached metadata for %s", metadata.url)
             return stale
         if stats:
             stats.record_failure()
@@ -540,7 +540,7 @@ def fetch_metadata(
         if stale is not None:
             if stats:
                 stats.record_stale_used()
-            LOGGER.info("Using stale cached metadata for %s", metadata.url)
+            LOGGER.debug("Using stale cached metadata for %s", metadata.url)
             return stale
         if stats:
             stats.record_failure()
