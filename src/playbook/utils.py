@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import errno
+import functools
 import hashlib
 import os
 import re
@@ -21,6 +22,7 @@ _TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
 _FALSE_VALUES = frozenset({"0", "false", "no", "off"})
 
 
+@functools.lru_cache(maxsize=2048)
 def normalize_token(value: str) -> str:
     """Return a normalized token suitable for fuzzy comparisons."""
     lowered = value.lower()
