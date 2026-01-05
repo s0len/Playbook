@@ -187,11 +187,14 @@ class ShowFingerprint:
     content_hash: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             "digest": self.digest,
             "seasons": dict(self.season_hashes),
             "episodes": {season: dict(episodes) for season, episodes in self.episode_hashes.items()},
         }
+        if self.content_hash is not None:
+            result["content_hash"] = self.content_hash
+        return result
 
     @classmethod
     def from_dict(cls, payload: Dict[str, Any]) -> "ShowFingerprint":
