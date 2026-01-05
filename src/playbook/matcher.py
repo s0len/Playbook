@@ -85,8 +85,9 @@ def _tokens_close(candidate: str, target: str) -> bool:
     return _token_similarity(candidate, target) >= 0.9
 
 
-def _resolve_session_lookup(session_lookup: Dict[str, str], token: str) -> Optional[str]:
-    direct = session_lookup.get(token)
+def _resolve_session_lookup(session_lookup: SessionLookupIndex, token: str) -> Optional[str]:
+    # Try exact match first
+    direct = session_lookup.get_direct(token)
     if direct:
         return direct
 
@@ -96,7 +97,8 @@ def _resolve_session_lookup(session_lookup: Dict[str, str], token: str) -> Optio
     best_key: Optional[str] = None
     best_score = 0.0
 
-    for candidate in session_lookup.keys():
+    # Use index to get only candidates matching first-char and length constraints
+    for candidate in session_lookup.get_candidates(token):
         if len(candidate) < 4:
             continue
         if not _tokens_close(candidate, token):
@@ -111,7 +113,7 @@ def _resolve_session_lookup(session_lookup: Dict[str, str], token: str) -> Optio
             best_score = score
 
     if best_key is not None and best_score >= 0.85:
-        return session_lookup[best_key]
+        return session_lookup.get_direct(best_key)
     return None
 
 
