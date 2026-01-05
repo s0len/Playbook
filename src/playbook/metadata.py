@@ -184,6 +184,7 @@ class ShowFingerprint:
     digest: str
     season_hashes: Dict[str, str]
     episode_hashes: Dict[str, Dict[str, str]]
+    content_hash: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
