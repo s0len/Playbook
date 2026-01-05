@@ -30,6 +30,15 @@ def normalize_token(value: str) -> str:
     return stripped
 
 
+def clear_normalize_cache() -> None:
+    """Clear the normalize_token LRU cache.
+
+    Useful for testing to ensure deterministic behavior and for memory
+    management in long-running processes.
+    """
+    normalize_token.cache_clear()
+
+
 def slugify(value: str, separator: str = "-") -> str:
     """Create a slug suitable for file system usage."""
     normalized = normalize_token(value)
