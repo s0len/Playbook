@@ -113,12 +113,12 @@ class KometaCronTrigger(_BaseKometaTrigger):
             api.create_namespaced_job(namespace=namespace, body=job_body)
         except ApiException as exc:
             if getattr(exc, "status", None) == 409:
-                LOGGER.info("Kometa Job already exists; skipping duplicate trigger (%s/%s)", namespace, job_name)
+                LOGGER.debug("Kometa Job already exists; skipping duplicate trigger (%s/%s)", namespace, job_name)
             else:
                 LOGGER.error("Failed to create Kometa Job %s/%s: %s", namespace, job_name, exc)
             return False
 
-        LOGGER.info(
+        LOGGER.debug(
             "Triggered Kometa CronJob\n  Namespace: %s\n  CronJob: %s\n  Job: %s",
             namespace,
             cronjob_name,
@@ -281,13 +281,13 @@ class KometaDockerTrigger(_BaseKometaTrigger):
             return False
 
         if use_exec:
-            LOGGER.info(
+            LOGGER.debug(
                 "Triggered Kometa via docker exec\n  Container: %s\n  Libraries: %s",
                 self._settings.docker_container_name,
                 self._settings.docker_libraries or "(all configured libraries)",
             )
         else:
-            LOGGER.info(
+            LOGGER.debug(
                 "Triggered Kometa via docker run\n  Image: %s\n  Libraries: %s",
                 self._settings.docker_image or "kometateam/kometa",
                 self._settings.docker_libraries or "(all configured libraries)",
@@ -321,7 +321,7 @@ class KometaDockerTrigger(_BaseKometaTrigger):
             for raw_line in process.stdout:
                 line = raw_line.rstrip()
                 if line:
-                    LOGGER.info("Kometa | %s", line)
+                    LOGGER.debug("Kometa | %s", line)
         finally:
             process.stdout.close()
         return process.wait()
