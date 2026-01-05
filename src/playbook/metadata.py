@@ -554,7 +554,7 @@ def fetch_metadata(
             stats.record_failure()
         raise MetadataFetchError(f"Unable to fetch metadata from {metadata.url}") from exc
 
-    content = yaml.safe_load(response.text)
+    content = _parse_content(response.text)
     if not isinstance(content, dict):
         raise ValueError(f"Unexpected metadata structure at {metadata.url}")
 
