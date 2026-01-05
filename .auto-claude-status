@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "002-issues-with-develop-now-latest-can-t-run-without-r",
-  "state": "complete",
+  "spec": "008-replace-yaml-parsing-with-json-for-metadata-cachin",
+  "state": "building",
   "subtasks": {
-    "completed": 9,
-    "total": 9,
-    "in_progress": 0,
+    "completed": 0,
+    "total": 0,
+    "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Integration Testing",
+    "current": "Add Performance Logging",
     "id": null,
-    "total": 3
+    "total": 1
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 9,
-    "started_at": "2026-01-05T13:36:53.960037"
+    "number": 5,
+    "started_at": "2026-01-05T23:14:33.091672"
   },
-  "last_update": "2026-01-05T14:12:47.267430"
+  "last_update": "2026-01-05T23:23:20.314748"
 }

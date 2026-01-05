@@ -140,8 +140,11 @@ def _clean_episode_metadata(metadata: Any) -> Any:
 def _parse_content(text: str) -> Any:
     """Parse content as JSON first, falling back to YAML if needed."""
     try:
-        return json.loads(text)
+        result = json.loads(text)
+        LOGGER.debug("Parsed content using JSON")
+        return result
     except json.JSONDecodeError:
+        LOGGER.debug("JSON parsing failed, falling back to YAML")
         return yaml.safe_load(text)
 
 
