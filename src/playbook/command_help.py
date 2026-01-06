@@ -180,32 +180,64 @@ VALIDATE_CONFIG_COMMAND_HELP = CommandHelp(
     # Extended examples shown in --examples
     extended_examples=[
         (
-            "Validate configuration file for errors",
+            "Basic validation: check configuration file for syntax and schema errors",
             "playbook validate-config --config /config/playbook.yaml",
         ),
         (
-            "Show diff against sample configuration to see customizations",
+            "Show diff against sample configuration to see what you've customized",
             "playbook validate-config --diff-sample",
         ),
         (
-            "Show detailed tracebacks when validation fails",
+            "Show detailed Python tracebacks when validation fails for debugging",
             "playbook validate-config --show-trace",
         ),
         (
-            "Combine diff and trace for comprehensive debugging",
+            "Combine diff and trace for comprehensive debugging session",
             "playbook validate-config --diff-sample --show-trace",
         ),
         (
-            "Docker: validate configuration in CI/CD pipeline",
+            "Validate custom config file path (useful in multi-environment setups)",
+            "playbook validate-config --config ./config/playbook.prod.yaml",
+        ),
+        (
+            "Docker: validate configuration before starting main container",
             "docker run --rm -v /config:/config ghcr.io/s0len/playbook:latest validate-config --show-trace",
         ),
         (
-            "CI/CD: exit with non-zero code on validation failure",
-            "playbook validate-config || exit 1",
+            "Docker Compose: validate config as a pre-check service",
+            "docker-compose run --rm playbook validate-config --config /config/playbook.yaml",
         ),
         (
-            "Python module: validate from source",
-            "python -m playbook.cli validate-config --config ./playbook.yaml",
+            "CI/CD: GitHub Actions validation step with error reporting",
+            "playbook validate-config --config ./config/playbook.yaml --show-trace || exit 1",
+        ),
+        (
+            "CI/CD: GitLab CI validation job that fails the pipeline on errors",
+            "docker run --rm -v $PWD/config:/config ghcr.io/s0len/playbook:latest validate-config --show-trace",
+        ),
+        (
+            "CI/CD: Pre-commit hook to validate before allowing commits",
+            "#!/bin/bash\nplaybook validate-config --config ./config/playbook.yaml || { echo 'Config validation failed'; exit 1; }",
+        ),
+        (
+            "Kubernetes: validate ConfigMap before applying to cluster",
+            "kubectl create configmap playbook-config --from-file=playbook.yaml --dry-run=client -o yaml | playbook validate-config --config -",
+        ),
+        (
+            "Pre-deployment: validate config changes before rolling out to production",
+            "playbook validate-config --config ./playbook.prod.yaml --diff-sample && echo 'Safe to deploy'",
+        ),
+        (
+            "Python module: validate during development with full traceback",
+            "python -m playbook.cli validate-config --config ./playbook.yaml --show-trace",
+        ),
+        (
+            "Automated testing: validate sample config in unit tests",
+            "python -m playbook.cli validate-config --config ./config/playbook.sample.yaml",
+        ),
+        (
+            "Multi-environment: validate all configs in a loop (dev, staging, prod)",
+            "for env in dev staging prod; do playbook validate-config --config ./config/playbook.$env.yaml || exit 1; done",
         ),
     ],
     env_vars=[
