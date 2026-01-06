@@ -678,20 +678,13 @@ class Processor:
             LOGGER.log(level, builder.render())
 
     def _log_run_recap(self, stats: ProcessingStats, duration: float) -> None:
+        from io import StringIO
+        from rich.console import Console
+
         destinations = sorted(self._touched_destinations)
-        builder = LogBlockBuilder("Run Recap")
 
-        fields: Dict[str, Any] = {
-            "Duration": f"{duration:.2f}s",
-            "Processed": stats.processed,
-            "Skipped": stats.skipped,
-            "Ignored": stats.ignored,
-            "Warnings": len(stats.warnings),
-            "Errors": len(stats.errors),
-            "Destinations": len(destinations),
-        }
-
-        # Add Plex sync status
+        # Build Plex sync status string
+        plex_status = None
         if self._plex_sync is not None:
             if self._plex_sync_ran and self._plex_sync_stats:
                 plex_summary = self._plex_sync_stats.summary()
@@ -708,19 +701,38 @@ class Processor:
                     plex_status += f" [{not_found} not found]"
                 if self._plex_sync_stats.errors:
                     plex_status += f" [{len(self._plex_sync_stats.errors)} errors]"
-                fields["Plex Sync"] = plex_status
             elif self._plex_sync.dry_run or self.config.settings.dry_run:
-                fields["Plex Sync"] = "dry-run"
+                plex_status = "dry-run"
             else:
-                fields["Plex Sync"] = "skipped (no changes)"
+                plex_status = "skipped (no changes)"
         else:
-            fields["Plex Sync"] = "disabled"
+            plex_status = "disabled"
 
-        # Keep Kometa status for backwards compatibility (may be removed)
-        if self._kometa_trigger.enabled:
-            fields["Kometa Triggered"] = "yes" if self._kometa_trigger_fired else "no"
+        # Determine Kometa status for backwards compatibility (may be removed)
+        kometa_triggered = self._kometa_trigger_fired if self._kometa_trigger.enabled else None
 
-        builder.add_fields(fields)
+        # Create the run recap table using SummaryTableRenderer
+        renderer = SummaryTableRenderer()
+        table = renderer.render_run_recap_table(
+            stats=stats,
+            duration=duration,
+            destinations=destinations,
+            plex_sync_status=plex_status,
+            kometa_triggered=kometa_triggered,
+        )
+
+        # Render the table to a string
+        table_buffer = StringIO()
+        table_console = Console(file=table_buffer, force_terminal=True, width=120)
+        table_console.print()
+        table_console.print(table)
+        table_output = table_buffer.getvalue()
+
+        # Log the table
+        LOGGER.info(table_output)
+
+        # Add additional sections using LogBlockBuilder
+        builder = LogBlockBuilder("", pad_top=False)
         builder.add_section(
             "Destinations (sample)",
             destinations[:5],
@@ -745,7 +757,10 @@ class Processor:
         if follow_ups:
             builder.add_section("Follow-Ups", follow_ups)
 
-        LOGGER.info(builder.render())
+        # Only render and log the additional sections if there's content
+        additional_output = builder.render()
+        if additional_output.strip():
+            LOGGER.info(additional_output)
 
     @staticmethod
     def _filtered_ignored_details(stats: ProcessingStats) -> List[str]:
