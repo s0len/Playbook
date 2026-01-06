@@ -31,6 +31,15 @@ from .models import ProcessingStats, Show, SportFileMatch
 from .notifications import NotificationEvent, NotificationService
 from .plex_client import PlexApiError
 from .plex_metadata_sync import PlexMetadataSync, PlexSyncStats, create_plex_sync_from_config
+from .run_summary import (
+    extract_error_context,
+    filtered_ignored_details,
+    has_activity,
+    has_detailed_activity,
+    summarize_counts,
+    summarize_messages,
+    summarize_plex_errors,
+)
 from .templating import render_template
 from .trace_writer import TraceOptions, persist_trace
 from .utils import ensure_directory, link_file, normalize_token, sanitize_component, sha1_of_file, sha1_of_text, slugify
@@ -293,7 +302,7 @@ class Processor:
 
             summary_counts = (stats.processed, stats.skipped, stats.ignored)
             summary_changed = summary_counts != self._previous_summary
-            should_log_summary = (LOGGER.isEnabledFor(logging.DEBUG) or self._has_activity(stats)) and summary_changed
+            should_log_summary = (LOGGER.isEnabledFor(logging.DEBUG) or has_activity(stats)) and summary_changed
             if should_log_summary:
                 LOGGER.info(
                     self._format_inline_log(
@@ -315,7 +324,7 @@ class Processor:
                         )
                     )
 
-            has_details = self._has_detailed_activity(stats)
+            has_details = has_detailed_activity(stats)
             has_issues = bool(stats.errors or stats.warnings)
             if LOGGER.isEnabledFor(logging.DEBUG):
                 if has_details or has_issues:
@@ -609,30 +618,30 @@ class Processor:
             builder.add_section("Errors", stats.errors)
             builder.add_section("Warnings", stats.warnings)
             builder.add_section("Skipped", stats.skipped_details)
-            builder.add_section("Ignored", self._filtered_ignored_details(stats))
+            builder.add_section("Ignored", filtered_ignored_details(stats))
         else:
             builder.add_section(
                 "Errors",
-                self._summarize_counts(stats.errors_by_sport, len(stats.errors), "error"),
+                summarize_counts(stats.errors_by_sport, len(stats.errors), "error"),
             )
             builder.add_section(
                 "Warnings",
-                self._summarize_counts(stats.warnings_by_sport, len(stats.warnings), "warning"),
+                summarize_counts(stats.warnings_by_sport, len(stats.warnings), "warning"),
             )
             builder.add_section(
                 "Skipped",
-                self._summarize_messages(stats.skipped_details),
+                summarize_messages(stats.skipped_details),
             )
             builder.add_section(
                 "Ignored",
-                self._summarize_counts(stats.ignored_by_sport, stats.ignored, "ignored"),
+                summarize_counts(stats.ignored_by_sport, stats.ignored, "ignored"),
             )
 
         # Always show Plex sync errors (they're important to surface)
         if self._plex_sync_stats and self._plex_sync_stats.errors:
             builder.add_section(
                 "Plex Sync Errors",
-                self._summarize_plex_errors(self._plex_sync_stats.errors),
+                summarize_plex_errors(self._plex_sync_stats.errors),
             )
 
         LOGGER.log(level, builder.render())
@@ -691,7 +700,7 @@ class Processor:
         if self._plex_sync_stats and self._plex_sync_stats.errors:
             builder.add_section(
                 "Plex Sync Errors",
-                self._summarize_plex_errors(self._plex_sync_stats.errors, limit=5),
+                summarize_plex_errors(self._plex_sync_stats.errors, limit=5),
             )
 
         follow_ups: List[str] = []
@@ -706,198 +715,6 @@ class Processor:
             builder.add_section("Follow-Ups", follow_ups)
 
         LOGGER.info(builder.render())
-
-    @staticmethod
-    def _filtered_ignored_details(stats: ProcessingStats) -> List[str]:
-        filtered: List[str] = []
-        suppressed_non_video = 0
-        for detail in stats.ignored_details:
-            if "No configured sport accepts extension" in detail:
-                suppressed_non_video += 1
-                continue
-            filtered.append(detail)
-        if stats.suppressed_ignored_samples:
-            label = "sample" if stats.suppressed_ignored_samples == 1 else "samples"
-            filtered.append(f"(Suppressed {stats.suppressed_ignored_samples} {label})")
-        if suppressed_non_video:
-            noun = "item" if suppressed_non_video == 1 else "items"
-            filtered.append(f"(Suppressed {suppressed_non_video} non-video {noun})")
-        return filtered
-
-    @staticmethod
-    def _summarize_counts(counts: Dict[str, int], total: int, label: str) -> List[str]:
-        if total <= 0:
-            return []
-        lines: List[str] = []
-        if counts:
-            ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
-            for sport, value in ordered:
-                suffix = "entry" if value == 1 else "entries"
-                lines.append(f"{sport}: {value} {suffix}")
-        remainder = total - sum(counts.values())
-        if remainder > 0:
-            suffix = "entry" if remainder == 1 else "entries"
-            lines.append(f"other: {remainder} {suffix}")
-        lines.append(f"Run with --verbose for per-{label} details.")
-        return lines
-
-    @staticmethod
-    def _summarize_messages(entries: List[str], *, limit: int = 5) -> List[str]:
-        if not entries:
-            return []
-        counter = Counter(entries)
-        ordered = sorted(counter.items(), key=lambda item: (-item[1], item[0]))
-        lines: List[str] = []
-        for text, count in ordered[:limit]:
-            prefix = f"{count}× " if count > 1 else ""
-            lines.append(f"{prefix}{text}")
-        remaining = len(ordered) - limit
-        if remaining > 0:
-            lines.append(f"... {remaining} more (use --verbose for full list)")
-        else:
-            lines.append("Run with --verbose for per-file details.")
-        return lines
-
-    @staticmethod
-    def _summarize_plex_errors(errors: List[str], *, limit: int = 10) -> List[str]:
-        """Summarize Plex sync errors, grouping by error type.
-
-        Extracts and displays library name, metadata source URL, and close matches
-        or available items from error strings for better actionability.
-        """
-        if not errors:
-            return []
-
-        # Group errors by type (first part before colon or first few words)
-        grouped: Dict[str, List[str]] = {}
-        for error in errors:
-            # Extract error category (e.g., "Show not found", "Season not found", etc.)
-            if ":" in error:
-                category = error.split(":")[0].strip()
-            else:
-                # Use first 30 chars as category
-                category = error[:30].strip()
-            grouped.setdefault(category, []).append(error)
-
-        lines: List[str] = []
-        shown = 0
-        for category, errs in sorted(grouped.items(), key=lambda x: -len(x[1])):
-            if shown >= limit:
-                break
-            if len(errs) > 1:
-                lines.append(f"{len(errs)}× {category}")
-                # Extract and display contextual information from first error
-                example = errs[0]
-                context_info = Processor._extract_error_context(example)
-                if context_info:
-                    lines.append(f"    └─ {context_info}")
-                else:
-                    # Fall back to truncated example
-                    if len(example) > 80:
-                        example = example[:77] + "..."
-                    lines.append(f"    └─ e.g.: {example}")
-            else:
-                err = errs[0]
-                context_info = Processor._extract_error_context(err)
-                if context_info:
-                    lines.append(f"- {category}: {context_info}")
-                else:
-                    if len(err) > 80:
-                        err = err[:77] + "..."
-                    lines.append(f"- {err}")
-            shown += 1
-
-        remaining = len(grouped) - shown
-        if remaining > 0:
-            lines.append(f"... {remaining} more error types")
-
-        return lines
-
-    @staticmethod
-    def _extract_error_context(error: str) -> Optional[str]:
-        """Extract actionable context from Plex error strings.
-
-        Parses error strings to extract library name, metadata source URL,
-        and similar/available items for display.
-
-        Returns a formatted context string or None if parsing fails.
-        """
-        # Pattern for "Show not found: '{title}' in library {library_id} (metadata: {url}). Similar: {matches}"
-        show_match = re.match(
-            r"Show not found:\s*'([^']+)'\s*in library\s*(\S+)\s*\(metadata:\s*([^)]+)\)\.?\s*(.*)",
-            error,
-        )
-        if show_match:
-            title, library_id, metadata_url, remainder = show_match.groups()
-            parts = [f"'{title}'", f"library={library_id}"]
-            # Extract similar shows if present
-            if "Similar:" in remainder:
-                similar_part = remainder.split("Similar:")[-1].strip()
-                if similar_part:
-                    parts.append(f"similar=[{similar_part}]")
-            # Truncate metadata URL for display
-            if metadata_url:
-                url_display = metadata_url
-                if len(url_display) > 40:
-                    url_display = "..." + url_display[-37:]
-                parts.append(f"source={url_display}")
-            return " | ".join(parts)
-
-        # Pattern for "Season not found: {info} in show '{title}' | library={id} | source={url}. Available: {seasons}"
-        season_match = re.match(
-            r"Season not found:\s*([^|]+)\s*in show\s*'([^']+)'\s*\|\s*library=(\S+)\s*\|\s*source=([^.]+)\.?\s*(.*)",
-            error,
-        )
-        if season_match:
-            season_info, show_title, library_id, source_url, remainder = season_match.groups()
-            parts = [f"{season_info.strip()}", f"show='{show_title}'", f"library={library_id}"]
-            # Extract available seasons if present
-            if "Available:" in remainder:
-                available_part = remainder.split("Available:")[-1].strip()
-                if available_part:
-                    parts.append(f"plex has=[{available_part}]")
-            return " | ".join(parts)
-
-        # Pattern for "Episode not found: {info} in season {season} of '{title}' | library={id} | source={url}. Available: {episodes}"
-        episode_match = re.match(
-            r"Episode not found:\s*([^|]+)\s*in season\s*([^|]+)\s*of\s*'([^']+)'\s*\|\s*library=(\S+)\s*\|\s*source=([^.]+)\.?\s*(.*)",
-            error,
-        )
-        if episode_match:
-            episode_info, season_info, show_title, library_id, source_url, remainder = episode_match.groups()
-            parts = [
-                f"{episode_info.strip()}",
-                f"season={season_info.strip()}",
-                f"show='{show_title}'",
-            ]
-            # Extract available episodes if present
-            if "Available:" in remainder:
-                available_part = remainder.split("Available:")[-1].strip()
-                if available_part:
-                    parts.append(f"plex has=[{available_part}]")
-            return " | ".join(parts)
-
-        # No pattern matched - return None to use fallback
-        return None
-
-    @staticmethod
-    def _has_activity(stats: ProcessingStats) -> bool:
-        return bool(
-            stats.processed
-            or stats.skipped
-            or stats.ignored
-            or stats.errors
-            or stats.warnings
-        )
-
-    @staticmethod
-    def _has_detailed_activity(stats: ProcessingStats) -> bool:
-        return bool(
-            stats.errors
-            or stats.warnings
-            or stats.skipped_details
-            or stats.ignored_details
-        )
 
     def _build_context(self, runtime: SportRuntime, source_path: Path, season, episode, groups) -> Dict[str, object]:
         show = runtime.show
