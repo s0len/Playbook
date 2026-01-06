@@ -87,3 +87,13 @@ exclude = [
 ]
 # Scripts and root level test files can be more flexible
 "*.py" = ["TCH"]  # Don't enforce TYPE_CHECKING in root scripts
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Use spaces for indentation
+indent-style = "space"
+
+# Format code snippets in docstrings
+docstring-code-format = true
