@@ -686,6 +686,13 @@ class AutoscanTarget(NotificationTarget):
             self._verify_ssl = True
         else:
             self._verify_ssl = bool(verify_value)
+        if not self._verify_ssl:
+            LOGGER.warning(
+                "SSL/TLS certificate verification is DISABLED for Autoscan target. "
+                "This makes the connection vulnerable to man-in-the-middle (MITM) attacks. "
+                "For production environments, strongly consider enabling SSL verification "
+                "or properly configuring trusted certificates instead."
+            )
         self._rewrite_rules = self._build_rewrite_rules(config.get("rewrite"))
 
     @staticmethod
