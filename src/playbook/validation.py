@@ -591,13 +591,19 @@ def _validate_metadata_block(
     url_value = metadata.get("url")
     if isinstance(url_value, str) and not url_value.strip():
         issue_path = path + ".url"
+        error_code = "metadata-url"
+        error_message = "Metadata URL must not be blank"
+        fix_suggestion = None
+        if error_code in FIX_SUGGESTION_REGISTRY:
+            fix_suggestion = FIX_SUGGESTION_REGISTRY[error_code](issue_path, error_message, error_code)
         report.errors.append(
             ValidationIssue(
                 severity="error",
                 path=issue_path,
-                message="Metadata URL must not be blank",
-                code="metadata-url",
+                message=error_message,
+                code=error_code,
                 line_number=line_map.get(issue_path) if line_map else None,
+                fix_suggestion=fix_suggestion,
             )
         )
 
@@ -620,13 +626,19 @@ def validate_config_data(
 
     for error in sorted(validator.iter_errors(data), key=lambda exc: exc.path):
         error_path = _format_jsonschema_path(error.absolute_path)
+        error_code = "schema"
+        error_message = error.message
+        fix_suggestion = None
+        if error_code in FIX_SUGGESTION_REGISTRY:
+            fix_suggestion = FIX_SUGGESTION_REGISTRY[error_code](error_path, error_message, error_code)
         report.errors.append(
             ValidationIssue(
                 severity="error",
                 path=error_path,
-                message=error.message,
-                code="schema",
+                message=error_message,
+                code=error_code,
                 line_number=line_map.get(error_path) if line_map else None,
+                fix_suggestion=fix_suggestion,
             )
         )
 
@@ -646,13 +658,19 @@ def _validate_semantics(
         problem = _parse_time(flush_time)
         if problem:
             issue_path = "settings.notifications.flush_time"
+            error_code = "flush-time"
+            error_message = f"Invalid time '{flush_time}': {problem}"
+            fix_suggestion = None
+            if error_code in FIX_SUGGESTION_REGISTRY:
+                fix_suggestion = FIX_SUGGESTION_REGISTRY[error_code](issue_path, error_message, error_code)
             report.errors.append(
                 ValidationIssue(
                     severity="error",
                     path=issue_path,
-                    message=f"Invalid time '{flush_time}': {problem}",
-                    code="flush-time",
+                    message=error_message,
+                    code=error_code,
                     line_number=line_map.get(issue_path) if line_map else None,
+                    fix_suggestion=fix_suggestion,
                 )
             )
 
@@ -665,13 +683,19 @@ def _validate_semantics(
         if isinstance(sport_id, str):
             if sport_id in seen_ids:
                 issue_path = f"sports[{index}].id"
+                error_code = "duplicate-id"
+                error_message = f"Duplicate sport id '{sport_id}' also defined at index {seen_ids[sport_id]}"
+                fix_suggestion = None
+                if error_code in FIX_SUGGESTION_REGISTRY:
+                    fix_suggestion = FIX_SUGGESTION_REGISTRY[error_code](issue_path, error_message, error_code)
                 report.errors.append(
                     ValidationIssue(
                         severity="error",
                         path=issue_path,
-                        message=f"Duplicate sport id '{sport_id}' also defined at index {seen_ids[sport_id]}",
-                        code="duplicate-id",
+                        message=error_message,
+                        code=error_code,
                         line_number=line_map.get(issue_path) if line_map else None,
+                        fix_suggestion=fix_suggestion,
                     )
                 )
             else:
@@ -683,24 +707,36 @@ def _validate_semantics(
             _validate_metadata_block(metadata, f"sports[{index}].metadata", report, line_map)
         elif metadata is None and not variants:
             issue_path = f"sports[{index}].metadata"
+            error_code = "metadata-missing"
+            error_message = "Sport must define metadata or variants with metadata"
+            fix_suggestion = None
+            if error_code in FIX_SUGGESTION_REGISTRY:
+                fix_suggestion = FIX_SUGGESTION_REGISTRY[error_code](issue_path, error_message, error_code)
             report.errors.append(
                 ValidationIssue(
                     severity="error",
                     path=issue_path,
-                    message="Sport must define metadata or variants with metadata",
-                    code="metadata-missing",
+                    message=error_message,
+                    code=error_code,
                     line_number=line_map.get(issue_path) if line_map else None,
+                    fix_suggestion=fix_suggestion,
                 )
             )
         elif metadata is not None and not isinstance(metadata, dict):
             issue_path = f"sports[{index}].metadata"
+            error_code = "metadata-structure"
+            error_message = "Metadata must be a mapping when provided"
+            fix_suggestion = None
+            if error_code in FIX_SUGGESTION_REGISTRY:
+                fix_suggestion = FIX_SUGGESTION_REGISTRY[error_code](issue_path, error_message, error_code)
             report.errors.append(
                 ValidationIssue(
                     severity="error",
                     path=issue_path,
-                    message="Metadata must be a mapping when provided",
-                    code="metadata-structure",
+                    message=error_message,
+                    code=error_code,
                     line_number=line_map.get(issue_path) if line_map else None,
+                    fix_suggestion=fix_suggestion,
                 )
             )
 
@@ -708,26 +744,38 @@ def _validate_semantics(
             for variant_index, variant in enumerate(variants):
                 if not isinstance(variant, dict):
                     issue_path = f"sports[{index}].variants[{variant_index}]"
+                    error_code = "variant-structure"
+                    error_message = "Variant entries must be mappings"
+                    fix_suggestion = None
+                    if error_code in FIX_SUGGESTION_REGISTRY:
+                        fix_suggestion = FIX_SUGGESTION_REGISTRY[error_code](issue_path, error_message, error_code)
                     report.errors.append(
                         ValidationIssue(
                             severity="error",
                             path=issue_path,
-                            message="Variant entries must be mappings",
-                            code="variant-structure",
+                            message=error_message,
+                            code=error_code,
                             line_number=line_map.get(issue_path) if line_map else None,
+                            fix_suggestion=fix_suggestion,
                         )
                     )
                     continue
                 variant_metadata = variant.get("metadata")
                 if not isinstance(variant_metadata, dict):
                     issue_path = f"sports[{index}].variants[{variant_index}].metadata"
+                    error_code = "metadata-missing"
+                    error_message = "Variant must provide a metadata block"
+                    fix_suggestion = None
+                    if error_code in FIX_SUGGESTION_REGISTRY:
+                        fix_suggestion = FIX_SUGGESTION_REGISTRY[error_code](issue_path, error_message, error_code)
                     report.errors.append(
                         ValidationIssue(
                             severity="error",
                             path=issue_path,
-                            message="Variant must provide a metadata block",
-                            code="metadata-missing",
+                            message=error_message,
+                            code=error_code,
                             line_number=line_map.get(issue_path) if line_map else None,
+                            fix_suggestion=fix_suggestion,
                         )
                     )
                     continue
@@ -746,13 +794,19 @@ def _validate_semantics(
         for name in requested_sets:
             if name not in known_sets:
                 issue_path = f"sports[{index}].pattern_sets"
+                error_code = "pattern-set"
+                error_message = f"Unknown pattern set '{name}'"
+                fix_suggestion = None
+                if error_code in FIX_SUGGESTION_REGISTRY:
+                    fix_suggestion = FIX_SUGGESTION_REGISTRY[error_code](issue_path, error_message, error_code)
                 report.errors.append(
                     ValidationIssue(
                         severity="error",
                         path=issue_path,
-                        message=f"Unknown pattern set '{name}'",
-                        code="pattern-set",
+                        message=error_message,
+                        code=error_code,
                         line_number=line_map.get(issue_path) if line_map else None,
+                        fix_suggestion=fix_suggestion,
                     )
                 )
 
