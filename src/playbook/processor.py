@@ -622,55 +622,60 @@ class Processor:
         return "\n".join(lines)
 
     def _log_detailed_summary(self, stats: ProcessingStats, *, level: int = logging.INFO) -> None:
+        from io import StringIO
+        from rich.console import Console
+
         show_entries = LOGGER.isEnabledFor(logging.DEBUG)
-        builder = LogBlockBuilder("Detailed Summary", pad_top=True)
 
-        fields: Dict[str, Any] = {
-            "Processed": stats.processed,
-            "Skipped": stats.skipped,
-            "Ignored": stats.ignored,
-            "Warnings": len(stats.warnings),
-            "Errors": len(stats.errors),
-        }
+        # Create the summary table using SummaryTableRenderer
+        renderer = SummaryTableRenderer()
+        table = renderer.render_summary_table(stats, plex_sync_stats=self._plex_sync_stats)
 
-        # Add Plex sync stats if available
-        if self._plex_sync_stats:
-            plex_errors = len(self._plex_sync_stats.errors)
-            fields["Plex Sync Errors"] = plex_errors
+        # Render the table to a string
+        table_buffer = StringIO()
+        table_console = Console(file=table_buffer, force_terminal=True, width=120)
+        table_console.print()
+        table_console.print(table)
+        table_output = table_buffer.getvalue()
 
-        builder.add_fields(fields)
+        # Log the table
+        LOGGER.log(level, table_output)
 
-        if show_entries:
-            builder.add_section("Errors", stats.errors)
-            builder.add_section("Warnings", stats.warnings)
-            builder.add_section("Skipped", stats.skipped_details)
-            builder.add_section("Ignored", self._filtered_ignored_details(stats))
-        else:
-            builder.add_section(
-                "Errors",
-                self._summarize_counts(stats.errors_by_sport, len(stats.errors), "error"),
-            )
-            builder.add_section(
-                "Warnings",
-                self._summarize_counts(stats.warnings_by_sport, len(stats.warnings), "warning"),
-            )
-            builder.add_section(
-                "Skipped",
-                self._summarize_messages(stats.skipped_details),
-            )
-            builder.add_section(
-                "Ignored",
-                self._summarize_counts(stats.ignored_by_sport, stats.ignored, "ignored"),
-            )
+        # Add detailed sections if needed
+        if show_entries or stats.errors or stats.warnings or (self._plex_sync_stats and self._plex_sync_stats.errors):
+            builder = LogBlockBuilder("Details", pad_top=False)
 
-        # Always show Plex sync errors (they're important to surface)
-        if self._plex_sync_stats and self._plex_sync_stats.errors:
-            builder.add_section(
-                "Plex Sync Errors",
-                self._summarize_plex_errors(self._plex_sync_stats.errors),
-            )
+            if show_entries:
+                builder.add_section("Errors", stats.errors)
+                builder.add_section("Warnings", stats.warnings)
+                builder.add_section("Skipped", stats.skipped_details)
+                builder.add_section("Ignored", self._filtered_ignored_details(stats))
+            else:
+                builder.add_section(
+                    "Errors",
+                    self._summarize_counts(stats.errors_by_sport, len(stats.errors), "error"),
+                )
+                builder.add_section(
+                    "Warnings",
+                    self._summarize_counts(stats.warnings_by_sport, len(stats.warnings), "warning"),
+                )
+                builder.add_section(
+                    "Skipped",
+                    self._summarize_messages(stats.skipped_details),
+                )
+                builder.add_section(
+                    "Ignored",
+                    self._summarize_counts(stats.ignored_by_sport, stats.ignored, "ignored"),
+                )
 
-        LOGGER.log(level, builder.render())
+            # Always show Plex sync errors (they're important to surface)
+            if self._plex_sync_stats and self._plex_sync_stats.errors:
+                builder.add_section(
+                    "Plex Sync Errors",
+                    self._summarize_plex_errors(self._plex_sync_stats.errors),
+                )
+
+            LOGGER.log(level, builder.render())
 
     def _log_run_recap(self, stats: ProcessingStats, duration: float) -> None:
         destinations = sorted(self._touched_destinations)
