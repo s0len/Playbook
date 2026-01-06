@@ -24,7 +24,6 @@ from .metadata import (
 from .metadata_loader import MetadataLoadResult, SportRuntime, load_sports
 from .models import ProcessingStats, SportFileMatch
 from .notifications import NotificationEvent, NotificationService
-from .plex_client import PlexApiError
 from .plex_metadata_sync import PlexMetadataSync, PlexSyncStats, create_plex_sync_from_config
 from .run_summary import (
     extract_error_context,
@@ -46,6 +45,7 @@ from .match_handler import (
 )
 from .destination_builder import build_destination, build_match_context, format_relative_destination
 from .trace_writer import TraceOptions, persist_trace
+from .post_run_triggers import run_plex_sync_if_needed, trigger_kometa_if_needed
 from .utils import ensure_directory, link_file, normalize_token, sha1_of_file, sha1_of_text
 
 LOGGER = logging.getLogger(__name__)
@@ -705,116 +705,28 @@ class Processor:
             return event
 
     def _trigger_post_run_trigger_if_needed(self, stats: ProcessingStats) -> None:
+        """Run post-run triggers: Plex sync and Kometa (delegates to post_run_triggers module)."""
         # Run Plex metadata sync if enabled and we processed files
         self._run_plex_sync_if_needed(stats)
 
         # Run Kometa trigger if enabled (legacy, may be removed)
-        if (
-            self._kometa_trigger_fired
-            or not self._kometa_trigger.enabled
-            or self.config.settings.dry_run
-            or not self._kometa_trigger_needed
-            or stats.processed <= 0
-        ):
-            return
-        triggered = self._kometa_trigger.trigger(
-            extra_labels={"trigger-mode": "post-run"},
-            extra_annotations={"playbook/post-run": "true"},
+        self._kometa_trigger_fired, self._kometa_trigger_needed = trigger_kometa_if_needed(
+            self._kometa_trigger,
+            self._kometa_trigger_fired,
+            self._kometa_trigger_needed,
+            global_dry_run=self.config.settings.dry_run,
+            stats=stats,
         )
-        if triggered:
-            self._kometa_trigger_fired = True
-            self._kometa_trigger_needed = False
 
     def _run_plex_sync_if_needed(self, stats: ProcessingStats) -> None:
-        """Run Plex metadata sync after file processing.
-
-        Sync runs when:
-        1. Files were processed (new files to sync)
-        2. Metadata changed in remote YAML
-        3. Sports have never been synced to Plex (first-time sync)
-        4. Force mode is enabled
-
-        Unless a specific sports_filter is already set, only syncs sports
-        that match one of the above criteria.
-        """
-        if self._plex_sync is None:
-            return
-
-        if self._plex_sync_ran:
-            return
-
-        # Apply dry-run from global settings if not already set
-        if self.config.settings.dry_run and not self._plex_sync.dry_run:
-            self._plex_sync.dry_run = True
-
-        # Build set of sports needing sync
-        active_sports = set(self._sports_with_processed_files)
-        active_sports.update(sport_id for sport_id, _ in self._metadata_changed_sports)
-
-        # Also include sports that have never been synced to Plex
-        try:
-            sports_needing_initial_sync = self._plex_sync.get_sports_needing_sync()
-            if sports_needing_initial_sync:
-                LOGGER.debug(
-                    "Sports needing initial/updated Plex sync: %s",
-                    ", ".join(sorted(sports_needing_initial_sync)),
-                )
-                active_sports.update(sports_needing_initial_sync)
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.warning("Failed to check Plex sync state: %s", exc)
-
-        # Skip if no sports need syncing (and no force mode)
-        if not active_sports and not self._plex_sync.force:
-            LOGGER.debug(
-                self._format_log(
-                    "Skipping Plex Sync",
-                    {"Reason": "No files processed, no metadata changes, all sports already synced"},
-                )
-            )
-            return
-
-        # Apply sports filter (unless explicit filter is already set)
-        if not self._plex_sync.sports_filter and active_sports:
-            self._plex_sync.sports_filter = sorted(active_sports)
-            LOGGER.debug(
-                "Plex sync limited to sports with activity or needing sync: %s",
-                ", ".join(self._plex_sync.sports_filter),
-            )
-
-        LOGGER.info(
-            self._format_log(
-                "Running Plex Metadata Sync",
-                {
-                    "Dry Run": self._plex_sync.dry_run,
-                    "Force": self._plex_sync.force,
-                    "Sports": self._plex_sync.sports_filter or "(all)",
-                },
-            )
+        """Run Plex metadata sync after file processing (delegates to post_run_triggers module)."""
+        self._plex_sync_stats, self._plex_sync_ran = run_plex_sync_if_needed(
+            self._plex_sync,
+            self._plex_sync_ran,
+            global_dry_run=self.config.settings.dry_run,
+            sports_with_processed_files=self._sports_with_processed_files,
+            metadata_changed_sports=self._metadata_changed_sports,
         )
-
-        try:
-            self._plex_sync_stats = self._plex_sync.sync_all()
-            self._plex_sync_ran = True
-        except PlexApiError as exc:
-            LOGGER.error(
-                self._format_log(
-                    "Plex Sync Failed",
-                    {"Error": str(exc)},
-                )
-            )
-            self._plex_sync_stats = PlexSyncStats()
-            self._plex_sync_stats.errors.append(str(exc))
-            self._plex_sync_ran = True
-        except Exception as exc:  # noqa: BLE001 - defensive
-            LOGGER.exception(
-                self._format_log(
-                    "Plex Sync Unexpected Error",
-                    {"Error": str(exc)},
-                )
-            )
-            self._plex_sync_stats = PlexSyncStats()
-            self._plex_sync_stats.errors.append(f"Unexpected: {exc}")
-            self._plex_sync_ran = True
 
     def _should_overwrite_existing(self, match: SportFileMatch) -> bool:
         source_name = match.source_path.name.lower()
