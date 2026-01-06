@@ -1,17 +1,17 @@
 {
   "active": true,
-  "spec": "005-the-logs-are-way-too-much-info-when-in-info-mode-i",
+  "spec": "018-add-dependency-vulnerability-scanning-to-ci-pipeli",
   "state": "building",
   "subtasks": {
-    "completed": 6,
-    "total": 10,
+    "completed": 5,
+    "total": 6,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Medium-Impact Log Reduction",
+    "current": "Documentation",
     "id": null,
-    "total": 4
+    "total": 1
   },
   "workers": {
     "active": 0,
@@ -19,7 +19,7 @@
   },
   "session": {
     "number": 7,
-    "started_at": "2026-01-05T23:08:23.146661"
+    "started_at": "2026-01-06T13:17:29.057377"
   },
-  "last_update": "2026-01-05T23:15:19.140882"
+  "last_update": "2026-01-06T13:27:52.115294"
 }
