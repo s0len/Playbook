@@ -394,6 +394,9 @@ def run_kometa_trigger(args: argparse.Namespace) -> int:
         LOGGER.exception("Failed to load configuration: %s", exc)
         return 1
 
+    banner_info = build_banner_info(config, verbose=args.verbose, trace_matches=False)
+    print_startup_banner(banner_info, CONSOLE)
+
     trigger_settings = dataclasses.replace(config.settings.kometa_trigger)
     if args.mode:
         trigger_settings.mode = args.mode
