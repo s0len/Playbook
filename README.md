@@ -334,7 +334,7 @@ notifications:
         - from: ${DESTINATION_DIR:-/data/destination}
           to: /mnt/unionfs/Media         # Rewrite Playbook’s path to what Autoscan/Plex can see
       timeout: 10                        # Seconds before the request is considered failed (default 10)
-      verify_ssl: true                   # Set false for self-signed endpoints (not recommended)
+      verify_ssl: true                   # ⚠️ SECURITY WARNING: Setting false disables SSL/TLS verification and exposes you to MITM attacks - only for development with self-signed certs
 ```
 
 Every successful `new`/`changed` event sends the parent directory of the destination file as a `dir` query parameter. Add more rewrite entries if Autoscan lives inside a container with different mount points.
