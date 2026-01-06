@@ -350,3 +350,142 @@ class TestFormatJsonschemaPath:
         """Test that an empty tuple returns '<root>'."""
         result = _format_jsonschema_path(())
         assert result == "<root>"
+
+
+# Tests for time parsing function
+
+
+class TestParseTime:
+    """Tests for _parse_time helper function."""
+
+    def test_valid_hh_mm_format(self):
+        """Test valid time in HH:MM format."""
+        result = _parse_time("14:30")
+        assert result is None
+
+    def test_valid_hh_mm_with_leading_zeros(self):
+        """Test valid time with leading zeros."""
+        result = _parse_time("08:05")
+        assert result is None
+
+    def test_valid_hh_mm_midnight(self):
+        """Test midnight time."""
+        result = _parse_time("00:00")
+        assert result is None
+
+    def test_valid_hh_mm_end_of_day(self):
+        """Test end of day time."""
+        result = _parse_time("23:59")
+        assert result is None
+
+    def test_valid_hh_mm_ss_format(self):
+        """Test valid time in HH:MM:SS format."""
+        result = _parse_time("14:30:45")
+        assert result is None
+
+    def test_valid_hh_mm_ss_with_zeros(self):
+        """Test valid time with seconds as zero."""
+        result = _parse_time("12:30:00")
+        assert result is None
+
+    def test_valid_hh_mm_ss_end_of_minute(self):
+        """Test valid time with 59 seconds."""
+        result = _parse_time("23:59:59")
+        assert result is None
+
+    def test_invalid_hour_too_high(self):
+        """Test invalid hour value greater than 23."""
+        result = _parse_time("24:00")
+        assert result is not None
+        assert "hour must be in 0..23" in result
+
+    def test_invalid_hour_negative(self):
+        """Test invalid negative hour value."""
+        result = _parse_time("-1:00")
+        assert result is not None
+        assert "hour must be in 0..23" in result
+
+    def test_invalid_hour_too_high_with_seconds(self):
+        """Test invalid hour with HH:MM:SS format."""
+        result = _parse_time("25:30:45")
+        assert result is not None
+        assert "hour must be in 0..23" in result
+
+    def test_invalid_minute_too_high(self):
+        """Test invalid minute value greater than 59."""
+        result = _parse_time("12:60")
+        assert result is not None
+        assert "minute must be in 0..59" in result
+
+    def test_invalid_minute_negative(self):
+        """Test invalid negative minute value."""
+        result = _parse_time("12:-1")
+        assert result is not None
+        assert "minute must be in 0..59" in result
+
+    def test_invalid_second_too_high(self):
+        """Test invalid second value greater than 59."""
+        result = _parse_time("12:30:60")
+        assert result is not None
+        assert "second must be in 0..59" in result
+
+    def test_invalid_second_negative(self):
+        """Test invalid negative second value."""
+        result = _parse_time("12:30:-1")
+        assert result is not None
+        assert "second must be in 0..59" in result
+
+    def test_non_integer_hour(self):
+        """Test time with non-integer hour component."""
+        result = _parse_time("12.5:30")
+        assert result == "components must be integers"
+
+    def test_non_integer_minute(self):
+        """Test time with non-integer minute component."""
+        result = _parse_time("12:30.5")
+        assert result == "components must be integers"
+
+    def test_non_integer_second(self):
+        """Test time with non-integer second component."""
+        result = _parse_time("12:30:45.5")
+        assert result == "components must be integers"
+
+    def test_non_integer_all_components(self):
+        """Test time with all non-integer components."""
+        result = _parse_time("abc:def")
+        assert result == "components must be integers"
+
+    def test_invalid_format_single_part(self):
+        """Test time with only one component."""
+        result = _parse_time("14")
+        assert result == "expected HH:MM or HH:MM:SS"
+
+    def test_invalid_format_four_parts(self):
+        """Test time with four components."""
+        result = _parse_time("14:30:45:00")
+        assert result == "expected HH:MM or HH:MM:SS"
+
+    def test_invalid_format_empty_string(self):
+        """Test empty string."""
+        result = _parse_time("")
+        assert result == "expected HH:MM or HH:MM:SS"
+
+    def test_invalid_format_no_colons(self):
+        """Test time string without colons."""
+        result = _parse_time("1430")
+        assert result == "expected HH:MM or HH:MM:SS"
+
+    def test_invalid_format_too_many_parts(self):
+        """Test time with more than three parts."""
+        result = _parse_time("12:30:45:12:00")
+        assert result == "expected HH:MM or HH:MM:SS"
+
+    def test_edge_case_single_digit_components(self):
+        """Test that single-digit components are not automatically padded."""
+        result = _parse_time("9:5")
+        assert result is None
+
+    def test_edge_case_all_zeros_with_seconds(self):
+        """Test all zeros with seconds."""
+        result = _parse_time("00:00:00")
+        assert result is None
