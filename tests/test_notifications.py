@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from playbook.config import NotificationSettings
-from playbook.notifications import NotificationEvent, NotificationService
+from playbook.notifications import AutoscanTarget, NotificationEvent, NotificationService
 
 
 class FakeResponse:
@@ -441,4 +442,18 @@ def test_autoscan_target_posts_manual_trigger(tmp_path, monkeypatch) -> None:
     assert request["url"] == "http://autoscan.test:3030/triggers/manual"
     assert ("dir", "/mnt/unionfs/Show") in request["params"]
     assert request["auth"] is None
+
+
+def test_autoscan_target_logs_warning_when_verify_ssl_disabled(tmp_path, caplog) -> None:
+    config = {
+        "url": "https://autoscan.test:3030",
+        "verify_ssl": False,
+    }
+
+    with caplog.at_level(logging.WARNING, logger="playbook.notifications"):
+        AutoscanTarget(config, destination_dir=tmp_path)
+
+    assert "SSL/TLS certificate verification is DISABLED" in caplog.text
+    assert "man-in-the-middle (MITM) attacks" in caplog.text
+    assert "production environments" in caplog.text
 
