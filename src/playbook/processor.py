@@ -24,6 +24,7 @@ from .metadata import (
     MetadataFetchStatistics,
     MetadataFingerprintStore,
     compute_show_fingerprint,
+    compute_show_fingerprint_cached,
     load_show,
 )
 from .models import ProcessingStats, Show, SportFileMatch
@@ -166,7 +167,8 @@ class Processor:
             extensions = {ext.lower() for ext in sport.source_extensions}
 
             try:
-                fingerprint = compute_show_fingerprint(show, sport.metadata)
+                cached_fingerprint = self.metadata_fingerprints.get(sport.id)
+                fingerprint = compute_show_fingerprint_cached(show, sport.metadata, cached_fingerprint)
             except Exception as exc:  # pragma: no cover - defensive, should not happen
                 LOGGER.warning(
                     self._format_log(

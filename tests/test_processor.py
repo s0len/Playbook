@@ -14,6 +14,7 @@ from playbook.metadata import (
     MetadataNormalizer,
     ShowFingerprint,
     compute_show_fingerprint,
+    compute_show_fingerprint_cached,
 )
 from playbook.models import Episode, ProcessingStats, Season, Show
 from playbook.processor import Processor
@@ -856,4 +857,219 @@ class TestExtractErrorContext:
         result = Processor._extract_error_context(error)
 
         assert result is None
+
+
+def test_show_fingerprint_content_hash_serialization_roundtrip() -> None:
+    """Test that ShowFingerprint.to_dict() and from_dict() correctly handle content_hash."""
+    # Test with content_hash present
+    fingerprint_with_hash = ShowFingerprint(
+        digest="abc123",
+        season_hashes={"01": "hash1", "02": "hash2"},
+        episode_hashes={
+            "01": {"ep1": "ep_hash1", "ep2": "ep_hash2"},
+            "02": {"ep3": "ep_hash3"},
+        },
+        content_hash="content_abc123",
+    )
+
+    # Serialize to dict
+    serialized = fingerprint_with_hash.to_dict()
+
+    # Verify content_hash is in serialized output
+    assert "content_hash" in serialized
+    assert serialized["content_hash"] == "content_abc123"
+    assert serialized["digest"] == "abc123"
+    assert serialized["seasons"] == {"01": "hash1", "02": "hash2"}
+
+    # Deserialize back
+    deserialized = ShowFingerprint.from_dict(serialized)
+
+    # Verify content_hash survives roundtrip
+    assert deserialized.content_hash == "content_abc123"
+    assert deserialized.digest == "abc123"
+    assert deserialized.season_hashes == {"01": "hash1", "02": "hash2"}
+    assert deserialized.episode_hashes == {
+        "01": {"ep1": "ep_hash1", "ep2": "ep_hash2"},
+        "02": {"ep3": "ep_hash3"},
+    }
+
+
+def test_show_fingerprint_backward_compatibility_without_content_hash() -> None:
+    """Test backward compatibility with old format (no content_hash)."""
+    # Simulate old format without content_hash
+    old_format_dict = {
+        "digest": "xyz789",
+        "seasons": {"01": "season_hash"},
+        "episodes": {"01": {"ep1": "episode_hash"}},
+    }
+
+    # Should deserialize without error
+    fingerprint = ShowFingerprint.from_dict(old_format_dict)
+
+    # content_hash should be None for backward compatibility
+    assert fingerprint.content_hash is None
+    assert fingerprint.digest == "xyz789"
+    assert fingerprint.season_hashes == {"01": "season_hash"}
+    assert fingerprint.episode_hashes == {"01": {"ep1": "episode_hash"}}
+
+    # When serializing back, content_hash should not be included if None
+    serialized = fingerprint.to_dict()
+    assert "content_hash" not in serialized
+    assert serialized["digest"] == "xyz789"
+
+
+def test_compute_show_fingerprint_cached_returns_cached_when_content_matches() -> None:
+    """Test that compute_show_fingerprint_cached() returns cached fingerprint when content matches."""
+    # Setup metadata configuration
+    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
+    normalizer = MetadataNormalizer(metadata_cfg)
+
+    # Create raw metadata
+    raw_metadata = {
+        "metadata": {
+            "demo": {
+                "title": "Demo Series",
+                "seasons": {
+                    "01": {
+                        "title": "Season 1",
+                        "episodes": [
+                            {
+                                "title": "Episode 1",
+                                "summary": "First episode",
+                                "episode_number": 1,
+                            }
+                        ],
+                    }
+                },
+            }
+        }
+    }
+
+    show = normalizer.load_show(raw_metadata)
+
+    # Test 1: No cache exists - should compute new fingerprint with content_hash
+    result_no_cache = compute_show_fingerprint_cached(show, metadata_cfg, cached_fingerprint=None)
+
+    assert result_no_cache is not None
+    assert result_no_cache.content_hash is not None
+    assert result_no_cache.digest is not None
+    assert result_no_cache.season_hashes is not None
+    assert result_no_cache.episode_hashes is not None
+
+    # Test 2: Cache exists with matching content_hash - should return cached fingerprint
+    cached_fingerprint = result_no_cache
+    result_cache_hit = compute_show_fingerprint_cached(show, metadata_cfg, cached_fingerprint=cached_fingerprint)
+
+    # Should return the exact same cached fingerprint object (cache hit)
+    assert result_cache_hit is cached_fingerprint
+    assert result_cache_hit.content_hash == cached_fingerprint.content_hash
+    assert result_cache_hit.digest == cached_fingerprint.digest
+
+    # Test 3: Content changes - should compute new fingerprint
+    modified_metadata = {
+        "metadata": {
+            "demo": {
+                "title": "Demo Series",
+                "seasons": {
+                    "01": {
+                        "title": "Season 1",
+                        "episodes": [
+                            {
+                                "title": "Episode 1",
+                                "summary": "Updated summary",  # Changed content
+                                "episode_number": 1,
+                            }
+                        ],
+                    }
+                },
+            }
+        }
+    }
+
+    modified_show = normalizer.load_show(modified_metadata)
+    result_cache_miss = compute_show_fingerprint_cached(
+        modified_show, metadata_cfg, cached_fingerprint=cached_fingerprint
+    )
+
+    # Should compute new fingerprint (cache miss)
+    assert result_cache_miss is not cached_fingerprint
+    assert result_cache_miss.content_hash != cached_fingerprint.content_hash
+    assert result_cache_miss.digest != cached_fingerprint.digest
+    assert result_cache_miss.content_hash is not None
+
+
+def test_content_hash_determinism() -> None:
+    """Test that content_hash is deterministic for same input and different for different input."""
+    # Setup metadata configuration
+    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
+    normalizer = MetadataNormalizer(metadata_cfg)
+
+    # Create raw metadata
+    raw_metadata = {
+        "metadata": {
+            "demo": {
+                "title": "Demo Series",
+                "seasons": {
+                    "01": {
+                        "title": "Season 1",
+                        "episodes": [
+                            {
+                                "title": "Episode 1",
+                                "summary": "First episode",
+                                "episode_number": 1,
+                            }
+                        ],
+                    }
+                },
+            }
+        }
+    }
+
+    # Test 1: Same metadata produces same content_hash (determinism)
+    show1 = normalizer.load_show(raw_metadata)
+    fingerprint1 = compute_show_fingerprint(show1, metadata_cfg)
+
+    show2 = normalizer.load_show(raw_metadata)
+    fingerprint2 = compute_show_fingerprint(show2, metadata_cfg)
+
+    assert fingerprint1.content_hash is not None
+    assert fingerprint2.content_hash is not None
+    assert fingerprint1.content_hash == fingerprint2.content_hash, "Same metadata should produce same content_hash"
+
+    # Test 2: Different metadata produces different content_hash
+    different_metadata = {
+        "metadata": {
+            "demo": {
+                "title": "Different Series",  # Changed title
+                "seasons": {
+                    "01": {
+                        "title": "Season 1",
+                        "episodes": [
+                            {
+                                "title": "Episode 1",
+                                "summary": "First episode",
+                                "episode_number": 1,
+                            }
+                        ],
+                    }
+                },
+            }
+        }
+    }
+
+    show3 = normalizer.load_show(different_metadata)
+    fingerprint3 = compute_show_fingerprint(show3, metadata_cfg)
+
+    assert fingerprint3.content_hash is not None
+    assert fingerprint3.content_hash != fingerprint1.content_hash, "Different metadata should produce different content_hash"
+
+    # Test 3: Different season_overrides produces different content_hash
+    metadata_cfg_with_overrides = MetadataConfig(
+        url="https://example.com/demo.yaml", show_key="demo", season_overrides={"01": "Custom Season"}
+    )
+    show4 = normalizer.load_show(raw_metadata)
+    fingerprint4 = compute_show_fingerprint(show4, metadata_cfg_with_overrides)
+
+    assert fingerprint4.content_hash is not None
+    assert fingerprint4.content_hash != fingerprint1.content_hash, "Different season_overrides should produce different content_hash"
 

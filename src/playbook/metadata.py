@@ -195,13 +195,17 @@ class ShowFingerprint:
     digest: str
     season_hashes: Dict[str, str]
     episode_hashes: Dict[str, Dict[str, str]]
+    content_hash: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             "digest": self.digest,
             "seasons": dict(self.season_hashes),
             "episodes": {season: dict(episodes) for season, episodes in self.episode_hashes.items()},
         }
+        if self.content_hash is not None:
+            result["content_hash"] = self.content_hash
+        return result
 
     @classmethod
     def from_dict(cls, payload: Dict[str, Any]) -> "ShowFingerprint":
@@ -215,7 +219,10 @@ class ShowFingerprint:
             if not isinstance(mapping, dict):
                 continue
             episode_hashes[str(season_key)] = {str(ep_key): str(ep_hash) for ep_key, ep_hash in mapping.items()}
-        return cls(digest=digest, season_hashes=season_hashes, episode_hashes=episode_hashes)
+        # Read content_hash if present, otherwise None for backward compatibility
+        content_hash_raw = payload.get("content_hash")
+        content_hash = str(content_hash_raw) if content_hash_raw is not None else None
+        return cls(digest=digest, season_hashes=season_hashes, episode_hashes=episode_hashes, content_hash=content_hash)
 
 
 @dataclass(slots=True)
@@ -368,8 +375,35 @@ class MetadataFingerprintStore:
             LOGGER.error("Failed to write metadata fingerprint cache %s: %s", self.path, exc)
 
 
+def _compute_content_hash(show: Show, metadata_cfg: MetadataConfig) -> str:
+    """Compute a quick hash from show metadata and configuration.
+
+    This hash captures all inputs that affect the fingerprint:
+    - show.metadata (raw metadata content)
+    - metadata_cfg.show_key (which show in the catalog)
+    - metadata_cfg.season_overrides (season configuration overrides)
+
+    Returns a deterministic SHA1 hash string that changes when any of these inputs change.
+    """
+    content_payload = {
+        "show_key": metadata_cfg.show_key,
+        "season_overrides": metadata_cfg.season_overrides,
+        "metadata": show.metadata,
+    }
+    serialized = json.dumps(
+        content_payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=_json_default,
+    )
+    return sha1_of_text(serialized)
+
+
 def compute_show_fingerprint(show: Show, metadata_cfg: MetadataConfig) -> ShowFingerprint:
     """Compute a hash representing the effective metadata for a sport."""
+
+    content_hash = _compute_content_hash(show, metadata_cfg)
 
     fingerprint_payload = {
         "show_key": metadata_cfg.show_key,
@@ -431,7 +465,40 @@ def compute_show_fingerprint(show: Show, metadata_cfg: MetadataConfig) -> ShowFi
             episode_hash_map[episode_key] = sha1_of_text(episode_serialized)
         episode_hashes[season_key] = episode_hash_map
 
-    return ShowFingerprint(digest=digest, season_hashes=season_hashes, episode_hashes=episode_hashes)
+    return ShowFingerprint(
+        digest=digest, season_hashes=season_hashes, episode_hashes=episode_hashes, content_hash=content_hash
+    )
+
+
+def compute_show_fingerprint_cached(
+    show: Show, metadata_cfg: MetadataConfig, cached_fingerprint: Optional[ShowFingerprint] = None
+) -> ShowFingerprint:
+    """Compute show fingerprint with caching optimization.
+
+    If the cached fingerprint's content_hash matches the current content hash,
+    return the cached fingerprint without recomputing season/episode hashes.
+    Otherwise, compute the full fingerprint.
+
+    Args:
+        show: The show to fingerprint
+        metadata_cfg: Metadata configuration
+        cached_fingerprint: Optional previously cached fingerprint
+
+    Returns:
+        ShowFingerprint with content_hash populated
+    """
+    current_content_hash = _compute_content_hash(show, metadata_cfg)
+
+    if cached_fingerprint is not None and cached_fingerprint.content_hash == current_content_hash:
+        return cached_fingerprint
+
+    fingerprint = compute_show_fingerprint(show, metadata_cfg)
+    return ShowFingerprint(
+        digest=fingerprint.digest,
+        season_hashes=fingerprint.season_hashes,
+        episode_hashes=fingerprint.episode_hashes,
+        content_hash=current_content_hash,
+    )
 
 
 class MetadataFetchError(RuntimeError):
