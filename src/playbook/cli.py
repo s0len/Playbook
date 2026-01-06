@@ -17,7 +17,8 @@ from .config import AppConfig, Settings, load_config
 from .kometa_trigger import build_kometa_trigger
 from .processor import Processor, TraceOptions
 from .utils import load_yaml_file
-from .validation import ValidationIssue, validate_config_data
+from .validation import ValidationIssue, extract_yaml_line_numbers_from_file, validate_config_data
+from .validation_output import ValidationFormatter
 from .watcher import FileWatcherLoop, WatchdogUnavailableError
 
 LOGGER = logging.getLogger(__name__)
@@ -431,7 +432,15 @@ def run_validate_config(args: argparse.Namespace) -> int:
             CONSOLE.print(traceback.format_exc(), style="dim")
         return 1
 
-    report = validate_config_data(data)
+    # Extract line numbers from the YAML file
+    try:
+        line_map = extract_yaml_line_numbers_from_file(config_path)
+    except Exception:  # noqa: BLE001
+        # If line number extraction fails, continue without line numbers
+        line_map = None
+
+    # Validate configuration with line number mapping
+    report = validate_config_data(data, line_map=line_map)
 
     if report.is_valid:
         try:
@@ -448,17 +457,9 @@ def run_validate_config(args: argparse.Namespace) -> int:
             if getattr(args, "show_trace", False):
                 CONSOLE.print(traceback.format_exc(), style="dim")
 
-    if report.errors:
-        CONSOLE.print(f"[bold red]{len(report.errors)} validation error(s) detected:[/bold red]")
-        for issue in report.errors:
-            CONSOLE.print(f"  • [bold]{issue.path}[/bold] — {issue.message} ({issue.code})")
-    else:
-        CONSOLE.print("[bold green]Configuration passed validation.[/bold green]")
-
-    if report.warnings:
-        CONSOLE.print(f"[yellow]{len(report.warnings)} warning(s):[/yellow]")
-        for issue in report.warnings:
-            CONSOLE.print(f"  • [bold]{issue.path}[/bold] — {issue.message} ({issue.code})")
+    # Use ValidationFormatter to display the report
+    formatter = ValidationFormatter(console=CONSOLE, show_suggestions=True, config_data=data)
+    formatter.format_report(report)
 
     if getattr(args, "diff_sample", False):
         sample_path = _resolve_sample_config_path()
