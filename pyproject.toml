@@ -48,3 +48,42 @@ Homepage = "https://github.com/s0len/Playbook"
 Documentation = "https://s0len.github.io/Playbook/"
 Repository = "https://github.com/s0len/Playbook"
 Issues = "https://github.com/s0len/Playbook/issues"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+# Enable rule sets
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # bugbear
+    "UP",   # pyupgrade
+    "C4",   # comprehensions
+    "SIM",  # simplify
+    "TCH",  # type-checking
+]
+
+# Exclude directories
+exclude = [
+    ".venv",
+    "venv",
+    ".git",
+    "__pycache__",
+    "*.egg-info",
+    ".pytest_cache",
+    ".ruff_cache",
+    "build",
+    "dist",
+    ".tox",
+]
+
+[tool.ruff.per-file-ignores]
+# Tests can have assertions, magic values, and less strict rules
+"tests/**/*.py" = [
+    "B011",  # Do not use assert False
+    "SIM300", # Yoda conditions
+]
+# Scripts and root level test files can be more flexible
+"*.py" = ["TCH"]  # Don't enforce TYPE_CHECKING in root scripts
