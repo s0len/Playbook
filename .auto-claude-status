@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "005-the-logs-are-way-too-much-info-when-in-info-mode-i",
+  "spec": "026-show-progress-bar-at-info-level-for-long-operation",
   "state": "building",
   "subtasks": {
-    "completed": 6,
-    "total": 10,
+    "completed": 2,
+    "total": 3,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Medium-Impact Log Reduction",
+    "current": "Testing and Verification",
     "id": null,
-    "total": 4
+    "total": 2
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 7,
-    "started_at": "2026-01-05T23:08:23.146661"
+    "number": 4,
+    "started_at": "2026-01-06T13:18:24.855422"
   },
-  "last_update": "2026-01-05T23:15:19.140882"
+  "last_update": "2026-01-06T13:23:58.567328"
 }
