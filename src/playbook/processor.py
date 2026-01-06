@@ -41,6 +41,7 @@ from .run_summary import (
     summarize_plex_errors,
 )
 from .file_discovery import matches_globs, should_suppress_sample_ignored, skip_reason_for_source_file
+from .match_handler import alias_candidates, specificity_score
 from .templating import render_template
 from .trace_writer import TraceOptions, persist_trace
 from .utils import ensure_directory, link_file, normalize_token, sanitize_component, sha1_of_file, sha1_of_text, slugify
@@ -1111,16 +1112,16 @@ class Processor:
         if not session_raw:
             return False
 
-        session_specificity = self._specificity_score(session_raw)
+        session_specificity = specificity_score(session_raw)
         if session_specificity == 0:
             return False
 
         session_token = normalize_token(session_raw)
-        alias_candidates = self._alias_candidates(match)
+        candidates = alias_candidates(match)
 
         baseline_scores = [
-            self._specificity_score(alias)
-            for alias in alias_candidates
+            specificity_score(alias)
+            for alias in candidates
             if normalize_token(alias) != session_token
         ]
 
@@ -1128,87 +1129,6 @@ class Processor:
             return False
 
         return session_specificity > min(baseline_scores)
-
-    def _alias_candidates(self, match: SportFileMatch) -> List[str]:
-        candidates: List[str] = []
-
-        canonical = match.episode.title
-        if canonical:
-            candidates.append(canonical)
-
-        candidates.extend(match.episode.aliases)
-
-        session_aliases = match.pattern.session_aliases
-        if canonical in session_aliases:
-            candidates.extend(session_aliases[canonical])
-        else:
-            canonical_token = normalize_token(canonical) if canonical else ""
-            for key, aliases in session_aliases.items():
-                if canonical_token and normalize_token(key) == canonical_token:
-                    candidates.extend(aliases)
-                    break
-
-        # Deduplicate while preserving order and skip falsy values
-        seen: Set[str] = set()
-        unique_candidates: List[str] = []
-        for value in candidates:
-            if not value:
-                continue
-            if value not in seen:
-                seen.add(value)
-                unique_candidates.append(value)
-
-        return unique_candidates
-
-    @staticmethod
-    def _specificity_score(value: str) -> int:
-        if not value:
-            return 0
-
-        score = 0
-        lower = value.lower()
-
-        digit_count = sum(ch.isdigit() for ch in value)
-        score += digit_count * 2
-
-        score += lower.count(".") + lower.count("-") + lower.count("_")
-
-        if re.search(r"\\bpart[\\s._-]*\\d+\\b", lower):
-            score += 2
-        if re.search(r"\\bstage[\\s._-]*\\d+\\b", lower):
-            score += 1
-        if re.search(r"\\b(?:heat|round|leg|match|session)[\\s._-]*\\d+\\b", lower):
-            score += 1
-        if re.search(r"(?:^|[\\s._-])(qf|sf|q|fp|sp)[\\s._-]*\\d+\\b", lower):
-            score += 1
-
-        spelled_markers = (
-            "one",
-            "two",
-            "three",
-            "four",
-            "five",
-            "six",
-            "seven",
-            "eight",
-            "nine",
-            "ten",
-            "first",
-            "second",
-            "third",
-            "fourth",
-            "fifth",
-            "sixth",
-            "seventh",
-            "eighth",
-            "ninth",
-            "tenth",
-        )
-        for marker in spelled_markers:
-            if re.search(rf"\\b{marker}\\b", lower):
-                score += 1
-
-        return score
 
     @staticmethod
     def _season_cache_key(match: SportFileMatch) -> Optional[str]:
