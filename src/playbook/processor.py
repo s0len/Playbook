@@ -277,7 +277,7 @@ class Processor:
                     )
                 )
 
-            with Progress(disable=not LOGGER.isEnabledFor(logging.DEBUG)) as progress:
+            with Progress(disable=not LOGGER.isEnabledFor(logging.INFO)) as progress:
                 task_id = progress.add_task("Processing", total=file_count)
                 for source_path in filtered_source_files:
                     is_sample_file = self._should_suppress_sample_ignored(source_path)
