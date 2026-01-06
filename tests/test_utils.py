@@ -5,8 +5,10 @@ import os
 import pytest
 
 from playbook.utils import (
+    clear_normalize_cache,
     env_bool,
     env_list,
+    get_normalize_cache_info,
     link_file,
     normalize_token,
     parse_env_bool,
@@ -127,4 +129,84 @@ class TestValidateUrl:
 
     def test_rejects_invalid_url(self) -> None:
         assert validate_url("http://") is False
+
+
+class TestNormalizeCaching:
+    def test_cache_returns_correct_results(self) -> None:
+        """Verify that cached normalize_token returns the same results as non-cached."""
+        clear_normalize_cache()
+
+        test_cases = [
+            ("FP1 Warm-Up!", "fp1warmup"),
+            ("Grand Prix #1", "grandprix1"),
+            ("Season 2024", "season2024"),
+            ("Test@#$%String", "teststring"),
+        ]
+
+        for input_str, expected in test_cases:
+            result = normalize_token(input_str)
+            assert result == expected, f"normalize_token('{input_str}') should return '{expected}'"
+
+            # Call again to ensure cache returns same result
+            cached_result = normalize_token(input_str)
+            assert cached_result == expected, f"Cached result for '{input_str}' should match"
+            assert cached_result == result, "Cached result should equal first result"
+
+    def test_clear_normalize_cache_works(self) -> None:
+        """Verify that clear_normalize_cache() properly clears the cache."""
+        clear_normalize_cache()
+
+        # Make some calls to populate the cache
+        normalize_token("Test String 1")
+        normalize_token("Test String 2")
+        normalize_token("Test String 3")
+
+        # Verify cache has entries
+        info_before = get_normalize_cache_info()
+        assert info_before.currsize > 0, "Cache should have entries after normalize calls"
+
+        # Clear the cache
+        clear_normalize_cache()
+
+        # Verify cache is empty
+        info_after = get_normalize_cache_info()
+        assert info_after.currsize == 0, "Cache should be empty after clear"
+        assert info_after.hits == 0, "Hits should be reset after clear"
+        assert info_after.misses == 0, "Misses should be reset after clear"
+
+    def test_get_normalize_cache_info_returns_valid_info(self) -> None:
+        """Verify that get_normalize_cache_info() returns valid cache statistics."""
+        clear_normalize_cache()
+
+        # Initial state should show empty cache
+        info = get_normalize_cache_info()
+        assert hasattr(info, "hits"), "Cache info should have 'hits' attribute"
+        assert hasattr(info, "misses"), "Cache info should have 'misses' attribute"
+        assert hasattr(info, "maxsize"), "Cache info should have 'maxsize' attribute"
+        assert hasattr(info, "currsize"), "Cache info should have 'currsize' attribute"
+
+        assert info.maxsize == 2048, "Max size should be 2048"
+        assert info.currsize == 0, "Current size should start at 0"
+        assert info.hits == 0, "Hits should start at 0"
+        assert info.misses == 0, "Misses should start at 0"
+
+        # Call normalize_token and verify cache stats update
+        normalize_token("First Call")
+        info_after_first = get_normalize_cache_info()
+        assert info_after_first.misses == 1, "Should have 1 miss after first call"
+        assert info_after_first.currsize == 1, "Should have 1 entry in cache"
+
+        # Call same input again - should be a cache hit
+        normalize_token("First Call")
+        info_after_second = get_normalize_cache_info()
+        assert info_after_second.hits == 1, "Should have 1 hit after second call with same input"
+        assert info_after_second.misses == 1, "Misses should still be 1"
+        assert info_after_second.currsize == 1, "Current size should still be 1"
+
+        # Call with different input - should be another miss
+        normalize_token("Second Call")
+        info_after_third = get_normalize_cache_info()
+        assert info_after_third.hits == 1, "Hits should still be 1"
+        assert info_after_third.misses == 2, "Should have 2 misses after new input"
+        assert info_after_third.currsize == 2, "Should have 2 entries in cache"
 
