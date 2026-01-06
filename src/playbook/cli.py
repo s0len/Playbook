@@ -13,7 +13,9 @@ from typing import Optional, Tuple
 from rich.console import Console
 from rich.logging import RichHandler
 
+from .command_help import get_command_help
 from .config import AppConfig, Settings, load_config
+from .help_formatter import RichHelpFormatter
 from .kometa_trigger import build_kometa_trigger
 from .processor import Processor, TraceOptions
 from .utils import load_yaml_file
@@ -28,6 +30,29 @@ LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 _FALSE_VALUES = {"0", "false", "no", "off"}
+
+
+def _make_help_formatter(command_name: str):
+    """
+    Create a RichHelpFormatter class with command-specific help content.
+
+    Args:
+        command_name: Name of the command to get help content for
+
+    Returns:
+        A formatter class that will render examples, environment variables, and tips
+    """
+    help_content = get_command_help(command_name)
+
+    class CommandHelpFormatter(RichHelpFormatter):
+        def format_help(self) -> str:
+            # Add the command-specific content before formatting
+            self.add_examples(help_content.examples)
+            self.add_environment_variables(help_content.env_vars)
+            self.add_tips(help_content.tips)
+            return super().format_help()
+
+    return CommandHelpFormatter
 
 
 def _parse_env_bool(value: Optional[str]) -> Optional[bool]:
@@ -58,10 +83,11 @@ def parse_args(argv: Optional[Tuple[str, ...]] = None) -> argparse.Namespace:
     """
     arguments = list(argv or sys.argv[1:])
 
-    # Create main parser
+    # Create main parser with RichHelpFormatter
     parser = argparse.ArgumentParser(
         prog="playbook",
         description="Playbook - Automated media file organization and metadata management",
+        formatter_class=RichHelpFormatter,
     )
 
     # Create subparsers
@@ -107,6 +133,7 @@ def _add_run_subparser(subparsers) -> None:
         "run",
         help="Process media files according to configuration",
         description="Playbook - Process media files according to configuration",
+        formatter_class=_make_help_formatter("run"),
     )
     run_parser.add_argument(
         "--config",
@@ -174,6 +201,7 @@ def _add_validate_config_subparser(subparsers) -> None:
         "validate-config",
         help="Validate Playbook configuration",
         description="Validate Playbook configuration file for errors",
+        formatter_class=_make_help_formatter("validate-config"),
     )
     validate_parser.add_argument(
         "--config",
@@ -199,6 +227,7 @@ def _add_kometa_trigger_subparser(subparsers) -> None:
         "kometa-trigger",
         help="Manually trigger Kometa",
         description="Trigger Kometa manually via Playbook",
+        formatter_class=_make_help_formatter("kometa-trigger"),
     )
     trigger_parser.add_argument(
         "--config",
