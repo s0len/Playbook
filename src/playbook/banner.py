@@ -6,6 +6,9 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from . import __version__
+from .config import AppConfig
+
 
 @dataclass(slots=True)
 class BannerInfo:
@@ -21,6 +24,31 @@ class BannerInfo:
     notifications_enabled: bool
     plex_sync_enabled: bool
     kometa_trigger_enabled: bool
+
+
+def build_banner_info(
+    config: AppConfig,
+    verbose: bool = False,
+    trace_matches: bool = False,
+) -> BannerInfo:
+    """Build a BannerInfo instance from AppConfig and runtime settings."""
+    enabled_sports_count = sum(1 for sport in config.sports if sport.enabled)
+    notifications_enabled = bool(config.settings.notifications.targets)
+
+    return BannerInfo(
+        version=__version__,
+        dry_run=config.settings.dry_run,
+        watch_mode=config.settings.file_watcher.enabled,
+        verbose=verbose,
+        trace_matches=trace_matches,
+        source_dir=str(config.settings.source_dir),
+        destination_dir=str(config.settings.destination_dir),
+        cache_dir=str(config.settings.cache_dir),
+        enabled_sports_count=enabled_sports_count,
+        notifications_enabled=notifications_enabled,
+        plex_sync_enabled=config.settings.plex_sync.enabled,
+        kometa_trigger_enabled=config.settings.kometa_trigger.enabled,
+    )
 
 
 def print_startup_banner(info: BannerInfo, console: Console) -> None:
