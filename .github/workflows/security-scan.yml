@@ -1,0 +1,41 @@
+name: Security Scan
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'requirements.txt'
+      - 'requirements-dev.txt'
+      - '.github/workflows/security-scan.yml'
+  pull_request:
+    paths:
+      - 'requirements.txt'
+      - 'requirements-dev.txt'
+      - '.github/workflows/security-scan.yml'
+  schedule:
+    # Run every Monday at 9:00 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  python-dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Scan requirements.txt for vulnerabilities
+        run: pip-audit -r requirements.txt --desc
+
+      - name: Scan requirements-dev.txt for vulnerabilities
+        run: pip-audit -r requirements-dev.txt --desc
