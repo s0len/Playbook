@@ -392,6 +392,8 @@ def _compute_content_hash(show: Show, metadata_cfg: MetadataConfig) -> str:
 def compute_show_fingerprint(show: Show, metadata_cfg: MetadataConfig) -> ShowFingerprint:
     """Compute a hash representing the effective metadata for a sport."""
 
+    content_hash = _compute_content_hash(show, metadata_cfg)
+
     fingerprint_payload = {
         "show_key": metadata_cfg.show_key,
         "season_overrides": metadata_cfg.season_overrides,
@@ -452,7 +454,9 @@ def compute_show_fingerprint(show: Show, metadata_cfg: MetadataConfig) -> ShowFi
             episode_hash_map[episode_key] = sha1_of_text(episode_serialized)
         episode_hashes[season_key] = episode_hash_map
 
-    return ShowFingerprint(digest=digest, season_hashes=season_hashes, episode_hashes=episode_hashes)
+    return ShowFingerprint(
+        digest=digest, season_hashes=season_hashes, episode_hashes=episode_hashes, content_hash=content_hash
+    )
 
 
 def compute_show_fingerprint_cached(
