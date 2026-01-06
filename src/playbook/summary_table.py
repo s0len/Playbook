@@ -252,3 +252,79 @@ class SummaryTableRenderer:
         )
         self.console.print()
         self.console.print(table)
+
+    @staticmethod
+    def render_summary_plain_text(
+        stats: ProcessingStats,
+        plex_sync_stats: Optional[PlexSyncStats] = None,
+    ) -> str:
+        """Render a summary as plain text without Rich formatting.
+
+        Args:
+            stats: Processing statistics to render
+            plex_sync_stats: Optional Plex sync statistics
+
+        Returns:
+            Plain text summary string
+        """
+        lines = [
+            "",
+            "Processing Summary",
+            "------------------",
+            f"    Processed        : {stats.processed}",
+            f"    Skipped          : {stats.skipped}",
+            f"    Ignored          : {stats.ignored}",
+            f"    Warnings         : {len(stats.warnings)}",
+            f"    Errors           : {len(stats.errors)}",
+        ]
+
+        # Add Plex sync errors if available
+        if plex_sync_stats and plex_sync_stats.errors:
+            plex_errors = len(plex_sync_stats.errors)
+            lines.append(f"    Plex Sync Errors : {plex_errors}")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def render_run_recap_plain_text(
+        stats: ProcessingStats,
+        duration: float,
+        destinations: List[str],
+        plex_sync_status: Optional[str] = None,
+        kometa_triggered: Optional[bool] = None,
+    ) -> str:
+        """Render a run recap as plain text without Rich formatting.
+
+        Args:
+            stats: Processing statistics
+            duration: Duration of the run in seconds
+            destinations: List of destination directories touched
+            plex_sync_status: Optional Plex sync status message
+            kometa_triggered: Optional flag indicating if Kometa was triggered
+
+        Returns:
+            Plain text run recap string
+        """
+        lines = [
+            "",
+            "Run Recap",
+            "---------",
+            f"    Duration         : {duration:.2f}s",
+            f"    Processed        : {stats.processed}",
+            f"    Skipped          : {stats.skipped}",
+            f"    Ignored          : {stats.ignored}",
+            f"    Warnings         : {len(stats.warnings)}",
+            f"    Errors           : {len(stats.errors)}",
+            f"    Destinations     : {len(destinations)}",
+        ]
+
+        # Add Plex sync status if provided
+        if plex_sync_status is not None:
+            lines.append(f"    Plex Sync        : {plex_sync_status}")
+
+        # Add Kometa status if provided
+        if kometa_triggered is not None:
+            kometa_status = "yes" if kometa_triggered else "no"
+            lines.append(f"    Kometa Triggered : {kometa_status}")
+
+        return "\n".join(lines)

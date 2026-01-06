@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import sys
 import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -99,6 +100,15 @@ class Processor:
     @staticmethod
     def _format_inline_log(event: str, fields: Optional[Mapping[str, object]] = None) -> str:
         return render_fields_block(event, fields or {}, pad_top=False)
+
+    @staticmethod
+    def _is_terminal_output() -> bool:
+        """Check if output is going to a terminal (TTY) or being piped/redirected.
+
+        Returns:
+            True if output is to a terminal, False if piped to file or another process
+        """
+        return sys.stdout.isatty()
 
     def _load_sports(self) -> List[SportRuntime]:
         runtimes: List[SportRuntime] = []
@@ -622,21 +632,30 @@ class Processor:
         return "\n".join(lines)
 
     def _log_detailed_summary(self, stats: ProcessingStats, *, level: int = logging.INFO) -> None:
-        from io import StringIO
-        from rich.console import Console
-
         show_entries = LOGGER.isEnabledFor(logging.DEBUG)
 
-        # Create the summary table using SummaryTableRenderer
-        renderer = SummaryTableRenderer()
-        table = renderer.render_summary_table(stats, plex_sync_stats=self._plex_sync_stats)
+        # Detect if output is to a terminal
+        is_terminal = self._is_terminal_output()
 
-        # Render the table to a string
-        table_buffer = StringIO()
-        table_console = Console(file=table_buffer, force_terminal=True, width=120)
-        table_console.print()
-        table_console.print(table)
-        table_output = table_buffer.getvalue()
+        # Render summary as rich table or plain text based on output destination
+        if is_terminal:
+            from io import StringIO
+            from rich.console import Console
+
+            renderer = SummaryTableRenderer()
+            table = renderer.render_summary_table(stats, plex_sync_stats=self._plex_sync_stats)
+
+            # Render the table to a string with ANSI colors
+            table_buffer = StringIO()
+            table_console = Console(file=table_buffer, force_terminal=True, width=120)
+            table_console.print()
+            table_console.print(table)
+            table_output = table_buffer.getvalue()
+        else:
+            # Render as plain text when output is piped or redirected
+            table_output = SummaryTableRenderer.render_summary_plain_text(
+                stats, plex_sync_stats=self._plex_sync_stats
+            )
 
         # Log the table
         LOGGER.log(level, table_output)
@@ -678,9 +697,6 @@ class Processor:
             LOGGER.log(level, builder.render())
 
     def _log_run_recap(self, stats: ProcessingStats, duration: float) -> None:
-        from io import StringIO
-        from rich.console import Console
-
         destinations = sorted(self._touched_destinations)
 
         # Build Plex sync status string
@@ -711,22 +727,38 @@ class Processor:
         # Determine Kometa status for backwards compatibility (may be removed)
         kometa_triggered = self._kometa_trigger_fired if self._kometa_trigger.enabled else None
 
-        # Create the run recap table using SummaryTableRenderer
-        renderer = SummaryTableRenderer()
-        table = renderer.render_run_recap_table(
-            stats=stats,
-            duration=duration,
-            destinations=destinations,
-            plex_sync_status=plex_status,
-            kometa_triggered=kometa_triggered,
-        )
+        # Detect if output is to a terminal
+        is_terminal = self._is_terminal_output()
 
-        # Render the table to a string
-        table_buffer = StringIO()
-        table_console = Console(file=table_buffer, force_terminal=True, width=120)
-        table_console.print()
-        table_console.print(table)
-        table_output = table_buffer.getvalue()
+        # Render run recap as rich table or plain text based on output destination
+        if is_terminal:
+            from io import StringIO
+            from rich.console import Console
+
+            renderer = SummaryTableRenderer()
+            table = renderer.render_run_recap_table(
+                stats=stats,
+                duration=duration,
+                destinations=destinations,
+                plex_sync_status=plex_status,
+                kometa_triggered=kometa_triggered,
+            )
+
+            # Render the table to a string with ANSI colors
+            table_buffer = StringIO()
+            table_console = Console(file=table_buffer, force_terminal=True, width=120)
+            table_console.print()
+            table_console.print(table)
+            table_output = table_buffer.getvalue()
+        else:
+            # Render as plain text when output is piped or redirected
+            table_output = SummaryTableRenderer.render_run_recap_plain_text(
+                stats=stats,
+                duration=duration,
+                destinations=destinations,
+                plex_sync_status=plex_status,
+                kometa_triggered=kometa_triggered,
+            )
 
         # Log the table
         LOGGER.info(table_output)
