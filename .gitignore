@@ -9,7 +9,13 @@ node_modules/
 
 # Environment files
 .env
-.env.local 
+.env.local
+**/.env
+**/.env.local
+**/.env.*
+# But allow .env.example template files (they don't contain secrets)
+!**/.env.example
+!.env.example 
 
 # Python files to ignore
 __pycache__/
@@ -21,6 +27,7 @@ playbook.log
 openapi.json
 site/
 
-.auto-claude
+.auto-claude/*
+!.auto-claude/.env.example
 .worktrees
 .vscode/
