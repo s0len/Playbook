@@ -38,15 +38,16 @@ from .run_summary import (
 )
 from .file_discovery import gather_source_files, matches_globs, should_suppress_sample_ignored, skip_reason_for_source_file
 from .match_handler import (
-    alias_candidates,
+    cleanup_old_destination,
     episode_cache_key,
+    handle_match,
     season_cache_key,
-    specificity_score,
+    should_overwrite_existing,
 )
 from .destination_builder import build_destination, build_match_context, format_relative_destination
 from .trace_writer import TraceOptions, persist_trace
 from .post_run_triggers import run_plex_sync_if_needed, trigger_kometa_if_needed
-from .utils import ensure_directory, link_file, normalize_token, sha1_of_file, sha1_of_text
+from .utils import ensure_directory, sha1_of_text
 
 LOGGER = logging.getLogger(__name__)
 
@@ -494,215 +495,35 @@ class Processor:
         )
 
     def _handle_match(self, match: SportFileMatch, stats: ProcessingStats) -> Optional[NotificationEvent]:
-        destination = match.destination_path
+        """Process a file match: create link, update cache, handle overwrites.
+
+        Delegates to match_handler.handle_match().
+        """
         settings = self.config.settings
         link_mode = (match.sport.link_mode or settings.link_mode).lower()
-        source_key = str(match.source_path)
-        old_destination = self._stale_destinations.get(source_key)
-        cache_kwargs = {
-            "sport_id": match.sport.id,
-            "season_key": season_cache_key(match),
-            "episode_key": episode_cache_key(match),
-        }
 
-        stale_record = self._stale_records.get(source_key)
-
-        destination_display = self._format_relative_destination(destination)
-
-        file_checksum: Optional[str] = None
-        try:
-            file_checksum = sha1_of_file(match.source_path)
-        except ValueError as exc:  # pragma: no cover - depends on filesystem state
-            LOGGER.debug(
-                self._format_log(
-                    "Failed To Hash Source",
-                    {
-                        "Source": match.source_path,
-                        "Error": exc,
-                    },
-                )
-            )
-
-        stored_checksum = self.processed_cache.get_checksum(match.source_path)
-        previous_checksum = stored_checksum or (stale_record.checksum if stale_record else None)
-        previously_seen = bool(stored_checksum or stale_record)
-        content_changed = (
-            previously_seen
-            and file_checksum is not None
-            and previous_checksum is not None
-            and file_checksum != previous_checksum
-        )
-        if not previously_seen:
-            event_type = "new"
-        elif content_changed:
-            event_type = "changed"
-        else:
-            event_type = "refresh"
-
-        destination_display = self._format_relative_destination(destination)
-        event = NotificationEvent(
-            sport_id=match.sport.id,
-            sport_name=match.sport.name,
-            show_title=match.show.title,
-            season=str(match.context.get("season_title") or match.season.title or "Season"),
-            session=str(match.context.get("session") or match.episode.title or "Session"),
-            episode=str(match.context.get("episode_title") or match.episode.title or match.episode.title),
-            summary=match.context.get("episode_summary") or match.episode.summary,
-            destination=destination_display,
-            source=match.source_path.name,
-            action="link",
+        event, kometa_trigger_needed, sport_id = handle_match(
+            match,
+            stats,
+            processed_cache=self.processed_cache,
+            stale_destinations=self._stale_destinations,
+            stale_records=self._stale_records,
+            skip_existing=settings.skip_existing,
+            dry_run=settings.dry_run,
             link_mode=link_mode,
-            match_details=dict(match.context),
-            event_type=event_type,
+            format_destination_fn=self._format_relative_destination,
+            logger=LOGGER,
         )
 
-        replace_existing = False
-        if destination.exists():
-            if settings.skip_existing:
-                if self._should_overwrite_existing(match):
-                    replace_existing = True
-                else:
-                    LOGGER.debug(
-                        self._format_log(
-                            "Skipping Existing Destination",
-                            {
-                                "Destination": destination,
-                                "Source": match.source_path,
-                            },
-                        )
-                    )
-                    self._cleanup_old_destination(
-                        source_key,
-                        old_destination,
-                        destination,
-                        dry_run=settings.dry_run,
-                    )
-                    skip_message = f"Destination exists: {destination} (source {match.source_path})"
-                    stats.register_skipped(skip_message, is_error=False, sport_id=match.sport.id)
-                    if not settings.dry_run:
-                        self.processed_cache.mark_processed(
-                            match.source_path,
-                            destination,
-                            checksum=file_checksum,
-                            **cache_kwargs,
-                        )
-                    event.action = "skipped"
-                    event.skip_reason = skip_message
-                    event.event_type = "skipped"
-                    return event
+        # Update instance state based on results
+        if kometa_trigger_needed and not settings.dry_run:
+            self._kometa_trigger_needed = True
 
-        if replace_existing:
-            LOGGER.debug(
-                self._format_log(
-                    "Preparing To Replace Destination",
-                    {"Destination": destination},
-                )
-            )
-            if not settings.dry_run:
-                try:
-                    destination.unlink()
-                except OSError as exc:
-                    LOGGER.error(
-                        self._format_log(
-                            "Failed To Remove Destination",
-                            {
-                                "Destination": destination,
-                                "Error": exc,
-                            },
-                        )
-                    )
-                    stats.register_skipped(
-                        f"Failed to replace destination {destination}: {exc}",
-                        is_error=True,
-                        sport_id=match.sport.id,
-                    )
-                    event.action = "error"
-                    event.skip_reason = f"failed-to-remove: {exc}"
-                    event.event_type = "error"
-                    return event
+        if sport_id:
+            self._record_destination_touch(match.destination_path)
+            self._sports_with_processed_files.add(sport_id)
 
-        LOGGER.debug(
-            self._format_log(
-                "Processed",
-                {
-                    "Action": "replace" if replace_existing else "link",
-                    "Sport": match.sport.id,
-                    "Season": match.context.get("season_title"),
-                    "Session": match.context.get("session"),
-                    "Dest": destination_display,
-                    "Src": match.source_path.name,
-                },
-            )
-        )
-
-        if LOGGER.isEnabledFor(logging.DEBUG):
-            LOGGER.debug(
-                self._format_log(
-                    "Processing Details",
-                    {
-                        "Source": match.source_path,
-                        "Destination": destination,
-                        "Link Mode": link_mode,
-                        "Replace": replace_existing,
-                    },
-                )
-            )
-
-        if settings.dry_run:
-            stats.register_processed()
-            self._record_destination_touch(destination)
-            self._sports_with_processed_files.add(match.sport.id)
-            event.action = "dry-run"
-            event.event_type = "dry-run"
-            event.replaced = replace_existing
-            return event
-
-        result = link_file(match.source_path, destination, mode=link_mode)
-        if result.created:
-            stats.register_processed()
-            self._record_destination_touch(destination)
-            self._sports_with_processed_files.add(match.sport.id)
-            self.processed_cache.mark_processed(
-                match.source_path,
-                destination,
-                checksum=file_checksum,
-                **cache_kwargs,
-            )
-            self._cleanup_old_destination(
-                source_key,
-                old_destination,
-                destination,
-                dry_run=settings.dry_run,
-            )
-            event.action = link_mode
-            event.replaced = replace_existing
-            if not settings.dry_run:
-                self._kometa_trigger_needed = True
-            return event
-        else:
-            failure_message = f"Failed to link {match.source_path} -> {destination}: {result.reason}"
-            stats.register_skipped(failure_message, sport_id=match.sport.id)
-            if result.reason == "destination-exists":
-                self.processed_cache.mark_processed(
-                    match.source_path,
-                    destination,
-                    checksum=file_checksum,
-                    **cache_kwargs,
-                )
-                self._cleanup_old_destination(
-                    source_key,
-                    old_destination,
-                    destination,
-                    dry_run=settings.dry_run,
-                )
-                event.action = "skipped"
-                event.skip_reason = failure_message
-                event.event_type = "skipped"
-                return event
-            event.action = "error"
-            event.skip_reason = failure_message
-            event.event_type = "error"
-            return event
+        return event
 
     def _trigger_post_run_trigger_if_needed(self, stats: ProcessingStats) -> None:
         """Run post-run triggers: Plex sync and Kometa (delegates to post_run_triggers module)."""
@@ -729,34 +550,8 @@ class Processor:
         )
 
     def _should_overwrite_existing(self, match: SportFileMatch) -> bool:
-        source_name = match.source_path.name.lower()
-        if any(keyword in source_name for keyword in ("repack", "proper")):
-            return True
-
-        if "2160p" in source_name:
-            return True
-
-        session_raw = str(match.context.get("session") or "").strip()
-        if not session_raw:
-            return False
-
-        session_specificity = specificity_score(session_raw)
-        if session_specificity == 0:
-            return False
-
-        session_token = normalize_token(session_raw)
-        candidates = alias_candidates(match)
-
-        baseline_scores = [
-            specificity_score(alias)
-            for alias in candidates
-            if normalize_token(alias) != session_token
-        ]
-
-        if not baseline_scores:
-            return False
-
-        return session_specificity > min(baseline_scores)
+        """Determine if an existing destination should be overwritten (delegates to match_handler)."""
+        return should_overwrite_existing(match)
 
     def _format_relative_destination(self, destination: Path) -> str:
         return format_relative_destination(destination, self.config.settings.destination_dir)
@@ -772,56 +567,14 @@ class Processor:
         *,
         dry_run: bool,
     ) -> None:
-        self._stale_records.pop(source_key, None)
-        if not old_destination:
-            self._stale_destinations.pop(source_key, None)
-            return
-
-        if old_destination == new_destination:
-            self._stale_destinations.pop(source_key, None)
-            return
-
-        if not old_destination.exists() or old_destination.is_dir():
-            self._stale_destinations.pop(source_key, None)
-            return
-
-        if dry_run:
-            LOGGER.debug(
-                self._format_log(
-                    "Dry-Run: Would Remove Obsolete Destination",
-                    {
-                        "Source": source_key,
-                        "Old Destination": old_destination,
-                        "Replaced With": self._format_relative_destination(new_destination),
-                    },
-                )
-            )
-            self._stale_destinations.pop(source_key, None)
-            return
-
-        try:
-            old_destination.unlink()
-        except OSError as exc:
-            LOGGER.warning(
-                self._format_log(
-                    "Failed To Remove Obsolete Destination",
-                    {
-                        "Source": source_key,
-                        "Old Destination": old_destination,
-                        "Error": exc,
-                    },
-                )
-            )
-        else:
-            LOGGER.debug(
-                self._format_log(
-                    "Removed Obsolete Destination",
-                    {
-                        "Source": source_key,
-                        "Removed": self._format_relative_destination(old_destination),
-                        "Replaced With": self._format_relative_destination(new_destination),
-                    },
-                )
-            )
-        finally:
-            self._stale_destinations.pop(source_key, None)
+        """Clean up old destination when source moves (delegates to match_handler)."""
+        cleanup_old_destination(
+            source_key,
+            old_destination,
+            new_destination,
+            dry_run=dry_run,
+            stale_records=self._stale_records,
+            stale_destinations=self._stale_destinations,
+            format_destination_fn=self._format_relative_destination,
+            logger=LOGGER,
+        )
