@@ -101,8 +101,9 @@ def dump_yaml_file(path: Path, data: Dict[str, Any]) -> None:
         yaml.safe_dump(data, handle, sort_keys=False, allow_unicode=True)
 
 
-def sha1_of_text(text: str) -> str:
-    return hashlib.sha1(text.encode("utf-8")).hexdigest()
+def hash_text(text: str) -> str:
+    """Compute SHA-256 digest of the given text."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def sha1_of_file(path: Path, chunk_size: int = 65536) -> str:
