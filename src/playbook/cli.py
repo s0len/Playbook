@@ -46,121 +46,191 @@ def _env_bool(name: str) -> Optional[bool]:
 
 
 def parse_args(argv: Optional[Tuple[str, ...]] = None) -> argparse.Namespace:
+    """
+    Parse command-line arguments using argparse subparsers.
+
+    Supports three subcommands:
+    - run: Main Playbook processing (default)
+    - validate-config: Validate configuration file
+    - kometa-trigger: Manually trigger Kometa
+
+    For backward compatibility, if no subcommand is specified, 'run' is assumed.
+    """
     arguments = list(argv or sys.argv[1:])
-    if arguments:
-        if arguments[0] == "validate-config":
-            return _parse_validate_args(arguments[1:])
-        if arguments[0] == "kometa-trigger":
-            return _parse_trigger_args(arguments[1:])
-    return _parse_run_args(arguments)
+
+    # Create main parser
+    parser = argparse.ArgumentParser(
+        prog="playbook",
+        description="Playbook - Automated media file organization and metadata management",
+    )
+
+    # Create subparsers
+    subparsers = parser.add_subparsers(
+        dest="command",
+        help="Available commands",
+    )
+
+    # Add 'run' subcommand
+    _add_run_subparser(subparsers)
+
+    # Add 'validate-config' subcommand
+    _add_validate_config_subparser(subparsers)
+
+    # Add 'kometa-trigger' subcommand
+    _add_kometa_trigger_subparser(subparsers)
+
+    # For backward compatibility: if no arguments or first arg doesn't match a subcommand,
+    # treat it as 'run' command
+    if not arguments or arguments[0] not in ["validate-config", "kometa-trigger"]:
+        # Filter out 'run' if it's the first argument (to handle both cases)
+        if arguments and arguments[0] == "run":
+            arguments = arguments[1:]
+        arguments = ["run"] + arguments
+
+    namespace = parser.parse_args(arguments)
+
+    # Ensure command is set (for backward compatibility)
+    if not hasattr(namespace, "command") or namespace.command is None:
+        namespace.command = "run"
+
+    # Validate run-specific argument conflicts
+    if namespace.command == "run":
+        if getattr(namespace, "watch", False) and getattr(namespace, "no_watch", False):
+            parser.error("--watch and --no-watch cannot be used together")
+
+    return namespace
 
 
-def _parse_run_args(arguments: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Playbook")
-    parser.add_argument(
+def _add_run_subparser(subparsers) -> None:
+    """Add the 'run' subcommand parser."""
+    run_parser = subparsers.add_parser(
+        "run",
+        help="Process media files according to configuration",
+        description="Playbook - Process media files according to configuration",
+    )
+    run_parser.add_argument(
         "--config",
         type=Path,
         default=Path(os.getenv("CONFIG_PATH", "/config/playbook.yaml")),
         help="Path to the YAML configuration file",
     )
-    parser.add_argument("--dry-run", action="store_true", help="Execute without writing to destination")
-    parser.add_argument("--verbose", action="store_true", help="Enable debug logging on the console")
-    parser.add_argument(
+    run_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Execute without writing to destination",
+    )
+    run_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable debug logging on the console",
+    )
+    run_parser.add_argument(
         "--log-level",
         choices=LOG_LEVEL_CHOICES,
         help="Log level for the persistent log file (default INFO, or DEBUG when --verbose)",
     )
-    parser.add_argument(
+    run_parser.add_argument(
         "--console-level",
         choices=LOG_LEVEL_CHOICES,
         help="Log level for console output (defaults to --log-level)",
     )
-    parser.add_argument(
+    run_parser.add_argument(
         "--log-file",
         type=Path,
         help="Path to the persistent log file (default ./playbook.log or $LOG_FILE)",
     )
-    parser.add_argument(
+    run_parser.add_argument(
         "--clear-processed-cache",
         action="store_true",
         help="Clear the processed-file cache before running",
     )
-    parser.add_argument(
+    run_parser.add_argument(
         "--trace-matches",
         "--explain",
         dest="trace_matches",
         action="store_true",
         help="Capture detailed match traces and store JSON artifacts (default directory: cache_dir/traces)",
     )
-    parser.add_argument(
+    run_parser.add_argument(
         "--trace-output",
         type=Path,
         help="Directory where match trace JSON files are written (implies --trace-matches)",
     )
-    parser.add_argument("--watch", action="store_true", help="Force filesystem watcher mode")
-    parser.add_argument("--no-watch", action="store_true", help="Disable filesystem watcher even if enabled in config")
-    namespace = parser.parse_args(arguments)
-    if namespace.watch and namespace.no_watch:
-        parser.error("--watch and --no-watch cannot be used together")
-    namespace.command = "run"
-    return namespace
+    run_parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Force filesystem watcher mode",
+    )
+    run_parser.add_argument(
+        "--no-watch",
+        action="store_true",
+        help="Disable filesystem watcher even if enabled in config",
+    )
 
 
-def _parse_validate_args(arguments: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Validate Playbook configuration")
-    parser.add_argument(
+def _add_validate_config_subparser(subparsers) -> None:
+    """Add the 'validate-config' subcommand parser."""
+    validate_parser = subparsers.add_parser(
+        "validate-config",
+        help="Validate Playbook configuration",
+        description="Validate Playbook configuration file for errors",
+    )
+    validate_parser.add_argument(
         "--config",
         type=Path,
         default=Path(os.getenv("CONFIG_PATH", "/config/playbook.yaml")),
         help="Path to the YAML configuration file",
     )
-    parser.add_argument(
+    validate_parser.add_argument(
         "--diff-sample",
         action="store_true",
         help="Display a unified diff against config/playbook.sample.yaml when available",
     )
-    parser.add_argument(
+    validate_parser.add_argument(
         "--show-trace",
         action="store_true",
         help="Print exception tracebacks when validation fails",
     )
-    namespace = parser.parse_args(arguments)
-    namespace.command = "validate-config"
-    return namespace
 
 
-def _parse_trigger_args(arguments: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Trigger Kometa manually via Playbook")
-    parser.add_argument(
+def _add_kometa_trigger_subparser(subparsers) -> None:
+    """Add the 'kometa-trigger' subcommand parser."""
+    trigger_parser = subparsers.add_parser(
+        "kometa-trigger",
+        help="Manually trigger Kometa",
+        description="Trigger Kometa manually via Playbook",
+    )
+    trigger_parser.add_argument(
         "--config",
         type=Path,
         default=Path(os.getenv("CONFIG_PATH", "/config/playbook.yaml")),
         help="Path to the YAML configuration file",
     )
-    parser.add_argument(
+    trigger_parser.add_argument(
         "--mode",
         choices=["docker", "kubernetes"],
         help="Override kometa_trigger.mode for this invocation",
     )
-    parser.add_argument("--verbose", action="store_true", help="Enable debug logging on the console")
-    parser.add_argument(
+    trigger_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable debug logging on the console",
+    )
+    trigger_parser.add_argument(
         "--log-level",
         choices=LOG_LEVEL_CHOICES,
         help="Log level for the persistent log file (default INFO, or DEBUG when --verbose)",
     )
-    parser.add_argument(
+    trigger_parser.add_argument(
         "--console-level",
         choices=LOG_LEVEL_CHOICES,
         help="Log level for console output (defaults to --log-level)",
     )
-    parser.add_argument(
+    trigger_parser.add_argument(
         "--log-file",
         type=Path,
         help="Path to the persistent log file (default ./playbook.log or $LOG_FILE)",
     )
-    namespace = parser.parse_args(arguments)
-    namespace.command = "kometa-trigger"
-    return namespace
 
 
 def _resolve_previous_log_path(log_file: Path) -> Path:
