@@ -17,6 +17,8 @@ class ValidationIssue:
     path: str
     message: str
     code: str
+    line_number: Optional[int] = None
+    fix_suggestion: Optional[str] = None
 
 
 @dataclass(slots=True)
