@@ -4,7 +4,7 @@ import datetime as dt
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence
 
 from jsonschema import Draft7Validator
 
@@ -280,6 +280,118 @@ CONFIG_SCHEMA: Dict[str, Any] = {
         },
     },
 }
+
+
+# Fix Suggestion System
+# Type alias for fix suggestion functions that take a ValidationIssue and return a suggestion string
+FixSuggestionGenerator = Callable[[str, str, str], Optional[str]]
+
+
+def _suggest_schema_fix(path: str, message: str, code: str) -> Optional[str]:
+    """Generate fix suggestion for schema validation errors."""
+    # Try to extract useful information from the error message
+    if "is a required property" in message:
+        # Extract the missing property name from the message
+        return "Add the required field to your configuration"
+    if "is not of type" in message:
+        expected_type = None
+        if "'string'" in message:
+            expected_type = "string"
+        elif "'object'" in message:
+            expected_type = "object/mapping"
+        elif "'array'" in message:
+            expected_type = "array/list"
+        elif "'boolean'" in message:
+            expected_type = "boolean"
+        elif "'integer'" in message or "'number'" in message:
+            expected_type = "number"
+        if expected_type:
+            return f"Change this field to a {expected_type} value"
+    if "is not one of" in message or "is not valid under any of the given schemas" in message:
+        return "Check the allowed values/formats for this field in the documentation"
+    return "Review the configuration schema requirements for this field"
+
+
+def _suggest_flush_time_fix(path: str, message: str, code: str) -> Optional[str]:
+    """Generate fix suggestion for flush_time validation errors."""
+    return "Use format HH:MM or HH:MM:SS with valid hour (00-23) and minute (00-59) values (e.g., '09:00' or '15:30:00')"
+
+
+def _suggest_metadata_url_fix(path: str, message: str, code: str) -> Optional[str]:
+    """Generate fix suggestion for blank metadata URL errors."""
+    return "Provide a valid non-empty URL for the metadata source (e.g., 'https://example.com/api/schedule')"
+
+
+def _suggest_metadata_missing_fix(path: str, message: str, code: str) -> Optional[str]:
+    """Generate fix suggestion for missing metadata errors."""
+    if "variants" in path:
+        return "Add a 'metadata' block with a 'url' field to this variant entry"
+    return "Either add a 'metadata' block with a 'url' field, or define 'variants' with metadata for this sport"
+
+
+def _suggest_duplicate_id_fix(path: str, message: str, code: str) -> Optional[str]:
+    """Generate fix suggestion for duplicate sport ID errors."""
+    return "Change the sport 'id' to a unique value not used by other sports in your configuration"
+
+
+def _suggest_pattern_set_fix(path: str, message: str, code: str) -> Optional[str]:
+    """Generate fix suggestion for unknown pattern set errors."""
+    # Try to extract the unknown pattern set name from the message
+    match = re.search(r"Unknown pattern set '([^']+)'", message)
+    if match:
+        unknown_name = match.group(1)
+        return f"Either define '{unknown_name}' in the pattern_sets section or remove it from this sport's pattern_sets list. Check for typos in the pattern set name."
+    return "Either define the pattern set in the pattern_sets section or remove it from this sport's pattern_sets list"
+
+
+def _suggest_load_config_fix(path: str, message: str, code: str) -> Optional[str]:
+    """Generate fix suggestion for configuration file loading errors."""
+    if "No such file" in message or "not found" in message.lower():
+        return "Ensure the configuration file path is correct and the file exists"
+    if "Permission denied" in message:
+        return "Check file permissions and ensure the application has read access to the configuration file"
+    if "YAML" in message or "parse" in message.lower():
+        return "Fix YAML syntax errors. Common issues: incorrect indentation, missing colons, unquoted special characters"
+    return "Check the configuration file for syntax errors or file access issues"
+
+
+def _suggest_metadata_structure_fix(path: str, message: str, code: str) -> Optional[str]:
+    """Generate fix suggestion for metadata structure errors."""
+    return "The metadata field must be an object/mapping with fields like 'url', 'show_key', etc. Remove or restructure this field."
+
+
+def _suggest_variant_structure_fix(path: str, message: str, code: str) -> Optional[str]:
+    """Generate fix suggestion for variant structure errors."""
+    return "Each variant entry must be an object/mapping with fields like 'id', 'name', 'metadata', etc."
+
+
+# Registry mapping error codes to fix suggestion generators
+FIX_SUGGESTION_REGISTRY: Dict[str, FixSuggestionGenerator] = {
+    "schema": _suggest_schema_fix,
+    "flush-time": _suggest_flush_time_fix,
+    "metadata-url": _suggest_metadata_url_fix,
+    "metadata-missing": _suggest_metadata_missing_fix,
+    "duplicate-id": _suggest_duplicate_id_fix,
+    "pattern-set": _suggest_pattern_set_fix,
+    "load-config": _suggest_load_config_fix,
+    "metadata-structure": _suggest_metadata_structure_fix,
+    "variant-structure": _suggest_variant_structure_fix,
+}
+
+
+def get_fix_suggestion(issue: ValidationIssue) -> Optional[str]:
+    """Get a fix suggestion for a validation issue.
+
+    Args:
+        issue: The ValidationIssue to generate a suggestion for
+
+    Returns:
+        A fix suggestion string, or None if no suggestion is available
+    """
+    generator = FIX_SUGGESTION_REGISTRY.get(issue.code)
+    if generator:
+        return generator(issue.path, issue.message, issue.code)
+    return None
 
 
 def extract_yaml_line_numbers(yaml_content: str) -> Dict[str, int]:
@@ -652,5 +764,7 @@ __all__ = [
     "CONFIG_SCHEMA",
     "extract_yaml_line_numbers",
     "extract_yaml_line_numbers_from_file",
+    "get_fix_suggestion",
+    "FIX_SUGGESTION_REGISTRY",
 ]
 
