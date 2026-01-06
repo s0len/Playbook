@@ -660,6 +660,41 @@ class Processor:
         # Log the table
         LOGGER.log(level, table_output)
 
+        # Add sport-by-sport breakdown table if verbose or there are issues
+        if show_entries or stats.errors or stats.warnings or (self._plex_sync_stats and self._plex_sync_stats.errors):
+            # Build sports_by_id dictionary for the breakdown table
+            sports_by_id = {sport.id: sport for sport in self.config.sports}
+
+            if is_terminal:
+                from io import StringIO
+                from rich.console import Console
+
+                renderer = SummaryTableRenderer()
+                sport_table = renderer.render_sport_breakdown_table(
+                    stats=stats,
+                    sports_by_id=sports_by_id,
+                    processed_by_sport=stats.processed_by_sport,
+                )
+
+                if sport_table:
+                    # Render the sport breakdown table to a string with ANSI colors
+                    sport_table_buffer = StringIO()
+                    sport_table_console = Console(file=sport_table_buffer, force_terminal=True, width=120)
+                    sport_table_console.print()
+                    sport_table_console.print(sport_table)
+                    sport_table_output = sport_table_buffer.getvalue()
+                    LOGGER.log(level, sport_table_output)
+            else:
+                # Render as plain text when output is piped or redirected
+                sport_table_output = SummaryTableRenderer.render_sport_breakdown_plain_text(
+                    stats=stats,
+                    sports_by_id=sports_by_id,
+                    processed_by_sport=stats.processed_by_sport,
+                )
+
+                if sport_table_output:
+                    LOGGER.log(level, sport_table_output)
+
         # Add detailed sections if needed
         if show_entries or stats.errors or stats.warnings or (self._plex_sync_stats and self._plex_sync_stats.errors):
             builder = LogBlockBuilder("Details", pad_top=False)
