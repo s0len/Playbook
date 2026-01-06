@@ -16,6 +16,12 @@ class CommandHelp:
     examples: List[Tuple[str, str]] = field(default_factory=list)
     """List of (description, command) tuples showing usage examples."""
 
+    brief_examples: List[Tuple[str, str]] = field(default_factory=list)
+    """Brief examples shown in --help (2-3 most common use cases)."""
+
+    extended_examples: List[Tuple[str, str]] = field(default_factory=list)
+    """Extended examples shown in --examples (comprehensive cookbook-style)."""
+
     env_vars: List[Tuple[str, str]] = field(default_factory=list)
     """List of (variable_name, description) tuples documenting environment variables."""
 
@@ -25,6 +31,7 @@ class CommandHelp:
 
 # Help content for the 'run' command
 RUN_COMMAND_HELP = CommandHelp(
+    # Legacy examples field (kept for backward compatibility)
     examples=[
         (
             "Basic dry-run to preview what would happen without modifying files",
@@ -38,6 +45,40 @@ RUN_COMMAND_HELP = CommandHelp(
             "Watch mode: continuously monitor source directory for new files",
             "playbook run --watch",
         ),
+    ],
+    # Brief examples shown in --help
+    brief_examples=[
+        (
+            "Basic dry-run to preview what would happen without modifying files",
+            "playbook run --dry-run --verbose",
+        ),
+        (
+            "Run once and process all files in source directory",
+            "playbook run --config /config/playbook.yaml",
+        ),
+        (
+            "Watch mode: continuously monitor source directory for new files",
+            "playbook run --watch",
+        ),
+    ],
+    # Extended examples shown in --examples
+    extended_examples=[
+        (
+            "Basic dry-run to preview what would happen without modifying files",
+            "playbook run --dry-run --verbose",
+        ),
+        (
+            "Run once and process all files in source directory",
+            "playbook run --config /config/playbook.yaml",
+        ),
+        (
+            "Watch mode: continuously monitor source directory for new files",
+            "playbook run --watch",
+        ),
+        (
+            "Disable watch mode even if enabled in config",
+            "playbook run --no-watch",
+        ),
         (
             "Clear the processed file cache before running",
             "playbook run --clear-processed-cache",
@@ -47,12 +88,24 @@ RUN_COMMAND_HELP = CommandHelp(
             "playbook run --trace-matches --trace-output /cache/traces",
         ),
         (
+            "Custom log levels: DEBUG to file, INFO to console",
+            "playbook run --log-level DEBUG --console-level INFO",
+        ),
+        (
             "Docker: dry-run with verbose logging",
             "docker run --rm -e DRY_RUN=true -e VERBOSE=true -v /config:/config ghcr.io/s0len/playbook:latest",
         ),
         (
             "Docker: continuous watch mode for automated processing",
             "docker run -d -e WATCH_MODE=true -v /config:/config -v /downloads:/data/source ghcr.io/s0len/playbook:latest",
+        ),
+        (
+            "Docker: process with custom config and clear cache",
+            "docker run --rm -e CLEAR_PROCESSED_CACHE=true -v /my-config:/config -v /downloads:/data/source ghcr.io/s0len/playbook:latest",
+        ),
+        (
+            "Python module: run from source with custom config",
+            "python -m playbook.cli run --config ./playbook.yaml --dry-run",
         ),
     ],
     env_vars=[
@@ -86,7 +139,30 @@ RUN_COMMAND_HELP = CommandHelp(
 
 # Help content for the 'validate-config' command
 VALIDATE_CONFIG_COMMAND_HELP = CommandHelp(
+    # Legacy examples field (kept for backward compatibility)
     examples=[
+        (
+            "Validate configuration file for errors",
+            "playbook validate-config --config /config/playbook.yaml",
+        ),
+        (
+            "Show diff against sample configuration to see customizations",
+            "playbook validate-config --diff-sample",
+        ),
+    ],
+    # Brief examples shown in --help
+    brief_examples=[
+        (
+            "Validate configuration file for errors",
+            "playbook validate-config --config /config/playbook.yaml",
+        ),
+        (
+            "Show diff against sample configuration to see customizations",
+            "playbook validate-config --diff-sample",
+        ),
+    ],
+    # Extended examples shown in --examples
+    extended_examples=[
         (
             "Validate configuration file for errors",
             "playbook validate-config --config /config/playbook.yaml",
@@ -100,12 +176,20 @@ VALIDATE_CONFIG_COMMAND_HELP = CommandHelp(
             "playbook validate-config --show-trace",
         ),
         (
+            "Combine diff and trace for comprehensive debugging",
+            "playbook validate-config --diff-sample --show-trace",
+        ),
+        (
             "Docker: validate configuration in CI/CD pipeline",
             "docker run --rm -v /config:/config ghcr.io/s0len/playbook:latest validate-config --show-trace",
         ),
         (
             "CI/CD: exit with non-zero code on validation failure",
             "playbook validate-config || exit 1",
+        ),
+        (
+            "Python module: validate from source",
+            "python -m playbook.cli validate-config --config ./playbook.yaml",
         ),
     ],
     env_vars=[
@@ -123,6 +207,7 @@ VALIDATE_CONFIG_COMMAND_HELP = CommandHelp(
 
 # Help content for the 'kometa-trigger' command
 KOMETA_TRIGGER_COMMAND_HELP = CommandHelp(
+    # Legacy examples field (kept for backward compatibility)
     examples=[
         (
             "Manually trigger Kometa using configuration settings",
@@ -131,6 +216,32 @@ KOMETA_TRIGGER_COMMAND_HELP = CommandHelp(
         (
             "Override trigger mode to use Docker instead of Kubernetes",
             "playbook kometa-trigger --mode docker",
+        ),
+    ],
+    # Brief examples shown in --help
+    brief_examples=[
+        (
+            "Manually trigger Kometa using configuration settings",
+            "playbook kometa-trigger --config /config/playbook.yaml",
+        ),
+        (
+            "Override trigger mode to use Docker instead of Kubernetes",
+            "playbook kometa-trigger --mode docker",
+        ),
+    ],
+    # Extended examples shown in --examples
+    extended_examples=[
+        (
+            "Manually trigger Kometa using configuration settings",
+            "playbook kometa-trigger --config /config/playbook.yaml",
+        ),
+        (
+            "Override trigger mode to use Docker instead of Kubernetes",
+            "playbook kometa-trigger --mode docker",
+        ),
+        (
+            "Override trigger mode to use Kubernetes",
+            "playbook kometa-trigger --mode kubernetes",
         ),
         (
             "Trigger with verbose logging to debug issues",
@@ -143,6 +254,10 @@ KOMETA_TRIGGER_COMMAND_HELP = CommandHelp(
         (
             "Kubernetes: manually trigger metadata refresh after bulk imports",
             "kubectl exec -n media playbook -- python -m playbook.cli kometa-trigger --mode kubernetes",
+        ),
+        (
+            "Python module: trigger from source with custom config",
+            "python -m playbook.cli kometa-trigger --config ./playbook.yaml --mode docker",
         ),
     ],
     env_vars=[

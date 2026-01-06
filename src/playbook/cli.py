@@ -15,7 +15,7 @@ from rich.logging import RichHandler
 
 from .command_help import get_command_help
 from .config import AppConfig, Settings, load_config
-from .help_formatter import RichHelpFormatter
+from .help_formatter import RichHelpFormatter, render_extended_examples
 from .kometa_trigger import build_kometa_trigger
 from .processor import Processor, TraceOptions
 from .utils import load_yaml_file
@@ -47,7 +47,8 @@ def _make_help_formatter(command_name: str):
     class CommandHelpFormatter(RichHelpFormatter):
         def format_help(self) -> str:
             # Add the command-specific content before formatting
-            self.add_examples(help_content.examples)
+            # Use brief_examples for --help to keep it concise
+            self.add_examples(help_content.brief_examples)
             self.add_environment_variables(help_content.env_vars)
             self.add_tips(help_content.tips)
             return super().format_help()
@@ -136,6 +137,11 @@ def _add_run_subparser(subparsers) -> None:
         formatter_class=_make_help_formatter("run"),
     )
     run_parser.add_argument(
+        "--examples",
+        action="store_true",
+        help="Show comprehensive cookbook-style examples and exit",
+    )
+    run_parser.add_argument(
         "--config",
         type=Path,
         default=Path(os.getenv("CONFIG_PATH", "/config/playbook.yaml")),
@@ -204,6 +210,11 @@ def _add_validate_config_subparser(subparsers) -> None:
         formatter_class=_make_help_formatter("validate-config"),
     )
     validate_parser.add_argument(
+        "--examples",
+        action="store_true",
+        help="Show comprehensive cookbook-style examples and exit",
+    )
+    validate_parser.add_argument(
         "--config",
         type=Path,
         default=Path(os.getenv("CONFIG_PATH", "/config/playbook.yaml")),
@@ -228,6 +239,11 @@ def _add_kometa_trigger_subparser(subparsers) -> None:
         help="Manually trigger Kometa",
         description="Trigger Kometa manually via Playbook",
         formatter_class=_make_help_formatter("kometa-trigger"),
+    )
+    trigger_parser.add_argument(
+        "--examples",
+        action="store_true",
+        help="Show comprehensive cookbook-style examples and exit",
     )
     trigger_parser.add_argument(
         "--config",
@@ -619,6 +635,14 @@ def _print_sample_diff(sample_path: Path, target_path: Path) -> None:
 
 def main(argv: Optional[Tuple[str, ...]] = None) -> int:
     args = parse_args(argv)
+
+    # Handle --examples flag for all commands
+    if getattr(args, "examples", False):
+        command_name = getattr(args, "command", "run")
+        help_content = get_command_help(command_name)
+        render_extended_examples(command_name, help_content.extended_examples, CONSOLE)
+        return 0
+
     if getattr(args, "command", "run") == "validate-config":
         return run_validate_config(args)
     if getattr(args, "command", "run") == "kometa-trigger":

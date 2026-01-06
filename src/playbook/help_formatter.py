@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import shutil
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from rich.console import Console
 from rich.markdown import Markdown
@@ -170,6 +170,9 @@ class RichHelpFormatter(argparse.HelpFormatter):
         Returns:
             Formatted examples string
         """
+        if not self._examples:
+            return ""
+
         with self.console.capture() as capture:
             self.console.print(Text("Examples:", style="bold cyan"))
             self.console.print()
@@ -183,6 +186,10 @@ class RichHelpFormatter(argparse.HelpFormatter):
 
                 if i < len(self._examples):
                     self.console.print()  # Spacing between examples
+
+            # Add note about --examples flag
+            self.console.print()
+            self.console.print("  Run with --examples to see more comprehensive usage examples", style="dim italic")
 
         return capture.get()
 
@@ -225,3 +232,104 @@ class RichHelpFormatter(argparse.HelpFormatter):
                 self.console.print(f"  • {tip}", style="yellow")
 
         return capture.get()
+
+
+def render_extended_examples(
+    command_name: str,
+    examples: List[Tuple[str, str]],
+    console: Optional[Console] = None,
+) -> None:
+    """
+    Render extended examples in a comprehensive cookbook-style format.
+
+    Args:
+        command_name: Name of the command (for the title)
+        examples: List of (description, command) tuples
+        console: Rich Console instance (creates new if None)
+    """
+    if console is None:
+        console = Console()
+
+    # Render title
+    title = Text()
+    title.append(f"Extended Examples: ", style="bold white")
+    title.append(f"playbook {command_name}", style="bold cyan")
+
+    console.print()
+    console.print(Panel(title, style="bold cyan", border_style="cyan"))
+    console.print()
+
+    # Group examples by category
+    cli_examples = []
+    docker_examples = []
+    kubernetes_examples = []
+    python_examples = []
+    other_examples = []
+
+    for description, command in examples:
+        if command.startswith("docker "):
+            docker_examples.append((description, command))
+        elif command.startswith("kubectl "):
+            kubernetes_examples.append((description, command))
+        elif command.startswith("python "):
+            python_examples.append((description, command))
+        elif command.startswith(f"playbook {command_name}") or command.startswith("playbook "):
+            cli_examples.append((description, command))
+        else:
+            other_examples.append((description, command))
+
+    # Render CLI examples
+    if cli_examples:
+        console.print(Text("Command-Line Interface", style="bold yellow"))
+        console.print()
+        for i, (description, command) in enumerate(cli_examples, 1):
+            console.print(f"  {i}. {description}", style="white")
+            console.print(f"     $ {command}", style="green")
+            console.print()
+
+    # Render Docker examples
+    if docker_examples:
+        console.print(Text("Docker Usage", style="bold yellow"))
+        console.print()
+        for i, (description, command) in enumerate(docker_examples, 1):
+            console.print(f"  {i}. {description}", style="white")
+            console.print(f"     $ {command}", style="blue")
+            console.print()
+
+    # Render Kubernetes examples
+    if kubernetes_examples:
+        console.print(Text("Kubernetes Usage", style="bold yellow"))
+        console.print()
+        for i, (description, command) in enumerate(kubernetes_examples, 1):
+            console.print(f"  {i}. {description}", style="white")
+            console.print(f"     $ {command}", style="magenta")
+            console.print()
+
+    # Render Python module examples
+    if python_examples:
+        console.print(Text("Python Module Usage", style="bold yellow"))
+        console.print()
+        for i, (description, command) in enumerate(python_examples, 1):
+            console.print(f"  {i}. {description}", style="white")
+            console.print(f"     $ {command}", style="cyan")
+            console.print()
+
+    # Render other examples
+    if other_examples:
+        console.print(Text("Other Examples", style="bold yellow"))
+        console.print()
+        for i, (description, command) in enumerate(other_examples, 1):
+            console.print(f"  {i}. {description}", style="white")
+            console.print(f"     $ {command}", style="dim yellow")
+            console.print()
+
+    # Footer note
+    console.print()
+    console.print(
+        Panel(
+            "💡 Tip: Use --help to see concise help with common options",
+            style="dim",
+            border_style="dim",
+        )
+    )
+    console.print()
