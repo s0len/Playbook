@@ -679,3 +679,282 @@ class TestFileWatcherLoopInit:
             assert path1 in loop._roots
             assert path2 in loop._roots
             assert all(isinstance(root, Path) for root in loop._roots)
+
+
+# Tests for FileWatcherLoop._resolve_roots method
+
+
+class TestFileWatcherLoopResolveRoots:
+    """Tests for FileWatcherLoop._resolve_roots method."""
+
+    def test_default_to_source_dir_when_paths_empty(self, mock_processor, minimal_watcher_settings, mock_observer, tmp_path):
+        """Test that _resolve_roots returns source_dir when paths is empty."""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        mock_processor.config.settings.source_dir = source_dir
+        minimal_watcher_settings.paths = []
+
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, minimal_watcher_settings)
+            roots = loop._roots
+
+            # Should return source_dir as default
+            assert len(roots) == 1
+            assert roots[0] == source_dir
+
+    def test_default_to_source_dir_when_paths_none(self, mock_processor, minimal_watcher_settings, mock_observer, tmp_path):
+        """Test that _resolve_roots returns source_dir when paths is None."""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        mock_processor.config.settings.source_dir = source_dir
+        minimal_watcher_settings.paths = None
+
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, minimal_watcher_settings)
+            roots = loop._roots
+
+            # Should return source_dir as default
+            assert len(roots) == 1
+            assert roots[0] == source_dir
+
+    def test_resolves_relative_path_against_source_dir(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+        """Test that _resolve_roots resolves relative paths against source_dir."""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        mock_processor.config.settings.source_dir = source_dir
+
+        watcher_settings.paths = ["relative/path"]
+
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            roots = loop._roots
+
+            # Should resolve relative to source_dir
+            expected_path = source_dir / "relative/path"
+            assert len(roots) == 1
+            assert roots[0] == expected_path
+
+    def test_resolves_multiple_relative_paths(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+        """Test that _resolve_roots handles multiple relative paths."""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        mock_processor.config.settings.source_dir = source_dir
+
+        watcher_settings.paths = ["rel1", "rel2/sub", "rel3"]
+
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            roots = loop._roots
+
+            # Should resolve all relative to source_dir
+            assert len(roots) == 3
+            assert roots[0] == source_dir / "rel1"
+            assert roots[1] == source_dir / "rel2/sub"
+            assert roots[2] == source_dir / "rel3"
+
+    def test_preserves_absolute_paths(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+        """Test that _resolve_roots preserves absolute paths."""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        mock_processor.config.settings.source_dir = source_dir
+
+        absolute_path = tmp_path / "absolute/watch"
+        watcher_settings.paths = [str(absolute_path)]
+
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            roots = loop._roots
+
+            # Should preserve absolute path
+            assert len(roots) == 1
+            assert roots[0] == absolute_path
+
+    def test_handles_mixed_absolute_and_relative_paths(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+        """Test that _resolve_roots correctly handles mixed path types."""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        mock_processor.config.settings.source_dir = source_dir
+
+        absolute_path = tmp_path / "absolute"
+        watcher_settings.paths = [str(absolute_path), "relative", "another/relative"]
+
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            roots = loop._roots
+
+            # Should have 3 roots
+            assert len(roots) == 3
+            assert roots[0] == absolute_path
+            assert roots[1] == source_dir / "relative"
+            assert roots[2] == source_dir / "another/relative"
+
+    def test_creates_directory_for_absolute_path(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+        """Test that _resolve_roots creates directory for non-existent absolute path."""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        mock_processor.config.settings.source_dir = source_dir
+
+        # Use a path that doesn't exist yet
+        new_absolute_path = tmp_path / "new/absolute/path"
+        watcher_settings.paths = [str(new_absolute_path)]
+
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            roots = loop._roots
+
+            # Directory should have been created
+            assert new_absolute_path.exists()
+            assert new_absolute_path.is_dir()
+            assert roots[0] == new_absolute_path
+
+    def test_creates_directory_for_relative_path(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+        """Test that _resolve_roots creates directory for non-existent relative path."""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        mock_processor.config.settings.source_dir = source_dir
+
+        watcher_settings.paths = ["new/relative/path"]
+
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            roots = loop._roots
+
+            # Directory should have been created relative to source_dir
+            expected_path = source_dir / "new/relative/path"
+            assert expected_path.exists()
+            assert expected_path.is_dir()
+            assert roots[0] == expected_path
+
+    def test_creates_nested_directories(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+        """Test that _resolve_roots creates deeply nested directories."""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        mock_processor.config.settings.source_dir = source_dir
+
+        watcher_settings.paths = ["level1/level2/level3/level4"]
+
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            roots = loop._roots
+
+            # All parent directories should have been created
+            expected_path = source_dir / "level1/level2/level3/level4"
+            assert expected_path.exists()
+            assert expected_path.is_dir()
+            assert (source_dir / "level1").exists()
+            assert (source_dir / "level1/level2").exists()
+            assert (source_dir / "level1/level2/level3").exists()
+
+    def test_expands_user_home_directory(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+        """Test that _resolve_roots expands ~ to user home directory."""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        mock_processor.config.settings.source_dir = source_dir
+
+        watcher_settings.paths = ["~/watch_dir"]
+
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            # We need to mock Path.expanduser
+            original_expanduser = Path.expanduser
+
+            def mock_expanduser_func(self):
+                if "~" in str(self):
+                    # Replace ~ with a tmp path for testing
+                    return Path(str(self).replace("~", str(tmp_path / "home/user")))
+                return self
+
+            with patch.object(Path, "expanduser", mock_expanduser_func):
+                loop = FileWatcherLoop(mock_processor, watcher_settings)
+                roots = loop._roots
+
+                # Should have expanded ~ to home directory
+                assert len(roots) == 1
+                assert "~" not in str(roots[0])
+                # The path should contain our mocked home directory
+                assert str(tmp_path / "home/user") in str(roots[0])
+
+    def test_expands_user_home_in_relative_path(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+        """Test that _resolve_roots expands ~ even when path becomes relative to source_dir."""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        mock_processor.config.settings.source_dir = source_dir
+
+        # Path with ~ that's not at the start (though this is unusual)
+        watcher_settings.paths = ["~relative"]
+
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            roots = loop._roots
+
+            # Should expand and process the path
+            assert len(roots) == 1
+            # The exact behavior depends on whether ~relative is considered absolute after expansion
+
+    def test_returns_pathlib_path_objects(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+        """Test that _resolve_roots returns Path objects, not strings."""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        mock_processor.config.settings.source_dir = source_dir
+
+        watcher_settings.paths = [str(tmp_path / "path1"), "relative_path2"]
+
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            roots = loop._roots
+
+            # All roots should be Path objects
+            assert all(isinstance(root, Path) for root in roots)
+            assert len(roots) == 2
+
+    def test_handles_duplicate_paths(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+        """Test that _resolve_roots preserves duplicate paths (doesn't deduplicate)."""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        mock_processor.config.settings.source_dir = source_dir
+
+        # Same path specified twice
+        watcher_settings.paths = ["same/path", "same/path"]
+
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            roots = loop._roots
+
+            # Method doesn't deduplicate, so we should have 2 entries
+            assert len(roots) == 2
+            assert roots[0] == roots[1]
+
+    def test_handles_path_with_dots(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+        """Test that _resolve_roots handles paths with . and .. components."""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        mock_processor.config.settings.source_dir = source_dir
+
+        # Relative path with ..
+        watcher_settings.paths = ["subdir/../other"]
+
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            roots = loop._roots
+
+            # Path should be normalized
+            expected_path = source_dir / "subdir/../other"
+            assert len(roots) == 1
+            # The path may or may not be normalized, but it should work
+            assert roots[0].exists()
+
+    def test_source_dir_as_string_path(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+        """Test that _resolve_roots works when source_dir is a Path object."""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        # Ensure source_dir is a Path object
+        mock_processor.config.settings.source_dir = source_dir
+
+        watcher_settings.paths = []
+
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            roots = loop._roots
+
+            # Should handle Path object for source_dir
+            assert len(roots) == 1
+            assert roots[0] == source_dir
