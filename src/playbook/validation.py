@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import datetime as dt
+import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from jsonschema import Draft7Validator
@@ -280,6 +282,155 @@ CONFIG_SCHEMA: Dict[str, Any] = {
 }
 
 
+def extract_yaml_line_numbers(yaml_content: str) -> Dict[str, int]:
+    """Extract line numbers for YAML keys from content.
+
+    This function parses YAML content and creates a mapping from key paths
+    to their line numbers in the original file. It attempts to use ruamel.yaml
+    if available for accurate line tracking, otherwise falls back to a regex-based
+    approach.
+
+    Args:
+        yaml_content: The YAML file content as a string
+
+    Returns:
+        Dictionary mapping key paths (e.g., "sports[0].id") to line numbers
+
+    Example:
+        >>> content = "settings:\\n  source_dir: /path\\n"
+        >>> line_map = extract_yaml_line_numbers(content)
+        >>> line_map.get("settings.source_dir")
+        2
+    """
+    line_map: Dict[str, int] = {}
+
+    # Try ruamel.yaml first for accurate line number tracking
+    try:
+        from ruamel.yaml import YAML
+
+        yaml_parser = YAML()
+        data = yaml_parser.load(yaml_content)
+
+        def _traverse_ruamel(obj: Any, path: str = "") -> None:
+            """Recursively traverse ruamel.yaml CommentedMap to extract line numbers."""
+            try:
+                from ruamel.yaml.comments import CommentedMap, CommentedSeq
+
+                if isinstance(obj, CommentedMap):
+                    for key, value in obj.items():
+                        key_path = f"{path}.{key}" if path else str(key)
+                        # Get line number for this key (lc = line/column info)
+                        if hasattr(obj, 'lc') and obj.lc.data:
+                            line_info = obj.lc.data.get(key)
+                            if line_info is not None:
+                                # line_info is typically (line, col, ...), 0-indexed
+                                line_map[key_path] = line_info[0] + 1
+                        _traverse_ruamel(value, key_path)
+
+                elif isinstance(obj, CommentedSeq):
+                    for index, item in enumerate(obj):
+                        item_path = f"{path}[{index}]"
+                        # Get line number for this array item
+                        if hasattr(obj, 'lc') and obj.lc.data:
+                            line_info = obj.lc.data.get(index)
+                            if line_info is not None:
+                                line_map[item_path] = line_info[0] + 1
+                        _traverse_ruamel(item, item_path)
+
+            except ImportError:
+                pass
+
+        _traverse_ruamel(data)
+
+        if line_map:
+            return line_map
+
+    except ImportError:
+        pass  # ruamel.yaml not available, fall back to regex approach
+    except Exception:  # noqa: BLE001
+        pass  # Any parsing errors, fall back to regex approach
+
+    # Fallback: regex-based line number extraction
+    # This approach is less accurate but works without ruamel.yaml
+    lines = yaml_content.split('\n')
+    current_path: List[str] = []
+    array_indices: Dict[str, int] = {}
+
+    for line_num, line in enumerate(lines, start=1):
+        # Skip empty lines and comments
+        stripped = line.lstrip()
+        if not stripped or stripped.startswith('#'):
+            continue
+
+        # Calculate indentation level
+        indent = len(line) - len(stripped)
+
+        # Match key-value pairs (key: value or key:)
+        key_match = re.match(r'^([a-zA-Z_][a-zA-Z0-9_-]*)\s*:\s*(.*)$', stripped)
+        if key_match:
+            key = key_match.group(1)
+            value = key_match.group(2).strip()
+
+            # Determine the depth based on indentation (assuming 2 spaces per level)
+            depth = indent // 2
+
+            # Adjust current path to match depth
+            current_path = current_path[:depth]
+            current_path.append(key)
+
+            # Build the full path
+            path_str = '.'.join(current_path)
+            line_map[path_str] = line_num
+
+            # Reset array indices for this path
+            array_indices[path_str] = 0
+
+            continue
+
+        # Match array items (- value or - )
+        array_match = re.match(r'^-\s+(.*)$', stripped)
+        if array_match and current_path:
+            # Determine the parent array path
+            depth = indent // 2
+            parent_path = '.'.join(current_path[:depth])
+
+            if parent_path not in array_indices:
+                array_indices[parent_path] = 0
+            else:
+                array_indices[parent_path] += 1
+
+            index = array_indices[parent_path]
+            array_path = f"{parent_path}[{index}]"
+            line_map[array_path] = line_num
+
+            # Check if the array item has an inline key-value
+            item_content = array_match.group(1).strip()
+            inline_key_match = re.match(r'^([a-zA-Z_][a-zA-Z0-9_-]*)\s*:\s*(.*)$', item_content)
+            if inline_key_match:
+                inline_key = inline_key_match.group(1)
+                inline_path = f"{array_path}.{inline_key}"
+                line_map[inline_path] = line_num
+
+    return line_map
+
+
+def extract_yaml_line_numbers_from_file(file_path: Path) -> Dict[str, int]:
+    """Extract line numbers for YAML keys from a file.
+
+    Args:
+        file_path: Path to the YAML file
+
+    Returns:
+        Dictionary mapping key paths to line numbers
+    """
+    try:
+        with file_path.open('r', encoding='utf-8') as f:
+            content = f.read()
+        return extract_yaml_line_numbers(content)
+    except Exception:  # noqa: BLE001
+        return {}
+
+
 def _format_jsonschema_path(path: Sequence[Any]) -> str:
     if not path:
         return "<root>"
@@ -454,5 +605,12 @@ def _validate_semantics(data: Dict[str, Any], report: ValidationReport) -> None:
                 )
 
 
-__all__ = ["ValidationIssue", "ValidationReport", "validate_config_data", "CONFIG_SCHEMA"]
+__all__ = [
+    "ValidationIssue",
+    "ValidationReport",
+    "validate_config_data",
+    "CONFIG_SCHEMA",
+    "extract_yaml_line_numbers",
+    "extract_yaml_line_numbers_from_file",
+]
 
