@@ -1229,7 +1229,7 @@ class Processor:
             )
 
         if settings.dry_run:
-            stats.register_processed()
+            stats.register_processed(sport_id=match.sport.id)
             self._record_destination_touch(destination)
             self._sports_with_processed_files.add(match.sport.id)
             event.action = "dry-run"
@@ -1239,7 +1239,7 @@ class Processor:
 
         result = link_file(match.source_path, destination, mode=link_mode)
         if result.created:
-            stats.register_processed()
+            stats.register_processed(sport_id=match.sport.id)
             self._record_destination_touch(destination)
             self._sports_with_processed_files.add(match.sport.id)
             self.processed_cache.mark_processed(
