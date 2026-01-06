@@ -200,10 +200,17 @@ Add an `autoscan` notification target to retrigger Plex/Emby/Jellyfin scans imme
 
 ```--8<-- "snippets/notifications-autoscan.md"```
 
+### ⚠️ Security Warning: SSL/TLS Verification
+
+**IMPORTANT:** The `verify_ssl` setting controls SSL/TLS certificate verification for HTTPS connections to Autoscan. Disabling this verification (`verify_ssl: false`) exposes your system to **man-in-the-middle (MITM) attacks** where an attacker can intercept and modify the communication between Playbook and Autoscan.
+
+- **Production environments:** ALWAYS keep `verify_ssl: true` (the default)
+- **Development/testing only:** `verify_ssl: false` may be used temporarily with self-signed certificates, but you should properly configure certificate trust stores instead
+- **Better alternatives:** Add self-signed certificates to your system's trust store or use a proper CA-signed certificate rather than disabling verification
+
 Guidelines:
 
-- `rewrite` entries translate Playbook’s container paths into whatever Autoscan/Plex can see (add as many mappings as needed).
-- `verify_ssl: false` is handy for lab clusters using self-signed certs (flip it back to `true` in production).
+- `rewrite` entries translate Playbook's container paths into whatever Autoscan/Plex can see (add as many mappings as needed).
 - Combine Autoscan pings with watcher mode for near-instant Plex updates—new files drop, Playbook links them, Autoscan triggers a scan.
 - Want extra resiliency? Keep one Autoscan target per Plex server/library pair so failures are isolated.
 
