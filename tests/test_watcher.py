@@ -112,4 +112,39 @@ def mock_moved_event():
     return event
 
 
-# Test infrastructure is now set up for subsequent subtasks
+# Tests for WatchdogUnavailableError exception
+
+
+class TestWatchdogUnavailableError:
+    """Tests for the WatchdogUnavailableError exception."""
+
+    def test_exception_can_be_raised(self):
+        """Test that WatchdogUnavailableError can be raised and caught."""
+        with pytest.raises(WatchdogUnavailableError):
+            raise WatchdogUnavailableError("Test message")
+
+    def test_exception_inherits_from_runtime_error(self):
+        """Test that WatchdogUnavailableError is a RuntimeError."""
+        error = WatchdogUnavailableError("Test message")
+        assert isinstance(error, RuntimeError)
+
+    def test_exception_message_format(self):
+        """Test that exception message is preserved correctly."""
+        message = "Custom error message"
+        error = WatchdogUnavailableError(message)
+        assert str(error) == message
+
+    def test_exception_with_standard_message(self):
+        """Test exception with the standard watchdog missing message."""
+        expected_message = "Filesystem watcher mode requires the 'watchdog' dependency. Install via 'pip install watchdog'."
+        error = WatchdogUnavailableError(expected_message)
+        assert str(error) == expected_message
+
+    def test_exception_raised_when_observer_none(self, mock_processor, watcher_settings):
+        """Test that FileWatcherLoop raises WatchdogUnavailableError when Observer is None."""
+        with patch("playbook.watcher.Observer", None):
+            with pytest.raises(
+                WatchdogUnavailableError,
+                match=r"Filesystem watcher mode requires the 'watchdog' dependency"
+            ):
+                FileWatcherLoop(mock_processor, watcher_settings)
