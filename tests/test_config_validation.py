@@ -7,8 +7,11 @@ import pytest
 
 from playbook.utils import load_yaml_file
 from playbook.validation import (
+    FIX_SUGGESTION_REGISTRY,
+    ValidationIssue,
     extract_yaml_line_numbers,
     extract_yaml_line_numbers_from_file,
+    get_fix_suggestion,
     validate_config_data,
 )
 
@@ -346,4 +349,404 @@ def test_extract_yaml_line_numbers_inline_array_syntax() -> None:
     assert line_map.get("pattern_sets.common[1].regex") == 4
     assert line_map.get("pattern_sets.common[2]") == 5
     assert line_map.get("pattern_sets.common[2].regex") == 5
+
+
+# ============================================================================
+# Fix Suggestion Tests
+# ============================================================================
+
+
+def test_fix_suggestion_schema_required_property() -> None:
+    """Test fix suggestion for schema validation error: missing required property."""
+    issue = ValidationIssue(
+        severity="error",
+        path="sports[0]",
+        message="'id' is a required property",
+        code="schema",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "Add the required field" in suggestion
+
+
+def test_fix_suggestion_schema_wrong_type_string() -> None:
+    """Test fix suggestion for schema validation error: wrong type (string expected)."""
+    issue = ValidationIssue(
+        severity="error",
+        path="settings.source_dir",
+        message="123 is not of type 'string'",
+        code="schema",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "string" in suggestion.lower()
+
+
+def test_fix_suggestion_schema_wrong_type_object() -> None:
+    """Test fix suggestion for schema validation error: wrong type (object expected)."""
+    issue = ValidationIssue(
+        severity="error",
+        path="settings.notifications",
+        message="'value' is not of type 'object'",
+        code="schema",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "object" in suggestion.lower() or "mapping" in suggestion.lower()
+
+
+def test_fix_suggestion_schema_wrong_type_array() -> None:
+    """Test fix suggestion for schema validation error: wrong type (array expected)."""
+    issue = ValidationIssue(
+        severity="error",
+        path="sports",
+        message="'test' is not of type 'array'",
+        code="schema",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "array" in suggestion.lower() or "list" in suggestion.lower()
+
+
+def test_fix_suggestion_schema_wrong_type_boolean() -> None:
+    """Test fix suggestion for schema validation error: wrong type (boolean expected)."""
+    issue = ValidationIssue(
+        severity="error",
+        path="settings.dry_run",
+        message="'yes' is not of type 'boolean'",
+        code="schema",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "boolean" in suggestion.lower()
+
+
+def test_fix_suggestion_schema_wrong_type_number() -> None:
+    """Test fix suggestion for schema validation error: wrong type (number expected)."""
+    issue = ValidationIssue(
+        severity="error",
+        path="settings.file_watcher.debounce_seconds",
+        message="'five' is not of type 'integer'",
+        code="schema",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "number" in suggestion.lower()
+
+
+def test_fix_suggestion_schema_invalid_enum() -> None:
+    """Test fix suggestion for schema validation error: invalid enum value."""
+    issue = ValidationIssue(
+        severity="error",
+        path="settings.link_mode",
+        message="'invalid' is not one of ['hardlink', 'copy', 'symlink']",
+        code="schema",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "allowed values" in suggestion.lower() or "documentation" in suggestion.lower()
+
+
+def test_fix_suggestion_schema_generic() -> None:
+    """Test fix suggestion for generic schema validation error."""
+    issue = ValidationIssue(
+        severity="error",
+        path="settings.unknown",
+        message="Some other schema error",
+        code="schema",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "schema" in suggestion.lower() or "requirements" in suggestion.lower()
+
+
+def test_fix_suggestion_flush_time() -> None:
+    """Test fix suggestion for flush_time validation error."""
+    issue = ValidationIssue(
+        severity="error",
+        path="settings.notifications.flush_time",
+        message="flush_time must be in HH:MM or HH:MM:SS format",
+        code="flush-time",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "HH:MM" in suggestion
+    assert "00-23" in suggestion or "hour" in suggestion.lower()
+    assert "00-59" in suggestion or "minute" in suggestion.lower()
+
+
+def test_fix_suggestion_metadata_url() -> None:
+    """Test fix suggestion for blank metadata URL error."""
+    issue = ValidationIssue(
+        severity="error",
+        path="sports[0].metadata.url",
+        message="metadata.url must be a non-blank string",
+        code="metadata-url",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "URL" in suggestion
+    assert "non-empty" in suggestion.lower() or "valid" in suggestion.lower()
+
+
+def test_fix_suggestion_metadata_missing_sport() -> None:
+    """Test fix suggestion for missing metadata on sport (not variant)."""
+    issue = ValidationIssue(
+        severity="error",
+        path="sports[0].metadata",
+        message="Either metadata or variants must be provided",
+        code="metadata-missing",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "metadata" in suggestion.lower()
+    assert "variants" in suggestion.lower()
+
+
+def test_fix_suggestion_metadata_missing_variant() -> None:
+    """Test fix suggestion for missing metadata on variant."""
+    issue = ValidationIssue(
+        severity="error",
+        path="sports[0].variants[0].metadata",
+        message="Each variant must have metadata",
+        code="metadata-missing",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "metadata" in suggestion.lower()
+    assert "variant" in suggestion.lower()
+
+
+def test_fix_suggestion_duplicate_id() -> None:
+    """Test fix suggestion for duplicate sport ID error."""
+    issue = ValidationIssue(
+        severity="error",
+        path="sports[2].id",
+        message="Duplicate sport id 'formula1' at indices 0 and 2",
+        code="duplicate-id",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "unique" in suggestion.lower()
+    assert "id" in suggestion.lower()
+
+
+def test_fix_suggestion_pattern_set_with_name() -> None:
+    """Test fix suggestion for unknown pattern set error with specific name."""
+    issue = ValidationIssue(
+        severity="error",
+        path="sports[0].pattern_sets[0]",
+        message="Unknown pattern set 'my_custom_patterns' referenced",
+        code="pattern-set",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "my_custom_patterns" in suggestion
+    assert "define" in suggestion.lower() or "pattern_sets" in suggestion.lower()
+    assert "typo" in suggestion.lower()
+
+
+def test_fix_suggestion_pattern_set_generic() -> None:
+    """Test fix suggestion for unknown pattern set error without specific name."""
+    issue = ValidationIssue(
+        severity="error",
+        path="sports[0].pattern_sets[0]",
+        message="Unknown pattern set referenced",
+        code="pattern-set",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "pattern" in suggestion.lower()
+    assert "define" in suggestion.lower() or "remove" in suggestion.lower()
+
+
+def test_fix_suggestion_load_config_file_not_found() -> None:
+    """Test fix suggestion for config file not found error."""
+    issue = ValidationIssue(
+        severity="error",
+        path="",
+        message="No such file or directory: config.yaml",
+        code="load-config",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "file path" in suggestion.lower() or "file exists" in suggestion.lower()
+
+
+def test_fix_suggestion_load_config_permission_denied() -> None:
+    """Test fix suggestion for config file permission error."""
+    issue = ValidationIssue(
+        severity="error",
+        path="",
+        message="Permission denied: config.yaml",
+        code="load-config",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "permission" in suggestion.lower()
+    assert "access" in suggestion.lower() or "read" in suggestion.lower()
+
+
+def test_fix_suggestion_load_config_yaml_syntax() -> None:
+    """Test fix suggestion for config YAML syntax error."""
+    issue = ValidationIssue(
+        severity="error",
+        path="",
+        message="YAML syntax error: invalid indentation",
+        code="load-config",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "YAML" in suggestion or "syntax" in suggestion.lower()
+    assert "indentation" in suggestion.lower() or "colon" in suggestion.lower() or "quote" in suggestion.lower()
+
+
+def test_fix_suggestion_load_config_generic() -> None:
+    """Test fix suggestion for generic config load error."""
+    issue = ValidationIssue(
+        severity="error",
+        path="",
+        message="Unknown error loading configuration",
+        code="load-config",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "syntax" in suggestion.lower() or "access" in suggestion.lower()
+
+
+def test_fix_suggestion_metadata_structure() -> None:
+    """Test fix suggestion for metadata structure error."""
+    issue = ValidationIssue(
+        severity="error",
+        path="sports[0].metadata",
+        message="Metadata must be a mapping when provided",
+        code="metadata-structure",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "metadata" in suggestion.lower()
+    assert "object" in suggestion.lower() or "mapping" in suggestion.lower()
+
+
+def test_fix_suggestion_variant_structure() -> None:
+    """Test fix suggestion for variant structure error."""
+    issue = ValidationIssue(
+        severity="error",
+        path="sports[0].variants[0]",
+        message="Each variant must be a dict/mapping",
+        code="variant-structure",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is not None
+    assert "variant" in suggestion.lower()
+    assert "object" in suggestion.lower() or "mapping" in suggestion.lower()
+
+
+def test_fix_suggestion_registry_completeness() -> None:
+    """Test that all expected error codes have fix suggestion generators."""
+    expected_codes = [
+        "schema",
+        "flush-time",
+        "metadata-url",
+        "metadata-missing",
+        "duplicate-id",
+        "pattern-set",
+        "load-config",
+        "metadata-structure",
+        "variant-structure",
+    ]
+
+    for code in expected_codes:
+        assert code in FIX_SUGGESTION_REGISTRY, f"Missing fix suggestion generator for error code: {code}"
+        generator = FIX_SUGGESTION_REGISTRY[code]
+        assert callable(generator), f"Fix suggestion generator for {code} is not callable"
+
+
+def test_fix_suggestion_unknown_code() -> None:
+    """Test that unknown error codes return None for fix suggestion."""
+    issue = ValidationIssue(
+        severity="error",
+        path="some.path",
+        message="Some error message",
+        code="unknown-error-code",
+    )
+
+    suggestion = get_fix_suggestion(issue)
+
+    assert suggestion is None
+
+
+def test_fix_suggestions_integration_with_validation() -> None:
+    """Test that fix suggestions are automatically generated during validation."""
+    config = {
+        "settings": {
+            "notifications": {
+                "flush_time": "25:99",  # Invalid flush_time
+            }
+        },
+        "sports": [
+            {
+                "id": "test",
+                "metadata": {
+                    "url": "",  # Blank URL
+                },
+            }
+        ],
+    }
+
+    report = validate_config_data(config)
+
+    # Find the flush_time error
+    flush_time_errors = [e for e in report.errors if e.code == "flush-time"]
+    assert len(flush_time_errors) > 0
+    assert flush_time_errors[0].fix_suggestion is not None
+    assert "HH:MM" in flush_time_errors[0].fix_suggestion
+
+    # Find the metadata-url error
+    url_errors = [e for e in report.errors if e.code == "metadata-url"]
+    assert len(url_errors) > 0
+    assert url_errors[0].fix_suggestion is not None
+    assert "URL" in url_errors[0].fix_suggestion
 
