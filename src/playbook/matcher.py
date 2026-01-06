@@ -85,8 +85,9 @@ def _tokens_close(candidate: str, target: str) -> bool:
     return _token_similarity(candidate, target) >= 0.9
 
 
-def _resolve_session_lookup(session_lookup: Dict[str, str], token: str) -> Optional[str]:
-    direct = session_lookup.get(token)
+def _resolve_session_lookup(session_lookup: SessionLookupIndex, token: str) -> Optional[str]:
+    # Try exact match first
+    direct = session_lookup.get_direct(token)
     if direct:
         return direct
 
@@ -96,7 +97,8 @@ def _resolve_session_lookup(session_lookup: Dict[str, str], token: str) -> Optio
     best_key: Optional[str] = None
     best_score = 0.0
 
-    for candidate in session_lookup.keys():
+    # Use index to get only candidates matching first-char and length constraints
+    for candidate in session_lookup.get_candidates(token):
         if len(candidate) < 4:
             continue
         if not _tokens_close(candidate, token):
@@ -111,13 +113,14 @@ def _resolve_session_lookup(session_lookup: Dict[str, str], token: str) -> Optio
             best_score = score
 
     if best_key is not None and best_score >= 0.85:
-        return session_lookup[best_key]
+        return session_lookup.get_direct(best_key)
     return None
 
 
 from .config import PatternConfig, SeasonSelector, SportConfig
 from .parsers.structured_filename import StructuredName, build_canonical_filename, parse_structured_filename
 from .models import Episode, Season, Show
+from .session_index import SessionLookupIndex
 from .team_aliases import get_team_alias_map
 from .utils import normalize_token
 
@@ -139,23 +142,27 @@ _NOISE_TOKENS = (
 class PatternRuntime:
     config: PatternConfig
     regex: re.Pattern[str]
-    session_lookup: Dict[str, str]
+    session_lookup: SessionLookupIndex
 
 
-def _build_session_lookup(pattern: PatternConfig, season: Season) -> Dict[str, str]:
-    lookup: Dict[str, str] = {}
+def _build_session_lookup(pattern: PatternConfig, season: Season) -> SessionLookupIndex:
+    index = SessionLookupIndex()
     for episode in season.episodes:
         normalized = normalize_token(episode.title)
-        lookup[normalized] = episode.title
+        index.add(normalized, episode.title)
         for alias in episode.aliases:
-            lookup[normalize_token(alias)] = episode.title
+            index.add(normalize_token(alias), episode.title)
 
     for canonical, aliases in pattern.session_aliases.items():
         normalized = normalize_token(canonical)
-        lookup.setdefault(normalized, canonical)
+        # Only add if not already present (equivalent to setdefault behavior)
+        if index.get_direct(normalized) is None:
+            index.add(normalized, canonical)
         for alias in aliases:
-            lookup.setdefault(normalize_token(alias), canonical)
-    return lookup
+            normalized_alias = normalize_token(alias)
+            if index.get_direct(normalized_alias) is None:
+                index.add(normalized_alias, canonical)
+    return index
 
 
 def _resolve_selector_value(
@@ -295,7 +302,7 @@ def _select_season(show: Show, selector: SeasonSelector, match_groups: Dict[str,
 def _select_episode(
     pattern_config: PatternConfig,
     season: Season,
-    session_lookup: Dict[str, str],
+    session_lookup: SessionLookupIndex,
     match_groups: Dict[str, str],
     trace: Optional[Dict[str, Any]] = None,
 ) -> Optional[Episode]:
@@ -560,7 +567,7 @@ def _find_episode_across_seasons(
     *,
     exclude_season: Optional[Season] = None,
     trace_enabled: bool = False,
-) -> Optional[Tuple[Season, Episode, Dict[str, str], Dict[str, str], Optional[Dict[str, Any]]]]:
+) -> Optional[Tuple[Season, Episode, Dict[str, str], SessionLookupIndex, Optional[Dict[str, Any]]]]:
     for candidate in show.seasons:
         if exclude_season and candidate is exclude_season:
             continue
@@ -758,7 +765,7 @@ def compile_patterns(sport: SportConfig) -> List[PatternRuntime]:
             PatternRuntime(
                 config=pattern,
                 regex=pattern.compiled_regex(),
-                session_lookup={},
+                session_lookup=SessionLookupIndex(),
             )
         )
     return compiled
