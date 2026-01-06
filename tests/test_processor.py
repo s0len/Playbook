@@ -857,3 +857,62 @@ class TestExtractErrorContext:
 
         assert result is None
 
+
+def test_show_fingerprint_content_hash_serialization_roundtrip() -> None:
+    """Test that ShowFingerprint.to_dict() and from_dict() correctly handle content_hash."""
+    # Test with content_hash present
+    fingerprint_with_hash = ShowFingerprint(
+        digest="abc123",
+        season_hashes={"01": "hash1", "02": "hash2"},
+        episode_hashes={
+            "01": {"ep1": "ep_hash1", "ep2": "ep_hash2"},
+            "02": {"ep3": "ep_hash3"},
+        },
+        content_hash="content_abc123",
+    )
+
+    # Serialize to dict
+    serialized = fingerprint_with_hash.to_dict()
+
+    # Verify content_hash is in serialized output
+    assert "content_hash" in serialized
+    assert serialized["content_hash"] == "content_abc123"
+    assert serialized["digest"] == "abc123"
+    assert serialized["seasons"] == {"01": "hash1", "02": "hash2"}
+
+    # Deserialize back
+    deserialized = ShowFingerprint.from_dict(serialized)
+
+    # Verify content_hash survives roundtrip
+    assert deserialized.content_hash == "content_abc123"
+    assert deserialized.digest == "abc123"
+    assert deserialized.season_hashes == {"01": "hash1", "02": "hash2"}
+    assert deserialized.episode_hashes == {
+        "01": {"ep1": "ep_hash1", "ep2": "ep_hash2"},
+        "02": {"ep3": "ep_hash3"},
+    }
+
+
+def test_show_fingerprint_backward_compatibility_without_content_hash() -> None:
+    """Test backward compatibility with old format (no content_hash)."""
+    # Simulate old format without content_hash
+    old_format_dict = {
+        "digest": "xyz789",
+        "seasons": {"01": "season_hash"},
+        "episodes": {"01": {"ep1": "episode_hash"}},
+    }
+
+    # Should deserialize without error
+    fingerprint = ShowFingerprint.from_dict(old_format_dict)
+
+    # content_hash should be None for backward compatibility
+    assert fingerprint.content_hash is None
+    assert fingerprint.digest == "xyz789"
+    assert fingerprint.season_hashes == {"01": "season_hash"}
+    assert fingerprint.episode_hashes == {"01": {"ep1": "episode_hash"}}
+
+    # When serializing back, content_hash should not be included if None
+    serialized = fingerprint.to_dict()
+    assert "content_hash" not in serialized
+    assert serialized["digest"] == "xyz789"
+
