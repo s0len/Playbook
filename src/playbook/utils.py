@@ -106,9 +106,9 @@ def hash_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def sha1_of_file(path: Path, chunk_size: int = 65536) -> str:
-    """Compute SHA-1 digest of the given file."""
-    digest = hashlib.sha1()
+def hash_file(path: Path, chunk_size: int = 65536) -> str:
+    """Compute SHA-256 digest of the given file."""
+    digest = hashlib.sha256()
     try:
         with path.open("rb") as handle:
             while True:

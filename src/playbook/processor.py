@@ -32,7 +32,7 @@ from .notifications import NotificationEvent, NotificationService
 from .plex_client import PlexApiError
 from .plex_metadata_sync import PlexMetadataSync, PlexSyncStats, create_plex_sync_from_config
 from .templating import render_template
-from .utils import ensure_directory, link_file, normalize_token, sanitize_component, sha1_of_file, sha1_of_text, slugify
+from .utils import ensure_directory, hash_file, hash_text, link_file, normalize_token, sanitize_component, slugify
 
 LOGGER = logging.getLogger(__name__)
 
@@ -572,7 +572,7 @@ class Processor:
         output_dir = self.trace_options.output_dir or (self.config.settings.cache_dir / "traces")
         ensure_directory(output_dir)
         trace_key = f"{trace.get('filename', '')}|{trace.get('sport_id', '')}"
-        trace_path = output_dir / f"{sha1_of_text(trace_key)}.json"
+        trace_path = output_dir / f"{hash_text(trace_key)}.json"
         trace["trace_path"] = str(trace_path)
         try:
             with trace_path.open("w", encoding="utf-8") as handle:
@@ -1038,7 +1038,7 @@ class Processor:
 
         file_checksum: Optional[str] = None
         try:
-            file_checksum = sha1_of_file(match.source_path)
+            file_checksum = hash_file(match.source_path)
         except ValueError as exc:  # pragma: no cover - depends on filesystem state
             LOGGER.debug(
                 self._format_log(

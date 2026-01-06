@@ -15,7 +15,7 @@ import yaml
 
 from .config import MetadataConfig, Settings
 from .models import Episode, Season, Show
-from .utils import ensure_directory, sha1_of_text
+from .utils import ensure_directory, hash_text
 
 if TYPE_CHECKING:
     from .cache import MetadataHttpCache
@@ -97,7 +97,7 @@ def _json_default(obj: Any) -> Any:
 
 
 def _cache_path(cache_dir: Path, url: str) -> Path:
-    digest = sha1_of_text(url)
+    digest = hash_text(url)
     return cache_dir / "metadata" / f"{digest}.json"
 
 
@@ -397,7 +397,7 @@ def _compute_content_hash(show: Show, metadata_cfg: MetadataConfig) -> str:
         separators=(",", ":"),
         default=_json_default,
     )
-    return sha1_of_text(serialized)
+    return hash_text(serialized)
 
 
 def compute_show_fingerprint(show: Show, metadata_cfg: MetadataConfig) -> ShowFingerprint:
@@ -417,7 +417,7 @@ def compute_show_fingerprint(show: Show, metadata_cfg: MetadataConfig) -> ShowFi
         separators=(",", ":"),
         default=_json_default,
     )
-    digest = sha1_of_text(serialized)
+    digest = hash_text(serialized)
 
     season_hashes: Dict[str, str] = {}
     episode_hashes: Dict[str, Dict[str, str]] = {}
@@ -440,7 +440,7 @@ def compute_show_fingerprint(show: Show, metadata_cfg: MetadataConfig) -> ShowFi
             separators=(",", ":"),
             default=_json_default,
         )
-        season_hashes[season_key] = sha1_of_text(season_serialized)
+        season_hashes[season_key] = hash_text(season_serialized)
         episode_hash_map: Dict[str, str] = {}
         for episode in season.episodes:
             episode_payload = {
@@ -462,7 +462,7 @@ def compute_show_fingerprint(show: Show, metadata_cfg: MetadataConfig) -> ShowFi
                 default=_json_default,
             )
             episode_key = _episode_identifier(episode)
-            episode_hash_map[episode_key] = sha1_of_text(episode_serialized)
+            episode_hash_map[episode_key] = hash_text(episode_serialized)
         episode_hashes[season_key] = episode_hash_map
 
     return ShowFingerprint(
