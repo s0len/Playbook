@@ -6,6 +6,7 @@ from rich.console import Console
 from rich.table import Table
 
 if TYPE_CHECKING:  # pragma: no cover
+    from .config import SportConfig
     from .models import ProcessingStats
     from .plex_client import PlexSyncStats
 
@@ -211,6 +212,91 @@ class SummaryTableRenderer:
 
         return table
 
+    def render_sport_breakdown_table(
+        self,
+        stats: ProcessingStats,
+        sports_by_id: Dict[str, SportConfig],
+        processed_by_sport: Optional[Dict[str, int]] = None,
+    ) -> Optional[Table]:
+        """Render a sport-by-sport breakdown table.
+
+        Shows one row per sport with activity, displaying Sport ID, Sport Name,
+        Processed, Warnings, Errors, and Status indicator.
+
+        Args:
+            stats: Processing statistics with per-sport tracking
+            sports_by_id: Dictionary mapping sport IDs to SportConfig objects
+            processed_by_sport: Optional dictionary of processed counts per sport ID
+
+        Returns:
+            Rich Table instance ready to print, or None if no sports have activity
+        """
+        # Collect all sport IDs that have any activity
+        sport_ids_with_activity = set()
+
+        # Add sports with errors
+        sport_ids_with_activity.update(stats.errors_by_sport.keys())
+
+        # Add sports with warnings
+        sport_ids_with_activity.update(stats.warnings_by_sport.keys())
+
+        # Add sports with processed files if available
+        if processed_by_sport:
+            sport_ids_with_activity.update(processed_by_sport.keys())
+
+        # Filter out the "samples" pseudo-sport used for ignored tracking
+        sport_ids_with_activity.discard("samples")
+
+        # Only render if there are multiple sports with activity
+        if len(sport_ids_with_activity) < 2:
+            return None
+
+        # Create the table
+        table = Table(title="Sport-by-Sport Breakdown", show_header=True, header_style="bold")
+
+        table.add_column("Sport ID", style="cyan", no_wrap=True)
+        table.add_column("Sport Name", style="cyan")
+        table.add_column("Processed", justify="right")
+        table.add_column("Warnings", justify="right")
+        table.add_column("Errors", justify="right")
+        table.add_column("Status", justify="center")
+
+        # Sort sports by ID for consistent output
+        for sport_id in sorted(sport_ids_with_activity):
+            # Get sport name from config, fallback to ID if not found
+            sport_name = sports_by_id.get(sport_id, None)
+            if sport_name:
+                sport_name_str = sport_name.name
+            else:
+                sport_name_str = sport_id
+
+            # Get counts for this sport
+            processed = processed_by_sport.get(sport_id, 0) if processed_by_sport else 0
+            warnings = stats.warnings_by_sport.get(sport_id, 0)
+            errors = stats.errors_by_sport.get(sport_id, 0)
+
+            # Determine overall status for this sport
+            if errors > 0:
+                status = f"[{ERROR_COLOR}]{ERROR_SYMBOL}[/{ERROR_COLOR}]"
+            elif warnings > 0:
+                status = f"[{WARNING_COLOR}]{WARNING_SYMBOL}[/{WARNING_COLOR}]"
+            elif processed > 0:
+                status = f"[{SUCCESS_COLOR}]{SUCCESS_SYMBOL}[/{SUCCESS_COLOR}]"
+            else:
+                status = f"[{DIM_COLOR}]{IGNORE_SYMBOL}[/{DIM_COLOR}]"
+
+            # Render the row
+            table.add_row(
+                sport_id,
+                sport_name_str,
+                self._colorize_value(processed) if processed > 0 else f"[{DIM_COLOR}]0[/{DIM_COLOR}]",
+                self._colorize_value(warnings, is_warning=True) if warnings > 0 else f"[{DIM_COLOR}]0[/{DIM_COLOR}]",
+                self._colorize_value(errors, is_error=True) if errors > 0 else f"[{DIM_COLOR}]0[/{DIM_COLOR}]",
+                status,
+            )
+
+        return table
+
     def print_summary_table(
         self,
         stats: ProcessingStats,
@@ -326,5 +412,75 @@ class SummaryTableRenderer:
         if kometa_triggered is not None:
             kometa_status = "yes" if kometa_triggered else "no"
             lines.append(f"    Kometa Triggered : {kometa_status}")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def render_sport_breakdown_plain_text(
+        stats: ProcessingStats,
+        sports_by_id: Dict[str, SportConfig],
+        processed_by_sport: Optional[Dict[str, int]] = None,
+    ) -> Optional[str]:
+        """Render a sport-by-sport breakdown as plain text.
+
+        Args:
+            stats: Processing statistics with per-sport tracking
+            sports_by_id: Dictionary mapping sport IDs to SportConfig objects
+            processed_by_sport: Optional dictionary of processed counts per sport ID
+
+        Returns:
+            Plain text sport breakdown string, or None if no sports have activity
+        """
+        # Collect all sport IDs that have any activity
+        sport_ids_with_activity = set()
+
+        # Add sports with errors
+        sport_ids_with_activity.update(stats.errors_by_sport.keys())
+
+        # Add sports with warnings
+        sport_ids_with_activity.update(stats.warnings_by_sport.keys())
+
+        # Add sports with processed files if available
+        if processed_by_sport:
+            sport_ids_with_activity.update(processed_by_sport.keys())
+
+        # Filter out the "samples" pseudo-sport used for ignored tracking
+        sport_ids_with_activity.discard("samples")
+
+        # Only render if there are multiple sports with activity
+        if len(sport_ids_with_activity) < 2:
+            return None
+
+        lines = [
+            "",
+            "Sport-by-Sport Breakdown",
+            "------------------------",
+        ]
+
+        # Sort sports by ID for consistent output
+        for sport_id in sorted(sport_ids_with_activity):
+            # Get sport name from config, fallback to ID if not found
+            sport_name = sports_by_id.get(sport_id, None)
+            if sport_name:
+                sport_name_str = sport_name.name
+            else:
+                sport_name_str = sport_id
+
+            # Get counts for this sport
+            processed = processed_by_sport.get(sport_id, 0) if processed_by_sport else 0
+            warnings = stats.warnings_by_sport.get(sport_id, 0)
+            errors = stats.errors_by_sport.get(sport_id, 0)
+
+            # Determine overall status for this sport
+            if errors > 0:
+                status = "ERROR"
+            elif warnings > 0:
+                status = "WARNING"
+            elif processed > 0:
+                status = "OK"
+            else:
+                status = "IDLE"
+
+            lines.append(f"    {sport_id:15s} | {sport_name_str:25s} | Processed: {processed:3d} | Warnings: {warnings:3d} | Errors: {errors:3d} | Status: {status}")
 
         return "\n".join(lines)
