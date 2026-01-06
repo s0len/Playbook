@@ -341,4 +341,3 @@ class ProcessedFileCache:
     def get_checksum(self, source_path: Path) -> str | None:
         record = self._records.get(str(source_path))
         return record.checksum if record else None
-

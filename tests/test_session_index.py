@@ -107,10 +107,10 @@ class TestSessionLookupIndexLengthFiltering:
 
     def test_get_candidates_filters_by_both_first_char_and_length(self) -> None:
         index = SessionLookupIndex()
-        index.add("quali", "episode-1")      # q, length 5
+        index.add("quali", "episode-1")  # q, length 5
         index.add("qualifying", "episode-2")  # q, length 10
-        index.add("quick", "episode-3")       # q, length 5
-        index.add("race", "episode-4")        # r, length 4
+        index.add("quick", "episode-3")  # q, length 5
+        index.add("race", "episode-4")  # r, length 4
 
         candidates = index.get_candidates("qualif")  # q, length 6
 
@@ -160,9 +160,9 @@ class TestSessionLookupIndexEdgeCases:
 
     def test_get_candidates_handles_single_character_token(self) -> None:
         index = SessionLookupIndex()
-        index.add("a", "episode-1")   # length 1
+        index.add("a", "episode-1")  # length 1
         index.add("ab", "episode-2")  # length 2
-        index.add("abc", "episode-3") # length 3
+        index.add("abc", "episode-3")  # length 3
 
         candidates = index.get_candidates("a")
         # Should include length 1 and 2 only
@@ -333,7 +333,7 @@ class TestSessionLookupIndexBenchmark:
             "sprintshootout",
             "sprint",
             "race",
-            "warmup"
+            "warmup",
         ]
 
         # Create 24 race weekends
@@ -359,9 +359,9 @@ class TestSessionLookupIndexBenchmark:
         candidate_count = len(candidates)
 
         # Log the results (will show in pytest output with -v or -s)
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("BENCHMARK RESULTS:")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"Total entries in index: {total_entries}")
         print(f"Search token: '{search_token}' (length {len(search_token)})")
         print(f"First character: '{search_token[0]}'")
@@ -369,18 +369,18 @@ class TestSessionLookupIndexBenchmark:
         print(f"Reduction ratio: {reduction_ratio:.2%}")
         print(f"Candidates checked: {candidate_count}/{total_entries}")
         print("Expected theoretical reduction: ~1.28% (1/78)")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         # Verify the optimization is working
         # With 216 entries and 26 possible first chars × 3 length buckets,
         # we expect roughly 216/78 ≈ 2.77 candidates on average
         # In practice, with our specific data, we should see significant reduction
-        assert candidate_count < total_entries * 0.5, \
+        assert candidate_count < total_entries * 0.5, (
             f"Candidate filtering not effective: {candidate_count}/{total_entries}"
+        )
 
         # Verify the correct answer is in the filtered candidates
-        assert "race15qualifying" in candidates, \
-            "Expected exact match should be in filtered candidates"
+        assert "race15qualifying" in candidates, "Expected exact match should be in filtered candidates"
 
     def test_worst_case_candidate_reduction(self) -> None:
         """Test worst-case scenario where many entries share first char and length.
@@ -394,9 +394,21 @@ class TestSessionLookupIndexBenchmark:
         # Worst case: 250 entries all starting with 'r' and similar lengths
         # This simulates a pathological case for the optimization
         base_words = [
-            "race", "races", "racing", "racer", "racers",
-            "round", "rounds", "result", "results", "replay",
-            "ranking", "rankings", "record", "records", "review"
+            "race",
+            "races",
+            "racing",
+            "racer",
+            "racers",
+            "round",
+            "rounds",
+            "result",
+            "results",
+            "replay",
+            "ranking",
+            "rankings",
+            "record",
+            "records",
+            "review",
         ]
 
         # Create 250 entries by combining base words with numbers
@@ -418,27 +430,27 @@ class TestSessionLookupIndexBenchmark:
         # Calculate metrics
         reduction_ratio = len(candidates) / total_entries
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("WORST-CASE BENCHMARK RESULTS:")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"Total entries in index: {total_entries}")
         print("All entries start with: 'r'")
         print(f"Search token: '{search_token}' (length {len(search_token)})")
         print(f"Candidates after filtering: {len(candidates)}")
         print(f"Reduction ratio: {reduction_ratio:.2%}")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         # Even in worst case, length filtering should eliminate some candidates
         # With length 6, we only check lengths 5, 6, 7
         # All other lengths are filtered out
-        assert len(candidates) < total_entries, \
-            "Even in worst case, some filtering should occur"
+        assert len(candidates) < total_entries, "Even in worst case, some filtering should occur"
 
         # Verify that candidates only include appropriate lengths
         for candidate in candidates:
             candidate_length = len(candidate)
-            assert abs(candidate_length - len(search_token)) <= 1, \
+            assert abs(candidate_length - len(search_token)) <= 1, (
                 f"Candidate '{candidate}' has invalid length {candidate_length}"
+            )
 
     def test_iteration_count_comparison(self) -> None:
         """Compare iteration counts: naive O(n) vs optimized O(n/k) approach.
@@ -473,9 +485,9 @@ class TestSessionLookupIndexBenchmark:
             ("race", "Main race session"),
         ]
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("ITERATION COUNT COMPARISON:")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"Total entries in index: {total_entries}\n")
 
         total_naive_iterations = 0
@@ -509,8 +521,9 @@ class TestSessionLookupIndexBenchmark:
         print(f"  Total optimized iterations: {total_optimized_iterations}")
         print(f"  Average reduction: {avg_reduction:.1%}")
         print(f"  Overall speedup: {overall_speedup:.1f}x")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         # Verify significant reduction in iterations
-        assert total_optimized_iterations < total_naive_iterations * 0.2, \
+        assert total_optimized_iterations < total_naive_iterations * 0.2, (
             "Expected at least 80% reduction in iterations"
+        )

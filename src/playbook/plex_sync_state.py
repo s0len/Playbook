@@ -183,4 +183,3 @@ class PlexSyncStateStore:
     def get_unsynced_sports(self, sport_ids: set[str], fingerprints: dict[str, str]) -> set[str]:
         """Get sports that need syncing."""
         return self.state.get_unsynced_sports(sport_ids, fingerprints)
-

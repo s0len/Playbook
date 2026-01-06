@@ -19,6 +19,7 @@ import yaml
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
+
 def test_nhl_pattern_set_registered():
     """Test 1: Verify NHL pattern set exists in builtin pattern sets"""
     print("=" * 70)
@@ -34,7 +35,7 @@ def test_nhl_pattern_set_registered():
         print(f"✓ Total pattern sets: {len(builtin_sets)}")
         print(f"✓ Available pattern sets: {sorted(builtin_sets.keys())}")
 
-        if 'nhl' in builtin_sets:
+        if "nhl" in builtin_sets:
             print("\n✅ SUCCESS: 'nhl' pattern set IS registered")
             print(f"✓ NHL pattern set contains {len(builtin_sets['nhl'])} pattern(s)")
             return True
@@ -45,6 +46,7 @@ def test_nhl_pattern_set_registered():
     except Exception as e:
         print(f"\n❌ FAILURE: Error loading pattern sets: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -57,30 +59,26 @@ def test_minimal_nhl_config():
 
     # Create minimal valid config with NHL sport
     minimal_config = {
-        'settings': {
-            'source_dir': '/tmp/test_source',
-            'destination_dir': '/tmp/test_dest',
-            'cache_dir': '/tmp/test_cache',
+        "settings": {
+            "source_dir": "/tmp/test_source",
+            "destination_dir": "/tmp/test_dest",
+            "cache_dir": "/tmp/test_cache",
         },
-        'sports': [
+        "sports": [
             {
-                'id': 'nhl',
-                'name': 'NHL',
-                'pattern_sets': ['nhl'],  # Reference the builtin NHL pattern set
-                'metadata': {
-                    'url': 'https://example.com/nhl.yaml',
-                    'show_key': 'NHL Test',
-                    'ttl_hours': 24
-                }
+                "id": "nhl",
+                "name": "NHL",
+                "pattern_sets": ["nhl"],  # Reference the builtin NHL pattern set
+                "metadata": {"url": "https://example.com/nhl.yaml", "show_key": "NHL Test", "ttl_hours": 24},
             }
-        ]
+        ],
     }
 
     try:
         from playbook.config import load_config
 
         # Write config to temp file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(minimal_config, f)
             temp_path = f.name
 
@@ -94,7 +92,7 @@ def test_minimal_nhl_config():
         print(f"✓ Number of sports configured: {len(config.sports)}")
 
         # Verify NHL sport is loaded
-        nhl_sport = next((s for s in config.sports if s.id == 'nhl'), None)
+        nhl_sport = next((s for s in config.sports if s.id == "nhl"), None)
         if nhl_sport:
             print(f"✓ NHL sport found: {nhl_sport.name}")
             print(f"✓ NHL sport enabled: {nhl_sport.enabled}")
@@ -112,12 +110,14 @@ def test_minimal_nhl_config():
     except ValueError as e:
         print(f"\n❌ FAILURE: ValueError raised when loading config: {e}")
         import traceback
+
         traceback.print_exc()
         Path(temp_path).unlink()
         return False
     except Exception as e:
         print(f"\n❌ FAILURE: Unexpected error: {e}")
         import traceback
+
         traceback.print_exc()
         try:
             Path(temp_path).unlink()
@@ -150,7 +150,7 @@ def test_sample_config_with_nhl():
         print(f"✓ Number of sports in sample config: {len(config.sports)}")
 
         # Find NHL sport
-        nhl_sport = next((s for s in config.sports if s.id == 'nhl'), None)
+        nhl_sport = next((s for s in config.sports if s.id == "nhl"), None)
 
         if nhl_sport:
             print("✓ NHL sport found in sample config")
@@ -179,11 +179,13 @@ def test_sample_config_with_nhl():
         else:
             print(f"\n❌ FAILURE: ValueError raised: {e}")
         import traceback
+
         traceback.print_exc()
         return False
     except Exception as e:
         print(f"\n❌ FAILURE: Unexpected error loading sample config: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

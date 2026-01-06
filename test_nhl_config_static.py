@@ -32,24 +32,24 @@ def verify_nhl_in_pattern_templates():
 
     # Look for NHL pattern set definition
     # Should find: nhl: or - nhl: with YAML anchor
-    nhl_pattern_match = re.search(r'^\s*nhl:\s*(&\w+)?\s*$', content, re.MULTILINE)
+    nhl_pattern_match = re.search(r"^\s*nhl:\s*(&\w+)?\s*$", content, re.MULTILINE)
 
     if nhl_pattern_match:
-        line_num = content[:nhl_pattern_match.start()].count('\n') + 1
+        line_num = content[: nhl_pattern_match.start()].count("\n") + 1
         print(f"✓ NHL pattern set found at line {line_num}")
         print(f"✓ Pattern: {nhl_pattern_match.group(0).strip()}")
 
         # Count the patterns under NHL
-        nhl_section = content[nhl_pattern_match.end():]
+        nhl_section = content[nhl_pattern_match.end() :]
         # Find the next top-level key (indicates end of NHL section)
-        next_section = re.search(r'^\s{0,2}\w+:', nhl_section, re.MULTILINE)
+        next_section = re.search(r"^\s{0,2}\w+:", nhl_section, re.MULTILINE)
         if next_section:
-            nhl_content = nhl_section[:next_section.start()]
+            nhl_content = nhl_section[: next_section.start()]
         else:
             nhl_content = nhl_section
 
         # Count pattern definitions (lines with "- description:")
-        pattern_count = len(re.findall(r'^\s+- description:', nhl_content, re.MULTILINE))
+        pattern_count = len(re.findall(r"^\s+- description:", nhl_content, re.MULTILINE))
 
         print(f"✓ NHL section contains approximately {pattern_count} pattern(s)")
         print("\n✅ SUCCESS: NHL pattern set IS defined in pattern_templates.yaml")
@@ -130,9 +130,7 @@ def verify_config_validation_logic():
     # Line 241: if set_name not in pattern_sets:
     # Line 242:     raise ValueError(f"Unknown pattern set '{set_name}'...")
     validation_pattern = re.search(
-        r'if\s+set_name\s+not\s+in\s+pattern_sets:.*?raise\s+ValueError.*?Unknown pattern set',
-        content,
-        re.DOTALL
+        r"if\s+set_name\s+not\s+in\s+pattern_sets:.*?raise\s+ValueError.*?Unknown pattern set", content, re.DOTALL
     )
 
     if validation_pattern:
@@ -144,11 +142,7 @@ def verify_config_validation_logic():
 
     # Verify builtin pattern sets are loaded
     # Line 640-642: builtin_pattern_sets = {name: deepcopy(patterns) for name, patterns in load_builtin_pattern_sets().items()}
-    builtin_load_pattern = re.search(
-        r'builtin_pattern_sets\s*=.*?load_builtin_pattern_sets\(\)',
-        content,
-        re.DOTALL
-    )
+    builtin_load_pattern = re.search(r"builtin_pattern_sets\s*=.*?load_builtin_pattern_sets\(\)", content, re.DOTALL)
 
     if builtin_load_pattern:
         print("✓ Builtin pattern sets loaded via load_builtin_pattern_sets()")
@@ -176,7 +170,7 @@ def verify_sample_config_syntax():
     content = sample_config.read_text()
 
     # Find NHL sport section
-    nhl_match = re.search(r'^\s*- id: nhl\s*$', content, re.MULTILINE)
+    nhl_match = re.search(r"^\s*- id: nhl\s*$", content, re.MULTILINE)
 
     if not nhl_match:
         print("⚠️  WARNING: NHL sport not found in sample config")
@@ -188,16 +182,16 @@ def verify_sample_config_syntax():
     # Extract NHL section
     nhl_start = nhl_match.start()
     # Find the next sport section
-    remaining = content[nhl_match.end():]
-    next_sport = re.search(r'^\s*- id: \w+\s*$', remaining, re.MULTILINE)
+    remaining = content[nhl_match.end() :]
+    next_sport = re.search(r"^\s*- id: \w+\s*$", remaining, re.MULTILINE)
 
     if next_sport:
-        nhl_section = content[nhl_start:nhl_match.end() + next_sport.start()]
+        nhl_section = content[nhl_start : nhl_match.end() + next_sport.start()]
     else:
         nhl_section = content[nhl_start:]
 
     # Verify NHL section has pattern_sets: [nhl]
-    pattern_sets_match = re.search(r'pattern_sets:\s*\n\s*- nhl', nhl_section)
+    pattern_sets_match = re.search(r"pattern_sets:\s*\n\s*- nhl", nhl_section)
 
     if pattern_sets_match:
         print("✓ NHL sport references pattern_sets: [nhl]")
@@ -206,12 +200,12 @@ def verify_sample_config_syntax():
         print("❌ WARNING: NHL sport doesn't reference pattern_sets: [nhl]")
 
     # Verify NHL has metadata
-    metadata_match = re.search(r'metadata:', nhl_section)
+    metadata_match = re.search(r"metadata:", nhl_section)
     if metadata_match:
         print("✓ NHL sport has metadata configuration")
 
     # Verify NHL has source_globs
-    globs_match = re.search(r'source_globs:', nhl_section)
+    globs_match = re.search(r"source_globs:", nhl_section)
     if globs_match:
         print("✓ NHL sport has source_globs configuration")
 

@@ -324,7 +324,7 @@ class PlexClient:
         if len(words) > 1:
             # Try first word + first number sequence
             first_word = words[0]
-            numbers = re.findall(r'\d+', title)
+            numbers = re.findall(r"\d+", title)
             if numbers:
                 simplified = f"{first_word} {numbers[0]}"
                 if simplified.lower() != title.lower():

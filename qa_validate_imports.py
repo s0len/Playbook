@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """QA validation script for import chain."""
+
 import ast
 import sys
 
@@ -14,6 +15,7 @@ def check_function_exists(filepath, function_name):
             return True
     return False
 
+
 def check_import_statement(filepath, module_path, names):
     """Check if specific names are imported from a module."""
     with open(filepath) as f:
@@ -26,6 +28,7 @@ def check_import_statement(filepath, module_path, names):
                 return all(name in imported_names for name in names)
     return False
 
+
 print("QA VALIDATION: Import Chain Verification")
 print("=" * 60)
 
@@ -33,14 +36,14 @@ print("=" * 60)
 checks = []
 
 print("\n1. Checking structured_filename.py functions...")
-if check_function_exists('./src/playbook/parsers/structured_filename.py', 'parse_structured_filename'):
+if check_function_exists("./src/playbook/parsers/structured_filename.py", "parse_structured_filename"):
     print("   ✅ parse_structured_filename function exists")
     checks.append(True)
 else:
     print("   ❌ parse_structured_filename function NOT FOUND")
     checks.append(False)
 
-if check_function_exists('./src/playbook/parsers/structured_filename.py', 'build_canonical_filename'):
+if check_function_exists("./src/playbook/parsers/structured_filename.py", "build_canonical_filename"):
     print("   ✅ build_canonical_filename function exists")
     checks.append(True)
 else:
@@ -49,8 +52,11 @@ else:
 
 # Check imports in matcher.py
 print("\n2. Checking matcher.py imports...")
-if check_import_statement('./src/playbook/matcher.py', '.parsers.structured_filename',
-                         ['StructuredName', 'build_canonical_filename', 'parse_structured_filename']):
+if check_import_statement(
+    "./src/playbook/matcher.py",
+    ".parsers.structured_filename",
+    ["StructuredName", "build_canonical_filename", "parse_structured_filename"],
+):
     print("   ✅ matcher.py imports all required functions from structured_filename")
     checks.append(True)
 else:
@@ -59,12 +65,12 @@ else:
 
 # Check StructuredName class exists
 print("\n3. Checking StructuredName class...")
-with open('./src/playbook/parsers/structured_filename.py') as f:
+with open("./src/playbook/parsers/structured_filename.py") as f:
     tree = ast.parse(f.read())
 
 has_structured_name = False
 for node in ast.walk(tree):
-    if isinstance(node, ast.ClassDef) and node.name == 'StructuredName':
+    if isinstance(node, ast.ClassDef) and node.name == "StructuredName":
         has_structured_name = True
         break
 

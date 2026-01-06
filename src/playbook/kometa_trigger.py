@@ -24,6 +24,7 @@ except Exception:  # pragma: no cover - optional dependency guard
     class ApiException(Exception):  # type: ignore[no-redef]
         """Fallback so callers can catch a consistent type."""
 
+
 LOGGER = logging.getLogger(__name__)
 
 _DEFAULT_LABEL_KEY = "trigger"
@@ -67,9 +68,7 @@ class KometaCronTrigger(_BaseKometaTrigger):
 
     @property
     def enabled(self) -> bool:
-        return bool(
-            self._settings.enabled and (self._settings.mode or "kubernetes").lower() == "kubernetes"
-        )
+        return bool(self._settings.enabled and (self._settings.mode or "kubernetes").lower() == "kubernetes")
 
     def trigger(
         self,
@@ -178,10 +177,14 @@ class KometaCronTrigger(_BaseKometaTrigger):
 
         metadata["name"] = job_name
         metadata["labels"] = self._build_labels(metadata.get("labels"), extra_labels)
-        metadata["annotations"] = self._build_annotations(metadata.get("annotations"), extra_annotations, include_timestamp=True)
+        metadata["annotations"] = self._build_annotations(
+            metadata.get("annotations"), extra_annotations, include_timestamp=True
+        )
 
         template_metadata["labels"] = self._build_labels(template_metadata.get("labels"), extra_labels)
-        template_metadata["annotations"] = self._build_annotations(template_metadata.get("annotations"), extra_annotations, include_timestamp=False)
+        template_metadata["annotations"] = self._build_annotations(
+            template_metadata.get("annotations"), extra_annotations, include_timestamp=False
+        )
         template["metadata"] = template_metadata
         spec["template"] = template
 
@@ -217,11 +220,7 @@ class KometaCronTrigger(_BaseKometaTrigger):
         *,
         include_timestamp: bool,
     ) -> dict[str, str]:
-        annotations = {
-            str(key): str(value)
-            for key, value in (base_annotations or {}).items()
-            if value is not None
-        }
+        annotations = {str(key): str(value) for key, value in (base_annotations or {}).items() if value is not None}
         annotations.setdefault("playbook/triggered-by", "playbook")
         if include_timestamp:
             annotations["playbook/triggered-at"] = (
@@ -264,11 +263,7 @@ class KometaDockerTrigger(_BaseKometaTrigger):
             )
             return False
 
-        command = (
-            self._build_exec_command(binary)
-            if use_exec
-            else self._build_run_command(binary, config_path or "")
-        )
+        command = self._build_exec_command(binary) if use_exec else self._build_run_command(binary, config_path or "")
 
         try:
             exit_code = self._stream_command(command)
@@ -381,4 +376,3 @@ class KometaDockerTrigger(_BaseKometaTrigger):
             args.extend(["--run-libraries", self._settings.docker_libraries])
         args.extend(self._settings.docker_extra_args or [])
         return args
-

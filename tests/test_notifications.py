@@ -441,4 +441,3 @@ def test_autoscan_target_posts_manual_trigger(tmp_path, monkeypatch) -> None:
     assert request["url"] == "http://autoscan.test:3030/triggers/manual"
     assert ("dir", "/mnt/unionfs/Show") in request["params"]
     assert request["auth"] is None
-

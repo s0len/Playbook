@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """QA validation script to test imports and basic functionality."""
+
 import sys
 from pathlib import Path
 
@@ -14,6 +15,7 @@ print("=" * 60)
 print("\n[Test 1] Importing from structured_filename...")
 try:
     from playbook.parsers.structured_filename import StructuredName, build_canonical_filename, parse_structured_filename
+
     print("✓ PASS: All functions imported successfully")
     print(f"  - parse_structured_filename: {parse_structured_filename}")
     print(f"  - build_canonical_filename: {build_canonical_filename}")
@@ -26,6 +28,7 @@ except ImportError as e:
 print("\n[Test 2] Importing matcher module...")
 try:
     from playbook import matcher
+
     print("✓ PASS: matcher module imported successfully")
     print(f"  - matcher.match_file_to_episode exists: {hasattr(matcher, 'match_file_to_episode')}")
 except ImportError as e:
@@ -36,10 +39,11 @@ except ImportError as e:
 print("\n[Test 3] Loading pattern templates...")
 try:
     from playbook.pattern_templates import load_builtin_pattern_sets
+
     pattern_sets = load_builtin_pattern_sets()
     print(f"✓ PASS: Loaded {len(pattern_sets)} pattern sets")
     print(f"  - NHL pattern set exists: {'nhl' in pattern_sets}")
-    if 'nhl' in pattern_sets:
+    if "nhl" in pattern_sets:
         print(f"  - NHL has {len(pattern_sets['nhl'])} patterns")
 except Exception as e:
     print(f"✗ FAIL: Pattern loading error - {e}")

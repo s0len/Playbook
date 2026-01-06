@@ -90,7 +90,7 @@ def _parse_date(value: object) -> str | None:
 
 def _resolve_asset_url(base_url: str, value: str | None) -> str | None:
     """Resolve asset path to full URL.
-    
+
     If value is already a full URL, return it as-is.
     If value is a relative path, resolve it relative to the base_url's directory.
     E.g., base_url = "https://example.com/metadata/show/2025.yaml"
@@ -101,16 +101,16 @@ def _resolve_asset_url(base_url: str, value: str | None) -> str | None:
         return None
     if value.startswith(("http://", "https://")):
         return value
-    
+
     # If value starts with /, it's relative to domain root
     if value.startswith("/"):
         return urljoin(base_url, value)
-    
+
     # For relative paths, resolve relative to base_url's directory
     # If base_url ends with /, it's already a directory URL
     if base_url.endswith("/"):
         return urljoin(base_url, value)
-    
+
     # Otherwise, base_url is a file path; get its directory
     # Add trailing slash to ensure we're treating it as a directory
     base_dir = base_url.rsplit("/", 1)[0] + "/"
@@ -122,10 +122,10 @@ def _map_show_metadata(show: Show, base_url: str) -> MappedMetadata:
     meta = show.metadata or {}
     poster_raw = _first(meta, ("url_poster", "poster", "thumb", "cover"))
     background_raw = _first(meta, ("url_background", "background", "art", "fanart"))
-    
+
     poster_url = _resolve_asset_url(base_url, poster_raw)
     background_url = _resolve_asset_url(base_url, background_raw)
-    
+
     if LOGGER.isEnabledFor(logging.DEBUG):
         LOGGER.debug(
             "Mapping show '%s': poster_raw=%s -> poster_url=%s, background_raw=%s -> background_url=%s",
@@ -135,14 +135,12 @@ def _map_show_metadata(show: Show, base_url: str) -> MappedMetadata:
             background_raw,
             background_url,
         )
-    
+
     return MappedMetadata(
         title=show.title or meta.get("title"),
         sort_title=_first(meta, ("sort_title", "sortTitle", "slug")),
         original_title=_first(meta, ("original_title", "originalTitle")),
-        originally_available_at=_parse_date(
-            _first(meta, ("originally_available", "originally_available_at"))
-        ),
+        originally_available_at=_parse_date(_first(meta, ("originally_available", "originally_available_at"))),
         summary=show.summary or meta.get("summary"),
         poster_url=poster_url,
         background_url=background_url,
@@ -154,10 +152,10 @@ def _map_season_metadata(season: Season, base_url: str) -> MappedMetadata:
     meta = season.metadata or {}
     poster_raw = _first(meta, ("url_poster", "poster", "thumb", "cover"))
     background_raw = _first(meta, ("url_background", "background", "art", "fanart"))
-    
+
     poster_url = _resolve_asset_url(base_url, poster_raw)
     background_url = _resolve_asset_url(base_url, background_raw)
-    
+
     if LOGGER.isEnabledFor(logging.DEBUG) and (poster_url or background_url):
         LOGGER.debug(
             "Mapping season '%s': poster_raw=%s -> poster_url=%s, background_raw=%s -> background_url=%s",
@@ -167,14 +165,12 @@ def _map_season_metadata(season: Season, base_url: str) -> MappedMetadata:
             background_raw,
             background_url,
         )
-    
+
     return MappedMetadata(
         title=season.title or meta.get("title"),
         sort_title=_first(meta, ("sort_title", "sortTitle", "slug")),
         original_title=_first(meta, ("original_title", "originalTitle")),
-        originally_available_at=_parse_date(
-            _first(meta, ("originally_available", "originally_available_at"))
-        ),
+        originally_available_at=_parse_date(_first(meta, ("originally_available", "originally_available_at"))),
         summary=season.summary or meta.get("summary"),
         poster_url=poster_url,
         background_url=background_url,
@@ -186,10 +182,10 @@ def _map_episode_metadata(episode: Episode, base_url: str) -> MappedMetadata:
     meta = episode.metadata or {}
     poster_raw = _first(meta, ("url_poster", "poster", "thumb", "cover"))
     background_raw = _first(meta, ("url_background", "background", "art", "fanart"))
-    
+
     poster_url = _resolve_asset_url(base_url, poster_raw)
     background_url = _resolve_asset_url(base_url, background_raw)
-    
+
     if LOGGER.isEnabledFor(logging.DEBUG) and (poster_url or background_url):
         LOGGER.debug(
             "Mapping episode '%s': poster_raw=%s -> poster_url=%s, background_raw=%s -> background_url=%s",
@@ -199,14 +195,13 @@ def _map_episode_metadata(episode: Episode, base_url: str) -> MappedMetadata:
             background_raw,
             background_url,
         )
-    
+
     return MappedMetadata(
         title=episode.title or meta.get("title"),
         sort_title=_first(meta, ("sort_title", "sortTitle", "slug")),
         original_title=_first(meta, ("original_title", "originalTitle")),
         originally_available_at=_parse_date(
-            _first(meta, ("originally_available", "originally_available_at"))
-            or episode.originally_available
+            _first(meta, ("originally_available", "originally_available_at")) or episode.originally_available
         ),
         summary=episode.summary or meta.get("summary"),
         poster_url=poster_url,
@@ -241,6 +236,7 @@ def _episode_identifier(episode: Episode) -> str:
 def _normalize_title(text: str) -> str:
     """Normalize title for fuzzy matching."""
     import re
+
     # Lowercase, remove punctuation, collapse whitespace
     text = text.lower()
     text = re.sub(r"[^\w\s]", "", text)
@@ -351,10 +347,7 @@ def _match_episode_key(plex_episodes: list[dict[str, object]], episode: Episode)
             if not entry_title_normalized:
                 continue
             # Check if one title contains the other
-            if (
-                target_title_normalized in entry_title_normalized
-                or entry_title_normalized in target_title_normalized
-            ):
+            if target_title_normalized in entry_title_normalized or entry_title_normalized in target_title_normalized:
                 LOGGER.debug(
                     "Partial matched episode '%s' to Plex episode '%s'",
                     episode.title,
@@ -619,14 +612,12 @@ class PlexMetadataSync:
             except PlexApiError as exc:
                 LOGGER.error("Plex API error for sport %s: %s", sport.id, exc)
                 stats.errors.append(
-                    f"Sport sync failed: {sport.id} | library={library_id} | "
-                    f"source={sport.metadata.url}: {exc}"
+                    f"Sport sync failed: {sport.id} | library={library_id} | source={sport.metadata.url}: {exc}"
                 )
             except Exception as exc:  # noqa: BLE001
                 LOGGER.exception("Unexpected error syncing %s: %s", sport.id, exc)
                 stats.errors.append(
-                    f"Sport sync failed: {sport.id} | library={library_id} | "
-                    f"source={sport.metadata.url}: {exc}"
+                    f"Sport sync failed: {sport.id} | library={library_id} | source={sport.metadata.url}: {exc}"
                 )
 
         self.fingerprint_store.save()
@@ -710,11 +701,13 @@ class PlexMetadataSync:
         if search_result.result is None:
             # Build enhanced log message with library context, metadata URL, and close matches
             builder = LogBlockBuilder("Show Not Found In Plex", pad_top=True)
-            builder.add_fields({
-                "Show Title": show.title,
-                "Library ID": library_id,
-                "Metadata URL": sport.metadata.url,
-            })
+            builder.add_fields(
+                {
+                    "Show Title": show.title,
+                    "Library ID": library_id,
+                    "Metadata URL": sport.metadata.url,
+                }
+            )
             if search_result.close_matches:
                 builder.add_section("Similar Shows In Plex", search_result.close_matches)
             else:
@@ -735,8 +728,7 @@ class PlexMetadataSync:
         if not show_rating:
             LOGGER.error("Show ratingKey missing for '%s'", show.title)
             stats.errors.append(
-                f"Missing ratingKey: '{show.title}' | library={library_id} | "
-                f"source={sport.metadata.url}"
+                f"Missing ratingKey: '{show.title}' | library={library_id} | source={sport.metadata.url}"
             )
             return
 
@@ -837,8 +829,7 @@ class PlexMetadataSync:
         # Debug: log what Plex has
         if LOGGER.isEnabledFor(logging.DEBUG):
             plex_season_info = [
-                f"idx={s.get('index')} title='{s.get('title')}' key={s.get('ratingKey')}"
-                for s in plex_seasons
+                f"idx={s.get('index')} title='{s.get('title')}' key={s.get('ratingKey')}" for s in plex_seasons
             ]
             LOGGER.debug(
                 "Plex seasons for '%s': %s",
@@ -869,17 +860,16 @@ class PlexMetadataSync:
             if not rating_key:
                 # Build enhanced log message showing what seasons exist in Plex
                 builder = LogBlockBuilder("Season Not Found In Plex", pad_top=True)
-                builder.add_fields({
-                    "Show Title": show.title,
-                    "Season Title": season.title,
-                    "Season Index": season.index,
-                    "Display Number": season.display_number,
-                })
+                builder.add_fields(
+                    {
+                        "Show Title": show.title,
+                        "Season Title": season.title,
+                        "Season Index": season.index,
+                        "Display Number": season.display_number,
+                    }
+                )
                 # Extract season info from Plex for diagnostic purposes
-                plex_season_titles = [
-                    f"{s.get('index', '?')}: {s.get('title', '(untitled)')}"
-                    for s in plex_seasons
-                ]
+                plex_season_titles = [f"{s.get('index', '?')}: {s.get('title', '(untitled)')}" for s in plex_seasons]
                 if plex_season_titles:
                     builder.add_section("Seasons In Plex", plex_season_titles)
                 else:
@@ -964,17 +954,18 @@ class PlexMetadataSync:
                 if not episode_rating:
                     # Build enhanced log message showing what episodes exist in Plex
                     builder = LogBlockBuilder("Episode Not Found In Plex", pad_top=True)
-                    builder.add_fields({
-                        "Show Title": show.title,
-                        "Season Title": season.title,
-                        "Episode Title": episode.title,
-                        "Episode Index": episode.index,
-                        "Display Number": episode.display_number,
-                    })
+                    builder.add_fields(
+                        {
+                            "Show Title": show.title,
+                            "Season Title": season.title,
+                            "Episode Title": episode.title,
+                            "Episode Index": episode.index,
+                            "Display Number": episode.display_number,
+                        }
+                    )
                     # Extract episode info from Plex for diagnostic purposes
                     plex_episode_titles = [
-                        f"{e.get('index', '?')}: {e.get('title', '(untitled)')}"
-                        for e in plex_episodes
+                        f"{e.get('index', '?')}: {e.get('title', '(untitled)')}" for e in plex_episodes
                     ]
                     if plex_episode_titles:
                         builder.add_section("Episodes In Plex", plex_episode_titles)
@@ -1089,10 +1080,7 @@ def main() -> int:
 
     sync = create_plex_sync_from_config(config)
     if sync is None:
-        LOGGER.info(
-            "Plex metadata sync is disabled; "
-            "set settings.plex_metadata_sync.enabled or PLEX_SYNC_ENABLED=true"
-        )
+        LOGGER.info("Plex metadata sync is disabled; set settings.plex_metadata_sync.enabled or PLEX_SYNC_ENABLED=true")
         return 0
 
     try:

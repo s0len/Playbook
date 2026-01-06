@@ -94,4 +94,3 @@ sports:
     )
 
     assert cli.run_kometa_trigger(args) == 1
-

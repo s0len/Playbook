@@ -454,4 +454,3 @@ def _validate_semantics(data: dict[str, Any], report: ValidationReport) -> None:
 
 
 __all__ = ["ValidationIssue", "ValidationReport", "validate_config_data", "CONFIG_SCHEMA"]
-

@@ -58,7 +58,9 @@ class _FileChangeHandler(FileSystemEventHandler):  # type: ignore[misc]
         target = str(path)
         filename = path.name
         if self._include:
-            if not any(fnmatch.fnmatch(filename, pattern) or fnmatch.fnmatch(target, pattern) for pattern in self._include):
+            if not any(
+                fnmatch.fnmatch(filename, pattern) or fnmatch.fnmatch(target, pattern) for pattern in self._include
+            ):
                 return False
         if self._ignore:
             if any(fnmatch.fnmatch(filename, pattern) or fnmatch.fnmatch(target, pattern) for pattern in self._ignore):
@@ -142,4 +144,3 @@ class FileWatcherLoop:
 
 
 __all__ = ["FileWatcherLoop", "WatchdogUnavailableError"]
-

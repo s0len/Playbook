@@ -74,9 +74,7 @@ class MetadataConfig:
 class DestinationTemplates:
     root_template: str = "{show_title}"
     season_dir_template: str = "{season_number:02d} {season_title}"
-    episode_template: str = (
-        "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
-    )
+    episode_template: str = "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
 
 
 @dataclass(slots=True)
@@ -131,9 +129,7 @@ class SportConfig:
     team_alias_map: str | None = None
     destination: DestinationTemplates = field(default_factory=DestinationTemplates)
     source_globs: list[str] = field(default_factory=list)
-    source_extensions: list[str] = field(
-        default_factory=lambda: [".mkv", ".mp4", ".ts", ".m4v", ".avi"]
-    )
+    source_extensions: list[str] = field(default_factory=lambda: [".mkv", ".mp4", ".ts", ".m4v", ".avi"])
     link_mode: str = "hardlink"
     allow_unmatched: bool = False
 
@@ -229,15 +225,11 @@ def _build_sport_config(
 
     pattern_set_refs = data.get("pattern_sets", []) or []
     if not isinstance(pattern_set_refs, list):
-        raise ValueError(
-            f"Sport '{data.get('id')}' must declare 'pattern_sets' as a list when provided"
-        )
+        raise ValueError(f"Sport '{data.get('id')}' must declare 'pattern_sets' as a list when provided")
 
     for set_name in pattern_set_refs:
         if not isinstance(set_name, str):
-            raise ValueError(
-                f"Sport '{data.get('id')}' pattern set names must be strings, got '{set_name}'"
-            )
+            raise ValueError(f"Sport '{data.get('id')}' pattern set names must be strings, got '{set_name}'")
         if set_name not in pattern_sets:
             raise ValueError(f"Unknown pattern set '{set_name}' referenced by sport '{data.get('id')}'")
         pattern_definitions.extend(deepcopy(pattern_sets[set_name]))
@@ -245,9 +237,7 @@ def _build_sport_config(
     custom_patterns = data.get("file_patterns", []) or []
     pattern_definitions.extend(deepcopy(custom_patterns))
 
-    patterns = sorted((
-        _build_pattern_config(pattern) for pattern in pattern_definitions
-    ), key=lambda cfg: cfg.priority)
+    patterns = sorted((_build_pattern_config(pattern) for pattern in pattern_definitions), key=lambda cfg: cfg.priority)
 
     return SportConfig(
         id=data["id"],
@@ -425,9 +415,7 @@ def _build_plex_sync_settings(data: dict[str, Any]) -> PlexSyncSettings:
 
     # Validate URL format if provided and enabled
     if url and enabled and not validate_url(url):
-        raise ValueError(
-            f"'plex_metadata_sync.url' must be a valid http/https URL, got: {url}"
-        )
+        raise ValueError(f"'plex_metadata_sync.url' must be a valid http/https URL, got: {url}")
 
     scan_wait_raw = data.get("scan_wait", 5.0)
     try:
@@ -540,7 +528,9 @@ def _build_kometa_trigger_settings(data: dict[str, Any]) -> KometaTriggerSetting
 def _build_settings(data: dict[str, Any]) -> Settings:
     destination_defaults = DestinationTemplates(
         root_template=data.get("destination", {}).get("root_template", "{show_title}"),
-        season_dir_template=data.get("destination", {}).get("season_dir_template", "{season_number:02d} {season_title}"),
+        season_dir_template=data.get("destination", {}).get(
+            "season_dir_template", "{season_number:02d} {season_title}"
+        ),
         episode_template=data.get("destination", {}).get(
             "episode_template",
             "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}",
@@ -637,9 +627,7 @@ def _build_settings(data: dict[str, Any]) -> Settings:
 def load_config(path: Path) -> AppConfig:
     data = load_yaml_file(path)
 
-    builtin_pattern_sets = {
-        name: deepcopy(patterns) for name, patterns in load_builtin_pattern_sets().items()
-    }
+    builtin_pattern_sets = {name: deepcopy(patterns) for name, patterns in load_builtin_pattern_sets().items()}
     user_pattern_sets = data.get("pattern_sets", {}) or {}
     if not isinstance(user_pattern_sets, dict):
         raise ValueError("'pattern_sets' must be defined as a mapping of name -> list of patterns")
@@ -649,9 +637,7 @@ def load_config(path: Path) -> AppConfig:
             builtin_pattern_sets[name] = []
             continue
         if not isinstance(patterns, list):
-            raise ValueError(
-                f"Pattern set '{name}' must be a list of pattern definitions"
-            )
+            raise ValueError(f"Pattern set '{name}' must be a list of pattern definitions")
         builtin_pattern_sets[name] = deepcopy(patterns)
 
     settings = _build_settings(data.get("settings", {}))

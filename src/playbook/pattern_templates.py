@@ -87,5 +87,3 @@ def expand_regex_with_tokens(regex: str) -> str:
         # Ensure tokens are loaded by forcing the builtin template load.
         load_builtin_pattern_sets()
     return _expand_placeholders(regex, _REGEX_TOKENS)
-
-

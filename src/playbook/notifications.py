@@ -319,7 +319,7 @@ class DiscordTarget(NotificationTarget):
             reason = f" [{item.get('skip_reason')}]" if item.get("skip_reason") else ""
             destination_label = self._destination_label(item.get("destination"))
             line = (
-                f"• {indicator+' ' if indicator else ''}{season_part}{item.get('episode')} "
+                f"• {indicator + ' ' if indicator else ''}{season_part}{item.get('episode')} "
                 f"({item.get('session')}) [{action}]"
                 f"{' — ' + destination_label if destination_label else ''}{reason}"
             )
@@ -613,9 +613,9 @@ class SlackTarget(NotificationTarget):
             )
         base = f"{event.sport_name}: {event.episode} ({event.session})"
         if event.action == "error":
-            return f":warning: Failed {base}{' - '+event.skip_reason if event.skip_reason else ''}"
+            return f":warning: Failed {base}{' - ' + event.skip_reason if event.skip_reason else ''}"
         if event.action == "skipped":
-            return f":information_source: Skipped {base}{' - '+event.skip_reason if event.skip_reason else ''}"
+            return f":information_source: Skipped {base}{' - ' + event.skip_reason if event.skip_reason else ''}"
         if event.action == "dry-run":
             return f":grey_question: [Dry-Run] {base} via {event.link_mode}"
         replaced = " (replaced)" if event.replaced else ""
@@ -815,6 +815,7 @@ class AutoscanTarget(NotificationTarget):
                 remainder = path[len(old_prefix) :]
                 return f"{new_prefix}{remainder}"
         return path
+
 
 class EmailTarget(NotificationTarget):
     name = "email"

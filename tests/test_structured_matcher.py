@@ -24,8 +24,7 @@ class TestNBATrailingDateParsing:
 
         assert year == 2025
         assert parsed_date == dt.date(2025, 12, 22), (
-            f"Expected 2025-12-22, got {parsed_date}. "
-            "Trailing '22 12' should parse as day=22, month=12."
+            f"Expected 2025-12-22, got {parsed_date}. Trailing '22 12' should parse as day=22, month=12."
         )
 
     def test_trailing_date_with_quality_suffix(self) -> None:
@@ -88,9 +87,7 @@ class TestNBATrailingDateParsing:
 class TestNBAStructuredMatching:
     """Tests for NBA structured filename matching to episodes."""
 
-    def _create_nba_show_with_episodes(
-        self, episodes: list[tuple[str, dt.date]]
-    ) -> tuple[Show, Season]:
+    def _create_nba_show_with_episodes(self, episodes: list[tuple[str, dt.date]]) -> tuple[Show, Season]:
         """Helper to create a show with the specified episodes."""
         episode_list = [
             Episode(
@@ -121,10 +118,12 @@ class TestNBAStructuredMatching:
 
     def test_pacers_vs_celtics_matches_correct_episode(self) -> None:
         """Verify Pacers vs Celtics file matches the correct episode, not Celtics vs Heat."""
-        show, season = self._create_nba_show_with_episodes([
-            ("Boston Celtics vs Miami Heat", dt.date(2024, 12, 22)),
-            ("Indiana Pacers vs Boston Celtics", dt.date(2024, 12, 22)),
-        ])
+        show, season = self._create_nba_show_with_episodes(
+            [
+                ("Boston Celtics vs Miami Heat", dt.date(2024, 12, 22)),
+                ("Indiana Pacers vs Boston Celtics", dt.date(2024, 12, 22)),
+            ]
+        )
 
         alias_lookup = _build_team_alias_lookup(show, get_team_alias_map("nba"))
 
@@ -147,16 +146,17 @@ class TestNBAStructuredMatching:
         pacers_celtics = season.episodes[1]
         score_correct = _score_structured_match(structured, season, pacers_celtics, alias_lookup)
         assert score_correct > 0.0, (
-            f"Expected positive score for correct episode, got {score_correct}. "
-            "Both teams match - should match."
+            f"Expected positive score for correct episode, got {score_correct}. Both teams match - should match."
         )
 
     def test_jazz_vs_nuggets_matches_correct_episode(self) -> None:
         """Verify Jazz vs Nuggets file matches correctly."""
-        show, season = self._create_nba_show_with_episodes([
-            ("Utah Jazz vs Denver Nuggets", dt.date(2024, 12, 22)),
-            ("Denver Nuggets vs Los Angeles Lakers", dt.date(2024, 12, 22)),
-        ])
+        show, season = self._create_nba_show_with_episodes(
+            [
+                ("Utah Jazz vs Denver Nuggets", dt.date(2024, 12, 22)),
+                ("Denver Nuggets vs Los Angeles Lakers", dt.date(2024, 12, 22)),
+            ]
+        )
 
         alias_lookup = _build_team_alias_lookup(show, get_team_alias_map("nba"))
 
@@ -178,10 +178,12 @@ class TestNBAStructuredMatching:
 
     def test_magic_vs_warriors_matches_correct_episode(self) -> None:
         """Verify Magic vs Warriors file matches correctly."""
-        show, season = self._create_nba_show_with_episodes([
-            ("Orlando Magic vs Golden State Warriors", dt.date(2024, 12, 22)),
-            ("Golden State Warriors vs Phoenix Suns", dt.date(2024, 12, 22)),
-        ])
+        show, season = self._create_nba_show_with_episodes(
+            [
+                ("Orlando Magic vs Golden State Warriors", dt.date(2024, 12, 22)),
+                ("Golden State Warriors vs Phoenix Suns", dt.date(2024, 12, 22)),
+            ]
+        )
 
         alias_lookup = _build_team_alias_lookup(show, get_team_alias_map("nba"))
 
@@ -203,9 +205,11 @@ class TestNBAStructuredMatching:
 
     def test_date_mismatch_returns_zero(self) -> None:
         """Verify that date mismatch returns zero score even if teams match."""
-        show, season = self._create_nba_show_with_episodes([
-            ("Boston Celtics vs Miami Heat", dt.date(2024, 12, 20)),  # Different date
-        ])
+        show, season = self._create_nba_show_with_episodes(
+            [
+                ("Boston Celtics vs Miami Heat", dt.date(2024, 12, 20)),  # Different date
+            ]
+        )
 
         alias_lookup = _build_team_alias_lookup(show, get_team_alias_map("nba"))
 
@@ -225,9 +229,11 @@ class TestNBAStructuredMatching:
 
     def test_date_within_tolerance_matches(self) -> None:
         """Verify that dates within 2-day tolerance still match."""
-        show, season = self._create_nba_show_with_episodes([
-            ("Boston Celtics vs Miami Heat", dt.date(2024, 12, 22)),
-        ])
+        show, season = self._create_nba_show_with_episodes(
+            [
+                ("Boston Celtics vs Miami Heat", dt.date(2024, 12, 22)),
+            ]
+        )
 
         alias_lookup = _build_team_alias_lookup(show, get_team_alias_map("nba"))
 
@@ -242,16 +248,17 @@ class TestNBAStructuredMatching:
         score = _score_structured_match(structured, season, episode, alias_lookup)
 
         assert score > 0.0, (
-            "Dates within 2-day tolerance should match. "
-            f"Dec 21 vs Dec 22 (1 day difference) got score {score}"
+            f"Dates within 2-day tolerance should match. Dec 21 vs Dec 22 (1 day difference) got score {score}"
         )
 
     def test_same_teams_different_dates_disambiguate(self) -> None:
         """Verify that same teams playing on different dates match to correct episode."""
-        show, season = self._create_nba_show_with_episodes([
-            ("Boston Celtics vs Miami Heat", dt.date(2024, 12, 15)),  # First game
-            ("Boston Celtics vs Miami Heat", dt.date(2024, 12, 22)),  # Rematch
-        ])
+        show, season = self._create_nba_show_with_episodes(
+            [
+                ("Boston Celtics vs Miami Heat", dt.date(2024, 12, 15)),  # First game
+                ("Boston Celtics vs Miami Heat", dt.date(2024, 12, 22)),  # Rematch
+            ]
+        )
 
         alias_lookup = _build_team_alias_lookup(show, get_team_alias_map("nba"))
 
@@ -278,9 +285,11 @@ class TestNBATeamAliasResolution:
 
     def test_nickname_resolves_in_matching(self) -> None:
         """Verify team nicknames resolve correctly during matching."""
-        show, season = TestNBAStructuredMatching()._create_nba_show_with_episodes([
-            ("Boston Celtics vs Miami Heat", dt.date(2024, 12, 22)),
-        ])
+        show, season = TestNBAStructuredMatching()._create_nba_show_with_episodes(
+            [
+                ("Boston Celtics vs Miami Heat", dt.date(2024, 12, 22)),
+            ]
+        )
 
         alias_lookup = _build_team_alias_lookup(show, get_team_alias_map("nba"))
 
@@ -295,15 +304,16 @@ class TestNBATeamAliasResolution:
         score = _score_structured_match(structured, season, episode, alias_lookup)
 
         assert score > 0.0, (
-            f"Nicknames 'Celtics vs Heat' should match 'Boston Celtics vs Miami Heat'. "
-            f"Got score {score}"
+            f"Nicknames 'Celtics vs Heat' should match 'Boston Celtics vs Miami Heat'. Got score {score}"
         )
 
     def test_abbreviation_resolves_in_matching(self) -> None:
         """Verify team abbreviations resolve correctly during matching."""
-        show, season = TestNBAStructuredMatching()._create_nba_show_with_episodes([
-            ("Los Angeles Lakers vs Chicago Bulls", dt.date(2024, 12, 22)),
-        ])
+        show, season = TestNBAStructuredMatching()._create_nba_show_with_episodes(
+            [
+                ("Los Angeles Lakers vs Chicago Bulls", dt.date(2024, 12, 22)),
+            ]
+        )
 
         alias_lookup = _build_team_alias_lookup(show, get_team_alias_map("nba"))
 
@@ -318,15 +328,16 @@ class TestNBATeamAliasResolution:
         score = _score_structured_match(structured, season, episode, alias_lookup)
 
         assert score > 0.0, (
-            f"Abbreviations 'LAL vs CHI' should match 'Los Angeles Lakers vs Chicago Bulls'. "
-            f"Got score {score}"
+            f"Abbreviations 'LAL vs CHI' should match 'Los Angeles Lakers vs Chicago Bulls'. Got score {score}"
         )
 
     def test_city_names_resolve_in_matching(self) -> None:
         """Verify city names resolve correctly during matching."""
-        show, season = TestNBAStructuredMatching()._create_nba_show_with_episodes([
-            ("Denver Nuggets vs Phoenix Suns", dt.date(2024, 12, 22)),
-        ])
+        show, season = TestNBAStructuredMatching()._create_nba_show_with_episodes(
+            [
+                ("Denver Nuggets vs Phoenix Suns", dt.date(2024, 12, 22)),
+            ]
+        )
 
         alias_lookup = _build_team_alias_lookup(show, get_team_alias_map("nba"))
 
@@ -341,8 +352,7 @@ class TestNBATeamAliasResolution:
         score = _score_structured_match(structured, season, episode, alias_lookup)
 
         assert score > 0.0, (
-            f"City names 'Denver vs Phoenix' should match 'Denver Nuggets vs Phoenix Suns'. "
-            f"Got score {score}"
+            f"City names 'Denver vs Phoenix' should match 'Denver Nuggets vs Phoenix Suns'. Got score {score}"
         )
 
 
@@ -375,6 +385,8 @@ class TestExtractTeamsFromText:
         assert len(teams) == 2
         assert "Boston Celtics" in teams
         assert "Miami Heat" in teams
+
+
 from playbook.config import DestinationTemplates, MetadataConfig, SportConfig
 from playbook.matcher import match_file_to_episode
 
@@ -485,4 +497,3 @@ def test_structured_match_with_provider_plus_and_trailing_date_tokens() -> None:
     result = match_file_to_episode(filename, sport, show, patterns=[])
     assert result is not None
     assert result["episode"].title == "Chicago Blackhawks vs Los Angeles Kings"
-

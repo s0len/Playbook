@@ -126,8 +126,7 @@ class TestResolveAssetUrl:
     def test_resolves_relative_path_from_file_url(self) -> None:
         # Base URL is a YAML file, relative path should be resolved from its directory
         result = _resolve_asset_url(
-            "https://raw.githubusercontent.com/user/repo/main/metadata/nhl/2025.yaml",
-            "posters/nhl.jpg"
+            "https://raw.githubusercontent.com/user/repo/main/metadata/nhl/2025.yaml", "posters/nhl.jpg"
         )
         assert result == "https://raw.githubusercontent.com/user/repo/main/metadata/nhl/posters/nhl.jpg"
 
@@ -138,18 +137,12 @@ class TestResolveAssetUrl:
 
     def test_handles_leading_slash(self) -> None:
         # Leading slash means relative to domain root
-        result = _resolve_asset_url(
-            "http://base.com/path/to/file.yaml",
-            "/assets/poster.jpg"
-        )
+        result = _resolve_asset_url("http://base.com/path/to/file.yaml", "/assets/poster.jpg")
         assert result == "http://base.com/assets/poster.jpg"
 
     def test_resolves_parent_directory_path(self) -> None:
         # Should handle paths with ../
-        result = _resolve_asset_url(
-            "https://example.com/metadata/show/2025.yaml",
-            "../posters/poster.jpg"
-        )
+        result = _resolve_asset_url("https://example.com/metadata/show/2025.yaml", "../posters/poster.jpg")
         assert result == "https://example.com/metadata/posters/poster.jpg"
 
 
@@ -447,10 +440,7 @@ class TestSeasonNotFoundLogging:
         ]
 
         # Format like the actual implementation does
-        plex_season_titles = [
-            f"{s.get('index', '?')}: {s.get('title', '(untitled)')}"
-            for s in plex_seasons
-        ]
+        plex_season_titles = [f"{s.get('index', '?')}: {s.get('title', '(untitled)')}" for s in plex_seasons]
 
         assert plex_season_titles == ["1: Season 1", "2: Season 2"]
 
@@ -463,10 +453,7 @@ class TestSeasonNotFoundLogging:
             {"ratingKey": "200", "index": 2, "title": "Season 2"},
         ]
 
-        plex_season_titles = [
-            f"{s.get('index', '?')}: {s.get('title', '(untitled)')}"
-            for s in plex_seasons
-        ]
+        plex_season_titles = [f"{s.get('index', '?')}: {s.get('title', '(untitled)')}" for s in plex_seasons]
 
         season_info = f"'{season.title}'" if season.title else f"index={season.index}"
         plex_seasons_str = ""
@@ -496,10 +483,7 @@ class TestEpisodeNotFoundLogging:
             {"ratingKey": "502", "index": 3, "title": "Episode 3"},
         ]
 
-        plex_episode_titles = [
-            f"{e.get('index', '?')}: {e.get('title', '(untitled)')}"
-            for e in plex_episodes
-        ]
+        plex_episode_titles = [f"{e.get('index', '?')}: {e.get('title', '(untitled)')}" for e in plex_episodes]
 
         assert plex_episode_titles == ["1: Pilot", "2: Episode 2", "3: Episode 3"]
 
@@ -513,10 +497,7 @@ class TestEpisodeNotFoundLogging:
             {"ratingKey": "501", "index": 2, "title": "Episode 2"},
         ]
 
-        plex_episode_titles = [
-            f"{e.get('index', '?')}: {e.get('title', '(untitled)')}"
-            for e in plex_episodes
-        ]
+        plex_episode_titles = [f"{e.get('index', '?')}: {e.get('title', '(untitled)')}" for e in plex_episodes]
 
         episode_info = f"'{episode.title}'" if episode.title else f"index={episode.index}"
         season_info = f"'{season.title}'" if season.title else f"index={season.index}"
@@ -546,10 +527,7 @@ class TestEpisodeNotFoundLogging:
             {"ratingKey": "504", "index": 5, "title": "Ep 5"},
         ]
 
-        plex_episode_titles = [
-            f"{e.get('index', '?')}: {e.get('title', '(untitled)')}"
-            for e in plex_episodes
-        ]
+        plex_episode_titles = [f"{e.get('index', '?')}: {e.get('title', '(untitled)')}" for e in plex_episodes]
 
         plex_episodes_str = ""
         if plex_episode_titles:

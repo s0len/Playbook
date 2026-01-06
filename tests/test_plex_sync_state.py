@@ -148,4 +148,3 @@ class TestPlexSyncStateStore:
         assert data["sports"]["nhl"]["seasons_synced"] == 2
         assert data["sports"]["nhl"]["episodes_synced"] == 10
         assert "synced_at" in data["sports"]["nhl"]
-

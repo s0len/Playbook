@@ -304,9 +304,7 @@ class MetadataFingerprintStore:
                 invalidate_all=False,
             )
 
-        if (
-            not existing.season_hashes and not existing.episode_hashes
-        ) or (
+        if (not existing.season_hashes and not existing.episode_hashes) or (
             not existing.episode_hashes and any(fingerprint.episode_hashes.values())
         ):
             self._fingerprints[key] = fingerprint
@@ -600,9 +598,7 @@ def fetch_metadata(
         except requests.RequestException as exc:  # noqa: BLE001
             if stats:
                 stats.record_failure()
-            raise MetadataFetchError(
-                f"Unable to refetch metadata from {metadata.url} after 304 Not Modified"
-            ) from exc
+            raise MetadataFetchError(f"Unable to refetch metadata from {metadata.url} after 304 Not Modified") from exc
         status_code = response.status_code
         if http_cache:
             http_cache.update(
@@ -749,19 +745,13 @@ class MetadataNormalizer:
             display_override = self.metadata_cfg.season_overrides.get(title, {}).get("season_number")
 
             derived_round = (
-                _season_round_from_sort_title(sort_title)
-                or self._season_number_from_key(str(key))
-                or title_round
+                _season_round_from_sort_title(sort_title) or self._season_number_from_key(str(key)) or title_round
             )
             if derived_round is None:
                 derived_round = index + 1
 
             season.round_number = int(round_override) if round_override is not None else derived_round
-            season.display_number = (
-                int(display_override)
-                if display_override is not None
-                else season.round_number
-            )
+            season.display_number = int(display_override) if display_override is not None else season.round_number
             if season.display_number is None:
                 season.display_number = index + 1
 
@@ -785,7 +775,7 @@ class MetadataNormalizer:
         episodes: list[Episode] = []
         for index, (episode_key, episode_raw) in enumerate(episodes_items):
             episode_dict = episode_raw or {}
-            title = episode_dict.get("title") or episode_dict.get("name") or f"Episode {index+1}"
+            title = episode_dict.get("title") or episode_dict.get("name") or f"Episode {index + 1}"
             summary = episode_dict.get("summary")
             originally_available = _parse_originally_available(episode_dict.get("originally_available"))
 

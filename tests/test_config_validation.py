@@ -57,4 +57,3 @@ def test_validation_rejects_invalid_watcher_block() -> None:
 
     report = validate_config_data(config)
     assert any(issue.path == "settings.file_watcher.paths" for issue in report.errors)
-

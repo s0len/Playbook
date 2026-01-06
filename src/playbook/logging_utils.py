@@ -129,4 +129,3 @@ def render_section_block(
     for heading, items in sections:
         builder.add_section(heading, items)
     return builder.render()
-

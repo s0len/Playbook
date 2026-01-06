@@ -23,9 +23,7 @@ def _token_similarity(candidate: str, target: str) -> float:
     return difflib.SequenceMatcher(None, candidate, target, autojunk=False).ratio()
 
 
-def _dates_within_proximity(
-    date1: dt.date | None, date2: dt.date | None, tolerance_days: int = 2
-) -> bool:
+def _dates_within_proximity(date1: dt.date | None, date2: dt.date | None, tolerance_days: int = 2) -> bool:
     """Check if two dates are within the specified tolerance (in days).
 
     Returns True if both dates are None, or if they're within tolerance.
@@ -67,7 +65,9 @@ def _tokens_close(candidate: str, target: str) -> bool:
         return False
 
     if len(candidate) == len(target):
-        differing_indices = [idx for idx, (cand_char, targ_char) in enumerate(zip(candidate, target)) if cand_char != targ_char]
+        differing_indices = [
+            idx for idx, (cand_char, targ_char) in enumerate(zip(candidate, target)) if cand_char != targ_char
+        ]
         if len(differing_indices) == 2:
             first, second = differing_indices
             if candidate[first] == target[second] and candidate[second] == target[first]:
@@ -369,9 +369,7 @@ def _select_episode(
         split_variants = [segment for segment in re.split(r"[\s._-]+", value) if segment]
         if split_variants:
             push_variant(" ".join(split_variants))
-            without_noise_words = " ".join(
-                word for word in split_variants if _strip_noise(normalize_token(word))
-            )
+            without_noise_words = " ".join(word for word in split_variants if _strip_noise(normalize_token(word)))
             push_variant(without_noise_words)
             for index in range(1, len(split_variants)):
                 truncated = " ".join(split_variants[index:])
@@ -484,7 +482,8 @@ def _select_episode(
         # If we have a date from the filename, filter by date proximity
         if parsed_date is not None:
             date_matched = [
-                ep for ep in matching_episodes
+                ep
+                for ep in matching_episodes
                 if _dates_within_proximity(parsed_date, ep.originally_available, tolerance_days=2)
             ]
             if date_matched:
@@ -492,7 +491,8 @@ def _select_episode(
                 return min(
                     date_matched,
                     key=lambda ep: abs((parsed_date - ep.originally_available).days)
-                    if ep.originally_available else 999
+                    if ep.originally_available
+                    else 999,
                 )
             # No date-matching episodes found - this is likely a mismatch
             # Only return a match if there's exactly one candidate (no ambiguity)
@@ -679,9 +679,7 @@ def _score_structured_match(
         if episode.originally_available.year == structured.year:
             score += 0.1
 
-    if structured.round and (
-        season.round_number == structured.round or season.display_number == structured.round
-    ):
+    if structured.round and (season.round_number == structured.round or season.display_number == structured.round):
         score += 0.1
     return score
 
@@ -798,11 +796,7 @@ def match_file_to_episode(
     def summarize_groups(groups: dict[str, str]) -> str:
         if not groups:
             return "none"
-        parts = [
-            f"{key}={value!r}"
-            for key, value in sorted(groups.items())
-            if not key.startswith("_")
-        ]
+        parts = [f"{key}={value!r}" for key, value in sorted(groups.items()) if not key.startswith("_")]
         return ", ".join(parts)
 
     def summarize_episode_candidates(season: Season, *, limit: int = 5) -> str:
@@ -999,10 +993,7 @@ def match_file_to_episode(
             "\n  - " if len(failed_resolutions) > 1 else " ",
             "\n  - ".join(failed_resolutions) if len(failed_resolutions) > 1 else failed_resolutions[0],
         )
-        message = (
-            f"Matched {matched_patterns} pattern(s) but could not resolve: "
-            f"{'; '.join(failed_resolutions)}"
-        )
+        message = f"Matched {matched_patterns} pattern(s) but could not resolve: {'; '.join(failed_resolutions)}"
         severity = "ignored" if (sport.allow_unmatched or suppress_warnings) else "warning"
         record(severity, message)
         if trace is not None:
@@ -1013,5 +1004,3 @@ def match_file_to_episode(
         if trace is not None:
             trace["status"] = "no-match"
     return None
-
-

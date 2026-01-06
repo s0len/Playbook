@@ -260,9 +260,7 @@ class TestNBATeamAliases:
         # Get all unique canonical team names from the alias map
         canonical_teams = set(alias_map.values())
 
-        assert len(canonical_teams) == 30, (
-            f"Expected 30 NBA teams in alias map, got {len(canonical_teams)}"
-        )
+        assert len(canonical_teams) == 30, f"Expected 30 NBA teams in alias map, got {len(canonical_teams)}"
 
         # Verify each team is present
         for team in self.NBA_TEAMS:
@@ -285,8 +283,7 @@ class TestNBATeamAliases:
 
         for abbr, expected_team in abbreviation_mappings.items():
             assert alias_map.get(abbr) == expected_team, (
-                f"Abbreviation '{abbr}' should resolve to '{expected_team}', "
-                f"got '{alias_map.get(abbr)}'"
+                f"Abbreviation '{abbr}' should resolve to '{expected_team}', got '{alias_map.get(abbr)}'"
             )
 
     def test_nicknames_resolve(self) -> None:
@@ -307,8 +304,7 @@ class TestNBATeamAliases:
 
         for nickname, expected_team in nickname_mappings.items():
             assert alias_map.get(nickname) == expected_team, (
-                f"Nickname '{nickname}' should resolve to '{expected_team}', "
-                f"got '{alias_map.get(nickname)}'"
+                f"Nickname '{nickname}' should resolve to '{expected_team}', got '{alias_map.get(nickname)}'"
             )
 
     def test_city_names_resolve(self) -> None:
@@ -328,9 +324,10 @@ class TestNBATeamAliases:
 
         for city, expected_team in city_mappings.items():
             assert alias_map.get(city) == expected_team, (
-                f"City '{city}' should resolve to '{expected_team}', "
-                f"got '{alias_map.get(city)}'"
+                f"City '{city}' should resolve to '{expected_team}', got '{alias_map.get(city)}'"
             )
+
+
 # ========================== Date Proximity Tests ==========================
 
 
@@ -600,4 +597,3 @@ class TestMatchFileWithDateProximity:
         # Should match October episode (index 5), not December (index 45)
         assert episode.index == 5
         assert episode.originally_available == dt.date(2024, 10, 15)
-

@@ -315,4 +315,3 @@ def test_metadata_normalizer_falls_back_to_index_when_no_numeric_hint() -> None:
     assert show.seasons[0].display_number == 1
     assert show.seasons[1].round_number == 2
     assert show.seasons[1].display_number == 2
-

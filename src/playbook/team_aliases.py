@@ -137,4 +137,3 @@ def get_team_alias_map(name: str | None) -> dict[str, str]:
     if not name:
         return {}
     return _TEAM_ALIAS_MAPS.get(name, {})
-

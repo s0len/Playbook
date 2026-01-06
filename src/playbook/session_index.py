@@ -21,6 +21,7 @@ Optimization Strategy:
     retrieve only the keys that satisfy conditions #2 and #3 in O(1) time, eliminating
     ~98% of unnecessary distance calculations.
 """
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -129,7 +130,7 @@ class SessionLookupIndex:
         # Index by first character and length for O(1) candidate filtering
         if key:  # Only index non-empty keys
             first_char = key[0]  # Extract first character (e.g., "race" -> "r")
-            length = len(key)     # Calculate length (e.g., "race" -> 4)
+            length = len(key)  # Calculate length (e.g., "race" -> 4)
 
             # Append to the appropriate bucket: _index[first_char][length]
             # Example: "race" goes to _index["r"][4].append("race")
@@ -186,9 +187,9 @@ class SessionLookupIndex:
 
         Example:
             >>> index = SessionLookupIndex()
-            >>> index.add("practice", "s01e01")    # Length 8, first char 'p'
+            >>> index.add("practice", "s01e01")  # Length 8, first char 'p'
             >>> index.add("qualifying", "s01e02")  # Length 10, first char 'q'
-            >>> index.add("race", "s01e03")        # Length 4, first char 'r'
+            >>> index.add("race", "s01e03")  # Length 4, first char 'r'
             >>>
             >>> # Token "practce" (length 7, first char 'p')
             >>> # Returns keys with first char 'p' and length in {6, 7, 8}
@@ -205,7 +206,7 @@ class SessionLookupIndex:
 
         # Extract filtering criteria from the token
         first_char = token[0]  # e.g., "practce" -> 'p'
-        length = len(token)     # e.g., "practce" -> 7
+        length = len(token)  # e.g., "practce" -> 7
 
         # Retrieve candidates matching the bucketing constraints
         # This is where the optimization happens: O(1) bucket access instead of O(n) scan
@@ -266,11 +267,7 @@ class SessionLookupIndex:
         Complexity: O(n) where n is the number of entries in mapping
 
         Example:
-            >>> session_dict = {
-            ...     "practice": "s01e01",
-            ...     "qualifying": "s01e02",
-            ...     "race": "s01e03"
-            ... }
+            >>> session_dict = {"practice": "s01e01", "qualifying": "s01e02", "race": "s01e03"}
             >>> index = SessionLookupIndex.from_dict(session_dict)
             >>> index.get_direct("race")
             's01e03'

@@ -149,9 +149,7 @@ def test_processor_removes_changed_entries_when_metadata_changes(tmp_path, monke
 
     state_dir = settings.cache_dir / "state"
     state_dir.mkdir(parents=True, exist_ok=True)
-    (state_dir / "metadata-digests.json").write_text(
-        json.dumps({"demo": fingerprint_v1.to_dict()})
-    )
+    (state_dir / "metadata-digests.json").write_text(json.dumps({"demo": fingerprint_v1.to_dict()}))
 
     call_counter = {"value": 0}
 
@@ -316,22 +314,12 @@ def test_metadata_change_relinks_and_removes_old_destination(tmp_path, monkeypat
     processor = Processor(config, enable_notifications=False)
     processor.process_all()
 
-    old_destination = (
-        settings.destination_dir
-        / "Demo Series"
-        / "01 Season 1"
-        / "Demo Series - S01E01 - Qualifying.mkv"
-    )
+    old_destination = settings.destination_dir / "Demo Series" / "01 Season 1" / "Demo Series - S01E01 - Qualifying.mkv"
     assert old_destination.exists()
 
     processor.process_all()
 
-    new_destination = (
-        settings.destination_dir
-        / "Demo Series"
-        / "01 Season 1"
-        / "Demo Series - S01E02 - Qualifying.mkv"
-    )
+    new_destination = settings.destination_dir / "Demo Series" / "01 Season 1" / "Demo Series - S01E02 - Qualifying.mkv"
 
     assert new_destination.exists()
     assert not old_destination.exists()
@@ -526,6 +514,7 @@ def test_symlink_sources_are_skipped(tmp_path, monkeypatch) -> None:
     assert stats.ignored == 0
     assert stats.errors == []
     assert stats.warnings == []
+
 
 def test_should_suppress_sample_variants() -> None:
     assert Processor._should_suppress_sample_ignored(Path("sample.mkv"))
@@ -779,7 +768,9 @@ class TestExtractErrorContext:
     """Tests for Processor._extract_error_context."""
 
     def test_extract_show_not_found_context(self) -> None:
-        error = "Show not found: 'Formula 1' in library 5 (metadata: http://example.com/f1.yaml). Similar: F1, Formula One"
+        error = (
+            "Show not found: 'Formula 1' in library 5 (metadata: http://example.com/f1.yaml). Similar: F1, Formula One"
+        )
         result = Processor._extract_error_context(error)
 
         assert result is not None
@@ -836,7 +827,9 @@ class TestExtractErrorContext:
         assert "plex has=[E01, E02, E03]" in result
 
     def test_extract_episode_not_found_without_available(self) -> None:
-        error = "Episode not found: E05 in season S01 of 'Demo Series' | library=2 | source=http://example.com/demo.yaml."
+        error = (
+            "Episode not found: E05 in season S01 of 'Demo Series' | library=2 | source=http://example.com/demo.yaml."
+        )
         result = Processor._extract_error_context(error)
 
         assert result is not None
@@ -1060,7 +1053,9 @@ def test_content_hash_determinism() -> None:
     fingerprint3 = compute_show_fingerprint(show3, metadata_cfg)
 
     assert fingerprint3.content_hash is not None
-    assert fingerprint3.content_hash != fingerprint1.content_hash, "Different metadata should produce different content_hash"
+    assert fingerprint3.content_hash != fingerprint1.content_hash, (
+        "Different metadata should produce different content_hash"
+    )
 
     # Test 3: Different season_overrides produces different content_hash
     metadata_cfg_with_overrides = MetadataConfig(
@@ -1070,5 +1065,6 @@ def test_content_hash_determinism() -> None:
     fingerprint4 = compute_show_fingerprint(show4, metadata_cfg_with_overrides)
 
     assert fingerprint4.content_hash is not None
-    assert fingerprint4.content_hash != fingerprint1.content_hash, "Different season_overrides should produce different content_hash"
-
+    assert fingerprint4.content_hash != fingerprint1.content_hash, (
+        "Different season_overrides should produce different content_hash"
+    )

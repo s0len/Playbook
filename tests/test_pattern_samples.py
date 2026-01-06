@@ -115,9 +115,7 @@ def _build_sport(data: dict[str, object]) -> SportConfig:
         patterns=patterns,
         destination=DestinationTemplates(),
         source_globs=list(data.get("source_globs", [])),
-        source_extensions=list(
-            data.get("source_extensions", [".mkv", ".mp4", ".ts", ".m4v", ".avi"])
-        ),
+        source_extensions=list(data.get("source_extensions", [".mkv", ".mp4", ".ts", ".m4v", ".avi"])),
         link_mode=str(data.get("link_mode", "hardlink")),
         allow_unmatched=bool(data.get("allow_unmatched", False)),
     )
@@ -181,7 +179,6 @@ def test_pattern_samples(sample: PatternSample) -> None:
             f"{sample.description}: '{expectation.value}' did not resolve. Diagnostics: {diagnostics}"
         )
         if expectation.expect_episode is not None:
-            assert (
-                result["episode"].title == expectation.expect_episode
-            ), f"{sample.description}: '{expectation.value}' matched {result['episode'].title!r}, expected {expectation.expect_episode!r}"
-
+            assert result["episode"].title == expectation.expect_episode, (
+                f"{sample.description}: '{expectation.value}' matched {result['episode'].title!r}, expected {expectation.expect_episode!r}"
+            )

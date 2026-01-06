@@ -239,9 +239,7 @@ class Processor:
             )
             removed_records = self.processed_cache.remove_by_metadata_changes(self._metadata_change_map)
             self._stale_destinations = {
-                source: Path(record.destination)
-                for source, record in removed_records.items()
-                if record.destination
+                source: Path(record.destination) for source, record in removed_records.items() if record.destination
             }
             self._stale_records = removed_records
         stats = ProcessingStats()
@@ -479,9 +477,7 @@ class Processor:
                 try:
                     destination = self._build_destination(runtime, pattern, context)
                 except ValueError as exc:
-                    message = (
-                        f"{runtime.sport.id}: Unsafe destination for {source_path.name} - {exc}"
-                    )
+                    message = f"{runtime.sport.id}: Unsafe destination for {source_path.name} - {exc}"
                     LOGGER.error(
                         self._format_log(
                             "Unsafe Destination",
@@ -694,10 +690,7 @@ class Processor:
                     f"{plex_summary['episodes']['updated']} (show/season/ep)"
                 )
                 # Show not-found counts if any
-                not_found = (
-                    plex_summary["seasons"]["not_found"]
-                    + plex_summary["episodes"]["not_found"]
-                )
+                not_found = plex_summary["seasons"]["not_found"] + plex_summary["episodes"]["not_found"]
                 if not_found:
                     plex_status += f" [{not_found} not found]"
                 if self._plex_sync_stats.errors:
@@ -916,22 +909,11 @@ class Processor:
 
     @staticmethod
     def _has_activity(stats: ProcessingStats) -> bool:
-        return bool(
-            stats.processed
-            or stats.skipped
-            or stats.ignored
-            or stats.errors
-            or stats.warnings
-        )
+        return bool(stats.processed or stats.skipped or stats.ignored or stats.errors or stats.warnings)
 
     @staticmethod
     def _has_detailed_activity(stats: ProcessingStats) -> bool:
-        return bool(
-            stats.errors
-            or stats.warnings
-            or stats.skipped_details
-            or stats.ignored_details
-        )
+        return bool(stats.errors or stats.warnings or stats.skipped_details or stats.ignored_details)
 
     def _build_context(self, runtime: SportRuntime, source_path: Path, season, episode, groups) -> dict[str, object]:
         show = runtime.show
@@ -1004,19 +986,12 @@ class Processor:
         episode_filename = render_template(episode_template, context)
         episode_component = sanitize_component(episode_filename)
 
-        destination = (
-            settings.destination_dir
-            / root_component
-            / season_component
-            / episode_component
-        )
+        destination = settings.destination_dir / root_component / season_component / episode_component
 
         base_dir = settings.destination_dir.resolve()
         destination_resolved = destination.resolve(strict=False)
         if not destination_resolved.is_relative_to(base_dir):
-            raise ValueError(
-                f"destination {destination_resolved} escapes destination_dir {base_dir}"
-            )
+            raise ValueError(f"destination {destination_resolved} escapes destination_dir {base_dir}")
 
         return destination
 
@@ -1363,9 +1338,7 @@ class Processor:
         alias_candidates = self._alias_candidates(match)
 
         baseline_scores = [
-            self._specificity_score(alias)
-            for alias in alias_candidates
-            if normalize_token(alias) != session_token
+            self._specificity_score(alias) for alias in alias_candidates if normalize_token(alias) != session_token
         ]
 
         if not baseline_scores:
