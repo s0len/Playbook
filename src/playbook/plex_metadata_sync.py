@@ -25,6 +25,7 @@ from .metadata import (
     MetadataFingerprintStore,
     ShowFingerprint,
     compute_show_fingerprint,
+    compute_show_fingerprint_cached,
     load_show,
 )
 from .models import Episode, Season, Show
@@ -558,7 +559,8 @@ class PlexMetadataSync:
             # Load show to compute fingerprint
             try:
                 show = load_show(self.config.settings, sport.metadata)
-                fingerprint = compute_show_fingerprint(show, sport.metadata)
+                cached_fingerprint = self.fingerprint_store.get(sport.id)
+                fingerprint = compute_show_fingerprint_cached(show, sport.metadata, cached_fingerprint)
             except Exception as exc:  # noqa: BLE001
                 LOGGER.debug("Failed to load metadata for %s: %s", sport.id, exc)
                 continue
