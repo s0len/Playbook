@@ -811,6 +811,99 @@ def _validate_semantics(
                 )
 
 
+def group_validation_issues(
+    issues: List[ValidationIssue],
+) -> Dict[str, Dict[str, List[ValidationIssue]]]:
+    """Group validation issues by their root section and sub-section.
+
+    This function organizes validation issues hierarchically:
+    - First level: Root section (settings, sports, pattern_sets, etc.)
+    - Second level: Sub-section for arrays (e.g., sports[0], sports[1]) or subsection names
+
+    Args:
+        issues: List of ValidationIssue objects to group
+
+    Returns:
+        Nested dictionary structure:
+        {
+            "settings": {
+                "notifications": [issue1, issue2],
+                "file_watcher": [issue3]
+            },
+            "sports": {
+                "sports[0]": [issue4, issue5],
+                "sports[1]": [issue6]
+            },
+            "pattern_sets": {
+                "pattern_sets": [issue7]
+            }
+        }
+
+    Example:
+        >>> issues = [
+        ...     ValidationIssue("error", "settings.notifications.flush_time", "Invalid time", "flush-time"),
+        ...     ValidationIssue("error", "sports[0].id", "Required field", "schema"),
+        ...     ValidationIssue("error", "sports[1].metadata.url", "Blank URL", "metadata-url"),
+        ... ]
+        >>> grouped = group_validation_issues(issues)
+        >>> "settings" in grouped
+        True
+        >>> "sports[0]" in grouped["sports"]
+        True
+    """
+    grouped: Dict[str, Dict[str, List[ValidationIssue]]] = {}
+
+    for issue in issues:
+        path = issue.path
+
+        # Extract root section (first part before . or [)
+        root_match = re.match(r'^([a-zA-Z_][a-zA-Z0-9_-]*)', path)
+        if not root_match:
+            # Fallback for unusual paths
+            root_section = "<root>"
+        else:
+            root_section = root_match.group(1)
+
+        # Determine the sub-section key for grouping
+        # For array paths like "sports[0].id", extract "sports[0]"
+        # For nested arrays like "sports[0].variants[1]", extract "sports[0].variants[1]"
+        # For non-array paths like "settings.notifications.flush_time", use the second level "notifications"
+
+        if '[' in path:
+            # Array path - extract up to the last array index before any property access
+            # Examples:
+            #   "sports[0].id" -> "sports[0]"
+            #   "sports[0].metadata.url" -> "sports[0]"
+            #   "sports[0].variants[1].metadata" -> "sports[0].variants[1]"
+
+            # Extract the path up to and including the last array index
+            # This regex matches the path from start up to the last closing bracket
+            match = re.match(r'^([a-zA-Z_][a-zA-Z0-9_.\[\]-]*\[[0-9]+\])', path)
+            if match:
+                sub_section = match.group(1)
+            else:
+                # Fallback if regex fails
+                sub_section = root_section
+        else:
+            # Non-array path - use second-level key if available, otherwise root
+            parts = path.split('.')
+            if len(parts) >= 2:
+                sub_section = parts[1]
+            else:
+                sub_section = root_section
+
+        # Initialize nested structure if needed
+        if root_section not in grouped:
+            grouped[root_section] = {}
+
+        if sub_section not in grouped[root_section]:
+            grouped[root_section][sub_section] = []
+
+        grouped[root_section][sub_section].append(issue)
+
+    return grouped
+
+
 __all__ = [
     "ValidationIssue",
     "ValidationReport",
@@ -820,5 +913,6 @@ __all__ = [
     "extract_yaml_line_numbers_from_file",
     "get_fix_suggestion",
     "FIX_SUGGESTION_REGISTRY",
+    "group_validation_issues",
 ]
 
