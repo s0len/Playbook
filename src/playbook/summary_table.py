@@ -10,6 +10,20 @@ if TYPE_CHECKING:  # pragma: no cover
     from .plex_client import PlexSyncStats
 
 
+# Color constants for status indicators
+SUCCESS_COLOR = "green"
+WARNING_COLOR = "yellow"
+ERROR_COLOR = "red"
+DIM_COLOR = "dim"
+
+# Symbol/emoji indicators for quick scanning
+SUCCESS_SYMBOL = "✓"
+WARNING_SYMBOL = "⚠"
+ERROR_SYMBOL = "✗"
+SKIP_SYMBOL = "⊘"
+IGNORE_SYMBOL = "○"
+
+
 class SummaryTableRenderer:
     """Renders processing statistics as Rich Tables with color-coded status indicators."""
 
@@ -34,12 +48,12 @@ class SummaryTableRenderer:
             Rich color string
         """
         if value == 0:
-            return "dim"
+            return DIM_COLOR
         if is_error:
-            return "red"
+            return ERROR_COLOR
         if is_warning:
-            return "yellow"
-        return "green"
+            return WARNING_COLOR
+        return SUCCESS_COLOR
 
     @staticmethod
     def _colorize_value(value: int, *, is_error: bool = False, is_warning: bool = False) -> str:
@@ -55,6 +69,70 @@ class SummaryTableRenderer:
         """
         color = SummaryTableRenderer._get_status_color(value, is_error=is_error, is_warning=is_warning)
         return f"[{color}]{value}[/{color}]"
+
+    @staticmethod
+    def _get_status_symbol(
+        *,
+        is_error: bool = False,
+        is_warning: bool = False,
+        is_skip: bool = False,
+        is_ignore: bool = False,
+    ) -> str:
+        """Get the symbol/emoji for a status type.
+
+        Args:
+            is_error: Whether this represents an error
+            is_warning: Whether this represents a warning
+            is_skip: Whether this represents a skip
+            is_ignore: Whether this represents ignored items
+
+        Returns:
+            Symbol string for the status type
+        """
+        if is_error:
+            return ERROR_SYMBOL
+        if is_warning:
+            return WARNING_SYMBOL
+        if is_skip:
+            return SKIP_SYMBOL
+        if is_ignore:
+            return IGNORE_SYMBOL
+        return SUCCESS_SYMBOL
+
+    @staticmethod
+    def _colorize_value_with_symbol(
+        value: int,
+        *,
+        is_error: bool = False,
+        is_warning: bool = False,
+        is_skip: bool = False,
+        is_ignore: bool = False,
+    ) -> str:
+        """Colorize a numeric value with a status symbol.
+
+        Args:
+            value: The numeric value to colorize
+            is_error: Whether this represents an error count
+            is_warning: Whether this represents a warning count
+            is_skip: Whether this represents a skip count
+            is_ignore: Whether this represents an ignore count
+
+        Returns:
+            Rich formatted string with symbol and color markup
+        """
+        if value == 0:
+            return f"[{DIM_COLOR}]{value}[/{DIM_COLOR}]"
+
+        symbol = SummaryTableRenderer._get_status_symbol(
+            is_error=is_error,
+            is_warning=is_warning,
+            is_skip=is_skip,
+            is_ignore=is_ignore,
+        )
+        color = SummaryTableRenderer._get_status_color(
+            value, is_error=is_error, is_warning=is_warning
+        )
+        return f"[{color}]{symbol} {value}[/{color}]"
 
     def render_summary_table(
         self,
