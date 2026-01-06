@@ -154,16 +154,16 @@ class SummaryTableRenderer:
         table.add_column("Count", justify="right")
 
         # Add processing stats
-        table.add_row("Processed", self._colorize_value(stats.processed))
-        table.add_row("Skipped", self._colorize_value(stats.skipped, is_warning=True))
-        table.add_row("Ignored", self._colorize_value(stats.ignored))
-        table.add_row("Warnings", self._colorize_value(len(stats.warnings), is_warning=True))
-        table.add_row("Errors", self._colorize_value(len(stats.errors), is_error=True))
+        table.add_row("Processed", self._colorize_value_with_symbol(stats.processed))
+        table.add_row("Skipped", self._colorize_value_with_symbol(stats.skipped, is_skip=True))
+        table.add_row("Ignored", self._colorize_value_with_symbol(stats.ignored, is_ignore=True))
+        table.add_row("Warnings", self._colorize_value_with_symbol(len(stats.warnings), is_warning=True))
+        table.add_row("Errors", self._colorize_value_with_symbol(len(stats.errors), is_error=True))
 
         # Add Plex sync errors if available
         if plex_sync_stats and plex_sync_stats.errors:
             plex_errors = len(plex_sync_stats.errors)
-            table.add_row("Plex Sync Errors", self._colorize_value(plex_errors, is_error=True))
+            table.add_row("Plex Sync Errors", self._colorize_value_with_symbol(plex_errors, is_error=True))
 
         return table
 
