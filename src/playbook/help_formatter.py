@@ -148,9 +148,22 @@ class RichHelpFormatter(argparse.HelpFormatter):
             content: Section content
             output: List to append rendered output to
         """
-        # Create a styled title
+        # Map section titles to icons for visual scanning
+        section_icons = {
+            "usage": "🚀",
+            "positional arguments": "📋",
+            "optional arguments": "⚙️",
+            "options": "⚙️",
+            "description": "📝",
+        }
+
+        # Get icon for this section (case-insensitive lookup)
+        icon = section_icons.get(title.lower(), "")
+        icon_prefix = f"{icon} " if icon else ""
+
+        # Create a styled title with icon
         title_text = Text()
-        title_text.append(title, style="bold cyan")
+        title_text.append(f"{icon_prefix}{title}", style="bold bright_cyan")
 
         # Render title
         with self.console.capture() as capture:
@@ -174,22 +187,26 @@ class RichHelpFormatter(argparse.HelpFormatter):
             return ""
 
         with self.console.capture() as capture:
-            self.console.print(Text("Examples:", style="bold cyan"))
+            # Section header with icon
+            self.console.print(Text("📚 Examples:", style="bold bright_cyan"))
             self.console.print()
 
             for i, (description, command) in enumerate(self._examples, 1):
-                # Print description
-                self.console.print(f"  {i}. {description}", style="white")
+                # Print description with subtle numbering
+                desc_text = Text()
+                desc_text.append(f"  {i}. ", style="dim cyan")
+                desc_text.append(description, style="bright_white")
+                self.console.print(desc_text)
 
-                # Print command in a subtle code block style
-                self.console.print(f"     $ {command}", style="dim yellow")
+                # Print command in a code block style with good contrast
+                self.console.print(f"     $ {command}", style="bright_yellow")
 
                 if i < len(self._examples):
                     self.console.print()  # Spacing between examples
 
-            # Add note about --examples flag
+            # Add note about --examples flag with icon
             self.console.print()
-            self.console.print("  Run with --examples to see more comprehensive usage examples", style="dim italic")
+            self.console.print("  💡 Run with --examples to see more comprehensive usage examples", style="dim italic bright_blue")
 
         return capture.get()
 
@@ -201,13 +218,14 @@ class RichHelpFormatter(argparse.HelpFormatter):
             Formatted environment variables string
         """
         with self.console.capture() as capture:
-            self.console.print(Text("Environment Variables:", style="bold cyan"))
+            # Section header with icon
+            self.console.print(Text("🔧 Environment Variables:", style="bold bright_cyan"))
             self.console.print()
 
-            # Create a table for better readability
+            # Create a table for better readability with enhanced styling
             table = Table(show_header=False, box=None, padding=(0, 2))
-            table.add_column("Variable", style="green", no_wrap=True)
-            table.add_column("Description", style="white")
+            table.add_column("Variable", style="bright_green bold", no_wrap=True)
+            table.add_column("Description", style="bright_white")
 
             for var_name, description in self._env_vars:
                 table.add_row(var_name, description)
@@ -224,12 +242,16 @@ class RichHelpFormatter(argparse.HelpFormatter):
             Formatted tips string
         """
         with self.console.capture() as capture:
-            self.console.print(Text("Tips:", style="bold cyan"))
+            # Section header with icon
+            self.console.print(Text("💡 Tips:", style="bold bright_cyan"))
             self.console.print()
 
             for tip in self._tips:
-                # Use a bullet point for each tip
-                self.console.print(f"  • {tip}", style="yellow")
+                # Use a styled bullet point for each tip with good readability
+                tip_text = Text()
+                tip_text.append("  ✨ ", style="bright_yellow")
+                tip_text.append(tip, style="bright_white")
+                self.console.print(tip_text)
 
         return capture.get()
 
@@ -250,13 +272,13 @@ def render_extended_examples(
     if console is None:
         console = Console()
 
-    # Render title
+    # Render title with icon
     title = Text()
-    title.append(f"Extended Examples: ", style="bold white")
-    title.append(f"playbook {command_name}", style="bold cyan")
+    title.append("📚 Extended Examples: ", style="bold bright_white")
+    title.append(f"playbook {command_name}", style="bold bright_cyan")
 
     console.print()
-    console.print(Panel(title, style="bold cyan", border_style="cyan"))
+    console.print(Panel(title, style="bold bright_cyan", border_style="bright_cyan"))
     console.print()
 
     # Group examples by category
@@ -280,56 +302,74 @@ def render_extended_examples(
 
     # Render CLI examples
     if cli_examples:
-        console.print(Text("Command-Line Interface", style="bold yellow"))
+        console.print(Text("💻 Command-Line Interface", style="bold bright_yellow"))
         console.print()
         for i, (description, command) in enumerate(cli_examples, 1):
-            console.print(f"  {i}. {description}", style="white")
-            console.print(f"     $ {command}", style="green")
+            desc_text = Text()
+            desc_text.append(f"  {i}. ", style="dim bright_cyan")
+            desc_text.append(description, style="bright_white")
+            console.print(desc_text)
+            console.print(f"     $ {command}", style="bright_green")
             console.print()
 
     # Render Docker examples
     if docker_examples:
-        console.print(Text("Docker Usage", style="bold yellow"))
+        console.print(Text("🐳 Docker Usage", style="bold bright_yellow"))
         console.print()
         for i, (description, command) in enumerate(docker_examples, 1):
-            console.print(f"  {i}. {description}", style="white")
-            console.print(f"     $ {command}", style="blue")
+            desc_text = Text()
+            desc_text.append(f"  {i}. ", style="dim bright_cyan")
+            desc_text.append(description, style="bright_white")
+            console.print(desc_text)
+            console.print(f"     $ {command}", style="bright_blue")
             console.print()
 
     # Render Kubernetes examples
     if kubernetes_examples:
-        console.print(Text("Kubernetes Usage", style="bold yellow"))
+        console.print(Text("☸️  Kubernetes Usage", style="bold bright_yellow"))
         console.print()
         for i, (description, command) in enumerate(kubernetes_examples, 1):
-            console.print(f"  {i}. {description}", style="white")
-            console.print(f"     $ {command}", style="magenta")
+            desc_text = Text()
+            desc_text.append(f"  {i}. ", style="dim bright_cyan")
+            desc_text.append(description, style="bright_white")
+            console.print(desc_text)
+            console.print(f"     $ {command}", style="bright_magenta")
             console.print()
 
     # Render Python module examples
     if python_examples:
-        console.print(Text("Python Module Usage", style="bold yellow"))
+        console.print(Text("🐍 Python Module Usage", style="bold bright_yellow"))
         console.print()
         for i, (description, command) in enumerate(python_examples, 1):
-            console.print(f"  {i}. {description}", style="white")
-            console.print(f"     $ {command}", style="cyan")
+            desc_text = Text()
+            desc_text.append(f"  {i}. ", style="dim bright_cyan")
+            desc_text.append(description, style="bright_white")
+            console.print(desc_text)
+            console.print(f"     $ {command}", style="bright_cyan")
             console.print()
 
     # Render other examples
     if other_examples:
-        console.print(Text("Other Examples", style="bold yellow"))
+        console.print(Text("📝 Other Examples", style="bold bright_yellow"))
         console.print()
         for i, (description, command) in enumerate(other_examples, 1):
-            console.print(f"  {i}. {description}", style="white")
-            console.print(f"     $ {command}", style="dim yellow")
+            desc_text = Text()
+            desc_text.append(f"  {i}. ", style="dim bright_cyan")
+            desc_text.append(description, style="bright_white")
+            console.print(desc_text)
+            console.print(f"     $ {command}", style="bright_yellow")
             console.print()
 
     # Footer note
     console.print()
+    footer_text = Text()
+    footer_text.append("💡 Tip: ", style="bright_yellow bold")
+    footer_text.append("Use --help to see concise help with common options", style="bright_white")
     console.print(
         Panel(
-            "💡 Tip: Use --help to see concise help with common options",
-            style="dim",
-            border_style="dim",
+            footer_text,
+            style="dim bright_blue",
+            border_style="dim bright_blue",
         )
     )
     console.print()
