@@ -1073,3 +1073,88 @@ def test_content_hash_determinism() -> None:
     assert fingerprint4.content_hash is not None
     assert fingerprint4.content_hash != fingerprint1.content_hash, "Different season_overrides should produce different content_hash"
 
+
+def test_progress_bar_enabled_at_info_level(tmp_path, monkeypatch) -> None:
+    """Test that Progress bar is enabled when logging is set to INFO level."""
+    settings = Settings(
+        source_dir=tmp_path / "source",
+        destination_dir=tmp_path / "dest",
+        cache_dir=tmp_path / "cache",
+        dry_run=True,
+    )
+    settings.source_dir.mkdir(parents=True)
+    settings.destination_dir.mkdir(parents=True)
+    settings.cache_dir.mkdir(parents=True)
+
+    source_file = settings.source_dir / "demo.r01.qualifying.mkv"
+    source_file.write_bytes(b"demo")
+
+    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
+    pattern = PatternConfig(
+        regex=r"(?i)^demo\.r(?P<round>\d{2})\.(?P<session>qualifying)\.mkv$",
+    )
+    sport = SportConfig(id="demo", name="Demo", metadata=metadata_cfg, patterns=[pattern])
+    config = AppConfig(settings=settings, sports=[sport])
+
+    episode = Episode(
+        title="Qualifying",
+        summary=None,
+        originally_available=None,
+        index=1,
+        display_number=1,
+    )
+    season = Season(
+        key="01",
+        title="Season 1",
+        summary=None,
+        index=1,
+        episodes=[episode],
+        display_number=1,
+        round_number=1,
+    )
+    show = Show(key="demo", title="Demo Series", summary=None, seasons=[season])
+
+    monkeypatch.setattr("playbook.processor.load_show", lambda *args, **kwargs: show)
+    monkeypatch.setattr(
+        "playbook.processor.compute_show_fingerprint",
+        lambda *args, **kwargs: ShowFingerprint(digest="fingerprint", season_hashes={}, episode_hashes={}),
+    )
+
+    from playbook import processor as processor_module
+
+    progress_disable_value = None
+
+    class MockProgress:
+        def __init__(self, disable=False, **kwargs):
+            nonlocal progress_disable_value
+            progress_disable_value = disable
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def add_task(self, *args, **kwargs):
+            return "task_id"
+
+        def advance(self, *args, **kwargs):
+            pass
+
+    monkeypatch.setattr("playbook.processor.Progress", MockProgress)
+
+    processor = Processor(config, enable_notifications=False)
+
+    original_level = processor_module.LOGGER.level
+    try:
+        processor_module.LOGGER.setLevel(logging.INFO)
+        processor.process_all()
+        assert progress_disable_value is False, "Progress bar should be enabled at INFO level"
+
+        progress_disable_value = None
+        processor_module.LOGGER.setLevel(logging.WARNING)
+        processor.process_all()
+        assert progress_disable_value is True, "Progress bar should be disabled at WARNING level"
+    finally:
+        processor_module.LOGGER.setLevel(original_level)
+
