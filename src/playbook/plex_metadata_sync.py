@@ -689,7 +689,7 @@ class PlexMetadataSync:
 
         # Compute and compare fingerprint
         previous_fingerprint = self.fingerprint_store.get(sport.id)
-        fingerprint = compute_show_fingerprint(show, sport.metadata)
+        fingerprint = compute_show_fingerprint_cached(show, sport.metadata, previous_fingerprint)
         change = self.fingerprint_store.update(sport.id, fingerprint)
 
         # Check against sync state (tracks actual Plex syncs, not just fingerprints)
