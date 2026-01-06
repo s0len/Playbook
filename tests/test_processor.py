@@ -14,6 +14,7 @@ from playbook.metadata import (
     MetadataNormalizer,
     ShowFingerprint,
     compute_show_fingerprint,
+    compute_show_fingerprint_cached,
 )
 from playbook.models import Episode, ProcessingStats, Season, Show
 from playbook.processor import Processor
@@ -915,4 +916,84 @@ def test_show_fingerprint_backward_compatibility_without_content_hash() -> None:
     serialized = fingerprint.to_dict()
     assert "content_hash" not in serialized
     assert serialized["digest"] == "xyz789"
+
+
+def test_compute_show_fingerprint_cached_returns_cached_when_content_matches() -> None:
+    """Test that compute_show_fingerprint_cached() returns cached fingerprint when content matches."""
+    # Setup metadata configuration
+    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
+    normalizer = MetadataNormalizer(metadata_cfg)
+
+    # Create raw metadata
+    raw_metadata = {
+        "metadata": {
+            "demo": {
+                "title": "Demo Series",
+                "seasons": {
+                    "01": {
+                        "title": "Season 1",
+                        "episodes": [
+                            {
+                                "title": "Episode 1",
+                                "summary": "First episode",
+                                "episode_number": 1,
+                            }
+                        ],
+                    }
+                },
+            }
+        }
+    }
+
+    show = normalizer.load_show(raw_metadata)
+
+    # Test 1: No cache exists - should compute new fingerprint with content_hash
+    result_no_cache = compute_show_fingerprint_cached(show, metadata_cfg, cached_fingerprint=None)
+
+    assert result_no_cache is not None
+    assert result_no_cache.content_hash is not None
+    assert result_no_cache.digest is not None
+    assert result_no_cache.season_hashes is not None
+    assert result_no_cache.episode_hashes is not None
+
+    # Test 2: Cache exists with matching content_hash - should return cached fingerprint
+    cached_fingerprint = result_no_cache
+    result_cache_hit = compute_show_fingerprint_cached(show, metadata_cfg, cached_fingerprint=cached_fingerprint)
+
+    # Should return the exact same cached fingerprint object (cache hit)
+    assert result_cache_hit is cached_fingerprint
+    assert result_cache_hit.content_hash == cached_fingerprint.content_hash
+    assert result_cache_hit.digest == cached_fingerprint.digest
+
+    # Test 3: Content changes - should compute new fingerprint
+    modified_metadata = {
+        "metadata": {
+            "demo": {
+                "title": "Demo Series",
+                "seasons": {
+                    "01": {
+                        "title": "Season 1",
+                        "episodes": [
+                            {
+                                "title": "Episode 1",
+                                "summary": "Updated summary",  # Changed content
+                                "episode_number": 1,
+                            }
+                        ],
+                    }
+                },
+            }
+        }
+    }
+
+    modified_show = normalizer.load_show(modified_metadata)
+    result_cache_miss = compute_show_fingerprint_cached(
+        modified_show, metadata_cfg, cached_fingerprint=cached_fingerprint
+    )
+
+    # Should compute new fingerprint (cache miss)
+    assert result_cache_miss is not cached_fingerprint
+    assert result_cache_miss.content_hash != cached_fingerprint.content_hash
+    assert result_cache_miss.digest != cached_fingerprint.digest
+    assert result_cache_miss.content_hash is not None
 
