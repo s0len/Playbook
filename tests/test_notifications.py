@@ -485,3 +485,113 @@ def test_autoscan_target_no_warning_when_verify_ssl_enabled(tmp_path, caplog) ->
     assert "SSL/TLS certificate verification is DISABLED" not in caplog.text
     assert "man-in-the-middle (MITM) attacks" not in caplog.text
 
+
+def test_autoscan_target_passes_verify_ssl_to_requests(tmp_path, monkeypatch) -> None:
+    rewrite_from = str(tmp_path / "dest")
+
+    # Test with verify_ssl=False
+    config_disabled = {
+        "url": "https://autoscan.test:3030",
+        "verify_ssl": False,
+        "rewrite": [
+            {
+                "from": rewrite_from,
+                "to": "/mnt/unionfs",
+            }
+        ],
+    }
+    settings_disabled = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        targets=[{"type": "autoscan", **config_disabled}],
+    )
+    service_disabled = NotificationService(
+        settings_disabled,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    calls: List[Dict[str, Any]] = []
+
+    def fake_post(url, params=None, auth=None, timeout=None, verify=None):
+        calls.append({"url": url, "params": params, "auth": auth, "timeout": timeout, "verify": verify})
+
+        class _Response:
+            status_code = 200
+            text = ""
+
+        return _Response()
+
+    monkeypatch.setattr("playbook.notifications.requests.post", fake_post)
+
+    destination_file = Path(rewrite_from) / "Show" / "Episode.mkv"
+    event = _build_event(
+        match_details={"destination_path": str(destination_file)},
+    )
+    service_disabled.notify(event)
+
+    assert len(calls) == 1
+    assert calls[0]["verify"] is False
+
+    # Clear calls for next test
+    calls.clear()
+
+    # Test with verify_ssl=True
+    config_enabled = {
+        "url": "https://autoscan.test:3030",
+        "verify_ssl": True,
+        "rewrite": [
+            {
+                "from": rewrite_from,
+                "to": "/mnt/unionfs",
+            }
+        ],
+    }
+    settings_enabled = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        targets=[{"type": "autoscan", **config_enabled}],
+    )
+    service_enabled = NotificationService(
+        settings_enabled,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    service_enabled.notify(event)
+
+    assert len(calls) == 1
+    assert calls[0]["verify"] is True
+
+    # Clear calls for next test
+    calls.clear()
+
+    # Test with verify_ssl not specified (defaults to True)
+    config_default = {
+        "url": "https://autoscan.test:3030",
+        "rewrite": [
+            {
+                "from": rewrite_from,
+                "to": "/mnt/unionfs",
+            }
+        ],
+    }
+    settings_default = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        targets=[{"type": "autoscan", **config_default}],
+    )
+    service_default = NotificationService(
+        settings_default,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    service_default.notify(event)
+
+    assert len(calls) == 1
+    assert calls[0]["verify"] is True
+
