@@ -811,6 +811,142 @@ def _validate_semantics(
                 )
 
 
+# Section Display Name Mapping
+# Maps technical section names to human-friendly display names
+SECTION_DISPLAY_NAMES: Dict[str, str] = {
+    # Root sections
+    "settings": "Settings",
+    "sports": "Sports",
+    "pattern_sets": "Pattern Sets",
+    # Settings subsections
+    "notifications": "Notification Settings",
+    "file_watcher": "File Watcher",
+    "destination": "Destination Settings",
+    "kometa_trigger": "Kometa Trigger",
+    # Other common sections
+    "source_dir": "Source Directory",
+    "destination_dir": "Destination Directory",
+    "cache_dir": "Cache Directory",
+    "dry_run": "Dry Run Mode",
+    "skip_existing": "Skip Existing Files",
+    "link_mode": "Link Mode",
+    "metadata": "Metadata",
+    "pattern_sets": "Pattern Sets",
+    "file_patterns": "File Patterns",
+    "variants": "Variants",
+}
+
+
+def get_section_display_name(
+    section_path: str,
+    config_data: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Convert a technical section path to a human-friendly display name.
+
+    This function takes configuration section paths and converts them to readable
+    display names for user-facing output.
+
+    Args:
+        section_path: The technical section path (e.g., "sports[0]", "settings.notifications")
+        config_data: Optional configuration data to extract actual names/IDs from
+
+    Returns:
+        Human-friendly display name
+
+    Examples:
+        >>> get_section_display_name("settings")
+        'Settings'
+        >>> get_section_display_name("notifications")
+        'Notification Settings'
+        >>> get_section_display_name("sports[0]")
+        'Sport #1'
+        >>> get_section_display_name("sports[0].variants[1]")
+        'Sport #1, Variant #2'
+        >>> # With config data containing sport ID
+        >>> config = {"sports": [{"id": "nhl", "name": "NHL"}]}
+        >>> get_section_display_name("sports[0]", config)
+        'Sport: nhl'
+    """
+    # Handle array indices with optional config data lookup
+    if '[' in section_path:
+        # Try to extract sport/variant information if config data is provided
+        if config_data:
+            # Match patterns like "sports[0]" or "sports[1].variants[2]"
+            sport_match = re.match(r'^sports\[(\d+)\](?:\.variants\[(\d+)\])?', section_path)
+            if sport_match:
+                sport_index = int(sport_match.group(1))
+                variant_index = sport_match.group(2)
+
+                sports = config_data.get("sports", [])
+                if sport_index < len(sports) and isinstance(sports[sport_index], dict):
+                    sport = sports[sport_index]
+                    sport_id = sport.get("id")
+                    sport_name = sport.get("name")
+
+                    # Build the display name
+                    if variant_index is not None:
+                        variant_idx = int(variant_index)
+                        variants = sport.get("variants", [])
+                        if variant_idx < len(variants) and isinstance(variants[variant_idx], dict):
+                            variant = variants[variant_idx]
+                            variant_id = variant.get("id") or variant.get("id_suffix")
+                            variant_name = variant.get("name")
+
+                            if variant_name:
+                                return f"Sport: {sport_id or sport_name or f'#{sport_index + 1}'}, Variant: {variant_name}"
+                            elif variant_id:
+                                return f"Sport: {sport_id or sport_name or f'#{sport_index + 1}'}, Variant: {variant_id}"
+                            else:
+                                return f"Sport: {sport_id or sport_name or f'#{sport_index + 1}'}, Variant #{variant_idx + 1}"
+
+                    # Just sport, no variant
+                    if sport_name:
+                        return f"Sport: {sport_name}"
+                    elif sport_id:
+                        return f"Sport: {sport_id}"
+
+        # Fallback to generic numbering when no config data or lookup fails
+        # Handle nested array paths like "sports[0].variants[1]"
+        parts = []
+        remaining = section_path
+
+        # Extract all array segments
+        while remaining:
+            match = re.match(r'^([a-zA-Z_][a-zA-Z0-9_-]*)\[(\d+)\](.*)$', remaining)
+            if match:
+                array_name = match.group(1)
+                index = int(match.group(2))
+                remaining = match.group(3)
+
+                # Convert array name to display name
+                if array_name == "sports":
+                    parts.append(f"Sport #{index + 1}")
+                elif array_name == "variants":
+                    parts.append(f"Variant #{index + 1}")
+                else:
+                    # Generic array handling
+                    display = SECTION_DISPLAY_NAMES.get(array_name, array_name.replace('_', ' ').title())
+                    parts.append(f"{display} #{index + 1}")
+
+                # Skip leading dot if present
+                if remaining.startswith('.'):
+                    remaining = remaining[1:]
+            else:
+                # No more array patterns, add remaining as-is if non-empty
+                if remaining:
+                    parts.append(SECTION_DISPLAY_NAMES.get(remaining, remaining.replace('_', ' ').title()))
+                break
+
+        return ", ".join(parts) if parts else section_path
+
+    # Non-array path - simple lookup or fallback to title case
+    if section_path in SECTION_DISPLAY_NAMES:
+        return SECTION_DISPLAY_NAMES[section_path]
+
+    # Fallback: convert underscores to spaces and title case
+    return section_path.replace('_', ' ').title()
+
+
 def group_validation_issues(
     issues: List[ValidationIssue],
 ) -> Dict[str, Dict[str, List[ValidationIssue]]]:
@@ -914,5 +1050,7 @@ __all__ = [
     "get_fix_suggestion",
     "FIX_SUGGESTION_REGISTRY",
     "group_validation_issues",
+    "get_section_display_name",
+    "SECTION_DISPLAY_NAMES",
 ]
 
