@@ -15,6 +15,7 @@ node_modules/
 __pycache__/
 *.pyc
 .venv/
+.ruff_cache/
 
 sport.log
 playbook.log
