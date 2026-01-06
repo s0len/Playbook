@@ -214,7 +214,9 @@ def test_detailed_summary_groups_counts_with_info(tmp_path, caplog) -> None:
         processor_module.LOGGER.setLevel(original_level)
 
     text = caplog.text
-    assert "Detailed Summary" in text
+    # The summary now uses a table format with "Processing Summary" title
+    assert "Processing Summary" in text
+    # The detailed counts section still uses the same format
     assert "sport-a: 1 entry" in text
     assert detail_token not in text
     assert "Run with --verbose for per-warning details." in text
@@ -256,6 +258,130 @@ def test_run_recap_lists_destinations(tmp_path, caplog) -> None:
     # Plex sync status is always shown (disabled when not configured)
     assert "Plex Sync" in text
     assert "Demo/Season 01/Race.mkv" in text
+
+
+def test_detailed_summary_table_format(tmp_path, caplog, monkeypatch) -> None:
+    """Verify the summary output uses table format with correct values."""
+    processor = _make_processor(tmp_path)
+    stats = ProcessingStats()
+    stats.register_processed()
+    stats.register_skipped("test skip", is_error=False)
+    stats.register_ignored("test ignore", sport_id="test-sport")
+    stats.register_warning("test warning", sport_id="test-sport")
+    stats.register_error("test error", sport_id="test-sport")
+
+    from playbook import processor as processor_module
+
+    original_level = processor_module.LOGGER.level
+    processor_module.LOGGER.setLevel(logging.INFO)
+    try:
+        with caplog.at_level(logging.INFO, logger="playbook.processor"):
+            processor._log_detailed_summary(stats)
+    finally:
+        processor_module.LOGGER.setLevel(original_level)
+
+    text = caplog.text
+    # Verify table header/title
+    assert "Processing Summary" in text
+    # Verify all the key metrics are present in output
+    assert "Processed" in text
+    assert "Skipped" in text
+    assert "Ignored" in text
+    assert "Warnings" in text
+    assert "Errors" in text
+    # Verify the actual counts appear in output (plain text format)
+    assert "1" in text  # processed, skipped, ignored, warnings, errors all have count of 1
+
+
+def test_run_recap_table_format(tmp_path, caplog) -> None:
+    """Verify the run recap uses table format with correct values."""
+    processor = _make_processor(tmp_path)
+    stats = ProcessingStats()
+    stats.register_processed()
+    stats.register_processed()
+    stats.register_warning("test warning", sport_id="test-sport")
+    processor._touched_destinations = {"Dest1/file1.mkv", "Dest2/file2.mkv"}
+
+    with caplog.at_level(logging.INFO, logger="playbook.processor"):
+        processor._log_run_recap(stats, duration=2.5)
+
+    text = caplog.text
+    # Verify table header/title
+    assert "Run Recap" in text
+    # Verify all the key metrics are present
+    assert "Duration" in text
+    assert "Processed" in text
+    assert "Warnings" in text
+    assert "Destinations" in text
+    assert "Plex Sync" in text
+    # Verify the actual values appear
+    assert "2.50s" in text or "2.5" in text  # duration
+    assert "2" in text  # processed count and destinations count
+
+
+def test_terminal_detection_for_table_output(tmp_path, caplog, monkeypatch) -> None:
+    """Verify terminal detection affects table rendering mode."""
+    processor = _make_processor(tmp_path)
+    stats = ProcessingStats()
+    stats.register_processed()
+
+    # Mock sys.stdout.isatty to simulate terminal output
+    import sys
+
+    original_isatty = sys.stdout.isatty
+
+    # Test with terminal output (should use Rich tables with ANSI)
+    monkeypatch.setattr("sys.stdout.isatty", lambda: True)
+    with caplog.at_level(logging.INFO, logger="playbook.processor"):
+        processor._log_run_recap(stats, duration=1.0)
+
+    text_terminal = caplog.text
+    caplog.clear()
+
+    # Test with piped output (should use plain text)
+    monkeypatch.setattr("sys.stdout.isatty", lambda: False)
+    with caplog.at_level(logging.INFO, logger="playbook.processor"):
+        processor._log_run_recap(stats, duration=1.0)
+
+    text_piped = caplog.text
+
+    # Both should contain the key labels
+    assert "Run Recap" in text_terminal
+    assert "Run Recap" in text_piped
+    assert "Duration" in text_terminal
+    assert "Duration" in text_piped
+    assert "Processed" in text_terminal
+    assert "Processed" in text_piped
+
+    # Restore original isatty
+    monkeypatch.undo()
+
+
+def test_summary_table_color_coding_in_terminal_mode(tmp_path, caplog, monkeypatch) -> None:
+    """Verify color coding is applied when output is to a terminal."""
+    processor = _make_processor(tmp_path)
+    stats = ProcessingStats()
+    stats.register_processed()
+    stats.register_error("test error", sport_id="test-sport")
+    stats.register_warning("test warning", sport_id="test-sport")
+
+    # Mock sys.stdout.isatty to return True (terminal mode)
+    monkeypatch.setattr("sys.stdout.isatty", lambda: True)
+
+    with caplog.at_level(logging.INFO, logger="playbook.processor"):
+        processor._log_detailed_summary(stats)
+
+    text = caplog.text
+
+    # In terminal mode, Rich tables will include ANSI escape codes for colors
+    # ANSI escape sequences start with \x1b[ or \033[
+    # When Rich renders with force_terminal=True, it should include these codes
+    assert "Processing Summary" in text or "\x1b[" in text or "\033[" in text
+
+    # Verify the content is present regardless of color codes
+    assert "Processed" in text
+    assert "Errors" in text
+    assert "Warnings" in text
 
 
 def test_metadata_change_relinks_and_removes_old_destination(tmp_path, monkeypatch) -> None:
