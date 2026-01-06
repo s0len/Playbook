@@ -456,6 +456,33 @@ Each variant inherits the base config, tweaks fields from the variant block, and
 
 Environment variables always win over config defaults, and CLI flags win over environment variables.
 
+#### Getting Help
+
+Playbook features **rich, color-formatted help** with practical examples for every command. Use `--help` for quick reference or `--examples` for a comprehensive cookbook-style guide:
+
+```bash
+# Main help with all available commands
+playbook --help
+
+# Command-specific help with brief examples
+playbook run --help
+playbook validate-config --help
+playbook kometa-trigger --help
+
+# Extended examples and usage patterns
+playbook run --examples
+playbook validate-config --examples
+playbook kometa-trigger --examples
+```
+
+The help output includes:
+- **Usage examples** – Real-world commands you can copy-paste
+- **Environment variables** – Alternative ways to configure options
+- **Tips & best practices** – Common workflows and gotchas
+- **Docker variants** – How to run the same command in containers
+
+All help content is formatted with colors and icons for easy scanning. On non-interactive terminals (CI/CD, redirected output), Playbook automatically falls back to plain text.
+
 ### Config Validation
 
 Preflight your YAML before running the processor:
