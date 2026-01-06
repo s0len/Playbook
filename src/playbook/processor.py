@@ -35,7 +35,7 @@ from .run_summary import (
     summarize_messages,
     summarize_plex_errors,
 )
-from .file_discovery import matches_globs, should_suppress_sample_ignored, skip_reason_for_source_file
+from .file_discovery import gather_source_files, matches_globs, should_suppress_sample_ignored, skip_reason_for_source_file
 from .match_handler import (
     alias_candidates,
     episode_cache_key,
@@ -253,48 +253,11 @@ class Processor:
                 self.metadata_fingerprints.save()
 
     def _gather_source_files(self, stats: Optional[ProcessingStats] = None) -> Iterable[Path]:
-        root = self.config.settings.source_dir
-        if not root.exists():
-            LOGGER.warning(
-                self._format_log(
-                    "Source Directory Missing",
-                    {"Path": root},
-                )
-            )
-            if stats is not None:
-                stats.register_warning(f"Source directory missing: {root}")
-            return []
+        """Discover and yield source files for processing.
 
-        for path in root.rglob("*"):
-            if not path.is_file():
-                continue
-
-            if path.is_symlink():
-                LOGGER.debug(
-                    self._format_log(
-                        "Skipping Source File",
-                        {
-                            "Source": path,
-                            "Reason": "symlink",
-                        },
-                    )
-                )
-                continue
-
-            skip_reason = skip_reason_for_source_file(path)
-            if skip_reason:
-                LOGGER.debug(
-                    self._format_log(
-                        "Skipping Source File",
-                        {
-                            "Source": path,
-                            "Reason": skip_reason,
-                        },
-                    )
-                )
-                continue
-
-            yield path
+        Delegates to file_discovery.gather_source_files().
+        """
+        return gather_source_files(self.config.settings.source_dir, stats)
 
     def _process_single_file(
         self,
