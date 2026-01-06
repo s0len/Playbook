@@ -7,7 +7,6 @@ import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
 
@@ -41,13 +40,12 @@ from .run_summary import (
     summarize_messages,
     summarize_plex_errors,
 )
+from .file_discovery import matches_globs, should_suppress_sample_ignored, skip_reason_for_source_file
 from .templating import render_template
 from .trace_writer import TraceOptions, persist_trace
 from .utils import ensure_directory, link_file, normalize_token, sanitize_component, sha1_of_file, sha1_of_text, slugify
 
 LOGGER = logging.getLogger(__name__)
-
-SAMPLE_FILENAME_PATTERN = re.compile(r"(?<![a-z0-9])sample(?![a-z0-9])")
 
 
 class Processor:
@@ -277,7 +275,7 @@ class Processor:
             with Progress(disable=not LOGGER.isEnabledFor(logging.DEBUG)) as progress:
                 task_id = progress.add_task("Processing", total=file_count)
                 for source_path in filtered_source_files:
-                    is_sample_file = self._should_suppress_sample_ignored(source_path)
+                    is_sample_file = should_suppress_sample_ignored(source_path)
                     handled, diagnostics = self._process_single_file(
                         source_path,
                         runtimes,
@@ -364,7 +362,7 @@ class Processor:
                 )
                 continue
 
-            skip_reason = self._skip_reason_for_source_file(path)
+            skip_reason = skip_reason_for_source_file(path)
             if skip_reason:
                 LOGGER.debug(
                     self._format_log(
@@ -378,19 +376,6 @@ class Processor:
                 continue
 
             yield path
-
-    @staticmethod
-    def _skip_reason_for_source_file(path: Path) -> Optional[str]:
-        name = path.name
-        if name.startswith("._") and len(name) > 2:
-            return "macOS resource fork (._ prefix)"
-        return None
-
-    def _matches_globs(self, path: Path, sport: SportConfig) -> bool:
-        if not sport.source_globs:
-            return True
-        filename = path.name
-        return any(fnmatch(filename, pattern) for pattern in sport.source_globs)
 
     def _process_single_file(
         self,
@@ -427,7 +412,7 @@ class Processor:
                     "sport_name": runtime.sport.name,
                     "source_name": source_path.name,
                 }
-            if not self._matches_globs(source_path, runtime.sport):
+            if not matches_globs(source_path, runtime.sport):
                 patterns = runtime.sport.source_globs or ["*"]
                 message = f"Excluded by source_globs {patterns}"
                 ignored_reasons.append(("ignored", message, runtime.sport.id))
@@ -557,11 +542,6 @@ class Processor:
                 self._persist_trace(trace_context)
 
         return False, ignored_reasons
-
-    @staticmethod
-    def _should_suppress_sample_ignored(source_path: Path) -> bool:
-        name = source_path.name.lower()
-        return bool(SAMPLE_FILENAME_PATTERN.search(name))
 
     def _persist_trace(self, trace: Optional[Dict[str, Any]]) -> Optional[Path]:
         return persist_trace(trace, self.trace_options, self.config.settings.cache_dir)

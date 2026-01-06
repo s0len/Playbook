@@ -3,23 +3,23 @@
   "spec": "014-split-processor-py-into-focused-modules",
   "state": "building",
   "subtasks": {
-    "completed": 3,
+    "completed": 10,
     "total": 39,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Analysis and Module Structure",
+    "current": "Extract Standalone Functions and Dataclasses",
     "id": null,
-    "total": 7
+    "total": 6
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 5,
-    "started_at": "2026-01-06T13:15:43.510665"
+    "number": 3,
+    "started_at": "2026-01-06T21:50:31.192904"
   },
-  "last_update": "2026-01-06T13:24:36.515276"
+  "last_update": "2026-01-06T21:54:57.530836"
 }
