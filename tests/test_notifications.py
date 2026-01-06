@@ -457,3 +457,31 @@ def test_autoscan_target_logs_warning_when_verify_ssl_disabled(tmp_path, caplog)
     assert "man-in-the-middle (MITM) attacks" in caplog.text
     assert "production environments" in caplog.text
 
+
+def test_autoscan_target_no_warning_when_verify_ssl_enabled(tmp_path, caplog) -> None:
+    # Test with verify_ssl not specified (defaults to True)
+    config_default = {
+        "url": "https://autoscan.test:3030",
+    }
+
+    with caplog.at_level(logging.WARNING, logger="playbook.notifications"):
+        AutoscanTarget(config_default, destination_dir=tmp_path)
+
+    assert "SSL/TLS certificate verification is DISABLED" not in caplog.text
+    assert "man-in-the-middle (MITM) attacks" not in caplog.text
+
+    # Clear logs for the next test
+    caplog.clear()
+
+    # Test with verify_ssl explicitly set to True
+    config_explicit = {
+        "url": "https://autoscan.test:3030",
+        "verify_ssl": True,
+    }
+
+    with caplog.at_level(logging.WARNING, logger="playbook.notifications"):
+        AutoscanTarget(config_explicit, destination_dir=tmp_path)
+
+    assert "SSL/TLS certificate verification is DISABLED" not in caplog.text
+    assert "man-in-the-middle (MITM) attacks" not in caplog.text
+
