@@ -470,50 +470,77 @@ def _collect_pattern_set_names(data: Dict[str, Any]) -> Iterable[str]:
     return builtin
 
 
-def _validate_metadata_block(metadata: Dict[str, Any], path: str, report: ValidationReport) -> None:
+def _validate_metadata_block(
+    metadata: Dict[str, Any],
+    path: str,
+    report: ValidationReport,
+    line_map: Optional[Dict[str, int]] = None,
+) -> None:
     url_value = metadata.get("url")
     if isinstance(url_value, str) and not url_value.strip():
+        issue_path = path + ".url"
         report.errors.append(
             ValidationIssue(
                 severity="error",
-                path=path + ".url",
+                path=issue_path,
                 message="Metadata URL must not be blank",
                 code="metadata-url",
+                line_number=line_map.get(issue_path) if line_map else None,
             )
         )
 
 
-def validate_config_data(data: Dict[str, Any]) -> ValidationReport:
+def validate_config_data(
+    data: Dict[str, Any],
+    line_map: Optional[Dict[str, int]] = None,
+) -> ValidationReport:
+    """Validate configuration data against schema and semantic rules.
+
+    Args:
+        data: The configuration data to validate
+        line_map: Optional mapping from config paths to line numbers in the source file
+
+    Returns:
+        ValidationReport containing any errors or warnings found
+    """
     report = ValidationReport()
     validator = Draft7Validator(CONFIG_SCHEMA)
 
     for error in sorted(validator.iter_errors(data), key=lambda exc: exc.path):
+        error_path = _format_jsonschema_path(error.absolute_path)
         report.errors.append(
             ValidationIssue(
                 severity="error",
-                path=_format_jsonschema_path(error.absolute_path),
+                path=error_path,
                 message=error.message,
                 code="schema",
+                line_number=line_map.get(error_path) if line_map else None,
             )
         )
 
-    _validate_semantics(data, report)
+    _validate_semantics(data, report, line_map)
     return report
 
 
-def _validate_semantics(data: Dict[str, Any], report: ValidationReport) -> None:
+def _validate_semantics(
+    data: Dict[str, Any],
+    report: ValidationReport,
+    line_map: Optional[Dict[str, int]] = None,
+) -> None:
     settings = data.get("settings") or {}
     notifications = settings.get("notifications") or {}
     flush_time = notifications.get("flush_time")
     if isinstance(flush_time, str):
         problem = _parse_time(flush_time)
         if problem:
+            issue_path = "settings.notifications.flush_time"
             report.errors.append(
                 ValidationIssue(
                     severity="error",
-                    path="settings.notifications.flush_time",
+                    path=issue_path,
                     message=f"Invalid time '{flush_time}': {problem}",
                     code="flush-time",
+                    line_number=line_map.get(issue_path) if line_map else None,
                 )
             )
 
@@ -525,12 +552,14 @@ def _validate_semantics(data: Dict[str, Any], report: ValidationReport) -> None:
         sport_id = sport.get("id")
         if isinstance(sport_id, str):
             if sport_id in seen_ids:
+                issue_path = f"sports[{index}].id"
                 report.errors.append(
                     ValidationIssue(
                         severity="error",
-                        path=f"sports[{index}].id",
+                        path=issue_path,
                         message=f"Duplicate sport id '{sport_id}' also defined at index {seen_ids[sport_id]}",
                         code="duplicate-id",
+                        line_number=line_map.get(issue_path) if line_map else None,
                     )
                 )
             else:
@@ -539,46 +568,54 @@ def _validate_semantics(data: Dict[str, Any], report: ValidationReport) -> None:
         variants = sport.get("variants") or []
 
         if isinstance(metadata, dict):
-            _validate_metadata_block(metadata, f"sports[{index}].metadata", report)
+            _validate_metadata_block(metadata, f"sports[{index}].metadata", report, line_map)
         elif metadata is None and not variants:
+            issue_path = f"sports[{index}].metadata"
             report.errors.append(
                 ValidationIssue(
                     severity="error",
-                    path=f"sports[{index}].metadata",
+                    path=issue_path,
                     message="Sport must define metadata or variants with metadata",
                     code="metadata-missing",
+                    line_number=line_map.get(issue_path) if line_map else None,
                 )
             )
         elif metadata is not None and not isinstance(metadata, dict):
+            issue_path = f"sports[{index}].metadata"
             report.errors.append(
                 ValidationIssue(
                     severity="error",
-                    path=f"sports[{index}].metadata",
+                    path=issue_path,
                     message="Metadata must be a mapping when provided",
                     code="metadata-structure",
+                    line_number=line_map.get(issue_path) if line_map else None,
                 )
             )
 
         if variants:
             for variant_index, variant in enumerate(variants):
                 if not isinstance(variant, dict):
+                    issue_path = f"sports[{index}].variants[{variant_index}]"
                     report.errors.append(
                         ValidationIssue(
                             severity="error",
-                            path=f"sports[{index}].variants[{variant_index}]",
+                            path=issue_path,
                             message="Variant entries must be mappings",
                             code="variant-structure",
+                            line_number=line_map.get(issue_path) if line_map else None,
                         )
                     )
                     continue
                 variant_metadata = variant.get("metadata")
                 if not isinstance(variant_metadata, dict):
+                    issue_path = f"sports[{index}].variants[{variant_index}].metadata"
                     report.errors.append(
                         ValidationIssue(
                             severity="error",
-                            path=f"sports[{index}].variants[{variant_index}].metadata",
+                            path=issue_path,
                             message="Variant must provide a metadata block",
                             code="metadata-missing",
+                            line_number=line_map.get(issue_path) if line_map else None,
                         )
                     )
                     continue
@@ -586,6 +623,7 @@ def _validate_semantics(data: Dict[str, Any], report: ValidationReport) -> None:
                     variant_metadata,
                     f"sports[{index}].variants[{variant_index}].metadata",
                     report,
+                    line_map,
                 )
 
     known_sets = _collect_pattern_set_names(data)
@@ -595,12 +633,14 @@ def _validate_semantics(data: Dict[str, Any], report: ValidationReport) -> None:
         requested_sets = sport.get("pattern_sets") or []
         for name in requested_sets:
             if name not in known_sets:
+                issue_path = f"sports[{index}].pattern_sets"
                 report.errors.append(
                     ValidationIssue(
                         severity="error",
-                        path=f"sports[{index}].pattern_sets",
+                        path=issue_path,
                         message=f"Unknown pattern set '{name}'",
                         code="pattern-set",
+                        line_number=line_map.get(issue_path) if line_map else None,
                     )
                 )
 
