@@ -13,6 +13,8 @@ from playbook.config import (
 )
 from playbook.matcher import (
     _build_team_alias_lookup,
+    _dates_within_proximity,
+    _parse_date_from_groups,
     _score_structured_match,
     compile_patterns,
     match_file_to_episode,

@@ -53,6 +53,23 @@ Issues = "https://github.com/s0len/Playbook/issues"
 line-length = 120
 target-version = "py312"
 
+# Exclude directories and temporary files
+exclude = [
+    ".venv",
+    "venv",
+    ".git",
+    "__pycache__",
+    "*.egg-info",
+    ".pytest_cache",
+    ".ruff_cache",
+    "build",
+    "dist",
+    ".tox",
+    "qa_*.py",  # Temporary QA validation scripts
+    "test_*.py",  # Root-level test files
+]
+
+[tool.ruff.lint]
 # Enable rule sets
 select = [
     "E",    # pycodestyle errors
@@ -65,28 +82,29 @@ select = [
     "TCH",  # type-checking
 ]
 
-# Exclude directories
-exclude = [
-    ".venv",
-    "venv",
-    ".git",
-    "__pycache__",
-    "*.egg-info",
-    ".pytest_cache",
-    ".ruff_cache",
-    "build",
-    "dist",
-    ".tox",
-]
-
-[tool.ruff.per-file-ignores]
+# Per-file ignores
+[tool.ruff.lint.per-file-ignores]
 # Tests can have assertions, magic values, and less strict rules
 "tests/**/*.py" = [
     "B011",  # Do not use assert False
     "SIM300", # Yoda conditions
+    "E402",  # Allow module imports not at top (test fixtures, etc.)
+    "E501",  # Allow long lines in tests (long test strings, etc.)
 ]
 # Scripts and root level test files can be more flexible
 "*.py" = ["TCH"]  # Don't enforce TYPE_CHECKING in root scripts
+# Allow long lines in error messages and log strings, and specific style patterns
+"src/playbook/cli.py" = ["SIM105"]
+"src/playbook/config.py" = ["E501"]
+"src/playbook/kometa_trigger.py" = ["E501"]
+"src/playbook/logging_utils.py" = ["UP007"]
+"src/playbook/matcher.py" = ["E402", "B905", "C413", "SIM102"]  # Delayed imports + style patterns
+"src/playbook/metadata.py" = ["SIM105", "SIM108"]
+"src/playbook/notifications.py" = ["E501", "SIM105"]
+"src/playbook/plex_metadata_sync.py" = ["E501"]
+"src/playbook/processor.py" = ["E501", "SIM102", "SIM108"]
+"src/playbook/utils.py" = ["UP031"]
+"src/playbook/watcher.py" = ["SIM102"]
 
 [tool.ruff.format]
 # Use double quotes for strings
