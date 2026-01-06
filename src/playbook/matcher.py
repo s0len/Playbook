@@ -142,7 +142,7 @@ _NOISE_TOKENS = (
 class PatternRuntime:
     config: PatternConfig
     regex: re.Pattern[str]
-    session_lookup: Dict[str, str]
+    session_lookup: SessionLookupIndex
 
 
 def _build_session_lookup(pattern: PatternConfig, season: Season) -> SessionLookupIndex:
@@ -302,7 +302,7 @@ def _select_season(show: Show, selector: SeasonSelector, match_groups: Dict[str,
 def _select_episode(
     pattern_config: PatternConfig,
     season: Season,
-    session_lookup: Dict[str, str],
+    session_lookup: SessionLookupIndex,
     match_groups: Dict[str, str],
     trace: Optional[Dict[str, Any]] = None,
 ) -> Optional[Episode]:
@@ -567,7 +567,7 @@ def _find_episode_across_seasons(
     *,
     exclude_season: Optional[Season] = None,
     trace_enabled: bool = False,
-) -> Optional[Tuple[Season, Episode, Dict[str, str], Dict[str, str], Optional[Dict[str, Any]]]]:
+) -> Optional[Tuple[Season, Episode, Dict[str, str], SessionLookupIndex, Optional[Dict[str, Any]]]]:
     for candidate in show.seasons:
         if exclude_season and candidate is exclude_season:
             continue
@@ -765,7 +765,7 @@ def compile_patterns(sport: SportConfig) -> List[PatternRuntime]:
             PatternRuntime(
                 config=pattern,
                 regex=pattern.compiled_regex(),
-                session_lookup={},
+                session_lookup=SessionLookupIndex(),
             )
         )
     return compiled
