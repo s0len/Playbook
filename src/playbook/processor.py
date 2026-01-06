@@ -5,7 +5,6 @@ import logging
 import re
 import time
 from collections import Counter
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
@@ -16,18 +15,14 @@ from .cache import CachedFileRecord, MetadataHttpCache, ProcessedFileCache
 from .config import AppConfig, SportConfig
 from .kometa_trigger import build_kometa_trigger
 from .logging_utils import LogBlockBuilder, render_fields_block
-from .matcher import PatternRuntime, compile_patterns, match_file_to_episode
+from .matcher import PatternRuntime, match_file_to_episode
 from .metadata import (
     MetadataChangeResult,
-    MetadataFetchError,
     MetadataFetchStatistics,
     MetadataFingerprintStore,
-    compute_show_fingerprint,
-    compute_show_fingerprint_cached,
-    load_show,
 )
-from .metadata_loader import SportRuntime
-from .models import ProcessingStats, Show, SportFileMatch
+from .metadata_loader import MetadataLoadResult, SportRuntime, load_sports
+from .models import ProcessingStats, SportFileMatch
 from .notifications import NotificationEvent, NotificationService
 from .plex_client import PlexApiError
 from .plex_metadata_sync import PlexMetadataSync, PlexSyncStats, create_plex_sync_from_config
@@ -101,109 +96,27 @@ class Processor:
         return render_fields_block(event, fields or {}, pad_top=False)
 
     def _load_sports(self) -> List[SportRuntime]:
-        runtimes: List[SportRuntime] = []
-        self._metadata_changed_sports = []
-        self._metadata_change_map = {}
-        self._metadata_fetch_stats = MetadataFetchStatistics()
+        """Load sports metadata in parallel and track changes.
 
-        disabled_sports = [sport for sport in self.config.sports if not sport.enabled]
-        for sport in disabled_sports:
-            LOGGER.debug(self._format_log("Skipping Disabled Sport", {"Sport": sport.id}))
+        Delegates to metadata_loader.load_sports() and unpacks results into
+        instance variables for tracking metadata changes and fetch statistics.
 
-        enabled_sports = [sport for sport in self.config.sports if sport.enabled]
-        if not enabled_sports:
-            return runtimes
+        Returns:
+            List of successfully loaded SportRuntime objects
+        """
+        result = load_sports(
+            sports=self.config.sports,
+            settings=self.config.settings,
+            metadata_http_cache=self.metadata_http_cache,
+            metadata_fingerprints=self.metadata_fingerprints,
+        )
 
-        shows: Dict[str, Show] = {}
-        max_workers = min(8, max(1, len(enabled_sports)))
+        # Unpack results into instance variables
+        self._metadata_changed_sports = result.changed_sports
+        self._metadata_change_map = result.change_map
+        self._metadata_fetch_stats = result.fetch_stats
 
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_map = {}
-            for sport in enabled_sports:
-                LOGGER.debug(self._format_log("Loading Metadata", {"Sport": sport.name}))
-                future = executor.submit(
-                    load_show,
-                    self.config.settings,
-                    sport.metadata,
-                    http_cache=self.metadata_http_cache,
-                    stats=self._metadata_fetch_stats,
-                )
-                future_map[future] = sport
-
-            for future in as_completed(future_map):
-                sport = future_map[future]
-                try:
-                    show = future.result()
-                except MetadataFetchError as exc:
-                    LOGGER.error(
-                        self._format_log(
-                            "Failed To Fetch Metadata",
-                            {
-                                "Sport": sport.id,
-                                "Name": sport.name,
-                                "Error": exc,
-                            },
-                        )
-                    )
-                    continue
-                except Exception as exc:  # pragma: no cover - defensive
-                    LOGGER.error(
-                        self._format_log(
-                            "Failed To Load Metadata",
-                            {
-                                "Sport": sport.id,
-                                "Name": sport.name,
-                                "Error": exc,
-                            },
-                        )
-                    )
-                    continue
-                shows[sport.id] = show
-
-        for sport in enabled_sports:
-            show = shows.get(sport.id)
-            if show is None:
-                continue
-            patterns = compile_patterns(sport)
-            extensions = {ext.lower() for ext in sport.source_extensions}
-
-            try:
-                cached_fingerprint = self.metadata_fingerprints.get(sport.id)
-                fingerprint = compute_show_fingerprint_cached(show, sport.metadata, cached_fingerprint)
-            except Exception as exc:  # pragma: no cover - defensive, should not happen
-                LOGGER.warning(
-                    self._format_log(
-                        "Failed To Compute Metadata Fingerprint",
-                        {
-                            "Sport": sport.id,
-                            "Error": exc,
-                        },
-                    )
-                )
-            else:
-                change = self.metadata_fingerprints.update(sport.id, fingerprint)
-                if change.updated:
-                    self._metadata_changed_sports.append((sport.id, sport.name))
-                    self._metadata_change_map[sport.id] = change
-
-            runtimes.append(SportRuntime(sport=sport, show=show, patterns=patterns, extensions=extensions))
-
-        if self._metadata_fetch_stats.has_activity():
-            snapshot = self._metadata_fetch_stats.snapshot()
-            LOGGER.info(
-                self._format_inline_log(
-                    "Metadata Cache",
-                    {
-                        "Hits": snapshot["cache_hits"],
-                        "Misses": snapshot["cache_misses"],
-                        "Refreshed": snapshot["network_requests"],
-                        "Not Modified": snapshot["not_modified"],
-                        "Stale": snapshot["stale_used"],
-                        "Failures": snapshot["failures"],
-                    },
-                )
-            )
-        return runtimes
+        return result.runtimes
 
     def clear_processed_cache(self) -> None:
         if self.config.settings.dry_run:
