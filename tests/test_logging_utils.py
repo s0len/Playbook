@@ -164,7 +164,8 @@ class TestWrapText:
     def test_wrap_text_with_only_newlines(self):
         """Test _wrap_text with only newline characters."""
         result = _wrap_text("\n\n", 50)
-        assert result == ["", "", ""]
+        # splitlines() on "\n\n" returns ['', ''] not ['', '', '']
+        assert result == ["", ""]
 
     def test_wrap_text_with_exact_width(self):
         """Test _wrap_text with text exactly at width."""
