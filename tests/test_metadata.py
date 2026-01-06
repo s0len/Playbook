@@ -130,6 +130,81 @@ def test_fetch_metadata_uses_stale_on_failure(monkeypatch, settings) -> None:
     assert snapshot["failures"] == 0
 
 
+def test_fetch_metadata_parses_json_content(monkeypatch, settings) -> None:
+    # JSON content should be parsed directly without YAML parser
+    json_payload = """
+    {
+        "metadata": {
+            "demo": {
+                "title": "Demo Series from JSON"
+            }
+        }
+    }
+    """
+
+    def fake_get(url, headers=None, timeout=None):
+        return DummyResponse(json_payload)
+
+    monkeypatch.setattr("playbook.metadata.requests.get", fake_get)
+
+    metadata_cfg = MetadataConfig(url="https://example.com/demo.json")
+    result = fetch_metadata(metadata_cfg, settings)
+    assert result["metadata"]["demo"]["title"] == "Demo Series from JSON"
+
+
+def test_fetch_metadata_falls_back_to_yaml(monkeypatch, settings) -> None:
+    # YAML content with features not valid in JSON should still parse
+    yaml_payload = """
+    metadata:
+      demo:
+        title: Demo Series from YAML
+        description: >
+          This is a multi-line
+          YAML string that uses
+          folded scalar syntax
+    """
+
+    def fake_get(url, headers=None, timeout=None):
+        return DummyResponse(yaml_payload)
+
+    monkeypatch.setattr("playbook.metadata.requests.get", fake_get)
+
+    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml")
+    result = fetch_metadata(metadata_cfg, settings)
+    assert result["metadata"]["demo"]["title"] == "Demo Series from YAML"
+    assert "This is a multi-line" in result["metadata"]["demo"]["description"]
+
+
+def test_fetch_metadata_handles_yaml_specific_features(monkeypatch, settings) -> None:
+    # YAML with anchors, aliases, and other YAML-specific features
+    yaml_payload = """
+    metadata:
+      demo:
+        title: Demo Series
+        common_config: &defaults
+          enabled: true
+          priority: high
+        feature_a:
+          <<: *defaults
+          name: Feature A
+        feature_b:
+          <<: *defaults
+          name: Feature B
+    """
+
+    def fake_get(url, headers=None, timeout=None):
+        return DummyResponse(yaml_payload)
+
+    monkeypatch.setattr("playbook.metadata.requests.get", fake_get)
+
+    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml")
+    result = fetch_metadata(metadata_cfg, settings)
+    assert result["metadata"]["demo"]["title"] == "Demo Series"
+    assert result["metadata"]["demo"]["feature_a"]["enabled"] is True
+    assert result["metadata"]["demo"]["feature_a"]["name"] == "Feature A"
+    assert result["metadata"]["demo"]["feature_b"]["priority"] == "high"
+
+
 def test_metadata_normalizer_loads_show_with_rounds() -> None:
     metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="f1")
     normalizer = MetadataNormalizer(metadata_cfg)

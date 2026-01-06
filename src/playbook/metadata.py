@@ -137,6 +137,17 @@ def _clean_episode_metadata(metadata: Any) -> Any:
     return dict(metadata)
 
 
+def _parse_content(text: str) -> Any:
+    """Parse content as JSON first, falling back to YAML if needed."""
+    try:
+        result = json.loads(text)
+        LOGGER.debug("Parsed content using JSON")
+        return result
+    except json.JSONDecodeError:
+        LOGGER.debug("JSON parsing failed, falling back to YAML")
+        return yaml.safe_load(text)
+
+
 def _load_cached_metadata(cache_file: Path, ttl_hours: int, *, allow_expired: bool = False) -> Optional[Dict[str, Any]]:
     if not cache_file.exists():
         return None
@@ -546,7 +557,7 @@ def fetch_metadata(
             stats.record_failure()
         raise MetadataFetchError(f"Unable to fetch metadata from {metadata.url}") from exc
 
-    content = yaml.safe_load(response.text)
+    content = _parse_content(response.text)
     if not isinstance(content, dict):
         raise ValueError(f"Unexpected metadata structure at {metadata.url}")
 
