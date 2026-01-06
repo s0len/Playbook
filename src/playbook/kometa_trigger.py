@@ -10,7 +10,7 @@ import shlex
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .config import KometaTriggerSettings
 
@@ -37,8 +37,8 @@ class _BaseKometaTrigger:
 
     def trigger(
         self,
-        extra_labels: Optional[Dict[str, str]] = None,
-        extra_annotations: Optional[Dict[str, str]] = None,
+        extra_labels: dict[str, str] | None = None,
+        extra_annotations: dict[str, str] | None = None,
     ) -> bool:  # pragma: no cover - overridden
         return False
 
@@ -62,8 +62,8 @@ class KometaCronTrigger(_BaseKometaTrigger):
 
     def __init__(self, settings: KometaTriggerSettings) -> None:
         self._settings = settings
-        self._api: Optional["client.BatchV1Api"] = None
-        self._api_client: Optional["client.ApiClient"] = None
+        self._api: client.BatchV1Api | None = None
+        self._api_client: client.ApiClient | None = None
 
     @property
     def enabled(self) -> bool:
@@ -73,8 +73,8 @@ class KometaCronTrigger(_BaseKometaTrigger):
 
     def trigger(
         self,
-        extra_labels: Optional[Dict[str, str]] = None,
-        extra_annotations: Optional[Dict[str, str]] = None,
+        extra_labels: dict[str, str] | None = None,
+        extra_annotations: dict[str, str] | None = None,
     ) -> bool:
         if not self.enabled:
             return False
@@ -126,7 +126,7 @@ class KometaCronTrigger(_BaseKometaTrigger):
         )
         return True
 
-    def _ensure_client(self) -> "client.BatchV1Api":
+    def _ensure_client(self) -> client.BatchV1Api:
         if self._api is not None:
             return self._api
 
@@ -139,7 +139,7 @@ class KometaCronTrigger(_BaseKometaTrigger):
     def _build_job_name(self) -> str:
         base = self._settings.job_name_prefix or f"{self._settings.cronjob_name or 'kometa-sport'}-manual"
         normalized = re.sub(r"[^a-z0-9-]", "-", base.lower()).strip("-") or "kometa-sport"
-        timestamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M%S")
+        timestamp = dt.datetime.now(dt.UTC).strftime("%Y%m%d%H%M%S")
         random_suffix = secrets.token_hex(2)
         name = f"{normalized}-{timestamp}-{random_suffix}"
         if len(name) > 63:
@@ -152,9 +152,9 @@ class KometaCronTrigger(_BaseKometaTrigger):
         self,
         cronjob: Any,
         job_name: str,
-        extra_labels: Optional[Dict[str, str]],
-        extra_annotations: Optional[Dict[str, str]],
-    ) -> Dict[str, Any]:
+        extra_labels: dict[str, str] | None,
+        extra_annotations: dict[str, str] | None,
+    ) -> dict[str, Any]:
         if not self._api_client:
             raise RuntimeError("API client not initialized")
 
@@ -193,15 +193,15 @@ class KometaCronTrigger(_BaseKometaTrigger):
         }
 
     @staticmethod
-    def _strip_runtime_fields(metadata: Dict[str, Any]) -> None:
+    def _strip_runtime_fields(metadata: dict[str, Any]) -> None:
         for key in ("creationTimestamp", "resourceVersion", "selfLink", "uid", "generation", "managedFields"):
             metadata.pop(key, None)
 
     @staticmethod
     def _build_labels(
-        base_labels: Optional[Dict[str, Any]],
-        extras: Optional[Dict[str, str]],
-    ) -> Dict[str, str]:
+        base_labels: dict[str, Any] | None,
+        extras: dict[str, str] | None,
+    ) -> dict[str, str]:
         labels = {str(key): str(value) for key, value in (base_labels or {}).items() if value is not None}
         labels[_DEFAULT_LABEL_KEY] = _DEFAULT_LABEL_VALUE
         if extras:
@@ -212,11 +212,11 @@ class KometaCronTrigger(_BaseKometaTrigger):
 
     @staticmethod
     def _build_annotations(
-        base_annotations: Optional[Dict[str, Any]],
-        extras: Optional[Dict[str, str]],
+        base_annotations: dict[str, Any] | None,
+        extras: dict[str, str] | None,
         *,
         include_timestamp: bool,
-    ) -> Dict[str, str]:
+    ) -> dict[str, str]:
         annotations = {
             str(key): str(value)
             for key, value in (base_annotations or {}).items()
@@ -225,7 +225,7 @@ class KometaCronTrigger(_BaseKometaTrigger):
         annotations.setdefault("playbook/triggered-by", "playbook")
         if include_timestamp:
             annotations["playbook/triggered-at"] = (
-                dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+                dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
             )
         if extras:
             for key, value in extras.items():
@@ -246,8 +246,8 @@ class KometaDockerTrigger(_BaseKometaTrigger):
 
     def trigger(
         self,
-        extra_labels: Optional[Dict[str, str]] = None,  # noqa: ARG002 - docker implementation ignores labels
-        extra_annotations: Optional[Dict[str, str]] = None,  # noqa: ARG002
+        extra_labels: dict[str, str] | None = None,  # noqa: ARG002 - docker implementation ignores labels
+        extra_annotations: dict[str, str] | None = None,  # noqa: ARG002
     ) -> bool:
         if not self.enabled:
             return False

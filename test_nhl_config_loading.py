@@ -12,8 +12,9 @@ This is the critical test to confirm the NHL ValueError issue is fixed.
 
 import sys
 import tempfile
-import yaml
 from pathlib import Path
+
+import yaml
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
@@ -29,16 +30,16 @@ def test_nhl_pattern_set_registered():
 
         builtin_sets = load_builtin_pattern_sets()
 
-        print(f"✓ Successfully loaded builtin pattern sets")
+        print("✓ Successfully loaded builtin pattern sets")
         print(f"✓ Total pattern sets: {len(builtin_sets)}")
         print(f"✓ Available pattern sets: {sorted(builtin_sets.keys())}")
 
         if 'nhl' in builtin_sets:
-            print(f"\n✅ SUCCESS: 'nhl' pattern set IS registered")
+            print("\n✅ SUCCESS: 'nhl' pattern set IS registered")
             print(f"✓ NHL pattern set contains {len(builtin_sets['nhl'])} pattern(s)")
             return True
         else:
-            print(f"\n❌ FAILURE: 'nhl' pattern set NOT found in builtin_pattern_sets")
+            print("\n❌ FAILURE: 'nhl' pattern set NOT found in builtin_pattern_sets")
             print(f"Available: {sorted(builtin_sets.keys())}")
             return False
     except Exception as e:
@@ -84,12 +85,12 @@ def test_minimal_nhl_config():
             temp_path = f.name
 
         print(f"✓ Created temporary config file: {temp_path}")
-        print(f"✓ Config contains NHL sport with pattern_sets: ['nhl']")
+        print("✓ Config contains NHL sport with pattern_sets: ['nhl']")
 
         # Load the config
         config = load_config(Path(temp_path))
 
-        print(f"✓ Config loaded successfully without ValueError")
+        print("✓ Config loaded successfully without ValueError")
         print(f"✓ Number of sports configured: {len(config.sports)}")
 
         # Verify NHL sport is loaded
@@ -98,13 +99,13 @@ def test_minimal_nhl_config():
             print(f"✓ NHL sport found: {nhl_sport.name}")
             print(f"✓ NHL sport enabled: {nhl_sport.enabled}")
             print(f"✓ NHL patterns loaded: {len(nhl_sport.patterns)}")
-            print(f"\n✅ SUCCESS: NHL config loads without ValueError")
+            print("\n✅ SUCCESS: NHL config loads without ValueError")
 
             # Clean up
             Path(temp_path).unlink()
             return True
         else:
-            print(f"\n❌ FAILURE: NHL sport not found in loaded config")
+            print("\n❌ FAILURE: NHL sport not found in loaded config")
             Path(temp_path).unlink()
             return False
 
@@ -145,14 +146,14 @@ def test_sample_config_with_nhl():
         # Load the sample config
         config = load_config(sample_config_path)
 
-        print(f"✓ Sample config loaded successfully")
+        print("✓ Sample config loaded successfully")
         print(f"✓ Number of sports in sample config: {len(config.sports)}")
 
         # Find NHL sport
         nhl_sport = next((s for s in config.sports if s.id == 'nhl'), None)
 
         if nhl_sport:
-            print(f"✓ NHL sport found in sample config")
+            print("✓ NHL sport found in sample config")
             print(f"✓ NHL sport name: {nhl_sport.name}")
             print(f"✓ NHL sport enabled: {nhl_sport.enabled}")
             print(f"✓ NHL patterns loaded: {len(nhl_sport.patterns)}")
@@ -162,19 +163,19 @@ def test_sample_config_with_nhl():
             sport_ids = [s.id for s in config.sports]
             print(f"✓ All sports loaded: {', '.join(sport_ids)}")
 
-            print(f"\n✅ SUCCESS: Sample config with NHL loads without ValueError")
-            print(f"   This confirms the fix for Issue #72 ValueError is working!")
+            print("\n✅ SUCCESS: Sample config with NHL loads without ValueError")
+            print("   This confirms the fix for Issue #72 ValueError is working!")
             return True
         else:
-            print(f"\n⚠️  WARNING: NHL sport not found in sample config")
-            print(f"   (This may be expected if NHL was removed from sample)")
+            print("\n⚠️  WARNING: NHL sport not found in sample config")
+            print("   (This may be expected if NHL was removed from sample)")
             return True
 
     except ValueError as e:
         if "Unknown pattern set 'nhl'" in str(e):
-            print(f"\n❌ FAILURE: Original Issue #72 ValueError still occurs!")
+            print("\n❌ FAILURE: Original Issue #72 ValueError still occurs!")
             print(f"   Error: {e}")
-            print(f"   This means the NHL pattern set is not properly registered.")
+            print("   This means the NHL pattern set is not properly registered.")
         else:
             print(f"\n❌ FAILURE: ValueError raised: {e}")
         import traceback

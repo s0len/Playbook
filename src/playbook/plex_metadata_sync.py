@@ -15,16 +15,15 @@ import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 from urllib.parse import urljoin
 
-from .config import AppConfig, PlexSyncSettings, SportConfig
+from .config import AppConfig, SportConfig
 from .logging_utils import LogBlockBuilder
 from .metadata import (
     MetadataChangeResult,
     MetadataFingerprintStore,
     ShowFingerprint,
-    compute_show_fingerprint,
     compute_show_fingerprint_cached,
     load_show,
 )
@@ -47,16 +46,16 @@ LOGGER = logging.getLogger(__name__)
 class MappedMetadata:
     """Metadata fields mapped for Plex API update."""
 
-    title: Optional[str]
-    sort_title: Optional[str]
-    original_title: Optional[str]
-    originally_available_at: Optional[str]
-    summary: Optional[str]
-    poster_url: Optional[str]
-    background_url: Optional[str]
+    title: str | None
+    sort_title: str | None
+    original_title: str | None
+    originally_available_at: str | None
+    summary: str | None
+    poster_url: str | None
+    background_url: str | None
 
 
-def _as_int(value: object) -> Optional[int]:
+def _as_int(value: object) -> int | None:
     """Safely convert value to int."""
     if value is None:
         return None
@@ -66,7 +65,7 @@ def _as_int(value: object) -> Optional[int]:
         return None
 
 
-def _first(metadata: Dict[str, object], keys: tuple[str, ...]) -> Optional[str]:
+def _first(metadata: dict[str, object], keys: tuple[str, ...]) -> str | None:
     """Get first non-empty value from metadata dict for given keys."""
     for key in keys:
         value = metadata.get(key)
@@ -75,7 +74,7 @@ def _first(metadata: Dict[str, object], keys: tuple[str, ...]) -> Optional[str]:
     return None
 
 
-def _parse_date(value: object) -> Optional[str]:
+def _parse_date(value: object) -> str | None:
     """Parse date to ISO format string."""
     if value is None:
         return None
@@ -89,7 +88,7 @@ def _parse_date(value: object) -> Optional[str]:
         return None
 
 
-def _resolve_asset_url(base_url: str, value: Optional[str]) -> Optional[str]:
+def _resolve_asset_url(base_url: str, value: str | None) -> str | None:
     """Resolve asset path to full URL.
     
     If value is already a full URL, return it as-is.
@@ -249,7 +248,7 @@ def _normalize_title(text: str) -> str:
     return text
 
 
-def _match_season_key(plex_seasons: List[Dict[str, object]], season: Season) -> Optional[str]:
+def _match_season_key(plex_seasons: list[dict[str, object]], season: Season) -> str | None:
     """Find the Plex rating key for a season by matching index or title."""
     target_numbers = {season.display_number, season.index}
     target_numbers = {num for num in target_numbers if num is not None}
@@ -294,7 +293,7 @@ def _match_season_key(plex_seasons: List[Dict[str, object]], season: Season) -> 
     return None
 
 
-def _match_episode_key(plex_episodes: List[Dict[str, object]], episode: Episode) -> Optional[str]:
+def _match_episode_key(plex_episodes: list[dict[str, object]], episode: Episode) -> str | None:
     """Find the Plex rating key for an episode by matching index or title.
 
     Uses multiple matching strategies:
@@ -375,8 +374,8 @@ def _apply_metadata(
     label: str,
     dry_run: bool,
     stats: PlexSyncStats,
-    library_id: Optional[str] = None,
-    metadata_url: Optional[str] = None,
+    library_id: str | None = None,
+    metadata_url: str | None = None,
 ) -> bool:
     """Apply metadata to a Plex item.
 
@@ -465,16 +464,16 @@ class PlexMetadataSync:
         self,
         config: AppConfig,
         *,
-        plex_url: Optional[str] = None,
-        plex_token: Optional[str] = None,
-        library_id: Optional[str] = None,
-        library_name: Optional[str] = None,
+        plex_url: str | None = None,
+        plex_token: str | None = None,
+        library_id: str | None = None,
+        library_name: str | None = None,
         force: bool = False,
         dry_run: bool = False,
         timeout: float = 15.0,
         rate_limit_delay: float = 0.1,
-        sports_filter: Optional[List[str]] = None,
-        scan_wait: Optional[float] = None,
+        sports_filter: list[str] | None = None,
+        scan_wait: float | None = None,
     ) -> None:
         self.config = config
         self.dry_run = dry_run
@@ -494,10 +493,10 @@ class PlexMetadataSync:
         self.rate_limit_delay = rate_limit_delay
         self.scan_wait = scan_wait if scan_wait is not None else plex_cfg.scan_wait
 
-        self._client: Optional[PlexClient] = None
-        self._library_id_resolved: Optional[str] = None
-        self._fingerprint_store: Optional[MetadataFingerprintStore] = None
-        self._sync_state_store: Optional[PlexSyncStateStore] = None
+        self._client: PlexClient | None = None
+        self._library_id_resolved: str | None = None
+        self._fingerprint_store: MetadataFingerprintStore | None = None
+        self._sync_state_store: PlexSyncStateStore | None = None
 
     @property
     def client(self) -> PlexClient:
@@ -547,13 +546,13 @@ class PlexMetadataSync:
             )
         return self._library_id_resolved
 
-    def get_sports_needing_sync(self) -> Set[str]:
+    def get_sports_needing_sync(self) -> set[str]:
         """Get sport IDs that need syncing (never synced or metadata changed).
 
         This allows the processor to decide whether to run sync at all.
         """
         sports = self._get_target_sports()
-        needing_sync: Set[str] = set()
+        needing_sync: set[str] = set()
 
         for sport in sports:
             # Load show to compute fingerprint
@@ -665,7 +664,7 @@ class PlexMetadataSync:
 
         return stats
 
-    def _get_target_sports(self) -> List[SportConfig]:
+    def _get_target_sports(self) -> list[SportConfig]:
         """Get list of sports to sync, respecting filter."""
         all_sports = [sport for sport in self.config.sports if sport.enabled]
 
@@ -825,7 +824,7 @@ class PlexMetadataSync:
         show_rating: str,
         base_url: str,
         fingerprint: ShowFingerprint,
-        previous_fingerprint: Optional[ShowFingerprint],
+        previous_fingerprint: ShowFingerprint | None,
         change: MetadataChangeResult,
         is_first_sync: bool,
         stats: PlexSyncStats,
@@ -848,7 +847,7 @@ class PlexMetadataSync:
             )
 
         # Build season rating key cache
-        season_rating_cache: Dict[str, str] = {}
+        season_rating_cache: dict[str, str] = {}
         for season in show.seasons:
             season_id = _season_identifier(season)
             rating_key = _match_season_key(plex_seasons, season)
@@ -856,7 +855,7 @@ class PlexMetadataSync:
                 season_rating_cache[season_id] = rating_key
 
         # Determine which seasons need updating
-        seasons_to_update: Set[str] = set()
+        seasons_to_update: set[str] = set()
         if self.force or change.invalidate_all or is_first_sync:
             seasons_to_update = {_season_identifier(s) for s in show.seasons}
         elif change.changed_seasons:
@@ -921,7 +920,7 @@ class PlexMetadataSync:
                 stats.seasons_skipped += 1
 
         # Sync episodes (with caching to avoid N+1)
-        episode_cache: Dict[str, List[Dict[str, Any]]] = {}
+        episode_cache: dict[str, list[dict[str, Any]]] = {}
 
         for season in show.seasons:
             season_id = _season_identifier(season)
@@ -952,7 +951,7 @@ class PlexMetadataSync:
             plex_episodes = episode_cache[season_id]
 
             # Get previous episode hashes for change detection
-            previous_episode_hashes: Dict[str, str] = {}
+            previous_episode_hashes: dict[str, str] = {}
             if previous_fingerprint:
                 previous_episode_hashes = previous_fingerprint.episode_hashes.get(season_id, {})
 
@@ -1032,7 +1031,7 @@ class PlexMetadataSync:
                     stats.episodes_skipped += 1
 
 
-def create_plex_sync_from_config(config: AppConfig) -> Optional[PlexMetadataSync]:
+def create_plex_sync_from_config(config: AppConfig) -> PlexMetadataSync | None:
     """Create a PlexMetadataSync instance from config with env var overrides.
 
     Returns None if sync is disabled.
@@ -1062,7 +1061,6 @@ def create_plex_sync_from_config(config: AppConfig) -> Optional[PlexMetadataSync
 def main() -> int:
     """CLI entrypoint for standalone execution."""
     import argparse
-    import sys
 
     parser = argparse.ArgumentParser(description="Sync Plex metadata from remote YAML.")
     parser.add_argument(

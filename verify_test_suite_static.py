@@ -10,7 +10,7 @@ to verify that our fixes don't introduce regressions.
 import ast
 import re
 from pathlib import Path
-from typing import List, Dict, Tuple
+
 
 class TestSuiteVerifier:
     def __init__(self, project_root: Path):
@@ -71,7 +71,7 @@ class TestSuiteVerifier:
         all_valid = True
         for test_file in test_files:
             try:
-                with open(test_file, 'r') as f:
+                with open(test_file) as f:
                     ast.parse(f.read())
                 print(f"  ✓ {test_file.name} - syntax valid")
             except SyntaxError as e:
@@ -119,7 +119,7 @@ class TestSuiteVerifier:
                 continue
 
             # Check if object exists in file
-            with open(file_path, 'r') as f:
+            with open(file_path) as f:
                 content = f.read()
 
             # Look for function or class definition
@@ -150,7 +150,7 @@ class TestSuiteVerifier:
         print("Verifying matcher tests compatibility...")
 
         matcher_file = self.src_dir / "matcher.py"
-        with open(matcher_file, 'r') as f:
+        with open(matcher_file) as f:
             matcher_content = f.read()
 
         # Check that the import we fixed is present (supports both absolute and relative imports)
@@ -186,7 +186,7 @@ class TestSuiteVerifier:
         print("Verifying config tests compatibility...")
 
         config_file = self.src_dir / "config.py"
-        with open(config_file, 'r') as f:
+        with open(config_file) as f:
             config_content = f.read()
 
         # Check that load_config function exists
@@ -217,7 +217,7 @@ class TestSuiteVerifier:
         print("Verifying structured filename tests compatibility...")
 
         sf_file = self.src_dir / "parsers" / "structured_filename.py"
-        with open(sf_file, 'r') as f:
+        with open(sf_file) as f:
             sf_content = f.read()
 
         # Check that both restored functions exist
@@ -251,7 +251,7 @@ class TestSuiteVerifier:
         print("Verifying sports pattern sets (no regression)...")
 
         pattern_file = self.src_dir / "pattern_templates.yaml"
-        with open(pattern_file, 'r') as f:
+        with open(pattern_file) as f:
             pattern_content = f.read()
 
         # Key sports that should be present

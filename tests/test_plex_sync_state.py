@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import pytest
 from pathlib import Path
 
 from src.playbook.plex_sync_state import (

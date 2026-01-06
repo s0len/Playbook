@@ -4,15 +4,13 @@ from __future__ import annotations
 
 import datetime as dt
 
-import pytest
-
-from playbook.parsers.structured_filename import StructuredName, _parse_date_candidates
 from playbook.matcher import (
     _build_team_alias_lookup,
     _extract_teams_from_text,
     _score_structured_match,
 )
 from playbook.models import Episode, Season, Show
+from playbook.parsers.structured_filename import StructuredName, _parse_date_candidates
 from playbook.team_aliases import get_team_alias_map
 
 
@@ -379,7 +377,6 @@ class TestExtractTeamsFromText:
         assert "Miami Heat" in teams
 from playbook.config import DestinationTemplates, MetadataConfig, SportConfig
 from playbook.matcher import match_file_to_episode
-from playbook.models import Episode, Season, Show
 
 
 def _sport(sport_id: str, *, alias_map: str | None = None) -> SportConfig:

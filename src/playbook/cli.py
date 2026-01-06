@@ -8,12 +8,11 @@ import os
 import sys
 import traceback
 from pathlib import Path
-from typing import Optional, Tuple
 
 from rich.console import Console
 from rich.logging import RichHandler
 
-from .config import AppConfig, Settings, load_config
+from .config import AppConfig, load_config
 from .kometa_trigger import build_kometa_trigger
 from .processor import Processor, TraceOptions
 from .utils import load_yaml_file
@@ -30,7 +29,7 @@ _TRUE_VALUES = {"1", "true", "yes", "on"}
 _FALSE_VALUES = {"0", "false", "no", "off"}
 
 
-def _parse_env_bool(value: Optional[str]) -> Optional[bool]:
+def _parse_env_bool(value: str | None) -> bool | None:
     if value is None:
         return None
     lowered = value.strip().lower()
@@ -41,11 +40,11 @@ def _parse_env_bool(value: Optional[str]) -> Optional[bool]:
     return None
 
 
-def _env_bool(name: str) -> Optional[bool]:
+def _env_bool(name: str) -> bool | None:
     return _parse_env_bool(os.getenv(name))
 
 
-def parse_args(argv: Optional[Tuple[str, ...]] = None) -> argparse.Namespace:
+def parse_args(argv: tuple[str, ...] | None = None) -> argparse.Namespace:
     arguments = list(argv or sys.argv[1:])
     if arguments:
         if arguments[0] == "validate-config":
@@ -173,7 +172,7 @@ def _resolve_level(name: str) -> int:
     return getattr(logging, name.upper(), logging.INFO)
 
 
-def configure_logging(log_level_name: str, log_file: Path, console_level_name: Optional[str] = None) -> None:
+def configure_logging(log_level_name: str, log_file: Path, console_level_name: str | None = None) -> None:
     log_level = _resolve_level(log_level_name)
     console_level = _resolve_level(console_level_name or log_level_name)
 
@@ -289,7 +288,7 @@ def _execute_run(args: argparse.Namespace) -> int:
     console_level_env = os.getenv("CONSOLE_LEVEL")
 
     resolved_log_level = (args.log_level or log_level_env or ("DEBUG" if verbose else "INFO"))
-    resolved_console_level: Optional[str]
+    resolved_console_level: str | None
     if args.console_level:
         resolved_console_level = args.console_level
     elif console_level_env:
@@ -472,7 +471,7 @@ def run_validate_config(args: argparse.Namespace) -> int:
     return 0 if report.is_valid else 1
 
 
-def _resolve_sample_config_path() -> Optional[Path]:
+def _resolve_sample_config_path() -> Path | None:
     root = Path(__file__).resolve().parents[2]
     sample_path = root / "config" / "playbook.sample.yaml"
     if sample_path.exists():
@@ -504,7 +503,7 @@ def _print_sample_diff(sample_path: Path, target_path: Path) -> None:
 
     CONSOLE.print("\n[cyan]Unified diff against sample configuration:[/cyan]")
     for line in diff_lines:
-        style: Optional[str]
+        style: str | None
         if line.startswith("---") or line.startswith("+++"):
             style = "bold"
         elif line.startswith("@@"):
@@ -518,7 +517,7 @@ def _print_sample_diff(sample_path: Path, target_path: Path) -> None:
         CONSOLE.print(line, style=style)
 
 
-def main(argv: Optional[Tuple[str, ...]] = None) -> int:
+def main(argv: tuple[str, ...] | None = None) -> int:
     args = parse_args(argv)
     if getattr(args, "command", "run") == "validate-config":
         return run_validate_config(args)

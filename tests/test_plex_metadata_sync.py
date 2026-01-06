@@ -3,16 +3,13 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import Any, Dict, Optional
-from unittest.mock import MagicMock, patch
+from typing import Any
 
 import pytest
 
 from playbook.models import Episode, Season, Show
 from playbook.plex_client import SearchResult
 from playbook.plex_metadata_sync import (
-    MappedMetadata,
-    PlexMetadataSync,
     _as_int,
     _episode_identifier,
     _first,
@@ -31,10 +28,10 @@ def _make_episode(
     index: int = 1,
     title: str = "Test",
     *,
-    summary: Optional[str] = None,
-    originally_available: Optional[dt.date] = None,
-    display_number: Optional[int] = None,
-    metadata: Optional[Dict[str, Any]] = None,
+    summary: str | None = None,
+    originally_available: dt.date | None = None,
+    display_number: int | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> Episode:
     """Helper to create Episode with defaults."""
     ep = Episode(
@@ -54,10 +51,10 @@ def _make_season(
     key: str = "season-1",
     title: str = "Season 1",
     *,
-    summary: Optional[str] = None,
-    display_number: Optional[int] = None,
-    metadata: Optional[Dict[str, Any]] = None,
-    episodes: Optional[list] = None,
+    summary: str | None = None,
+    display_number: int | None = None,
+    metadata: dict[str, Any] | None = None,
+    episodes: list | None = None,
 ) -> Season:
     """Helper to create Season with defaults."""
     season = Season(
@@ -77,9 +74,9 @@ def _make_show(
     key: str = "show-1",
     title: str = "Test Show",
     *,
-    summary: Optional[str] = None,
-    seasons: Optional[list] = None,
-    metadata: Optional[Dict[str, Any]] = None,
+    summary: str | None = None,
+    seasons: list | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> Show:
     """Helper to create Show with defaults."""
     show = Show(

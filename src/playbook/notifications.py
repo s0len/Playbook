@@ -7,10 +7,10 @@ import os
 import smtplib
 import time
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from email.message import EmailMessage
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import requests
 from requests import Response
@@ -29,8 +29,8 @@ class BatchRequest:
     sport_id: str
     sport_name: str
     bucket_date: date
-    message_id: Optional[str]
-    events: List[Dict[str, Any]]
+    message_id: str | None
+    events: list[dict[str, Any]]
 
 
 @dataclass(slots=True)
@@ -41,16 +41,16 @@ class NotificationEvent:
     season: str
     session: str
     episode: str
-    summary: Optional[str]
+    summary: str | None
     destination: str
     source: str
     action: str
     link_mode: str
     replaced: bool = False
-    skip_reason: Optional[str] = None
-    trace_path: Optional[str] = None
-    match_details: Dict[str, Any] = field(default_factory=dict)
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    skip_reason: str | None = None
+    trace_path: str | None = None
+    match_details: dict[str, Any] = field(default_factory=dict)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     event_type: str = "unknown"  # new, changed, refresh, skipped, error, dry-run
 
 
@@ -60,7 +60,7 @@ class NotificationBatcher:
     def __init__(self, cache_dir: Path, settings: NotificationSettings) -> None:
         self._settings = settings
         self._path = cache_dir / "state" / "discord-batches.json"
-        self._state: Dict[str, Dict[str, Any]] = {}
+        self._state: dict[str, dict[str, Any]] = {}
         self._dirty = False
         self._load()
 
@@ -154,7 +154,7 @@ class NotificationBatcher:
             LOGGER.warning("Ignoring malformed notification batch cache %s", self._path)
             return
 
-        state: Dict[str, Dict[str, Any]] = {}
+        state: dict[str, dict[str, Any]] = {}
         for sport_id, entry in payload.items():
             if not isinstance(sport_id, str) or not isinstance(entry, dict):
                 continue
@@ -163,7 +163,7 @@ class NotificationBatcher:
             if not isinstance(events_raw, list):
                 events_raw = []
 
-            events: List[Dict[str, Any]] = []
+            events: list[dict[str, Any]] = []
             for item in events_raw:
                 if not isinstance(item, dict):
                     continue
@@ -224,13 +224,13 @@ class NotificationTarget:
         raise NotImplementedError
 
 
-def _normalize_mentions_map(value: Any) -> Dict[str, str]:
+def _normalize_mentions_map(value: Any) -> dict[str, str]:
     if not value:
         return {}
     if not isinstance(value, dict):
         LOGGER.warning("Ignoring discord target mentions because value is not a mapping")
         return {}
-    mentions: Dict[str, str] = {}
+    mentions: dict[str, str] = {}
     for key, raw_value in value.items():
         if raw_value is None:
             continue
@@ -249,17 +249,17 @@ class DiscordTarget(NotificationTarget):
 
     def __init__(
         self,
-        webhook_url: Optional[str],
+        webhook_url: str | None,
         *,
         cache_dir: Path,
         settings: NotificationSettings,
-        batch: Optional[bool] = None,
-        mentions: Optional[Dict[str, str]] = None,
+        batch: bool | None = None,
+        mentions: dict[str, str] | None = None,
     ) -> None:
         self.webhook_url = webhook_url.strip() if isinstance(webhook_url, str) else None
         self._settings = settings
         use_batch = batch if batch is not None else settings.batch_daily
-        self._batcher: Optional[NotificationBatcher]
+        self._batcher: NotificationBatcher | None
         if self.enabled() and use_batch:
             self._batcher = NotificationBatcher(cache_dir, settings)
         else:
@@ -291,8 +291,8 @@ class DiscordTarget(NotificationTarget):
         payload = self._build_single_payload(event, now)
         self._send_with_retries("POST", self.webhook_url, payload)
 
-    def _build_single_payload(self, event: NotificationEvent, now: datetime) -> Dict[str, Any]:
-        embed: Dict[str, Any] = {
+    def _build_single_payload(self, event: NotificationEvent, now: datetime) -> dict[str, Any]:
+        embed: dict[str, Any] = {
             "title": self._trim(f"{event.show_title} – {event.session}", 256),
             "color": self._embed_color(event),
             "timestamp": now.isoformat(),
@@ -306,12 +306,12 @@ class DiscordTarget(NotificationTarget):
         content = self._apply_mention_prefix(content, event.sport_id, limit=2000)
         return {"content": content, "embeds": [embed]}
 
-    def _build_batch_payload(self, request: BatchRequest, now: datetime) -> Dict[str, Any]:
+    def _build_batch_payload(self, request: BatchRequest, now: datetime) -> dict[str, Any]:
         events = request.events
         total = len(events)
         visible_events = events[-20:]
 
-        lines: List[str] = []
+        lines: list[str] = []
         for item in visible_events:
             action = item.get("action", "link")
             indicator = self._event_indicator(item.get("event_type"))
@@ -348,7 +348,7 @@ class DiscordTarget(NotificationTarget):
         )
         fields.append(self._embed_field("Latest", latest_value, inline=False))
 
-        embed: Dict[str, Any] = {
+        embed: dict[str, Any] = {
             "title": self._trim(f"{request.sport_name} – {request.bucket_date.isoformat()}", 256),
             "color": 0x5865F2,
             "timestamp": latest_timestamp,
@@ -380,7 +380,7 @@ class DiscordTarget(NotificationTarget):
             return f"{base} (replaced existing)"
         return base
 
-    def _fields_for_event(self, event: NotificationEvent) -> List[Optional[Dict[str, Any]]]:
+    def _fields_for_event(self, event: NotificationEvent) -> list[dict[str, Any] | None]:
         destination_label = self._destination_label(event.destination) or event.destination
         fields = [
             self._embed_field("Sport", event.sport_name, inline=True),
@@ -403,7 +403,7 @@ class DiscordTarget(NotificationTarget):
             return 0x95A5A6
         return 0x5865F2
 
-    def _send_with_retries(self, method: str, url: str, payload: Dict[str, Any]) -> Optional[Response]:
+    def _send_with_retries(self, method: str, url: str, payload: dict[str, Any]) -> Response | None:
         attempt = 0
         max_attempts = 5
         backoff = 1.0
@@ -441,12 +441,12 @@ class DiscordTarget(NotificationTarget):
         LOGGER.error("Discord notification failed after %d attempts due to rate limiting.", max_attempts)
         return None
 
-    def _message_url(self, message_id: Optional[str]) -> str:
+    def _message_url(self, message_id: str | None) -> str:
         if not message_id:
             return self.webhook_url
         return f"{self.webhook_url}/messages/{message_id}"
 
-    def _embed_field(self, name: str, value: Optional[str], *, inline: bool) -> Optional[Dict[str, Any]]:
+    def _embed_field(self, name: str, value: str | None, *, inline: bool) -> dict[str, Any] | None:
         if value is None:
             return None
         text = self._trim(str(value), 1024)
@@ -454,7 +454,7 @@ class DiscordTarget(NotificationTarget):
             return None
         return {"name": self._trim(name, 256), "value": text, "inline": inline}
 
-    def _mention_for_sport(self, sport_id: Optional[str]) -> Optional[str]:
+    def _mention_for_sport(self, sport_id: str | None) -> str | None:
         base_mentions = getattr(self._settings, "mentions", {}) or {}
         mentions = dict(base_mentions)
         if self._mentions_override:
@@ -488,7 +488,7 @@ class DiscordTarget(NotificationTarget):
 
         return mentions.get("default")
 
-    def _apply_mention_prefix(self, text: str, sport_id: Optional[str], *, limit: int) -> str:
+    def _apply_mention_prefix(self, text: str, sport_id: str | None, *, limit: int) -> str:
         mention = self._mention_for_sport(sport_id)
         if not mention:
             return text
@@ -501,15 +501,15 @@ class DiscordTarget(NotificationTarget):
         return any(char in value for char in "*?[")
 
     @staticmethod
-    def _sport_prefixes(sport_id: str) -> List[str]:
+    def _sport_prefixes(sport_id: str) -> list[str]:
         parts = sport_id.split("_")
-        prefixes: List[str] = []
+        prefixes: list[str] = []
         for end in range(len(parts) - 1, 0, -1):
             prefixes.append("_".join(parts[:end]))
         return prefixes
 
     @staticmethod
-    def _event_indicator(event_type: Optional[str]) -> str:
+    def _event_indicator(event_type: str | None) -> str:
         mapping = {
             "new": "[NEW]",
             "changed": "[UPDATED]",
@@ -520,7 +520,7 @@ class DiscordTarget(NotificationTarget):
         return mapping.get(str(event_type).lower(), "")
 
     @staticmethod
-    def _destination_label(value: Optional[str]) -> str:
+    def _destination_label(value: str | None) -> str:
         if not value:
             return ""
         path = Path(value)
@@ -545,7 +545,7 @@ class DiscordTarget(NotificationTarget):
         return DiscordTarget._trim(text or "<empty>", 200)
 
     @staticmethod
-    def _extract_message_id(response: Response) -> Optional[str]:
+    def _extract_message_id(response: Response) -> str | None:
         try:
             payload = response.json()
         except ValueError:
@@ -578,7 +578,7 @@ class DiscordTarget(NotificationTarget):
 class SlackTarget(NotificationTarget):
     name = "slack"
 
-    def __init__(self, webhook_url: Optional[str], template: Optional[str] = None) -> None:
+    def __init__(self, webhook_url: str | None, template: str | None = None) -> None:
         self.webhook_url = webhook_url.strip() if isinstance(webhook_url, str) else None
         self.template = template
 
@@ -627,11 +627,11 @@ class GenericWebhookTarget(NotificationTarget):
 
     def __init__(
         self,
-        url: Optional[str],
+        url: str | None,
         *,
         method: str = "POST",
-        headers: Optional[Dict[str, str]] = None,
-        template: Optional[Any] = None,
+        headers: dict[str, str] | None = None,
+        template: Any | None = None,
     ) -> None:
         self.url = url.strip() if isinstance(url, str) else None
         self.method = method.upper()
@@ -671,7 +671,7 @@ class GenericWebhookTarget(NotificationTarget):
 class AutoscanTarget(NotificationTarget):
     name = "autoscan"
 
-    def __init__(self, config: Dict[str, Any], *, destination_dir: Path) -> None:
+    def __init__(self, config: dict[str, Any], *, destination_dir: Path) -> None:
         self._destination_dir = destination_dir
         self._endpoint = self._build_endpoint(config.get("url"), config.get("trigger"))
         self._timeout = self._parse_timeout(config.get("timeout"))
@@ -689,7 +689,7 @@ class AutoscanTarget(NotificationTarget):
         self._rewrite_rules = self._build_rewrite_rules(config.get("rewrite"))
 
     @staticmethod
-    def _build_endpoint(url_value: Any, trigger_value: Any) -> Optional[str]:
+    def _build_endpoint(url_value: Any, trigger_value: Any) -> str | None:
         if not url_value:
             return None
         base = str(url_value).strip().rstrip("/")
@@ -709,7 +709,7 @@ class AutoscanTarget(NotificationTarget):
         return max(1.0, timeout)
 
     @staticmethod
-    def _build_rewrite_rules(value: Any) -> List[Tuple[str, str]]:
+    def _build_rewrite_rules(value: Any) -> list[tuple[str, str]]:
         if not value:
             return []
         entries = value
@@ -717,7 +717,7 @@ class AutoscanTarget(NotificationTarget):
             entries = [entries]
         if not isinstance(entries, list):
             return []
-        rules: List[Tuple[str, str]] = []
+        rules: list[tuple[str, str]] = []
         for entry in entries:
             if not isinstance(entry, dict):
                 continue
@@ -782,7 +782,7 @@ class AutoscanTarget(NotificationTarget):
                 directory,
             )
 
-    def _directory_for_event(self, event: NotificationEvent) -> Optional[str]:
+    def _directory_for_event(self, event: NotificationEvent) -> str | None:
         details = event.match_details or {}
         destination_raw = details.get("destination_path")
         if destination_raw:
@@ -819,7 +819,7 @@ class AutoscanTarget(NotificationTarget):
 class EmailTarget(NotificationTarget):
     name = "email"
 
-    def __init__(self, config: Dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any]) -> None:
         smtp_config = config.get("smtp") or {}
         self.host = smtp_config.get("host")
         self.port = int(smtp_config.get("port", 587))
@@ -904,7 +904,7 @@ class NotificationService:
             destination_dir,
         )
         self._throttle_map = settings.throttle
-        self._last_sent: Dict[str, datetime] = {}
+        self._last_sent: dict[str, datetime] = {}
 
     @property
     def enabled(self) -> bool:
@@ -934,7 +934,7 @@ class NotificationService:
                 )
                 return
 
-        successes: List[str] = []
+        successes: list[str] = []
         for target in self._targets:
             if not target.enabled():
                 continue
@@ -963,11 +963,11 @@ class NotificationService:
 
     def _build_targets(
         self,
-        targets_raw: List[Dict[str, Any]],
+        targets_raw: list[dict[str, Any]],
         cache_dir: Path,
         destination_dir: Path,
-    ) -> List[NotificationTarget]:
-        targets: List[NotificationTarget] = []
+    ) -> list[NotificationTarget]:
+        targets: list[NotificationTarget] = []
         configs = list(targets_raw)
 
         for entry in configs:
@@ -1020,7 +1020,7 @@ class NotificationService:
 
         return [target for target in targets if target.enabled()]
 
-    def _discord_webhook_from(self, entry: Dict[str, Any]) -> Optional[str]:
+    def _discord_webhook_from(self, entry: dict[str, Any]) -> str | None:
         webhook = entry.get("webhook_url")
         if isinstance(webhook, str):
             webhook = webhook.strip()
@@ -1031,7 +1031,7 @@ class NotificationService:
         if env_name is None:
             return None
 
-        value: Optional[str] = None
+        value: str | None = None
         env_key = str(env_name).strip()
         if env_key:
             raw_value = os.environ.get(env_key)
@@ -1053,7 +1053,7 @@ class NotificationService:
         return max(0, int(default)) if default is not None else 0
 
 
-def _flatten_event(event: NotificationEvent) -> Dict[str, Any]:
+def _flatten_event(event: NotificationEvent) -> dict[str, Any]:
     data = {
         "sport_id": event.sport_id,
         "sport_name": event.sport_name,
@@ -1076,7 +1076,7 @@ def _flatten_event(event: NotificationEvent) -> Dict[str, Any]:
     return data
 
 
-def _render_template(template: Any, data: Dict[str, Any]) -> Any:
+def _render_template(template: Any, data: dict[str, Any]) -> Any:
     if isinstance(template, dict):
         return {key: _render_template(value, data) for key, value in template.items()}
     if isinstance(template, list):

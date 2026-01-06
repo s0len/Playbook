@@ -11,8 +11,8 @@ Uses static analysis to avoid dependency installation issues.
 """
 
 import ast
-import sys
 import re
+import sys
 from pathlib import Path
 
 
@@ -52,11 +52,11 @@ def verify_nhl_in_pattern_templates():
         pattern_count = len(re.findall(r'^\s+- description:', nhl_content, re.MULTILINE))
 
         print(f"✓ NHL section contains approximately {pattern_count} pattern(s)")
-        print(f"\n✅ SUCCESS: NHL pattern set IS defined in pattern_templates.yaml")
+        print("\n✅ SUCCESS: NHL pattern set IS defined in pattern_templates.yaml")
         return True
     else:
-        print(f"❌ FAILURE: NHL pattern set NOT found in pattern_templates.yaml")
-        print(f"   File exists but NHL section is missing")
+        print("❌ FAILURE: NHL pattern set NOT found in pattern_templates.yaml")
+        print("   File exists but NHL section is missing")
         return False
 
 
@@ -76,35 +76,35 @@ def verify_pattern_loading_mechanism():
 
     # Verify load_builtin_pattern_sets function exists
     if "def load_builtin_pattern_sets" in content:
-        print(f"✓ load_builtin_pattern_sets() function exists")
+        print("✓ load_builtin_pattern_sets() function exists")
     else:
-        print(f"❌ FAILURE: load_builtin_pattern_sets() function not found")
+        print("❌ FAILURE: load_builtin_pattern_sets() function not found")
         return False
 
     # Verify it loads from pattern_templates.yaml
     if "pattern_templates.yaml" in content or "pattern_templates" in content:
-        print(f"✓ Function loads from pattern_templates.yaml")
+        print("✓ Function loads from pattern_templates.yaml")
     else:
-        print(f"❌ WARNING: Cannot confirm YAML file is loaded")
+        print("❌ WARNING: Cannot confirm YAML file is loaded")
 
     # Parse the Python file with AST
     try:
         tree = ast.parse(content)
-        print(f"✓ pattern_templates.py syntax is valid")
+        print("✓ pattern_templates.py syntax is valid")
 
         # Find the load_builtin_pattern_sets function
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name == "load_builtin_pattern_sets":
-                print(f"✓ load_builtin_pattern_sets() function analyzed")
+                print("✓ load_builtin_pattern_sets() function analyzed")
 
                 # Check return type annotation
                 if node.returns:
-                    print(f"✓ Function has return type annotation")
+                    print("✓ Function has return type annotation")
 
-                print(f"\n✅ SUCCESS: Pattern loading mechanism is structurally correct")
+                print("\n✅ SUCCESS: Pattern loading mechanism is structurally correct")
                 return True
 
-        print(f"❌ FAILURE: Could not analyze load_builtin_pattern_sets() function")
+        print("❌ FAILURE: Could not analyze load_builtin_pattern_sets() function")
         return False
 
     except SyntaxError as e:
@@ -136,10 +136,10 @@ def verify_config_validation_logic():
     )
 
     if validation_pattern:
-        print(f"✓ Pattern set validation logic found")
-        print(f"✓ Validates that referenced pattern sets exist in builtin_pattern_sets")
+        print("✓ Pattern set validation logic found")
+        print("✓ Validates that referenced pattern sets exist in builtin_pattern_sets")
     else:
-        print(f"❌ FAILURE: Cannot find pattern set validation logic")
+        print("❌ FAILURE: Cannot find pattern set validation logic")
         return False
 
     # Verify builtin pattern sets are loaded
@@ -151,13 +151,13 @@ def verify_config_validation_logic():
     )
 
     if builtin_load_pattern:
-        print(f"✓ Builtin pattern sets loaded via load_builtin_pattern_sets()")
-        print(f"✓ This will include NHL if it exists in pattern_templates.yaml")
+        print("✓ Builtin pattern sets loaded via load_builtin_pattern_sets()")
+        print("✓ This will include NHL if it exists in pattern_templates.yaml")
     else:
-        print(f"❌ FAILURE: Cannot find builtin pattern set loading")
+        print("❌ FAILURE: Cannot find builtin pattern set loading")
         return False
 
-    print(f"\n✅ SUCCESS: Config validation will accept NHL if pattern exists")
+    print("\n✅ SUCCESS: Config validation will accept NHL if pattern exists")
     return True
 
 
@@ -179,11 +179,11 @@ def verify_sample_config_syntax():
     nhl_match = re.search(r'^\s*- id: nhl\s*$', content, re.MULTILINE)
 
     if not nhl_match:
-        print(f"⚠️  WARNING: NHL sport not found in sample config")
-        print(f"   (This may be expected if NHL was removed from sample)")
+        print("⚠️  WARNING: NHL sport not found in sample config")
+        print("   (This may be expected if NHL was removed from sample)")
         return True
 
-    print(f"✓ NHL sport found in sample config")
+    print("✓ NHL sport found in sample config")
 
     # Extract NHL section
     nhl_start = nhl_match.start()
@@ -200,24 +200,24 @@ def verify_sample_config_syntax():
     pattern_sets_match = re.search(r'pattern_sets:\s*\n\s*- nhl', nhl_section)
 
     if pattern_sets_match:
-        print(f"✓ NHL sport references pattern_sets: [nhl]")
-        print(f"✓ This is the exact reference that was causing ValueError in Issue #72")
+        print("✓ NHL sport references pattern_sets: [nhl]")
+        print("✓ This is the exact reference that was causing ValueError in Issue #72")
     else:
-        print(f"❌ WARNING: NHL sport doesn't reference pattern_sets: [nhl]")
+        print("❌ WARNING: NHL sport doesn't reference pattern_sets: [nhl]")
 
     # Verify NHL has metadata
     metadata_match = re.search(r'metadata:', nhl_section)
     if metadata_match:
-        print(f"✓ NHL sport has metadata configuration")
+        print("✓ NHL sport has metadata configuration")
 
     # Verify NHL has source_globs
     globs_match = re.search(r'source_globs:', nhl_section)
     if globs_match:
-        print(f"✓ NHL sport has source_globs configuration")
+        print("✓ NHL sport has source_globs configuration")
 
-    print(f"\n✅ SUCCESS: Sample config NHL section is well-formed")
-    print(f"   When loaded, this will reference the 'nhl' pattern set")
-    print(f"   which must exist in builtin_pattern_sets (verified in Test 1)")
+    print("\n✅ SUCCESS: Sample config NHL section is well-formed")
+    print("   When loaded, this will reference the 'nhl' pattern set")
+    print("   which must exist in builtin_pattern_sets (verified in Test 1)")
     return True
 
 
@@ -237,7 +237,7 @@ def verify_integration():
 
     print("\n✓ All components are in place for successful config loading")
     print("\n✅ SUCCESS: Integration flow is correct")
-    print(f"   Issue #72 ValueError: Unknown pattern set 'nhl' should be FIXED")
+    print("   Issue #72 ValueError: Unknown pattern set 'nhl' should be FIXED")
 
     return True
 

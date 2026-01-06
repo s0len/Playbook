@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 import requests
 
@@ -36,7 +34,7 @@ def test_fetch_metadata_uses_cache(monkeypatch, settings) -> None:
         title: Demo Series
     """
 
-    requests_called: List[str] = []
+    requests_called: list[str] = []
 
     def fake_get(url, headers=None, timeout=None):
         requests_called.append(url)

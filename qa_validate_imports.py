@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """QA validation script for import chain."""
-import sys
 import ast
+import sys
+
 
 def check_function_exists(filepath, function_name):
     """Check if a function exists in a Python file using AST."""
-    with open(filepath, 'r') as f:
+    with open(filepath) as f:
         tree = ast.parse(f.read(), filename=filepath)
 
     for node in ast.walk(tree):
@@ -15,7 +16,7 @@ def check_function_exists(filepath, function_name):
 
 def check_import_statement(filepath, module_path, names):
     """Check if specific names are imported from a module."""
-    with open(filepath, 'r') as f:
+    with open(filepath) as f:
         tree = ast.parse(f.read(), filename=filepath)
 
     for node in ast.walk(tree):
@@ -58,7 +59,7 @@ else:
 
 # Check StructuredName class exists
 print("\n3. Checking StructuredName class...")
-with open('./src/playbook/parsers/structured_filename.py', 'r') as f:
+with open('./src/playbook/parsers/structured_filename.py') as f:
     tree = ast.parse(f.read())
 
 has_structured_name = False

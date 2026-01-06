@@ -3,9 +3,10 @@ from __future__ import annotations
 import fnmatch
 import logging
 import time
+from collections.abc import Sequence
 from pathlib import Path
 from queue import Empty, Queue
-from typing import List, Optional, Sequence, Set, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from .config import WatcherSettings
 
@@ -68,14 +69,14 @@ class _FileChangeHandler(FileSystemEventHandler):  # type: ignore[misc]
 class FileWatcherLoop:
     """Watches the filesystem for changes and triggers processor runs."""
 
-    def __init__(self, processor: "Processor", settings: WatcherSettings) -> None:
+    def __init__(self, processor: Processor, settings: WatcherSettings) -> None:
         if Observer is None:
             raise WatchdogUnavailableError(
                 "Filesystem watcher mode requires the 'watchdog' dependency. Install via 'pip install watchdog'."
             )
         self._processor = processor
         self._settings = settings
-        self._queue: "Queue[Path]" = Queue()
+        self._queue: Queue[Path] = Queue()
         self._handler = _FileChangeHandler(self._queue, settings.include, settings.ignore)
         self._observer = Observer()
         self._roots = self._resolve_roots()
@@ -89,7 +90,7 @@ class FileWatcherLoop:
         watched_str = ", ".join(str(path) for path in self._roots) or str(self._processor.config.settings.source_dir)
         LOGGER.info("Filesystem watcher monitoring: %s", watched_str)
 
-        pending: Set[Path] = set()
+        pending: set[Path] = set()
         last_run = 0.0
         reconcile_interval = self._settings.reconcile_interval
         next_reconcile = time.monotonic() + reconcile_interval if reconcile_interval > 0 else None
@@ -116,7 +117,7 @@ class FileWatcherLoop:
             self._observer.stop()
             self._observer.join(timeout=5)
 
-    def _run_processor(self, pending: Set[Path]) -> None:
+    def _run_processor(self, pending: set[Path]) -> None:
         sample = ", ".join(sorted({str(path.parent) for path in pending})[:3])
         LOGGER.debug(
             "Detected %d filesystem change(s)%s; running processor.",
@@ -125,12 +126,12 @@ class FileWatcherLoop:
         )
         self._processor.process_all()
 
-    def _resolve_roots(self) -> List[Path]:
+    def _resolve_roots(self) -> list[Path]:
         roots = self._settings.paths or []
         default_root = self._processor.config.settings.source_dir
         if not roots:
             roots = [str(default_root)]
-        resolved: List[Path] = []
+        resolved: list[Path] = []
         for raw in roots:
             path = Path(raw).expanduser()
             if not path.is_absolute():

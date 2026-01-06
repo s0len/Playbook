@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from playbook.cache import CachedFileRecord, ProcessedFileCache
 from playbook.metadata import MetadataChangeResult
 

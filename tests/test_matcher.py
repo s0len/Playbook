@@ -2,9 +2,6 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
-from typing import Dict, List, Tuple
-
-import pytest
 
 from playbook.config import (
     DestinationTemplates,
@@ -15,17 +12,17 @@ from playbook.config import (
     SportConfig,
 )
 from playbook.matcher import (
-    compile_patterns,
-    match_file_to_episode,
     _build_team_alias_lookup,
     _score_structured_match,
+    compile_patterns,
+    match_file_to_episode,
 )
 from playbook.models import Episode, Season, Show
 from playbook.parsers.structured_filename import StructuredName
 from playbook.team_aliases import get_team_alias_map
 
 
-def build_show() -> Tuple[Show, Season]:
+def build_show() -> tuple[Show, Season]:
     practice = Episode(
         title="Free Practice 1",
         summary=None,
@@ -55,7 +52,7 @@ def build_show() -> Tuple[Show, Season]:
     return show, season
 
 
-def build_sport(patterns: List[PatternConfig]) -> SportConfig:
+def build_sport(patterns: list[PatternConfig]) -> SportConfig:
     return SportConfig(
         id="f1",
         name="Formula 1",
@@ -76,7 +73,7 @@ def test_match_file_to_episode_resolves_aliases() -> None:
 
     patterns = compile_patterns(sport)
 
-    diagnostics: List[Tuple[str, str]] = []
+    diagnostics: list[tuple[str, str]] = []
     result = match_file_to_episode("01.fp1.release.mkv", sport, show, patterns, diagnostics=diagnostics)
 
     assert result is not None
@@ -98,7 +95,7 @@ def test_match_file_to_episode_warns_when_season_missing() -> None:
 
     patterns = compile_patterns(sport)
 
-    diagnostics: List[Tuple[str, str]] = []
+    diagnostics: list[tuple[str, str]] = []
     result = match_file_to_episode("99.fp1.release.mkv", sport, show, patterns, diagnostics=diagnostics)
 
     assert result is None
@@ -120,7 +117,7 @@ def test_match_file_to_episode_suppresses_warnings_when_requested(caplog) -> Non
 
     patterns = compile_patterns(sport)
 
-    diagnostics: List[Tuple[str, str]] = []
+    diagnostics: list[tuple[str, str]] = []
     caplog.set_level(logging.WARNING, logger="playbook.matcher")
     result = match_file_to_episode(
         "99.fp1.release.mkv",
@@ -150,7 +147,7 @@ def test_match_file_to_episode_includes_trace_details() -> None:
 
     patterns = compile_patterns(sport)
 
-    trace: Dict[str, object] = {}
+    trace: dict[str, object] = {}
     result = match_file_to_episode(
         "01.qualifying.mkv",
         sport,
@@ -407,7 +404,7 @@ class TestParseDateFromGroups:
 class TestScoreStructuredMatchWithDates:
     """Tests for _score_structured_match date proximity behavior."""
 
-    def build_nhl_show_with_repeat_games(self) -> Tuple[Show, Season]:
+    def build_nhl_show_with_repeat_games(self) -> tuple[Show, Season]:
         """Build a show where the same teams play multiple times."""
         # Jets vs Stars game on October 15
         october_game = Episode(

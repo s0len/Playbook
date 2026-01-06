@@ -3,9 +3,10 @@
 import ast
 import sys
 
+
 def check_function_exists(filepath, function_name):
     """Check if a function exists in a Python file using AST."""
-    with open(filepath, 'r') as f:
+    with open(filepath) as f:
         tree = ast.parse(f.read(), filename=filepath)
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name == function_name:
@@ -39,7 +40,7 @@ else:
 print("\n[CHECK 2] Import statement in matcher.py")
 checks_total += 1
 
-with open('./src/playbook/matcher.py', 'r') as f:
+with open('./src/playbook/matcher.py') as f:
     tree = ast.parse(f.read())
 
 found_import = False
@@ -63,7 +64,7 @@ else:
 print("\n[CHECK 3] StructuredName class exists")
 checks_total += 1
 
-with open('./src/playbook/parsers/structured_filename.py', 'r') as f:
+with open('./src/playbook/parsers/structured_filename.py') as f:
     tree = ast.parse(f.read())
 
 has_class = any(isinstance(node, ast.ClassDef) and node.name == 'StructuredName'
@@ -79,7 +80,7 @@ else:
 print("\n[CHECK 4] File restoration completeness")
 checks_total += 1
 
-with open('./src/playbook/parsers/structured_filename.py', 'r') as f:
+with open('./src/playbook/parsers/structured_filename.py') as f:
     line_count = len(f.readlines())
 
 if line_count >= 250:
@@ -100,7 +101,7 @@ files_to_check = [
 
 for filepath in files_to_check:
     try:
-        with open(filepath, 'r') as f:
+        with open(filepath) as f:
             ast.parse(f.read(), filename=filepath)
         print(f"  ✅ {filepath.split('/')[-1]} - valid syntax")
         checks_passed += 1
@@ -111,7 +112,7 @@ for filepath in files_to_check:
 print("\n[CHECK 6] NHL pattern in pattern_templates.yaml")
 checks_total += 1
 
-with open('./src/playbook/pattern_templates.yaml', 'r') as f:
+with open('./src/playbook/pattern_templates.yaml') as f:
     yaml_content = f.read()
 
 if 'nhl: &nhl_patterns' in yaml_content or 'nhl:' in yaml_content.lower():

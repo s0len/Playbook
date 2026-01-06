@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping, MutableSequence, Sequence
 from textwrap import wrap
-from typing import Iterable, List, Mapping, MutableSequence, Sequence, Tuple, Union
+from typing import Union
 
 DEFAULT_WRAP_WIDTH = 110
 DEFAULT_LABEL_WIDTH = 22
 DEFAULT_INDENT = "    "
 
-FieldMapping = Union[Mapping[str, object], Sequence[Tuple[str, object]]]
+FieldMapping = Union[Mapping[str, object], Sequence[tuple[str, object]]]
 
 
-def _coerce_items(fields: FieldMapping) -> List[Tuple[str, object]]:
+def _coerce_items(fields: FieldMapping) -> list[tuple[str, object]]:
     if isinstance(fields, Mapping):
         return list(fields.items())
     return list(fields)
@@ -26,10 +27,10 @@ def _stringify(value: object) -> str:
     return str(value)
 
 
-def _wrap_text(text: str, width: int) -> List[str]:
+def _wrap_text(text: str, width: int) -> list[str]:
     if not text:
         return [""]
-    lines: List[str] = []
+    lines: list[str] = []
     for raw_line in text.splitlines() or [""]:
         wrapped = wrap(raw_line, width=width) or [""]
         lines.extend(wrapped)
@@ -120,7 +121,7 @@ def render_fields_block(title: str, fields: FieldMapping, *, pad_top: bool = Tru
 
 def render_section_block(
     title: str,
-    sections: Sequence[Tuple[str, Sequence[str]]],
+    sections: Sequence[tuple[str, Sequence[str]]],
     *,
     pad_top: bool = True,
 ) -> str:

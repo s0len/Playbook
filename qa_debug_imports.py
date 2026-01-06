@@ -2,7 +2,7 @@
 """Debug import statement in matcher.py."""
 import ast
 
-with open('./src/playbook/matcher.py', 'r') as f:
+with open('./src/playbook/matcher.py') as f:
     tree = ast.parse(f.read(), filename='matcher.py')
 
 print("All ImportFrom statements in matcher.py:")
@@ -13,6 +13,6 @@ for node in ast.walk(tree):
         names = [alias.name for alias in node.names]
         print(f"from {module} import {', '.join(names)}")
         if 'structured_filename' in str(module):
-            print(f"  ^^^^ FOUND structured_filename import!")
+            print("  ^^^^ FOUND structured_filename import!")
             print(f"  Module path: '{module}'")
             print(f"  Imported names: {names}")

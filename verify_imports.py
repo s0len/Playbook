@@ -8,10 +8,11 @@ import ast
 import sys
 from pathlib import Path
 
+
 def check_import_exists(module_file: Path, names: list) -> bool:
     """Check if names exist in the given module file."""
     try:
-        with open(module_file, 'r') as f:
+        with open(module_file) as f:
             tree = ast.parse(f.read(), filename=str(module_file))
 
         # Extract all top-level function and class definitions
@@ -84,7 +85,7 @@ def verify_matcher_imports():
     # Check syntax of matcher.py
     print("7. Checking matcher.py syntax:")
     try:
-        with open(matcher_file, 'r') as f:
+        with open(matcher_file) as f:
             ast.parse(f.read(), filename=str(matcher_file))
         print("  ✓ matcher.py syntax is valid")
     except SyntaxError as e:

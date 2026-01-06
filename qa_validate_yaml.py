@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """QA validation script for YAML syntax and NHL pattern set."""
-import yaml
 import sys
 
+import yaml
+
 try:
-    with open('./src/playbook/pattern_templates.yaml', 'r') as f:
+    with open('./src/playbook/pattern_templates.yaml') as f:
         data = yaml.safe_load(f)
 
     print("✅ YAML syntax valid")

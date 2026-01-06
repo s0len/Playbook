@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+from typing import Any
 
 from jsonschema import Draft7Validator
 
@@ -23,8 +24,8 @@ class ValidationIssue:
 class ValidationReport:
     """Aggregates validation warnings and errors."""
 
-    errors: List[ValidationIssue] = field(default_factory=list)
-    warnings: List[ValidationIssue] = field(default_factory=list)
+    errors: list[ValidationIssue] = field(default_factory=list)
+    warnings: list[ValidationIssue] = field(default_factory=list)
 
     @property
     def is_valid(self) -> bool:
@@ -34,7 +35,7 @@ class ValidationReport:
 _TIME_PATTERN = r"^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$"
 _LINK_MODES = ["hardlink", "copy", "symlink"]
 
-CONFIG_SCHEMA: Dict[str, Any] = {
+CONFIG_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
         "settings": {
@@ -281,7 +282,7 @@ CONFIG_SCHEMA: Dict[str, Any] = {
 def _format_jsonschema_path(path: Sequence[Any]) -> str:
     if not path:
         return "<root>"
-    tokens: List[str] = []
+    tokens: list[str] = []
     for part in path:
         if isinstance(part, int):
             if tokens:
@@ -293,7 +294,7 @@ def _format_jsonschema_path(path: Sequence[Any]) -> str:
     return ".".join(tokens) if tokens else "<root>"
 
 
-def _parse_time(value: str) -> Optional[str]:
+def _parse_time(value: str) -> str | None:
     try:
         parts = [int(part) for part in value.split(":")]
     except ValueError:
@@ -309,7 +310,7 @@ def _parse_time(value: str) -> Optional[str]:
     return None
 
 
-def _collect_pattern_set_names(data: Dict[str, Any]) -> Iterable[str]:
+def _collect_pattern_set_names(data: dict[str, Any]) -> Iterable[str]:
     builtin = set(load_builtin_pattern_sets().keys())
     user_sets = data.get("pattern_sets") or {}
     if isinstance(user_sets, dict):
@@ -317,7 +318,7 @@ def _collect_pattern_set_names(data: Dict[str, Any]) -> Iterable[str]:
     return builtin
 
 
-def _validate_metadata_block(metadata: Dict[str, Any], path: str, report: ValidationReport) -> None:
+def _validate_metadata_block(metadata: dict[str, Any], path: str, report: ValidationReport) -> None:
     url_value = metadata.get("url")
     if isinstance(url_value, str) and not url_value.strip():
         report.errors.append(
@@ -330,7 +331,7 @@ def _validate_metadata_block(metadata: Dict[str, Any], path: str, report: Valida
         )
 
 
-def validate_config_data(data: Dict[str, Any]) -> ValidationReport:
+def validate_config_data(data: dict[str, Any]) -> ValidationReport:
     report = ValidationReport()
     validator = Draft7Validator(CONFIG_SCHEMA)
 
@@ -348,7 +349,7 @@ def validate_config_data(data: Dict[str, Any]) -> ValidationReport:
     return report
 
 
-def _validate_semantics(data: Dict[str, Any], report: ValidationReport) -> None:
+def _validate_semantics(data: dict[str, Any], report: ValidationReport) -> None:
     settings = data.get("settings") or {}
     notifications = settings.get("notifications") or {}
     flush_time = notifications.get("flush_time")
@@ -365,7 +366,7 @@ def _validate_semantics(data: Dict[str, Any], report: ValidationReport) -> None:
             )
 
     sports = data.get("sports") or []
-    seen_ids: Dict[str, int] = {}
+    seen_ids: dict[str, int] = {}
     for index, sport in enumerate(sports):
         if not isinstance(sport, dict):
             continue

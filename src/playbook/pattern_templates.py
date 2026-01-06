@@ -3,19 +3,18 @@ from __future__ import annotations
 import re
 from functools import lru_cache
 from importlib import resources
-from typing import Any, Dict, List
+from typing import Any
 
 from .utils import load_yaml_file
 
-
 PLACEHOLDER_RE = re.compile(r"(?<!\?P)<([A-Za-z0-9_]+)>")
-_REGEX_TOKENS: Dict[str, str] = {}
+_REGEX_TOKENS: dict[str, str] = {}
 
 
-def _resolve_regex_tokens(raw_tokens: Dict[str, str]) -> Dict[str, str]:
-    resolved: Dict[str, str] = {}
+def _resolve_regex_tokens(raw_tokens: dict[str, str]) -> dict[str, str]:
+    resolved: dict[str, str] = {}
 
-    def resolve(name: str, stack: List[str]) -> str:
+    def resolve(name: str, stack: list[str]) -> str:
         if name in resolved:
             return resolved[name]
         if name not in raw_tokens:
@@ -39,7 +38,7 @@ def _resolve_regex_tokens(raw_tokens: Dict[str, str]) -> Dict[str, str]:
     return resolved
 
 
-def _expand_placeholders(text: str, tokens: Dict[str, str]) -> str:
+def _expand_placeholders(text: str, tokens: dict[str, str]) -> str:
     def replace(match: re.Match[str]) -> str:
         token_name = match.group(1)
         if token_name not in tokens:
@@ -49,8 +48,8 @@ def _expand_placeholders(text: str, tokens: Dict[str, str]) -> str:
     return PLACEHOLDER_RE.sub(replace, text)
 
 
-@lru_cache()
-def load_builtin_pattern_sets() -> Dict[str, List[Dict[str, Any]]]:
+@lru_cache
+def load_builtin_pattern_sets() -> dict[str, list[dict[str, Any]]]:
     """Load the curated pattern sets shipped with Playbook."""
 
     with resources.as_file(resources.files(__package__) / "pattern_templates.yaml") as path:

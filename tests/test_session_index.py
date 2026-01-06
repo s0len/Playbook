@@ -360,7 +360,7 @@ class TestSessionLookupIndexBenchmark:
 
         # Log the results (will show in pytest output with -v or -s)
         print(f"\n{'='*60}")
-        print(f"BENCHMARK RESULTS:")
+        print("BENCHMARK RESULTS:")
         print(f"{'='*60}")
         print(f"Total entries in index: {total_entries}")
         print(f"Search token: '{search_token}' (length {len(search_token)})")
@@ -368,7 +368,7 @@ class TestSessionLookupIndexBenchmark:
         print(f"Candidates after filtering: {candidate_count}")
         print(f"Reduction ratio: {reduction_ratio:.2%}")
         print(f"Candidates checked: {candidate_count}/{total_entries}")
-        print(f"Expected theoretical reduction: ~1.28% (1/78)")
+        print("Expected theoretical reduction: ~1.28% (1/78)")
         print(f"{'='*60}\n")
 
         # Verify the optimization is working
@@ -419,10 +419,10 @@ class TestSessionLookupIndexBenchmark:
         reduction_ratio = len(candidates) / total_entries
 
         print(f"\n{'='*60}")
-        print(f"WORST-CASE BENCHMARK RESULTS:")
+        print("WORST-CASE BENCHMARK RESULTS:")
         print(f"{'='*60}")
         print(f"Total entries in index: {total_entries}")
-        print(f"All entries start with: 'r'")
+        print("All entries start with: 'r'")
         print(f"Search token: '{search_token}' (length {len(search_token)})")
         print(f"Candidates after filtering: {len(candidates)}")
         print(f"Reduction ratio: {reduction_ratio:.2%}")
@@ -474,7 +474,7 @@ class TestSessionLookupIndexBenchmark:
         ]
 
         print(f"\n{'='*60}")
-        print(f"ITERATION COUNT COMPARISON:")
+        print("ITERATION COUNT COMPARISON:")
         print(f"{'='*60}")
         print(f"Total entries in index: {total_entries}\n")
 
@@ -504,7 +504,7 @@ class TestSessionLookupIndexBenchmark:
         avg_reduction = (total_naive_iterations - total_optimized_iterations) / total_naive_iterations
         overall_speedup = total_naive_iterations / max(total_optimized_iterations, 1)
 
-        print(f"OVERALL RESULTS:")
+        print("OVERALL RESULTS:")
         print(f"  Total naive iterations: {total_naive_iterations}")
         print(f"  Total optimized iterations: {total_optimized_iterations}")
         print(f"  Average reduction: {avg_reduction:.1%}")
