@@ -13,6 +13,7 @@ from typing import Optional, Tuple
 from rich.console import Console
 from rich.logging import RichHandler
 
+from .banner import build_banner_info, print_startup_banner
 from .config import AppConfig, Settings, load_config
 from .kometa_trigger import build_kometa_trigger
 from .processor import Processor, TraceOptions
@@ -332,6 +333,9 @@ def _execute_run(args: argparse.Namespace) -> int:
         if processor.notification_service.enabled:
             LOGGER.info("Notifications disabled for this run because the processed cache was cleared")
         processor.clear_processed_cache()
+
+    banner_info = build_banner_info(config, verbose=verbose, trace_matches=trace_enabled)
+    print_startup_banner(banner_info, CONSOLE)
 
     LOGGER.info("Starting Playbook%s", " (dry-run)" if config.settings.dry_run else "")
 
