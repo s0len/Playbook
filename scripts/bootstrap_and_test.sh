@@ -20,18 +20,26 @@ source "${VENV_PATH}/bin/activate"
 echo "[bootstrap] Upgrading pip..."
 pip install --upgrade pip
 
-if [[ -f "${PROJECT_ROOT}/requirements.txt" ]]; then
-  echo "[bootstrap] Installing requirements.txt..."
+# Install production dependencies with hash verification if lock file exists
+if [[ -f "${PROJECT_ROOT}/requirements.lock" ]]; then
+  echo "[bootstrap] Installing requirements.lock with hash verification..."
+  pip install --require-hashes -r "${PROJECT_ROOT}/requirements.lock"
+elif [[ -f "${PROJECT_ROOT}/requirements.txt" ]]; then
+  echo "[bootstrap] Installing requirements.txt (lock file not found)..."
   pip install -r "${PROJECT_ROOT}/requirements.txt"
 else
-  echo "[bootstrap] Skipping requirements.txt (not found)."
+  echo "[bootstrap] Skipping production requirements (not found)."
 fi
 
-if [[ -f "${PROJECT_ROOT}/requirements-dev.txt" ]]; then
-  echo "[bootstrap] Installing requirements-dev.txt..."
+# Install development dependencies with hash verification if lock file exists
+if [[ -f "${PROJECT_ROOT}/requirements-dev.lock" ]]; then
+  echo "[bootstrap] Installing requirements-dev.lock with hash verification..."
+  pip install --require-hashes -r "${PROJECT_ROOT}/requirements-dev.lock"
+elif [[ -f "${PROJECT_ROOT}/requirements-dev.txt" ]]; then
+  echo "[bootstrap] Installing requirements-dev.txt (lock file not found)..."
   pip install -r "${PROJECT_ROOT}/requirements-dev.txt"
 else
-  echo "[bootstrap] Skipping requirements-dev.txt (not found)."
+  echo "[bootstrap] Skipping development requirements (not found)."
 fi
 
 echo "[bootstrap] Running tests with pytest..."
