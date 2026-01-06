@@ -32,6 +32,7 @@ from .notifications import NotificationEvent, NotificationService
 from .plex_client import PlexApiError
 from .plex_metadata_sync import PlexMetadataSync, PlexSyncStats, create_plex_sync_from_config
 from .templating import render_template
+from .trace_writer import TraceOptions, persist_trace
 from .utils import ensure_directory, link_file, normalize_token, sanitize_component, sha1_of_file, sha1_of_text, slugify
 
 LOGGER = logging.getLogger(__name__)
@@ -45,12 +46,6 @@ class SportRuntime:
     show: Show
     patterns: List[PatternRuntime]
     extensions: Set[str]
-
-
-@dataclass(slots=True)
-class TraceOptions:
-    enabled: bool = False
-    output_dir: Optional[Path] = None
 
 
 class Processor:
@@ -567,36 +562,7 @@ class Processor:
         return bool(SAMPLE_FILENAME_PATTERN.search(name))
 
     def _persist_trace(self, trace: Optional[Dict[str, Any]]) -> Optional[Path]:
-        if not trace or not self.trace_options.enabled:
-            return None
-        output_dir = self.trace_options.output_dir or (self.config.settings.cache_dir / "traces")
-        ensure_directory(output_dir)
-        trace_key = f"{trace.get('filename', '')}|{trace.get('sport_id', '')}"
-        trace_path = output_dir / f"{sha1_of_text(trace_key)}.json"
-        trace["trace_path"] = str(trace_path)
-        try:
-            with trace_path.open("w", encoding="utf-8") as handle:
-                json.dump(trace, handle, ensure_ascii=False, indent=2)
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.debug(
-                self._format_log(
-                    "Failed To Write Trace",
-                    {
-                        "Path": trace_path,
-                        "Error": exc,
-                    },
-                )
-            )
-            return None
-        LOGGER.debug(
-            self._format_log(
-                "Wrote Match Trace",
-                {
-                    "Path": trace_path,
-                },
-            )
-        )
-        return trace_path
+        return persist_trace(trace, self.trace_options, self.config.settings.cache_dir)
 
     def _format_ignored_detail(
         self,
