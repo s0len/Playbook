@@ -280,7 +280,7 @@ KOMETA_TRIGGER_COMMAND_HELP = CommandHelp(
     # Extended examples shown in --examples
     extended_examples=[
         (
-            "Manually trigger Kometa using configuration settings",
+            "Basic manual trigger using configuration settings from playbook.yaml",
             "playbook kometa-trigger --config /config/playbook.yaml",
         ),
         (
@@ -292,20 +292,88 @@ KOMETA_TRIGGER_COMMAND_HELP = CommandHelp(
             "playbook kometa-trigger --mode kubernetes",
         ),
         (
-            "Trigger with verbose logging to debug issues",
-            "playbook kometa-trigger --verbose",
+            "Trigger with verbose logging to debug connection issues and command execution",
+            "playbook kometa-trigger --verbose --mode docker",
         ),
         (
-            "Docker: trigger Kometa from within Playbook container",
+            "Docker mode: trigger via 'docker run' to start a new Kometa container",
+            "playbook kometa-trigger --mode docker --config /config/playbook.yaml",
+        ),
+        (
+            "Docker mode: trigger via 'docker exec' in existing Kometa container",
             "docker exec playbook python -m playbook.cli kometa-trigger --mode docker",
         ),
         (
-            "Kubernetes: manually trigger metadata refresh after bulk imports",
+            "Docker mode: trigger specific libraries only (e.g., 'Sports' library)",
+            "playbook kometa-trigger --mode docker --config /config/playbook.yaml",
+        ),
+        (
+            "Docker mode: troubleshoot missing Docker socket or binary",
+            "ls -la /var/run/docker.sock && which docker && playbook kometa-trigger --mode docker --verbose",
+        ),
+        (
+            "Kubernetes mode: trigger metadata refresh after bulk imports",
+            "playbook kometa-trigger --mode kubernetes --config /config/playbook.yaml",
+        ),
+        (
+            "Kubernetes mode: trigger from within cluster with custom namespace",
             "kubectl exec -n media playbook -- python -m playbook.cli kometa-trigger --mode kubernetes",
         ),
         (
-            "Python module: trigger from source with custom config",
+            "Kubernetes mode: monitor triggered Job completion status",
+            "playbook kometa-trigger --mode kubernetes && kubectl get jobs -n media -l trigger=playbook --sort-by=.metadata.creationTimestamp",
+        ),
+        (
+            "Kubernetes mode: cleanup old triggered Jobs after successful runs",
+            "kubectl delete jobs -n media -l trigger=playbook --field-selector status.successful=1",
+        ),
+        (
+            "Integration: automatic trigger after Playbook processes new files (configured in playbook.yaml)",
+            "# Set kometa_trigger.enabled: true in config, then run:\nplaybook run --watch",
+        ),
+        (
+            "Integration: manual metadata refresh after importing large batch of files",
+            "playbook run --dry-run --verbose && playbook kometa-trigger --mode kubernetes",
+        ),
+        (
+            "Integration: scheduled trigger via cron for daily metadata updates",
+            "0 3 * * * /usr/local/bin/playbook kometa-trigger --config /config/playbook.yaml --mode docker >> /var/log/kometa-trigger.log 2>&1",
+        ),
+        (
+            "CI/CD: test Kometa trigger in staging before production rollout",
+            "playbook kometa-trigger --mode docker --config /config/playbook.staging.yaml --verbose",
+        ),
+        (
+            "Debugging: verify Docker configuration and test trigger without side effects",
+            "playbook validate-config && playbook kometa-trigger --mode docker --verbose 2>&1 | tee /tmp/trigger-debug.log",
+        ),
+        (
+            "Debugging: check Kubernetes CronJob exists before triggering",
+            "kubectl get cronjob kometa-sport -n media && playbook kometa-trigger --mode kubernetes",
+        ),
+        (
+            "Debugging: verify RBAC permissions for Kubernetes Job creation",
+            "kubectl auth can-i create jobs --namespace=media && playbook kometa-trigger --mode kubernetes --verbose",
+        ),
+        (
+            "Production: Docker Compose integration with sidecar Kometa container",
+            "docker-compose exec playbook python -m playbook.cli kometa-trigger --mode docker",
+        ),
+        (
+            "Production: Kubernetes with custom Job name prefix for organization",
+            "# Configure job_name_prefix in playbook.yaml, then:\nplaybook kometa-trigger --mode kubernetes",
+        ),
+        (
+            "Python module: trigger from source with custom config path",
             "python -m playbook.cli kometa-trigger --config ./playbook.yaml --mode docker",
+        ),
+        (
+            "Python module: development testing with local Kometa installation",
+            "python -m playbook.cli kometa-trigger --config ./config/playbook.dev.yaml --mode docker --verbose",
+        ),
+        (
+            "Multi-library: trigger all configured libraries after sports events complete",
+            "# Configure docker_libraries or just trigger all:\nplaybook kometa-trigger --mode docker",
         ),
     ],
     env_vars=[
