@@ -432,4 +432,195 @@ class TestLogBlockBuilder:
         assert first_idx < middle_idx < last_idx
 
 
-# Tests for convenience functions will be added in subsequent subtasks
+class TestRenderFieldsBlock:
+    """Tests for render_fields_block convenience function."""
+
+    def test_render_fields_block_basic(self):
+        """Test render_fields_block with basic field dictionary."""
+        result = render_fields_block("Test Block", {"key1": "value1", "key2": "value2"})
+        assert isinstance(result, str)
+        assert "Test Block" in result
+        assert "-" * len("Test Block") in result
+        assert "key1" in result
+        assert "value1" in result
+        assert "key2" in result
+        assert "value2" in result
+
+    def test_render_fields_block_with_pad_top_true(self):
+        """Test render_fields_block with pad_top=True (default)."""
+        result = render_fields_block("Title", {"key": "value"}, pad_top=True)
+        lines = result.split("\n")
+        # First line should be empty with pad_top=True
+        assert lines[0] == ""
+        assert lines[1] == "Title"
+
+    def test_render_fields_block_with_pad_top_false(self):
+        """Test render_fields_block with pad_top=False."""
+        result = render_fields_block("Title", {"key": "value"}, pad_top=False)
+        lines = result.split("\n")
+        # First line should be title, not empty
+        assert lines[0] == "Title"
+        assert lines[1] == "-" * len("Title")
+
+    def test_render_fields_block_with_sequence(self):
+        """Test render_fields_block with sequence of tuples."""
+        fields = [("first", "alpha"), ("second", "beta")]
+        result = render_fields_block("Ordered", fields, pad_top=False)
+        assert "Ordered" in result
+        assert "first" in result
+        assert "alpha" in result
+        assert "second" in result
+        assert "beta" in result
+
+    def test_render_fields_block_with_empty_fields(self):
+        """Test render_fields_block with empty fields."""
+        result = render_fields_block("Empty", {}, pad_top=False)
+        lines = result.split("\n")
+        # Should only have title and separator
+        assert lines[0] == "Empty"
+        assert lines[1] == "-----"
+        assert len(lines) == 2
+
+    def test_render_fields_block_with_various_types(self):
+        """Test render_fields_block with various value types."""
+        result = render_fields_block(
+            "Types",
+            {
+                "string": "text",
+                "number": 42,
+                "list": [1, 2, 3],
+                "none": None,
+            },
+            pad_top=False,
+        )
+        assert "string" in result and "text" in result
+        assert "number" in result and "42" in result
+        assert "list" in result and "1, 2, 3" in result
+        assert "none" in result
+
+    def test_render_fields_block_formatting(self):
+        """Test render_fields_block has proper formatting."""
+        result = render_fields_block("Format", {"name": "value"}, pad_top=False)
+        # Check for proper indentation and formatting
+        assert "    name" in result
+        assert ": value" in result
+
+
+class TestRenderSectionBlock:
+    """Tests for render_section_block convenience function."""
+
+    def test_render_section_block_single_section(self):
+        """Test render_section_block with a single section."""
+        sections = [("Items", ["item1", "item2", "item3"])]
+        result = render_section_block("Test", sections, pad_top=False)
+        assert "Test" in result
+        assert "Items:" in result
+        assert "- item1" in result
+        assert "- item2" in result
+        assert "- item3" in result
+
+    def test_render_section_block_multiple_sections(self):
+        """Test render_section_block with multiple sections."""
+        sections = [
+            ("Section A", ["a1", "a2"]),
+            ("Section B", ["b1", "b2", "b3"]),
+            ("Section C", ["c1"]),
+        ]
+        result = render_section_block("Multi", sections, pad_top=False)
+
+        # Check title
+        assert "Multi" in result
+
+        # Check all section headings
+        assert "Section A:" in result
+        assert "Section B:" in result
+        assert "Section C:" in result
+
+        # Check all items
+        assert "- a1" in result
+        assert "- a2" in result
+        assert "- b1" in result
+        assert "- b2" in result
+        assert "- b3" in result
+        assert "- c1" in result
+
+    def test_render_section_block_with_pad_top_true(self):
+        """Test render_section_block with pad_top=True (default)."""
+        sections = [("Items", ["item1"])]
+        result = render_section_block("Title", sections, pad_top=True)
+        lines = result.split("\n")
+        # First line should be empty with pad_top=True
+        assert lines[0] == ""
+        assert lines[1] == "Title"
+
+    def test_render_section_block_with_pad_top_false(self):
+        """Test render_section_block with pad_top=False."""
+        sections = [("Items", ["item1"])]
+        result = render_section_block("Title", sections, pad_top=False)
+        lines = result.split("\n")
+        # First line should be title, not empty
+        assert lines[0] == "Title"
+        assert lines[1] == "-" * len("Title")
+
+    def test_render_section_block_with_empty_section(self):
+        """Test render_section_block with empty section."""
+        sections = [("Empty Section", [])]
+        result = render_section_block("Test", sections, pad_top=False)
+        assert "Empty Section:" in result
+        assert "(none)" in result
+
+    def test_render_section_block_mixed_empty_and_populated(self):
+        """Test render_section_block with mix of empty and populated sections."""
+        sections = [
+            ("Has Items", ["item1", "item2"]),
+            ("Empty", []),
+            ("More Items", ["item3"]),
+        ]
+        result = render_section_block("Mixed", sections, pad_top=False)
+
+        assert "Has Items:" in result
+        assert "- item1" in result
+        assert "- item2" in result
+
+        assert "Empty:" in result
+        assert "(none)" in result
+
+        assert "More Items:" in result
+        assert "- item3" in result
+
+    def test_render_section_block_filters_none_items(self):
+        """Test render_section_block filters out None items."""
+        sections = [("Filtered", ["item1", None, "item2", None, "item3"])]
+        result = render_section_block("Test", sections, pad_top=False)
+        assert "- item1" in result
+        assert "- item2" in result
+        assert "- item3" in result
+        # Should have exactly 3 bullet points
+        assert result.count("- item") == 3
+
+    def test_render_section_block_with_empty_sections_list(self):
+        """Test render_section_block with no sections."""
+        result = render_section_block("No Sections", [], pad_top=False)
+        lines = result.split("\n")
+        # Should only have title and separator
+        assert lines[0] == "No Sections"
+        assert lines[1] == "-----------"
+        assert len(lines) == 2
+
+    def test_render_section_block_section_order(self):
+        """Test render_section_block preserves section order."""
+        sections = [
+            ("First", ["1"]),
+            ("Second", ["2"]),
+            ("Third", ["3"]),
+        ]
+        result = render_section_block("Order", sections, pad_top=False)
+        lines = result.split("\n")
+
+        # Find indices of section headings
+        first_idx = next(i for i, line in enumerate(lines) if "First:" in line)
+        second_idx = next(i for i, line in enumerate(lines) if "Second:" in line)
+        third_idx = next(i for i, line in enumerate(lines) if "Third:" in line)
+
+        # Verify they appear in order
+        assert first_idx < second_idx < third_idx
