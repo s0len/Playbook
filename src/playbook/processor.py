@@ -31,6 +31,8 @@ from .run_summary import (
     filtered_ignored_details,
     has_activity,
     has_detailed_activity,
+    log_detailed_summary,
+    log_run_recap,
     summarize_counts,
     summarize_messages,
     summarize_plex_errors,
@@ -451,125 +453,27 @@ class Processor:
         return "\n".join(lines)
 
     def _log_detailed_summary(self, stats: ProcessingStats, *, level: int = logging.INFO) -> None:
-        show_entries = LOGGER.isEnabledFor(logging.DEBUG)
-        builder = LogBlockBuilder("Detailed Summary", pad_top=True)
-
-        fields: Dict[str, Any] = {
-            "Processed": stats.processed,
-            "Skipped": stats.skipped,
-            "Ignored": stats.ignored,
-            "Warnings": len(stats.warnings),
-            "Errors": len(stats.errors),
-        }
-
-        # Add Plex sync stats if available
-        if self._plex_sync_stats:
-            plex_errors = len(self._plex_sync_stats.errors)
-            fields["Plex Sync Errors"] = plex_errors
-
-        builder.add_fields(fields)
-
-        if show_entries:
-            builder.add_section("Errors", stats.errors)
-            builder.add_section("Warnings", stats.warnings)
-            builder.add_section("Skipped", stats.skipped_details)
-            builder.add_section("Ignored", filtered_ignored_details(stats))
-        else:
-            builder.add_section(
-                "Errors",
-                summarize_counts(stats.errors_by_sport, len(stats.errors), "error"),
-            )
-            builder.add_section(
-                "Warnings",
-                summarize_counts(stats.warnings_by_sport, len(stats.warnings), "warning"),
-            )
-            builder.add_section(
-                "Skipped",
-                summarize_messages(stats.skipped_details),
-            )
-            builder.add_section(
-                "Ignored",
-                summarize_counts(stats.ignored_by_sport, stats.ignored, "ignored"),
-            )
-
-        # Always show Plex sync errors (they're important to surface)
-        if self._plex_sync_stats and self._plex_sync_stats.errors:
-            builder.add_section(
-                "Plex Sync Errors",
-                summarize_plex_errors(self._plex_sync_stats.errors),
-            )
-
-        LOGGER.log(level, builder.render())
-
-    def _log_run_recap(self, stats: ProcessingStats, duration: float) -> None:
-        destinations = sorted(self._touched_destinations)
-        builder = LogBlockBuilder("Run Recap")
-
-        fields: Dict[str, Any] = {
-            "Duration": f"{duration:.2f}s",
-            "Processed": stats.processed,
-            "Skipped": stats.skipped,
-            "Ignored": stats.ignored,
-            "Warnings": len(stats.warnings),
-            "Errors": len(stats.errors),
-            "Destinations": len(destinations),
-        }
-
-        # Add Plex sync status
-        if self._plex_sync is not None:
-            if self._plex_sync_ran and self._plex_sync_stats:
-                plex_summary = self._plex_sync_stats.summary()
-                plex_status = (
-                    f"{plex_summary['shows']['updated']}/{plex_summary['seasons']['updated']}/"
-                    f"{plex_summary['episodes']['updated']} (show/season/ep)"
-                )
-                # Show not-found counts if any
-                not_found = (
-                    plex_summary["seasons"]["not_found"]
-                    + plex_summary["episodes"]["not_found"]
-                )
-                if not_found:
-                    plex_status += f" [{not_found} not found]"
-                if self._plex_sync_stats.errors:
-                    plex_status += f" [{len(self._plex_sync_stats.errors)} errors]"
-                fields["Plex Sync"] = plex_status
-            elif self._plex_sync.dry_run or self.config.settings.dry_run:
-                fields["Plex Sync"] = "dry-run"
-            else:
-                fields["Plex Sync"] = "skipped (no changes)"
-        else:
-            fields["Plex Sync"] = "disabled"
-
-        # Keep Kometa status for backwards compatibility (may be removed)
-        if self._kometa_trigger.enabled:
-            fields["Kometa Triggered"] = "yes" if self._kometa_trigger_fired else "no"
-
-        builder.add_fields(fields)
-        builder.add_section(
-            "Destinations (sample)",
-            destinations[:5],
-            empty_label="(none)",
+        """Log detailed summary of processing results (delegates to run_summary module)."""
+        log_detailed_summary(
+            stats,
+            plex_sync_stats=self._plex_sync_stats,
+            level=level,
         )
 
-        # Show Plex sync errors in detail
-        if self._plex_sync_stats and self._plex_sync_stats.errors:
-            builder.add_section(
-                "Plex Sync Errors",
-                summarize_plex_errors(self._plex_sync_stats.errors, limit=5),
-            )
-
-        follow_ups: List[str] = []
-        if stats.errors:
-            follow_ups.append("Resolve processing errors above before next run.")
-        if self._plex_sync_stats and self._plex_sync_stats.errors:
-            follow_ups.append(
-                f"Check Plex library and metadata YAML for {len(self._plex_sync_stats.errors)} sync error(s)."
-            )
-
-        if follow_ups:
-            builder.add_section("Follow-Ups", follow_ups)
-
-        LOGGER.info(builder.render())
+    def _log_run_recap(self, stats: ProcessingStats, duration: float) -> None:
+        """Log run recap with duration, stats, and follow-up actions (delegates to run_summary module)."""
+        log_run_recap(
+            stats,
+            duration,
+            touched_destinations=sorted(self._touched_destinations),
+            plex_sync_enabled=self._plex_sync is not None,
+            plex_sync_ran=self._plex_sync_ran,
+            plex_sync_stats=self._plex_sync_stats,
+            plex_sync_dry_run=self._plex_sync.dry_run if self._plex_sync else False,
+            global_dry_run=self.config.settings.dry_run,
+            kometa_enabled=self._kometa_trigger.enabled,
+            kometa_fired=self._kometa_trigger_fired,
+        )
 
     def _build_context(self, runtime: SportRuntime, source_path: Path, season, episode, groups) -> Dict[str, object]:
         return build_match_context(

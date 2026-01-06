@@ -268,8 +268,175 @@ def extract_error_context(error: str) -> Optional[str]:
     return None
 
 
+def log_detailed_summary(
+    stats: ProcessingStats,
+    *,
+    plex_sync_stats: Optional[PlexSyncStats] = None,
+    level: int = logging.INFO,
+) -> None:
+    """Log detailed summary of processing results.
+
+    Shows counts for processed, skipped, ignored, warnings, and errors. When in
+    DEBUG mode, shows full lists; otherwise shows summarized counts and prompts
+    for verbose mode. Always surfaces Plex sync errors if present.
+
+    Args:
+        stats: Processing statistics to summarize.
+        plex_sync_stats: Optional Plex sync statistics (for error display).
+        level: Logging level to use (default INFO).
+    """
+    show_entries = LOGGER.isEnabledFor(logging.DEBUG)
+    builder = LogBlockBuilder("Detailed Summary", pad_top=True)
+
+    fields: Dict[str, object] = {
+        "Processed": stats.processed,
+        "Skipped": stats.skipped,
+        "Ignored": stats.ignored,
+        "Warnings": len(stats.warnings),
+        "Errors": len(stats.errors),
+    }
+
+    # Add Plex sync stats if available
+    if plex_sync_stats:
+        plex_errors = len(plex_sync_stats.errors)
+        fields["Plex Sync Errors"] = plex_errors
+
+    builder.add_fields(fields)
+
+    if show_entries:
+        builder.add_section("Errors", stats.errors)
+        builder.add_section("Warnings", stats.warnings)
+        builder.add_section("Skipped", stats.skipped_details)
+        builder.add_section("Ignored", filtered_ignored_details(stats))
+    else:
+        builder.add_section(
+            "Errors",
+            summarize_counts(stats.errors_by_sport, len(stats.errors), "error"),
+        )
+        builder.add_section(
+            "Warnings",
+            summarize_counts(stats.warnings_by_sport, len(stats.warnings), "warning"),
+        )
+        builder.add_section(
+            "Skipped",
+            summarize_messages(stats.skipped_details),
+        )
+        builder.add_section(
+            "Ignored",
+            summarize_counts(stats.ignored_by_sport, stats.ignored, "ignored"),
+        )
+
+    # Always show Plex sync errors (they're important to surface)
+    if plex_sync_stats and plex_sync_stats.errors:
+        builder.add_section(
+            "Plex Sync Errors",
+            summarize_plex_errors(plex_sync_stats.errors),
+        )
+
+    LOGGER.log(level, builder.render())
+
+
+def log_run_recap(
+    stats: ProcessingStats,
+    duration: float,
+    *,
+    touched_destinations: List[str],
+    plex_sync_enabled: bool,
+    plex_sync_ran: bool = False,
+    plex_sync_stats: Optional[PlexSyncStats] = None,
+    plex_sync_dry_run: bool = False,
+    global_dry_run: bool = False,
+    kometa_enabled: bool = False,
+    kometa_fired: bool = False,
+) -> None:
+    """Log run recap with duration, stats, and follow-up actions.
+
+    Shows overall processing summary including duration, file counts, Plex sync
+    status, Kometa trigger status, sample destinations, and any recommended
+    follow-up actions based on errors encountered.
+
+    Args:
+        stats: Processing statistics.
+        duration: Total processing duration in seconds.
+        touched_destinations: Sorted list of destination paths that were touched.
+        plex_sync_enabled: Whether Plex sync is configured/enabled.
+        plex_sync_ran: Whether Plex sync actually ran.
+        plex_sync_stats: Optional Plex sync statistics.
+        plex_sync_dry_run: Whether Plex sync is in dry-run mode.
+        global_dry_run: Whether global dry-run mode is enabled.
+        kometa_enabled: Whether Kometa trigger is enabled.
+        kometa_fired: Whether Kometa trigger actually fired.
+    """
+    destinations = sorted(touched_destinations)
+    builder = LogBlockBuilder("Run Recap")
+
+    fields: Dict[str, object] = {
+        "Duration": f"{duration:.2f}s",
+        "Processed": stats.processed,
+        "Skipped": stats.skipped,
+        "Ignored": stats.ignored,
+        "Warnings": len(stats.warnings),
+        "Errors": len(stats.errors),
+        "Destinations": len(destinations),
+    }
+
+    # Add Plex sync status
+    if plex_sync_enabled:
+        if plex_sync_ran and plex_sync_stats:
+            plex_summary = plex_sync_stats.summary()
+            plex_status = (
+                f"{plex_summary['shows']['updated']}/{plex_summary['seasons']['updated']}/"
+                f"{plex_summary['episodes']['updated']} (show/season/ep)"
+            )
+            # Show not-found counts if any
+            not_found = (
+                plex_summary["seasons"]["not_found"]
+                + plex_summary["episodes"]["not_found"]
+            )
+            if not_found:
+                plex_status += f" [{not_found} not found]"
+            if plex_sync_stats.errors:
+                plex_status += f" [{len(plex_sync_stats.errors)} errors]"
+            fields["Plex Sync"] = plex_status
+        elif plex_sync_dry_run or global_dry_run:
+            fields["Plex Sync"] = "dry-run"
+        else:
+            fields["Plex Sync"] = "skipped (no changes)"
+    else:
+        fields["Plex Sync"] = "disabled"
+
+    # Keep Kometa status for backwards compatibility (may be removed)
+    if kometa_enabled:
+        fields["Kometa Triggered"] = "yes" if kometa_fired else "no"
+
+    builder.add_fields(fields)
+    builder.add_section(
+        "Destinations (sample)",
+        destinations[:5],
+        empty_label="(none)",
+    )
+
+    # Show Plex sync errors in detail
+    if plex_sync_stats and plex_sync_stats.errors:
+        builder.add_section(
+            "Plex Sync Errors",
+            summarize_plex_errors(plex_sync_stats.errors, limit=5),
+        )
+
+    follow_ups: List[str] = []
+    if stats.errors:
+        follow_ups.append("Resolve processing errors above before next run.")
+    if plex_sync_stats and plex_sync_stats.errors:
+        follow_ups.append(
+            f"Check Plex library and metadata YAML for {len(plex_sync_stats.errors)} sync error(s)."
+        )
+
+    if follow_ups:
+        builder.add_section("Follow-Ups", follow_ups)
+
+    LOGGER.info(builder.render())
+
+
 # Functions still to be extracted from processor.py:
 # - format_log() (from _format_log)
 # - format_inline_log() (from _format_inline_log)
-# - log_detailed_summary() (from _log_detailed_summary)
-# - log_run_recap() (from _log_run_recap)
