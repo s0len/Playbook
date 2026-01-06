@@ -302,3 +302,215 @@ class TestSessionLookupIndexMultipleEntries:
         # "sprintqualifying" - length 16 (difference > 1) ✗
         # "sprint" - length 6 (difference > 1) ✗
         assert candidates == []
+
+
+@pytest.mark.benchmark
+class TestSessionLookupIndexBenchmark:
+    """Benchmark tests to measure performance with large session_lookup.
+
+    These tests are skipped in normal test runs. Run explicitly with:
+        pytest -m benchmark tests/test_session_index.py
+    """
+
+    def test_candidate_reduction_with_200_entries(self) -> None:
+        """Benchmark test demonstrating candidate reduction with 200+ entries.
+
+        This test simulates a sports show with many episodes (e.g., F1 season with
+        multiple sessions per race weekend). It demonstrates the optimization benefit
+        by comparing the total candidate set size vs. filtered candidate set.
+        """
+        index = SessionLookupIndex()
+
+        # Simulate a sports show with 200+ episodes
+        # Pattern: 24 race weekends × 9 sessions = 216 entries
+        # Sessions: FP1, FP2, FP3, Qualifying, Sprint Quali, Sprint, Race, etc.
+        session_types = [
+            "freepractice1",
+            "freepractice2",
+            "freepractice3",
+            "qualifying",
+            "sprintqualifying",
+            "sprintshootout",
+            "sprint",
+            "race",
+            "warmup"
+        ]
+
+        # Create 24 race weekends
+        for race_num in range(1, 25):
+            for session in session_types:
+                # Create keys like "race1freepractice1", "race2qualifying", etc.
+                key = f"race{race_num}{session}"
+                value = f"episode-{race_num}-{session}"
+                index.add(key, value)
+
+        # Verify we have 200+ entries
+        total_entries = len(index.keys())
+        assert total_entries >= 200, f"Expected 200+ entries, got {total_entries}"
+
+        # Test 1: Measure candidate reduction for a typical lookup
+        search_token = "race15qualifying"  # Looking for race 15 qualifying
+
+        # Without optimization, we'd iterate over ALL entries
+        candidates = index.get_candidates(search_token)
+
+        # Calculate reduction ratio
+        reduction_ratio = len(candidates) / total_entries
+        candidate_count = len(candidates)
+
+        # Log the results (will show in pytest output with -v or -s)
+        print(f"\n{'='*60}")
+        print(f"BENCHMARK RESULTS:")
+        print(f"{'='*60}")
+        print(f"Total entries in index: {total_entries}")
+        print(f"Search token: '{search_token}' (length {len(search_token)})")
+        print(f"First character: '{search_token[0]}'")
+        print(f"Candidates after filtering: {candidate_count}")
+        print(f"Reduction ratio: {reduction_ratio:.2%}")
+        print(f"Candidates checked: {candidate_count}/{total_entries}")
+        print(f"Expected theoretical reduction: ~1.28% (1/78)")
+        print(f"{'='*60}\n")
+
+        # Verify the optimization is working
+        # With 216 entries and 26 possible first chars × 3 length buckets,
+        # we expect roughly 216/78 ≈ 2.77 candidates on average
+        # In practice, with our specific data, we should see significant reduction
+        assert candidate_count < total_entries * 0.5, \
+            f"Candidate filtering not effective: {candidate_count}/{total_entries}"
+
+        # Verify the correct answer is in the filtered candidates
+        assert "race15qualifying" in candidates, \
+            "Expected exact match should be in filtered candidates"
+
+    def test_worst_case_candidate_reduction(self) -> None:
+        """Test worst-case scenario where many entries share first char and length.
+
+        Even in the worst case (all entries start with same char and similar length),
+        the optimization should still provide some benefit by avoiding iteration
+        over entries with different first chars or lengths outside ±1 range.
+        """
+        index = SessionLookupIndex()
+
+        # Worst case: 250 entries all starting with 'r' and similar lengths
+        # This simulates a pathological case for the optimization
+        base_words = [
+            "race", "races", "racing", "racer", "racers",
+            "round", "rounds", "result", "results", "replay",
+            "ranking", "rankings", "record", "records", "review"
+        ]
+
+        # Create 250 entries by combining base words with numbers
+        entry_count = 0
+        for i in range(1, 51):  # 50 iterations
+            for word in base_words[:5]:  # Use 5 base words = 250 entries
+                key = f"{word}{i}"
+                value = f"episode-{entry_count}"
+                index.add(key, value)
+                entry_count += 1
+
+        total_entries = len(index.keys())
+        assert total_entries >= 200, f"Expected 200+ entries, got {total_entries}"
+
+        # Search for a token that will match many entries
+        search_token = "race15"  # length 6
+        candidates = index.get_candidates(search_token)
+
+        # Calculate metrics
+        reduction_ratio = len(candidates) / total_entries
+
+        print(f"\n{'='*60}")
+        print(f"WORST-CASE BENCHMARK RESULTS:")
+        print(f"{'='*60}")
+        print(f"Total entries in index: {total_entries}")
+        print(f"All entries start with: 'r'")
+        print(f"Search token: '{search_token}' (length {len(search_token)})")
+        print(f"Candidates after filtering: {len(candidates)}")
+        print(f"Reduction ratio: {reduction_ratio:.2%}")
+        print(f"{'='*60}\n")
+
+        # Even in worst case, length filtering should eliminate some candidates
+        # With length 6, we only check lengths 5, 6, 7
+        # All other lengths are filtered out
+        assert len(candidates) < total_entries, \
+            "Even in worst case, some filtering should occur"
+
+        # Verify that candidates only include appropriate lengths
+        for candidate in candidates:
+            candidate_length = len(candidate)
+            assert abs(candidate_length - len(search_token)) <= 1, \
+                f"Candidate '{candidate}' has invalid length {candidate_length}"
+
+    def test_iteration_count_comparison(self) -> None:
+        """Compare iteration counts: naive O(n) vs optimized O(n/k) approach.
+
+        This test explicitly demonstrates the iteration count reduction that would
+        occur in the original _resolve_session_lookup() implementation.
+        """
+        index = SessionLookupIndex()
+
+        # Create 200 diverse entries across different first chars and lengths
+        entries_added = 0
+
+        # Add entries for each letter of alphabet
+        for char in "abcdefghijklmnopqrstuvwxyz":
+            for length in range(5, 15):  # Lengths 5-14
+                key = char * length  # "aaaaa", "aaaaaa", etc.
+                value = f"episode-{entries_added}"
+                index.add(key, value)
+                entries_added += 1
+                if entries_added >= 200:
+                    break
+            if entries_added >= 200:
+                break
+
+        total_entries = len(index.keys())
+
+        # Test multiple search scenarios
+        test_cases = [
+            ("qualifying", "Common F1 session name"),
+            ("practice1", "Another common session"),
+            ("sprint", "Sprint race session"),
+            ("race", "Main race session"),
+        ]
+
+        print(f"\n{'='*60}")
+        print(f"ITERATION COUNT COMPARISON:")
+        print(f"{'='*60}")
+        print(f"Total entries in index: {total_entries}\n")
+
+        total_naive_iterations = 0
+        total_optimized_iterations = 0
+
+        for token, description in test_cases:
+            # Naive approach: iterate ALL entries
+            naive_iterations = total_entries
+
+            # Optimized approach: only filtered candidates
+            candidates = index.get_candidates(token)
+            optimized_iterations = len(candidates)
+
+            total_naive_iterations += naive_iterations
+            total_optimized_iterations += optimized_iterations
+
+            speedup = naive_iterations / max(optimized_iterations, 1)
+
+            print(f"Token: '{token}' ({description})")
+            print(f"  Naive iterations: {naive_iterations}")
+            print(f"  Optimized iterations: {optimized_iterations}")
+            print(f"  Speedup: {speedup:.1f}x")
+            print()
+
+        # Calculate overall metrics
+        avg_reduction = (total_naive_iterations - total_optimized_iterations) / total_naive_iterations
+        overall_speedup = total_naive_iterations / max(total_optimized_iterations, 1)
+
+        print(f"OVERALL RESULTS:")
+        print(f"  Total naive iterations: {total_naive_iterations}")
+        print(f"  Total optimized iterations: {total_optimized_iterations}")
+        print(f"  Average reduction: {avg_reduction:.1%}")
+        print(f"  Overall speedup: {overall_speedup:.1f}x")
+        print(f"{'='*60}\n")
+
+        # Verify significant reduction in iterations
+        assert total_optimized_iterations < total_naive_iterations * 0.2, \
+            "Expected at least 80% reduction in iterations"
