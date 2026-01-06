@@ -997,3 +997,79 @@ def test_compute_show_fingerprint_cached_returns_cached_when_content_matches() -
     assert result_cache_miss.digest != cached_fingerprint.digest
     assert result_cache_miss.content_hash is not None
 
+
+def test_content_hash_determinism() -> None:
+    """Test that content_hash is deterministic for same input and different for different input."""
+    # Setup metadata configuration
+    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
+    normalizer = MetadataNormalizer(metadata_cfg)
+
+    # Create raw metadata
+    raw_metadata = {
+        "metadata": {
+            "demo": {
+                "title": "Demo Series",
+                "seasons": {
+                    "01": {
+                        "title": "Season 1",
+                        "episodes": [
+                            {
+                                "title": "Episode 1",
+                                "summary": "First episode",
+                                "episode_number": 1,
+                            }
+                        ],
+                    }
+                },
+            }
+        }
+    }
+
+    # Test 1: Same metadata produces same content_hash (determinism)
+    show1 = normalizer.load_show(raw_metadata)
+    fingerprint1 = compute_show_fingerprint(show1, metadata_cfg)
+
+    show2 = normalizer.load_show(raw_metadata)
+    fingerprint2 = compute_show_fingerprint(show2, metadata_cfg)
+
+    assert fingerprint1.content_hash is not None
+    assert fingerprint2.content_hash is not None
+    assert fingerprint1.content_hash == fingerprint2.content_hash, "Same metadata should produce same content_hash"
+
+    # Test 2: Different metadata produces different content_hash
+    different_metadata = {
+        "metadata": {
+            "demo": {
+                "title": "Different Series",  # Changed title
+                "seasons": {
+                    "01": {
+                        "title": "Season 1",
+                        "episodes": [
+                            {
+                                "title": "Episode 1",
+                                "summary": "First episode",
+                                "episode_number": 1,
+                            }
+                        ],
+                    }
+                },
+            }
+        }
+    }
+
+    show3 = normalizer.load_show(different_metadata)
+    fingerprint3 = compute_show_fingerprint(show3, metadata_cfg)
+
+    assert fingerprint3.content_hash is not None
+    assert fingerprint3.content_hash != fingerprint1.content_hash, "Different metadata should produce different content_hash"
+
+    # Test 3: Different season_overrides produces different content_hash
+    metadata_cfg_with_overrides = MetadataConfig(
+        url="https://example.com/demo.yaml", show_key="demo", season_overrides={"01": "Custom Season"}
+    )
+    show4 = normalizer.load_show(raw_metadata)
+    fingerprint4 = compute_show_fingerprint(show4, metadata_cfg_with_overrides)
+
+    assert fingerprint4.content_hash is not None
+    assert fingerprint4.content_hash != fingerprint1.content_hash, "Different season_overrides should produce different content_hash"
+
