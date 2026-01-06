@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from queue import Queue
 from unittest.mock import MagicMock, Mock, patch
@@ -958,3 +959,260 @@ class TestFileWatcherLoopResolveRoots:
             # Should handle Path object for source_dir
             assert len(roots) == 1
             assert roots[0] == source_dir
+
+
+# Tests for FileWatcherLoop._run_processor method
+
+
+class TestFileWatcherLoopRunProcessor:
+    """Tests for FileWatcherLoop._run_processor method."""
+
+    def test_calls_processor_process_all(self, mock_processor, watcher_settings, mock_observer):
+        """Test that _run_processor calls processor.process_all()."""
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+
+            # Create a set of pending paths
+            pending = {Path("/path/to/file1.mkv"), Path("/path/to/file2.mp4")}
+
+            # Call _run_processor
+            loop._run_processor(pending)
+
+            # Verify processor.process_all() was called
+            mock_processor.process_all.assert_called_once()
+
+    def test_calls_processor_process_all_with_empty_set(self, mock_processor, watcher_settings, mock_observer):
+        """Test that _run_processor calls processor.process_all() even with empty pending set."""
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+
+            # Call _run_processor with empty set
+            loop._run_processor(set())
+
+            # Verify processor.process_all() was still called
+            mock_processor.process_all.assert_called_once()
+
+    def test_calls_processor_process_all_with_single_file(self, mock_processor, watcher_settings, mock_observer):
+        """Test that _run_processor calls processor.process_all() with single file."""
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+
+            # Create a set with single path
+            pending = {Path("/path/to/file.mkv")}
+
+            # Call _run_processor
+            loop._run_processor(pending)
+
+            # Verify processor.process_all() was called
+            mock_processor.process_all.assert_called_once()
+
+    def test_logs_detected_changes_with_single_file(self, mock_processor, watcher_settings, mock_observer, caplog):
+        """Test that _run_processor logs the number of changes for a single file."""
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+
+            # Create a set with single path
+            pending = {Path("/videos/movie.mkv")}
+
+            # Capture log output
+            with caplog.at_level(logging.DEBUG):
+                loop._run_processor(pending)
+
+            # Verify log message
+            assert any("Detected 1 filesystem change" in record.message for record in caplog.records)
+            assert any("running processor" in record.message for record in caplog.records)
+
+    def test_logs_detected_changes_with_multiple_files(self, mock_processor, watcher_settings, mock_observer, caplog):
+        """Test that _run_processor logs the number of changes for multiple files."""
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+
+            # Create a set with multiple paths
+            pending = {
+                Path("/videos/movie1.mkv"),
+                Path("/videos/movie2.mp4"),
+                Path("/videos/movie3.mkv"),
+            }
+
+            # Capture log output
+            with caplog.at_level(logging.DEBUG):
+                loop._run_processor(pending)
+
+            # Verify log message shows correct count
+            assert any("Detected 3 filesystem change" in record.message for record in caplog.records)
+            assert any("running processor" in record.message for record in caplog.records)
+
+    def test_logs_parent_directory_sample(self, mock_processor, watcher_settings, mock_observer, caplog):
+        """Test that _run_processor includes parent directory sample in log message."""
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+
+            # Create a set with paths from same directory
+            pending = {
+                Path("/videos/sports/game1.mkv"),
+                Path("/videos/sports/game2.mp4"),
+            }
+
+            # Capture log output
+            with caplog.at_level(logging.DEBUG):
+                loop._run_processor(pending)
+
+            # Verify log message includes parent directory
+            assert any("near /videos/sports" in record.message for record in caplog.records)
+
+    def test_logs_multiple_parent_directories_sample(self, mock_processor, watcher_settings, mock_observer, caplog):
+        """Test that _run_processor includes samples from multiple parent directories."""
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+
+            # Create a set with paths from different directories
+            pending = {
+                Path("/videos/sports/game.mkv"),
+                Path("/videos/movies/film.mp4"),
+                Path("/videos/shows/episode.mkv"),
+            }
+
+            # Capture log output
+            with caplog.at_level(logging.DEBUG):
+                loop._run_processor(pending)
+
+            # Verify log message includes parent directories (sorted)
+            # The method shows up to 3 directories in sorted order
+            log_messages = [record.message for record in caplog.records if "Detected" in record.message]
+            assert len(log_messages) > 0
+            log_message = log_messages[0]
+            assert "near" in log_message
+            # All three directories should be mentioned
+            assert "/videos/movies" in log_message
+            assert "/videos/shows" in log_message
+            assert "/videos/sports" in log_message
+
+    def test_logs_limits_parent_directories_to_three(self, mock_processor, watcher_settings, mock_observer, caplog):
+        """Test that _run_processor limits parent directory sample to 3 directories."""
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+
+            # Create a set with paths from more than 3 different directories
+            pending = {
+                Path("/videos/dir1/file1.mkv"),
+                Path("/videos/dir2/file2.mp4"),
+                Path("/videos/dir3/file3.mkv"),
+                Path("/videos/dir4/file4.mp4"),
+                Path("/videos/dir5/file5.mkv"),
+            }
+
+            # Capture log output
+            with caplog.at_level(logging.DEBUG):
+                loop._run_processor(pending)
+
+            # Verify log message shows sample of directories (limited to 3)
+            log_messages = [record.message for record in caplog.records if "Detected" in record.message]
+            assert len(log_messages) > 0
+            log_message = log_messages[0]
+
+            # Count how many directories are mentioned (should be max 3)
+            dir_count = sum(1 for i in range(1, 6) if f"/videos/dir{i}" in log_message)
+            assert dir_count == 3
+
+    def test_logs_deduplicates_parent_directories(self, mock_processor, watcher_settings, mock_observer, caplog):
+        """Test that _run_processor deduplicates parent directories in log sample."""
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+
+            # Create a set with multiple files from same directory
+            pending = {
+                Path("/videos/sports/game1.mkv"),
+                Path("/videos/sports/game2.mp4"),
+                Path("/videos/sports/game3.mkv"),
+                Path("/videos/sports/game4.mp4"),
+            }
+
+            # Capture log output
+            with caplog.at_level(logging.DEBUG):
+                loop._run_processor(pending)
+
+            # Verify log message shows directory only once
+            log_messages = [record.message for record in caplog.records if "Detected" in record.message]
+            assert len(log_messages) > 0
+            log_message = log_messages[0]
+
+            # Should show "near /videos/sports" but only once
+            assert log_message.count("/videos/sports") == 1
+
+    def test_logs_without_sample_when_empty(self, mock_processor, watcher_settings, mock_observer, caplog):
+        """Test that _run_processor logs without parent directory sample when pending is empty."""
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+
+            # Call with empty set
+            loop._run_processor(set())
+
+            # Capture log output
+            with caplog.at_level(logging.DEBUG):
+                loop._run_processor(set())
+
+            # Verify log message doesn't include "near" when there are no files
+            log_messages = [record.message for record in caplog.records if "Detected" in record.message]
+            assert any("Detected 0 filesystem change" in msg for msg in log_messages)
+            # When sample is empty, "near" should not appear
+            assert not any("near" in msg for msg in log_messages if "Detected 0" in msg)
+
+    def test_logs_at_debug_level(self, mock_processor, watcher_settings, mock_observer, caplog):
+        """Test that _run_processor logs at DEBUG level."""
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+
+            pending = {Path("/videos/movie.mkv")}
+
+            # Capture log output at DEBUG level
+            with caplog.at_level(logging.DEBUG):
+                loop._run_processor(pending)
+
+            # Verify log was at DEBUG level
+            debug_records = [r for r in caplog.records if r.levelname == "DEBUG"]
+            assert any("Detected" in record.message for record in debug_records)
+
+    def test_logs_sorted_parent_directories(self, mock_processor, watcher_settings, mock_observer, caplog):
+        """Test that _run_processor sorts parent directories in log sample."""
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+
+            # Create a set with paths in non-alphabetical order
+            pending = {
+                Path("/videos/zebra/file.mkv"),
+                Path("/videos/alpha/file.mp4"),
+                Path("/videos/beta/file.mkv"),
+            }
+
+            # Capture log output
+            with caplog.at_level(logging.DEBUG):
+                loop._run_processor(pending)
+
+            # Verify log message shows directories in sorted order
+            log_messages = [record.message for record in caplog.records if "Detected" in record.message]
+            assert len(log_messages) > 0
+            log_message = log_messages[0]
+
+            # Extract the "near" portion
+            if "near" in log_message:
+                near_part = log_message.split("near")[1].split(";")[0].strip()
+                # Should be in alphabetical order: alpha, beta, zebra
+                alpha_pos = near_part.find("/videos/alpha")
+                beta_pos = near_part.find("/videos/beta")
+                zebra_pos = near_part.find("/videos/zebra")
+
+                assert alpha_pos < beta_pos < zebra_pos
+
+    def test_processor_called_regardless_of_pending_count(self, mock_processor, watcher_settings, mock_observer):
+        """Test that processor.process_all() is called regardless of pending count."""
+        with patch("playbook.watcher.Observer", return_value=mock_observer):
+            loop = FileWatcherLoop(mock_processor, watcher_settings)
+
+            # Test with various pending set sizes
+            for count in [0, 1, 5, 100]:
+                mock_processor.process_all.reset_mock()
+                pending = {Path(f"/videos/file{i}.mkv") for i in range(count)}
+                loop._run_processor(pending)
+
+                # Verify process_all was called exactly once
+                mock_processor.process_all.assert_called_once()
