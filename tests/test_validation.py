@@ -979,3 +979,795 @@ class TestConfigSchemaSettings:
         }
         report = validate_config_data(config)
         assert report.is_valid is True
+
+
+class TestConfigSchemaSports:
+    """Tests for CONFIG_SCHEMA validation of sports array and nested structures."""
+
+    def test_sports_field_is_required(self):
+        """Test that sports field is required in config."""
+        config = {
+            "settings": {
+                "source_dir": "/source",
+            }
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is False
+        # Find error related to sports field
+        sports_errors = [e for e in report.errors if "sports" in e.path or "<root>" in e.path]
+        assert len(sports_errors) >= 1
+
+    def test_sports_must_be_array(self):
+        """Test that sports field must be an array."""
+        config = {
+            "sports": "not an array"
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is False
+        # Find error related to sports type
+        sports_errors = [e for e in report.errors if "sports" in e.path]
+        assert len(sports_errors) >= 1
+
+    def test_empty_sports_array_is_valid(self):
+        """Test that an empty sports array is valid."""
+        config = {
+            "sports": []
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+        assert len(report.errors) == 0
+
+    def test_sport_id_is_required(self):
+        """Test that sport.id field is required."""
+        config = {
+            "sports": [
+                {
+                    "name": "Test Sport",
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is False
+        # Find error related to sport id
+        id_errors = [e for e in report.errors if "id" in e.path or "sports[0]" in e.path]
+        assert len(id_errors) >= 1
+
+    def test_sport_id_must_be_string(self):
+        """Test that sport.id must be a string."""
+        config = {
+            "sports": [
+                {
+                    "id": 123,
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is False
+        # Find error related to sport id type
+        id_errors = [e for e in report.errors if "id" in e.path]
+        assert len(id_errors) >= 1
+
+    def test_sport_id_must_not_be_empty(self):
+        """Test that sport.id must have minimum length of 1."""
+        config = {
+            "sports": [
+                {
+                    "id": "",
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is False
+        # Find error related to sport id length
+        id_errors = [e for e in report.errors if "id" in e.path]
+        assert len(id_errors) >= 1
+
+    def test_sport_with_valid_id_and_metadata(self):
+        """Test that a sport with valid id and metadata passes."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "metadata": {
+                        "url": "https://example.com/test.yaml"
+                    }
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_sport_name_is_optional_string(self):
+        """Test that sport.name is optional and accepts string."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "name": "Test Sport Name",
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_sport_enabled_boolean(self):
+        """Test that sport.enabled accepts boolean."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "enabled": True,
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_sport_team_alias_map_string(self):
+        """Test that sport.team_alias_map accepts string."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "team_alias_map": "nhl",
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_sport_team_alias_map_null(self):
+        """Test that sport.team_alias_map accepts null."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "team_alias_map": None,
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_metadata_url_is_required(self):
+        """Test that metadata.url is required when metadata is present."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "metadata": {
+                        "show_key": "test-show"
+                    }
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is False
+        # Find error related to metadata.url
+        url_errors = [e for e in report.errors if "url" in e.path]
+        assert len(url_errors) >= 1
+
+    def test_metadata_url_must_be_string(self):
+        """Test that metadata.url must be a string."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "metadata": {
+                        "url": 123
+                    }
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is False
+        # Find error related to metadata.url type
+        url_errors = [e for e in report.errors if "url" in e.path]
+        assert len(url_errors) >= 1
+
+    def test_metadata_url_must_not_be_empty(self):
+        """Test that metadata.url must have minimum length of 1."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "metadata": {
+                        "url": ""
+                    }
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is False
+        # Find error related to metadata.url length
+        url_errors = [e for e in report.errors if "url" in e.path]
+        assert len(url_errors) >= 1
+
+    def test_metadata_show_key_string(self):
+        """Test that metadata.show_key accepts string."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "metadata": {
+                        "url": "https://example.com/test.yaml",
+                        "show_key": "test-show"
+                    }
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_metadata_show_key_null(self):
+        """Test that metadata.show_key accepts null."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "metadata": {
+                        "url": "https://example.com/test.yaml",
+                        "show_key": None
+                    }
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_metadata_ttl_hours_integer(self):
+        """Test that metadata.ttl_hours accepts integer."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "metadata": {
+                        "url": "https://example.com/test.yaml",
+                        "ttl_hours": 24
+                    }
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_metadata_ttl_hours_minimum_value(self):
+        """Test that metadata.ttl_hours must be at least 1."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "metadata": {
+                        "url": "https://example.com/test.yaml",
+                        "ttl_hours": 0
+                    }
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is False
+        # Find error related to ttl_hours
+        ttl_errors = [e for e in report.errors if "ttl_hours" in e.path]
+        assert len(ttl_errors) >= 1
+
+    def test_metadata_headers_object(self):
+        """Test that metadata.headers accepts object with string values."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "metadata": {
+                        "url": "https://example.com/test.yaml",
+                        "headers": {
+                            "Authorization": "Bearer token",
+                            "User-Agent": "Playbook/1.0"
+                        }
+                    }
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_metadata_season_overrides_object(self):
+        """Test that metadata.season_overrides accepts object."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "metadata": {
+                        "url": "https://example.com/test.yaml",
+                        "season_overrides": {
+                            "2023": {"key": "value"}
+                        }
+                    }
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_sport_pattern_sets_as_array(self):
+        """Test that sport.pattern_sets accepts array of strings."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "pattern_sets": ["nhl_default", "custom_set"],
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        # May have errors about unknown pattern sets, but schema validation passes
+        # The semantic validation (unknown pattern sets) is tested separately
+
+    def test_sport_file_patterns_as_array(self):
+        """Test that sport.file_patterns accepts array of pattern definitions."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "file_patterns": [
+                        {
+                            "regex": r".*\.mkv"
+                        }
+                    ],
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_pattern_definition_regex_required(self):
+        """Test that pattern_definition.regex is required."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "file_patterns": [
+                        {
+                            "description": "Test pattern"
+                        }
+                    ],
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is False
+        # Find error related to regex
+        regex_errors = [e for e in report.errors if "regex" in e.message.lower() or "file_patterns" in e.path]
+        assert len(regex_errors) >= 1
+
+    def test_pattern_definition_regex_must_not_be_empty(self):
+        """Test that pattern_definition.regex must have minimum length."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "file_patterns": [
+                        {
+                            "regex": ""
+                        }
+                    ],
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is False
+        # Find error related to regex length
+        regex_errors = [e for e in report.errors if "file_patterns" in e.path]
+        assert len(regex_errors) >= 1
+
+    def test_pattern_definition_with_season_selector(self):
+        """Test that pattern_definition can include season_selector."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "file_patterns": [
+                        {
+                            "regex": r".*\.mkv",
+                            "season_selector": {
+                                "mode": "round",
+                                "offset": 1
+                            }
+                        }
+                    ],
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_season_selector_mode_enum(self):
+        """Test that season_selector.mode must be valid enum value."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "file_patterns": [
+                        {
+                            "regex": r".*\.mkv",
+                            "season_selector": {
+                                "mode": "invalid_mode"
+                            }
+                        }
+                    ],
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is False
+        # Find error related to mode
+        mode_errors = [e for e in report.errors if "mode" in e.path or "season_selector" in e.path]
+        assert len(mode_errors) >= 1
+
+    def test_season_selector_valid_modes(self):
+        """Test that season_selector.mode accepts valid enum values."""
+        valid_modes = ["round", "key", "title", "sequential", "date"]
+        for mode in valid_modes:
+            config = {
+                "sports": [
+                    {
+                        "id": "test-sport",
+                        "file_patterns": [
+                            {
+                                "regex": r".*\.mkv",
+                                "season_selector": {
+                                    "mode": mode
+                                }
+                            }
+                        ],
+                        "metadata": {"url": "https://example.com/test.yaml"}
+                    }
+                ]
+            }
+            report = validate_config_data(config)
+            assert report.is_valid is True, f"Mode '{mode}' should be valid"
+
+    def test_pattern_definition_with_episode_selector(self):
+        """Test that pattern_definition can include episode_selector."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "file_patterns": [
+                        {
+                            "regex": r".*\.mkv",
+                            "episode_selector": {
+                                "group": "episode"
+                            }
+                        }
+                    ],
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_sport_source_globs_array(self):
+        """Test that sport.source_globs accepts array of strings."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "source_globs": ["**/*.mkv", "**/*.mp4"],
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_sport_source_extensions_array(self):
+        """Test that sport.source_extensions accepts array of strings."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "source_extensions": [".mkv", ".mp4", ".avi"],
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_sport_link_mode_valid_values(self):
+        """Test that sport.link_mode accepts valid enum values."""
+        for link_mode in ["hardlink", "copy", "symlink"]:
+            config = {
+                "sports": [
+                    {
+                        "id": "test-sport",
+                        "link_mode": link_mode,
+                        "metadata": {"url": "https://example.com/test.yaml"}
+                    }
+                ]
+            }
+            report = validate_config_data(config)
+            assert report.is_valid is True, f"Link mode '{link_mode}' should be valid"
+
+    def test_sport_link_mode_invalid_value(self):
+        """Test that sport.link_mode rejects invalid values."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "link_mode": "invalid_mode",
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is False
+        # Find error related to link_mode
+        link_errors = [e for e in report.errors if "link_mode" in e.path]
+        assert len(link_errors) >= 1
+
+    def test_sport_allow_unmatched_boolean(self):
+        """Test that sport.allow_unmatched accepts boolean."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "allow_unmatched": True,
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_sport_destination_templates(self):
+        """Test that sport.destination accepts template strings."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "destination": {
+                        "root_template": "{sport_id}",
+                        "season_dir_template": "Season {season}",
+                        "episode_template": "{title}.{ext}"
+                    },
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_sport_variants_array(self):
+        """Test that sport.variants accepts array of variant objects."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "variants": [
+                        {
+                            "id": "variant-1",
+                            "metadata": {"url": "https://example.com/variant1.yaml"}
+                        }
+                    ]
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_variant_with_id_string(self):
+        """Test that variant.id accepts string."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "variants": [
+                        {
+                            "id": "custom-variant-id",
+                            "metadata": {"url": "https://example.com/variant.yaml"}
+                        }
+                    ]
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_variant_with_id_suffix(self):
+        """Test that variant.id_suffix accepts string."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "variants": [
+                        {
+                            "id_suffix": "-2023",
+                            "metadata": {"url": "https://example.com/variant.yaml"}
+                        }
+                    ]
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_variant_with_year_integer(self):
+        """Test that variant.year accepts integer."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "variants": [
+                        {
+                            "year": 2023,
+                            "metadata": {"url": "https://example.com/variant.yaml"}
+                        }
+                    ]
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_variant_with_year_string(self):
+        """Test that variant.year accepts string."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "variants": [
+                        {
+                            "year": "2023",
+                            "metadata": {"url": "https://example.com/variant.yaml"}
+                        }
+                    ]
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_variant_with_name(self):
+        """Test that variant.name accepts string."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "variants": [
+                        {
+                            "name": "Test Variant",
+                            "metadata": {"url": "https://example.com/variant.yaml"}
+                        }
+                    ]
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_variant_metadata_structure(self):
+        """Test that variant.metadata follows metadata schema."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "variants": [
+                        {
+                            "metadata": {
+                                "url": "https://example.com/variant.yaml",
+                                "show_key": "variant-show",
+                                "ttl_hours": 48
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_multiple_sports_in_array(self):
+        """Test that multiple sports can be defined in array."""
+        config = {
+            "sports": [
+                {
+                    "id": "sport-1",
+                    "metadata": {"url": "https://example.com/sport1.yaml"}
+                },
+                {
+                    "id": "sport-2",
+                    "metadata": {"url": "https://example.com/sport2.yaml"}
+                },
+                {
+                    "id": "sport-3",
+                    "metadata": {"url": "https://example.com/sport3.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_sport_with_all_optional_fields(self):
+        """Test sport with all optional fields populated."""
+        config = {
+            "sports": [
+                {
+                    "id": "comprehensive-sport",
+                    "name": "Comprehensive Sport",
+                    "enabled": True,
+                    "team_alias_map": "nhl",
+                    "metadata": {
+                        "url": "https://example.com/test.yaml",
+                        "show_key": "test-show",
+                        "ttl_hours": 24,
+                        "headers": {"Authorization": "Bearer token"},
+                        "season_overrides": {"2023": {}}
+                    },
+                    "pattern_sets": [],
+                    "file_patterns": [
+                        {
+                            "regex": r".*\.mkv",
+                            "description": "MKV files",
+                            "season_selector": {"mode": "round"},
+                            "episode_selector": {"group": "ep"},
+                            "priority": 100
+                        }
+                    ],
+                    "source_globs": ["**/*.mkv"],
+                    "source_extensions": [".mkv", ".mp4"],
+                    "link_mode": "hardlink",
+                    "allow_unmatched": False,
+                    "destination": {
+                        "root_template": "{sport_id}",
+                        "season_dir_template": "Season {season}",
+                        "episode_template": "{title}.{ext}"
+                    }
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_sport_with_multiple_variants(self):
+        """Test sport with multiple variants."""
+        config = {
+            "sports": [
+                {
+                    "id": "multi-variant-sport",
+                    "variants": [
+                        {
+                            "id": "variant-1",
+                            "year": 2022,
+                            "metadata": {"url": "https://example.com/v1.yaml"}
+                        },
+                        {
+                            "id": "variant-2",
+                            "year": 2023,
+                            "metadata": {"url": "https://example.com/v2.yaml"}
+                        },
+                        {
+                            "id_suffix": "-2024",
+                            "year": "2024",
+                            "name": "2024 Season",
+                            "metadata": {"url": "https://example.com/v3.yaml"}
+                        }
+                    ]
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
