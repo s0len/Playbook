@@ -276,3 +276,77 @@ class TestValidationReport:
         # Verify that report2's errors list is independent
         assert len(report1.errors) == 1
         assert len(report2.errors) == 0
+
+
+# Tests for helper functions
+
+
+class TestFormatJsonschemaPath:
+    """Tests for _format_jsonschema_path helper function."""
+
+    def test_empty_path_returns_root(self):
+        """Test that an empty path returns '<root>'."""
+        result = _format_jsonschema_path([])
+        assert result == "<root>"
+
+    def test_single_string_element(self):
+        """Test path with a single string element."""
+        result = _format_jsonschema_path(["sports"])
+        assert result == "sports"
+
+    def test_multiple_string_elements(self):
+        """Test path with multiple string elements."""
+        result = _format_jsonschema_path(["settings", "notifications", "flush_time"])
+        assert result == "settings.notifications.flush_time"
+
+    def test_single_integer_element(self):
+        """Test path with a single integer element (array index)."""
+        result = _format_jsonschema_path([0])
+        assert result == "[0]"
+
+    def test_string_then_integer(self):
+        """Test path with string followed by integer (array access)."""
+        result = _format_jsonschema_path(["sports", 0])
+        assert result == "sports[0]"
+
+    def test_multiple_array_indices(self):
+        """Test path with multiple consecutive array indices."""
+        result = _format_jsonschema_path(["sports", 0, 1])
+        assert result == "sports[0][1]"
+
+    def test_mixed_path_elements(self):
+        """Test path with mixed string and integer elements."""
+        result = _format_jsonschema_path(["sports", 0, "variants", 1, "metadata"])
+        assert result == "sports[0].variants[1].metadata"
+
+    def test_deeply_nested_path(self):
+        """Test path with deeply nested elements."""
+        result = _format_jsonschema_path(
+            ["settings", "destination", "root_template", "params", 0, "name"]
+        )
+        assert result == "settings.destination.root_template.params[0].name"
+
+    def test_string_with_special_characters(self):
+        """Test path with string elements containing underscores and dashes."""
+        result = _format_jsonschema_path(["file_watcher", "debounce_seconds"])
+        assert result == "file_watcher.debounce_seconds"
+
+    def test_array_notation_formatting(self):
+        """Test that array indices are formatted with brackets."""
+        result = _format_jsonschema_path(["sports", 5, "id"])
+        assert result == "sports[5].id"
+
+    def test_consecutive_strings_and_integers(self):
+        """Test path alternating between strings and integers."""
+        result = _format_jsonschema_path(["a", 0, "b", 1, "c", 2])
+        assert result == "a[0].b[1].c[2]"
+
+    def test_three_consecutive_array_indices(self):
+        """Test path with three consecutive array indices."""
+        result = _format_jsonschema_path(["matrix", 0, 1, 2])
+        assert result == "matrix[0][1][2]"
+
+    def test_empty_tuple_path(self):
+        """Test that an empty tuple returns '<root>'."""
+        result = _format_jsonschema_path(())
+        assert result == "<root>"
