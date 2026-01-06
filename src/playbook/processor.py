@@ -27,6 +27,7 @@ from .metadata import (
     compute_show_fingerprint_cached,
     load_show,
 )
+from .metadata_loader import SportRuntime
 from .models import ProcessingStats, Show, SportFileMatch
 from .notifications import NotificationEvent, NotificationService
 from .plex_client import PlexApiError
@@ -47,14 +48,6 @@ from .utils import ensure_directory, link_file, normalize_token, sanitize_compon
 LOGGER = logging.getLogger(__name__)
 
 SAMPLE_FILENAME_PATTERN = re.compile(r"(?<![a-z0-9])sample(?![a-z0-9])")
-
-
-@dataclass(slots=True)
-class SportRuntime:
-    sport: SportConfig
-    show: Show
-    patterns: List[PatternRuntime]
-    extensions: Set[str]
 
 
 class Processor:
