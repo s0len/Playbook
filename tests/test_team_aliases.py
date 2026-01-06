@@ -153,4 +153,97 @@ class TestBuildAliasMap:
 class TestGetTeamAliasMap:
     """Tests for get_team_alias_map function."""
 
-    pass
+    def test_get_nhl_team_aliases(self):
+        """Test that 'nhl' returns NHL team alias map."""
+        result = get_team_alias_map("nhl")
+
+        # Should return a non-empty dict
+        assert isinstance(result, dict)
+        assert len(result) > 0
+
+        # Verify some known NHL teams and aliases
+        assert result["bostonbruins"] == "Boston Bruins"
+        assert result["bruins"] == "Boston Bruins"
+        assert result["bos"] == "Boston Bruins"
+
+        assert result["torontomapleleafs"] == "Toronto Maple Leafs"
+        assert result["leafs"] == "Toronto Maple Leafs"
+        assert result["tor"] == "Toronto Maple Leafs"
+
+    def test_get_nba_team_aliases(self):
+        """Test that 'nba' returns NBA team alias map."""
+        result = get_team_alias_map("nba")
+
+        # Should return a non-empty dict
+        assert isinstance(result, dict)
+        assert len(result) > 0
+
+        # Verify some known NBA teams and aliases
+        assert result["losangeleslakers"] == "Los Angeles Lakers"
+        assert result["lakers"] == "Los Angeles Lakers"
+        assert result["lal"] == "Los Angeles Lakers"
+
+        assert result["goldenstatewarriors"] == "Golden State Warriors"
+        assert result["warriors"] == "Golden State Warriors"
+        assert result["gsw"] == "Golden State Warriors"
+
+    def test_get_premier_league_team_aliases(self):
+        """Test that 'premier_league' returns EPL team alias map."""
+        result = get_team_alias_map("premier_league")
+
+        # Should return a non-empty dict
+        assert isinstance(result, dict)
+        assert len(result) > 0
+
+        # Verify some known EPL teams and aliases
+        assert result["manchesterunited"] == "Manchester United"
+        assert result["manunited"] == "Manchester United"
+        assert result["mun"] == "Manchester United"
+
+        assert result["arsenal"] == "Arsenal"
+        assert result["gunners"] == "Arsenal"
+        assert result["ars"] == "Arsenal"
+
+    def test_get_team_alias_map_with_none(self):
+        """Test that None returns empty dict."""
+        result = get_team_alias_map(None)
+        assert result == {}
+
+    def test_get_team_alias_map_with_unknown_name(self):
+        """Test that unknown league name returns empty dict."""
+        result = get_team_alias_map("unknown_league")
+        assert result == {}
+
+        result = get_team_alias_map("mlb")
+        assert result == {}
+
+        result = get_team_alias_map("")
+        assert result == {}
+
+    def test_get_team_alias_map_returns_same_instance(self):
+        """Test that multiple calls return the same pre-built map instance."""
+        result1 = get_team_alias_map("nhl")
+        result2 = get_team_alias_map("nhl")
+
+        # Should be the exact same dict instance (not just equal)
+        assert result1 is result2
+
+    def test_get_team_alias_map_different_leagues_are_distinct(self):
+        """Test that different league maps are distinct from each other."""
+        nhl_map = get_team_alias_map("nhl")
+        nba_map = get_team_alias_map("nba")
+        epl_map = get_team_alias_map("premier_league")
+
+        # They should be different instances
+        assert nhl_map is not nba_map
+        assert nhl_map is not epl_map
+        assert nba_map is not epl_map
+
+        # They should have different content
+        # NHL has Bruins, NBA doesn't
+        assert "bruins" in nhl_map
+        assert "bruins" not in nba_map
+
+        # NBA has Lakers, NHL doesn't
+        assert "lakers" in nba_map
+        assert "lakers" not in nhl_map
