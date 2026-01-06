@@ -18,6 +18,7 @@ from .config import AppConfig, SportConfig
 from .kometa_trigger import build_kometa_trigger
 from .logging_utils import LogBlockBuilder, render_fields_block
 from .matcher import PatternRuntime, compile_patterns, match_file_to_episode
+from .summary_table import SummaryTableRenderer
 from .metadata import (
     MetadataChangeResult,
     MetadataFetchError,
