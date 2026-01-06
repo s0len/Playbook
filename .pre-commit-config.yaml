@@ -1,0 +1,17 @@
+# Pre-commit hooks configuration
+# Install hooks: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Ruff linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version should match requirements-dev.txt (>=0.8.0)
+    rev: v0.8.4
+    hooks:
+      # Run the ruff linter
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        types_or: [python, pyi]
+      # Run the ruff formatter
+      - id: ruff-format
+        types_or: [python, pyi]
