@@ -68,7 +68,7 @@ def test_notification_service_sends_discord_message(tmp_path, monkeypatch) -> No
         calls.append({"method": method, "url": url, "json": json})
         return FakeResponse(204)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     service.notify(_build_event())
 
@@ -108,7 +108,7 @@ def test_notification_service_mentions_opt_in_roles(tmp_path, monkeypatch) -> No
         calls.append({"method": method, "url": url, "json": json})
         return FakeResponse(204)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     service.notify(_build_event())
 
@@ -139,7 +139,7 @@ def test_notification_service_batches_discord_messages(tmp_path, monkeypatch) ->
         calls.append({"method": method, "url": url, "json": json})
         return responses.pop(0)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     service.notify(_build_event(destination="Demo-1.mkv"))
     service.notify(_build_event(destination="Demo-2.mkv"))
@@ -179,7 +179,7 @@ def test_notification_service_mentions_apply_to_batches(tmp_path, monkeypatch) -
         calls.append({"method": method, "url": url, "json": json})
         return responses.pop(0)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     service.notify(_build_event(destination="Demo-1.mkv"))
     service.notify(_build_event(destination="Demo-2.mkv"))
@@ -211,7 +211,7 @@ def test_notification_service_mentions_handle_variant_ids(tmp_path, monkeypatch)
         calls.append({"method": method, "url": url, "json": json})
         return FakeResponse(204)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     event = _build_event()
     event.sport_id = "premier_league_2025_26"
@@ -241,7 +241,7 @@ def test_notification_service_mentions_support_wildcards(tmp_path, monkeypatch) 
         calls.append({"method": method, "url": url, "json": json})
         return FakeResponse(204)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     event = _build_event()
     event.sport_id = "formula1_2025"
@@ -271,7 +271,7 @@ def test_discord_target_reads_webhook_from_env(tmp_path, monkeypatch) -> None:
         calls.append({"url": url, "json": json})
         return FakeResponse(204)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     service.notify(_build_event())
 
@@ -295,7 +295,7 @@ def test_discord_target_skips_when_env_missing(tmp_path, monkeypatch) -> None:
     def fake_request(method, url, json=None, timeout=None, headers=None):
         raise AssertionError("Request should not be sent when env var is missing")
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     service.notify(_build_event())
 
@@ -330,7 +330,7 @@ def test_discord_targets_support_per_target_mentions(tmp_path, monkeypatch) -> N
         calls.append({"url": url, "json": json})
         return FakeResponse(204)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     service.notify(_build_event())
 
@@ -363,8 +363,8 @@ def test_notification_service_handles_rate_limiting(tmp_path, monkeypatch) -> No
         request_calls.append(method)
         return responses.pop(0)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
-    monkeypatch.setattr("playbook.notifications.time.sleep", lambda seconds: sleep_calls.append(seconds))
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.time.sleep", lambda seconds: sleep_calls.append(seconds))
 
     service.notify(_build_event())
 
@@ -388,7 +388,7 @@ def test_notification_service_skips_non_new_events(tmp_path, monkeypatch) -> Non
     def fake_request(method, url, json=None, timeout=None, headers=None):
         raise AssertionError("Request should not be sent")
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
     service.notify(_build_event(event_type="refresh"))
 
 
@@ -428,7 +428,7 @@ def test_autoscan_target_posts_manual_trigger(tmp_path, monkeypatch) -> None:
 
         return _Response()
 
-    monkeypatch.setattr("playbook.notifications.requests.post", fake_post)
+    monkeypatch.setattr("playbook.notifications.autoscan.requests.post", fake_post)
 
     destination_file = Path(rewrite_from) / "Show" / "Episode.mkv"
     event = _build_event(
