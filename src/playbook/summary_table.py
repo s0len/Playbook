@@ -192,13 +192,13 @@ class SummaryTableRenderer:
         table.add_column("Metric", style="cyan", no_wrap=True)
         table.add_column("Value", justify="right")
 
-        # Add run statistics
+        # Add run statistics with symbols for quick visual scanning
         table.add_row("Duration", f"{duration:.2f}s")
-        table.add_row("Processed", self._colorize_value(stats.processed))
-        table.add_row("Skipped", self._colorize_value(stats.skipped, is_warning=True))
-        table.add_row("Ignored", self._colorize_value(stats.ignored))
-        table.add_row("Warnings", self._colorize_value(len(stats.warnings), is_warning=True))
-        table.add_row("Errors", self._colorize_value(len(stats.errors), is_error=True))
+        table.add_row("Processed", self._colorize_value_with_symbol(stats.processed))
+        table.add_row("Skipped", self._colorize_value_with_symbol(stats.skipped, is_skip=True))
+        table.add_row("Ignored", self._colorize_value_with_symbol(stats.ignored, is_ignore=True))
+        table.add_row("Warnings", self._colorize_value_with_symbol(len(stats.warnings), is_warning=True))
+        table.add_row("Errors", self._colorize_value_with_symbol(len(stats.errors), is_error=True))
         table.add_row("Destinations", str(len(destinations)))
 
         # Add Plex sync status if provided
