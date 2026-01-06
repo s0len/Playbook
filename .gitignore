@@ -9,7 +9,10 @@ node_modules/
 
 # Environment files
 .env
-.env.local 
+.env.local
+**/.env
+**/.env.local
+**/.env.* 
 
 # Python files to ignore
 __pycache__/
