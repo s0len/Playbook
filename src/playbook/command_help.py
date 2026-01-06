@@ -80,7 +80,7 @@ RUN_COMMAND_HELP = CommandHelp(
             "playbook run --no-watch",
         ),
         (
-            "Clear the processed file cache before running",
+            "Clear the processed file cache before running to reprocess all files",
             "playbook run --clear-processed-cache",
         ),
         (
@@ -88,24 +88,40 @@ RUN_COMMAND_HELP = CommandHelp(
             "playbook run --trace-matches --trace-output /cache/traces",
         ),
         (
-            "Custom log levels: DEBUG to file, INFO to console",
+            "Custom log levels: DEBUG to file, INFO to console (reduces noise)",
             "playbook run --log-level DEBUG --console-level INFO",
         ),
         (
-            "Docker: dry-run with verbose logging",
-            "docker run --rm -e DRY_RUN=true -e VERBOSE=true -v /config:/config ghcr.io/s0len/playbook:latest",
+            "Use environment variables instead of CLI flags",
+            "DRY_RUN=true VERBOSE=true playbook run",
         ),
         (
-            "Docker: continuous watch mode for automated processing",
-            "docker run -d -e WATCH_MODE=true -v /config:/config -v /downloads:/data/source ghcr.io/s0len/playbook:latest",
+            "Docker: quick verification with dry-run and verbose logging",
+            "docker run --rm -it -e DRY_RUN=true -e VERBOSE=true -e SOURCE_DIR=/downloads -e DESTINATION_DIR=/library -e CACHE_DIR=/cache -v /config:/config -v /downloads:/data/source -v /library:/data/destination -v /cache:/var/cache/playbook ghcr.io/s0len/playbook:latest --dry-run --verbose",
         ),
         (
-            "Docker: process with custom config and clear cache",
-            "docker run --rm -e CLEAR_PROCESSED_CACHE=true -v /my-config:/config -v /downloads:/data/source ghcr.io/s0len/playbook:latest",
+            "Docker: production run with proper volume mounts",
+            "docker run -d --name playbook -e TZ=UTC -e SOURCE_DIR=/downloads -e DESTINATION_DIR=/library -e CACHE_DIR=/cache -v /config:/config -v /downloads:/data/source -v /library:/data/destination -v /cache:/var/cache/playbook -v /logs:/var/log/playbook ghcr.io/s0len/playbook:latest",
+        ),
+        (
+            "Docker: continuous watch mode for automated processing with downloaders",
+            "docker run -d -e WATCH_MODE=true -e SOURCE_DIR=/downloads -e DESTINATION_DIR=/library -e CACHE_DIR=/cache -v /config:/config -v /downloads:/data/source -v /library:/data/destination -v /cache:/var/cache/playbook ghcr.io/s0len/playbook:latest --watch",
+        ),
+        (
+            "Docker: one-time run with cache clearing",
+            "docker run --rm -e CLEAR_PROCESSED_CACHE=true -e SOURCE_DIR=/downloads -e DESTINATION_DIR=/library -e CACHE_DIR=/cache -v /config:/config -v /downloads:/data/source -v /library:/data/destination -v /cache:/var/cache/playbook ghcr.io/s0len/playbook:latest --clear-processed-cache",
+        ),
+        (
+            "Docker: dry-run with custom log directory",
+            "docker run --rm -e DRY_RUN=true -e LOG_DIR=/var/log/playbook -v /config:/config -v /logs:/var/log/playbook ghcr.io/s0len/playbook:latest --dry-run",
         ),
         (
             "Python module: run from source with custom config",
             "python -m playbook.cli run --config ./playbook.yaml --dry-run",
+        ),
+        (
+            "Python module: watch mode from local development environment",
+            "python -m playbook.cli run --config ./playbook.yaml --watch --verbose",
         ),
     ],
     env_vars=[
