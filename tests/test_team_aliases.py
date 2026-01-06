@@ -247,3 +247,282 @@ class TestGetTeamAliasMap:
         # NBA has Lakers, NHL doesn't
         assert "lakers" in nba_map
         assert "lakers" not in nhl_map
+
+
+# Integration tests for team alias resolution correctness
+
+
+class TestTeamAliasResolution:
+    """Integration tests verifying specific team name aliases resolve correctly."""
+
+    # NHL Team Alias Resolution Tests
+
+    def test_nhl_bruins_alias_resolution(self):
+        """Test that various Boston Bruins aliases resolve correctly."""
+        nhl_map = get_team_alias_map("nhl")
+
+        # Test nickname alias
+        assert nhl_map["bruins"] == "Boston Bruins"
+
+        # Test city name alias
+        assert nhl_map["boston"] == "Boston Bruins"
+
+        # Test abbreviated code
+        assert nhl_map["bos"] == "Boston Bruins"
+
+        # Test full canonical name
+        assert nhl_map["bostonbruins"] == "Boston Bruins"
+
+    def test_nhl_maple_leafs_alias_resolution(self):
+        """Test that various Toronto Maple Leafs aliases resolve correctly."""
+        nhl_map = get_team_alias_map("nhl")
+
+        # Test nickname alias
+        assert nhl_map["leafs"] == "Toronto Maple Leafs"
+        assert nhl_map["mapleleafs"] == "Toronto Maple Leafs"
+
+        # Test city name alias
+        assert nhl_map["toronto"] == "Toronto Maple Leafs"
+
+        # Test abbreviated code
+        assert nhl_map["tor"] == "Toronto Maple Leafs"
+
+        # Test full canonical name
+        assert nhl_map["torontomapleleafs"] == "Toronto Maple Leafs"
+
+    def test_nhl_golden_knights_alias_resolution(self):
+        """Test that various Vegas Golden Knights aliases resolve correctly."""
+        nhl_map = get_team_alias_map("nhl")
+
+        # Test nickname alias
+        assert nhl_map["goldenknights"] == "Vegas Golden Knights"
+
+        # Test city name alias
+        assert nhl_map["vegas"] == "Vegas Golden Knights"
+
+        # Test abbreviated code
+        assert nhl_map["vgk"] == "Vegas Golden Knights"
+
+        # Test full canonical name
+        assert nhl_map["vegasgoldenknights"] == "Vegas Golden Knights"
+
+    def test_nhl_st_louis_blues_alias_resolution(self):
+        """Test that St. Louis Blues aliases with special characters resolve correctly."""
+        nhl_map = get_team_alias_map("nhl")
+
+        # Test nickname alias
+        assert nhl_map["blues"] == "St. Louis Blues"
+
+        # Test city name variations with special characters
+        assert nhl_map["stlouis"] == "St. Louis Blues"
+        assert nhl_map["saintlouisblues"] == "St. Louis Blues"
+        assert nhl_map["stlouisblues"] == "St. Louis Blues"
+
+        # Test abbreviated code
+        assert nhl_map["stl"] == "St. Louis Blues"
+
+    def test_nhl_abbreviated_codes(self):
+        """Test that NHL abbreviated codes resolve correctly."""
+        nhl_map = get_team_alias_map("nhl")
+
+        # Test various NHL team codes
+        assert nhl_map["ana"] == "Anaheim Ducks"
+        assert nhl_map["chi"] == "Chicago Blackhawks"
+        assert nhl_map["det"] == "Detroit Red Wings"
+        assert nhl_map["mtl"] == "Montreal Canadiens"
+        assert nhl_map["nyr"] == "New York Rangers"
+        assert nhl_map["pit"] == "Pittsburgh Penguins"
+        assert nhl_map["sea"] == "Seattle Kraken"
+        assert nhl_map["wpg"] == "Winnipeg Jets"
+
+    # NBA Team Alias Resolution Tests
+
+    def test_nba_lakers_alias_resolution(self):
+        """Test that various Los Angeles Lakers aliases resolve correctly."""
+        nba_map = get_team_alias_map("nba")
+
+        # Test nickname alias
+        assert nba_map["lakers"] == "Los Angeles Lakers"
+
+        # Test city name variations
+        assert nba_map["lalakers"] == "Los Angeles Lakers"
+
+        # Test abbreviated code
+        assert nba_map["lal"] == "Los Angeles Lakers"
+
+        # Test full canonical name
+        assert nba_map["losangeleslakers"] == "Los Angeles Lakers"
+
+    def test_nba_warriors_alias_resolution(self):
+        """Test that various Golden State Warriors aliases resolve correctly."""
+        nba_map = get_team_alias_map("nba")
+
+        # Test nickname alias
+        assert nba_map["warriors"] == "Golden State Warriors"
+        assert nba_map["dubs"] == "Golden State Warriors"
+
+        # Test city name alias
+        assert nba_map["goldenstate"] == "Golden State Warriors"
+
+        # Test abbreviated code
+        assert nba_map["gsw"] == "Golden State Warriors"
+
+        # Test full canonical name
+        assert nba_map["goldenstatewarriors"] == "Golden State Warriors"
+
+    def test_nba_76ers_alias_resolution(self):
+        """Test that Philadelphia 76ers aliases with numbers resolve correctly."""
+        nba_map = get_team_alias_map("nba")
+
+        # Test nickname aliases
+        assert nba_map["76ers"] == "Philadelphia 76ers"
+        assert nba_map["sixers"] == "Philadelphia 76ers"
+
+        # Test city name aliases
+        assert nba_map["philadelphia"] == "Philadelphia 76ers"
+        assert nba_map["philly"] == "Philadelphia 76ers"
+
+        # Test abbreviated code
+        assert nba_map["phi"] == "Philadelphia 76ers"
+
+    def test_nba_abbreviated_codes(self):
+        """Test that NBA abbreviated codes resolve correctly."""
+        nba_map = get_team_alias_map("nba")
+
+        # Test various NBA team codes
+        assert nba_map["atl"] == "Atlanta Hawks"
+        assert nba_map["bkn"] == "Brooklyn Nets"
+        assert nba_map["chi"] == "Chicago Bulls"
+        assert nba_map["dal"] == "Dallas Mavericks"
+        assert nba_map["mia"] == "Miami Heat"
+        assert nba_map["nyk"] == "New York Knicks"
+        assert nba_map["okc"] == "Oklahoma City Thunder"
+        assert nba_map["por"] == "Portland Trail Blazers"
+
+    # Premier League Team Alias Resolution Tests
+
+    def test_epl_man_united_alias_resolution(self):
+        """Test that various Manchester United aliases resolve correctly."""
+        epl_map = get_team_alias_map("premier_league")
+
+        # Test nickname aliases
+        assert epl_map["manunited"] == "Manchester United"
+        assert epl_map["manutd"] == "Manchester United"
+        assert epl_map["manu"] == "Manchester United"
+
+        # Test abbreviated code
+        assert epl_map["mun"] == "Manchester United"
+        assert epl_map["mufc"] == "Manchester United"
+
+        # Test full canonical name
+        assert epl_map["manchesterunited"] == "Manchester United"
+
+    def test_epl_arsenal_alias_resolution(self):
+        """Test that various Arsenal aliases resolve correctly."""
+        epl_map = get_team_alias_map("premier_league")
+
+        # Test nickname alias
+        assert epl_map["gunners"] == "Arsenal"
+
+        # Test club variations
+        assert epl_map["arsenalfc"] == "Arsenal"
+
+        # Test abbreviated code
+        assert epl_map["ars"] == "Arsenal"
+
+        # Test full canonical name
+        assert epl_map["arsenal"] == "Arsenal"
+
+    def test_epl_brighton_alias_resolution(self):
+        """Test that Brighton & Hove Albion aliases with special characters resolve correctly."""
+        epl_map = get_team_alias_map("premier_league")
+
+        # Test nickname alias
+        assert epl_map["albion"] == "Brighton & Hove Albion"
+
+        # Test variations with and without special characters
+        assert epl_map["brighton"] == "Brighton & Hove Albion"
+        assert epl_map["brightonhovealbion"] == "Brighton & Hove Albion"
+        assert epl_map["brightonandhovealbion"] == "Brighton & Hove Albion"
+
+        # Test abbreviated codes
+        assert epl_map["bha"] == "Brighton & Hove Albion"
+        assert epl_map["bhafc"] == "Brighton & Hove Albion"
+
+    def test_epl_tottenham_alias_resolution(self):
+        """Test that Tottenham Hotspur aliases resolve correctly."""
+        epl_map = get_team_alias_map("premier_league")
+
+        # Test nickname alias
+        assert epl_map["spurs"] == "Tottenham Hotspur"
+
+        # Test city name alias
+        assert epl_map["tottenham"] == "Tottenham Hotspur"
+
+        # Test abbreviated codes
+        assert epl_map["tot"] == "Tottenham Hotspur"
+        assert epl_map["thfc"] == "Tottenham Hotspur"
+
+        # Test full canonical name
+        assert epl_map["tottenhamhotspur"] == "Tottenham Hotspur"
+
+    def test_epl_abbreviated_codes(self):
+        """Test that EPL abbreviated codes resolve correctly."""
+        epl_map = get_team_alias_map("premier_league")
+
+        # Test various EPL team codes
+        assert epl_map["ars"] == "Arsenal"
+        assert epl_map["che"] == "Chelsea"
+        assert epl_map["liv"] == "Liverpool"
+        assert epl_map["mci"] == "Manchester City"
+        assert epl_map["mun"] == "Manchester United"
+        assert epl_map["tot"] == "Tottenham Hotspur"
+        assert epl_map["whu"] == "West Ham United"
+        assert epl_map["wol"] == "Wolverhampton Wanderers"
+
+    # Cross-league tests to ensure proper isolation
+
+    def test_league_isolation_for_common_codes(self):
+        """Test that teams with same codes in different leagues are isolated correctly."""
+        nhl_map = get_team_alias_map("nhl")
+        nba_map = get_team_alias_map("nba")
+
+        # BOS exists in both NHL (Boston Bruins) and NBA (Boston Celtics)
+        assert nhl_map["bos"] == "Boston Bruins"
+        assert nba_map["bos"] == "Boston Celtics"
+
+        # CHI exists in both NHL (Chicago Blackhawks) and NBA (Chicago Bulls)
+        assert nhl_map["chi"] == "Chicago Blackhawks"
+        assert nba_map["chi"] == "Chicago Bulls"
+
+        # TOR exists in both NHL (Toronto Maple Leafs) and NBA (Toronto Raptors)
+        assert nhl_map["tor"] == "Toronto Maple Leafs"
+        assert nba_map["tor"] == "Toronto Raptors"
+
+        # DET exists in both NHL (Detroit Red Wings) and NBA (Detroit Pistons)
+        assert nhl_map["det"] == "Detroit Red Wings"
+        assert nba_map["det"] == "Detroit Pistons"
+
+    def test_nickname_aliases_resolve_to_correct_teams(self):
+        """Test that common nickname aliases resolve to their correct teams."""
+        nhl_map = get_team_alias_map("nhl")
+        nba_map = get_team_alias_map("nba")
+        epl_map = get_team_alias_map("premier_league")
+
+        # Test NHL nicknames
+        assert nhl_map["bruins"] == "Boston Bruins"
+        assert nhl_map["leafs"] == "Toronto Maple Leafs"
+        assert nhl_map["penguins"] == "Pittsburgh Penguins"
+        assert nhl_map["avalanche"] == "Colorado Avalanche"
+
+        # Test NBA nicknames
+        assert nba_map["lakers"] == "Los Angeles Lakers"
+        assert nba_map["warriors"] == "Golden State Warriors"
+        assert nba_map["celtics"] == "Boston Celtics"
+        assert nba_map["bulls"] == "Chicago Bulls"
+
+        # Test EPL nicknames
+        assert epl_map["gunners"] == "Arsenal"
+        assert epl_map["spurs"] == "Tottenham Hotspur"
+        assert epl_map["blues"] == "Chelsea"
+        assert epl_map["reds"] == "Liverpool"
