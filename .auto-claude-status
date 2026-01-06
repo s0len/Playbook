@@ -3,23 +3,23 @@
   "spec": "022-add-interactive-help-with-examples-for-each-comman",
   "state": "building",
   "subtasks": {
-    "completed": 4,
+    "completed": 6,
     "total": 12,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "CLI Integration",
+    "current": "Help Content & Polish",
     "id": null,
-    "total": 3
+    "total": 4
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 1,
+    "number": 3,
     "started_at": "2026-01-06T21:50:09.428388"
   },
-  "last_update": "2026-01-06T21:50:09.486401"
+  "last_update": "2026-01-06T21:58:53.679815"
 }
