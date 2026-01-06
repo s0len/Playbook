@@ -125,6 +125,11 @@ def _parse_validate_args(arguments: list[str]) -> argparse.Namespace:
         action="store_true",
         help="Print exception tracebacks when validation fails",
     )
+    parser.add_argument(
+        "--no-suggestions",
+        action="store_true",
+        help="Disable fix suggestions in output for cleaner display",
+    )
     namespace = parser.parse_args(arguments)
     namespace.command = "validate-config"
     return namespace
@@ -458,7 +463,8 @@ def run_validate_config(args: argparse.Namespace) -> int:
                 CONSOLE.print(traceback.format_exc(), style="dim")
 
     # Use ValidationFormatter to display the report
-    formatter = ValidationFormatter(console=CONSOLE, show_suggestions=True, config_data=data)
+    show_suggestions = not getattr(args, "no_suggestions", False)
+    formatter = ValidationFormatter(console=CONSOLE, show_suggestions=show_suggestions, config_data=data)
     formatter.format_report(report)
 
     if getattr(args, "diff_sample", False):
