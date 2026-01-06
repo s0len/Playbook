@@ -47,9 +47,9 @@ from .match_handler import (
     season_cache_key,
     specificity_score,
 )
-from .templating import render_template
+from .destination_builder import build_destination, build_match_context, format_relative_destination
 from .trace_writer import TraceOptions, persist_trace
-from .utils import ensure_directory, link_file, normalize_token, sanitize_component, sha1_of_file, sha1_of_text, slugify
+from .utils import ensure_directory, link_file, normalize_token, sha1_of_file, sha1_of_text
 
 LOGGER = logging.getLogger(__name__)
 
@@ -696,91 +696,22 @@ class Processor:
         LOGGER.info(builder.render())
 
     def _build_context(self, runtime: SportRuntime, source_path: Path, season, episode, groups) -> Dict[str, object]:
-        show = runtime.show
-        sport = runtime.sport
-
-        context: Dict[str, object] = {}
-        context.update(groups)
-
-        context.update(
-            {
-                "sport_id": sport.id,
-                "sport_name": sport.name,
-                "show_id": show.key,
-                "show_key": show.key,
-                "show_title": show.title,
-                "season_key": season.key,
-                "season_title": season.title,
-                "season_index": season.index,
-                "season_number": season.display_number or season.index,
-                "season_round": season.round_number or season.display_number or season.index,
-                "season_sort_title": season.sort_title or season.title,
-                "season_slug": slugify(season.title),
-                "episode_title": episode.title,
-                "episode_index": episode.index,
-                "episode_number": episode.display_number or episode.index,
-                "episode_summary": episode.summary or "",
-                "episode_slug": slugify(episode.title),
-                "episode_originally_available": (
-                    episode.originally_available.isoformat() if episode.originally_available else ""
-                ),
-                "originally_available": (
-                    episode.originally_available.isoformat() if episode.originally_available else ""
-                ),
-                "extension": source_path.suffix.lstrip("."),
-                "suffix": source_path.suffix,
-                "source_filename": source_path.name,
-                "source_stem": source_path.stem,
-                "relative_source": str(source_path.relative_to(self.config.settings.source_dir)),
-            }
+        return build_match_context(
+            runtime=runtime,
+            source_path=source_path,
+            season=season,
+            episode=episode,
+            groups=groups,
+            source_dir=self.config.settings.source_dir,
         )
-
-        year_match = re.search(r"(\d{4})", show.title)
-        if year_match:
-            context["season_year"] = int(year_match.group(1))
-
-        return context
 
     def _build_destination(self, runtime: SportRuntime, pattern, context: Dict[str, object]) -> Path:
-        settings = self.config.settings
-        sport = runtime.sport
-
-        destination_root_template = (
-            pattern.destination_root_template
-            or sport.destination.root_template
-            or settings.default_destination.root_template
+        return build_destination(
+            runtime=runtime,
+            pattern=pattern,
+            context=context,
+            settings=self.config.settings,
         )
-        season_template = (
-            pattern.season_dir_template
-            or sport.destination.season_dir_template
-            or settings.default_destination.season_dir_template
-        )
-        episode_template = (
-            pattern.filename_template
-            or sport.destination.episode_template
-            or settings.default_destination.episode_template
-        )
-
-        root_component = sanitize_component(render_template(destination_root_template, context))
-        season_component = sanitize_component(render_template(season_template, context))
-        episode_filename = render_template(episode_template, context)
-        episode_component = sanitize_component(episode_filename)
-
-        destination = (
-            settings.destination_dir
-            / root_component
-            / season_component
-            / episode_component
-        )
-
-        base_dir = settings.destination_dir.resolve()
-        destination_resolved = destination.resolve(strict=False)
-        if not destination_resolved.is_relative_to(base_dir):
-            raise ValueError(
-                f"destination {destination_resolved} escapes destination_dir {base_dir}"
-            )
-
-        return destination
 
     def _handle_match(self, match: SportFileMatch, stats: ProcessingStats) -> Optional[NotificationEvent]:
         destination = match.destination_path
@@ -1136,12 +1067,7 @@ class Processor:
         return session_specificity > min(baseline_scores)
 
     def _format_relative_destination(self, destination: Path) -> str:
-        base = self.config.settings.destination_dir
-        try:
-            relative = destination.relative_to(base)
-        except ValueError:
-            return str(destination)
-        return str(relative)
+        return format_relative_destination(destination, self.config.settings.destination_dir)
 
     def _record_destination_touch(self, destination: Path) -> None:
         self._touched_destinations.add(self._format_relative_destination(destination))
