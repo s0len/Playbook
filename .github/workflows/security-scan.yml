@@ -1,5 +1,14 @@
 name: Security Scan
 
+# This workflow performs security vulnerability scanning on:
+# 1. Pull requests - gates merges via required status checks
+# 2. Pushes to develop/main - provides early detection
+# 3. Weekly schedule - catches newly disclosed vulnerabilities
+# 4. Manual triggers - for ad-hoc security audits
+#
+# Note: The build-and-push workflow also runs these scans before deploying
+# to ensure vulnerable code never reaches production.
+
 on:
   push:
     branches:
