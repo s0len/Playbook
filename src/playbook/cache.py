@@ -209,6 +209,25 @@ class ProcessedFileCache:
         }
 
     def prune_missing_sources(self) -> None:
+        """Remove all cache entries for source files that no longer exist on disk.
+
+        This method performs an explicit, synchronous cleanup of stale cache entries.
+        It checks every cached source file for existence and removes entries for
+        missing files. This can be slow with large caches (thousands of filesystem
+        checks).
+
+        **When to use:**
+        - Explicit maintenance operations or cleanup commands
+        - Manual cache housekeeping when needed
+
+        **Not recommended for:**
+        - Regular operation or startup - lazy pruning in is_processed() handles
+          cleanup automatically as files are accessed, avoiding blocking I/O
+
+        Note: Lazy pruning happens automatically in is_processed() when files are
+        accessed, so calling this method is typically unnecessary during normal
+        operation.
+        """
         removed = False
         for key in list(self._records.keys()):
             if not Path(key).exists():
@@ -225,6 +244,9 @@ class ProcessedFileCache:
         try:
             stat = source_path.stat()
         except FileNotFoundError:
+            # Lazy cleanup: remove stale entry for missing source file
+            del self._records[str(source_path)]
+            self._dirty = True
             return False
 
         if stat.st_mtime_ns != record.mtime_ns or stat.st_size != record.size:

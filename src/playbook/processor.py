@@ -219,7 +219,6 @@ class Processor:
     def process_all(self) -> ProcessingStats:
         self._kometa_trigger_fired = False
         self._kometa_trigger_needed = False
-        self.processed_cache.prune_missing_sources()
         runtimes = self._load_sports()
         self._stale_destinations = {}
         self._stale_records = {}
