@@ -86,6 +86,14 @@ class SessionLookupIndex:
 
         return candidates
 
+    def keys(self) -> List[str]:
+        """Get all keys in the index.
+
+        Returns:
+            List of all keys in the index
+        """
+        return list(self._mapping.keys())
+
     @classmethod
     def from_dict(cls, mapping: Dict[str, str]) -> SessionLookupIndex:
         """Create a SessionLookupIndex from an existing dictionary.
