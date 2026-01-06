@@ -41,7 +41,12 @@ from .run_summary import (
     summarize_plex_errors,
 )
 from .file_discovery import matches_globs, should_suppress_sample_ignored, skip_reason_for_source_file
-from .match_handler import alias_candidates, specificity_score
+from .match_handler import (
+    alias_candidates,
+    episode_cache_key,
+    season_cache_key,
+    specificity_score,
+)
 from .templating import render_template
 from .trace_writer import TraceOptions, persist_trace
 from .utils import ensure_directory, link_file, normalize_token, sanitize_component, sha1_of_file, sha1_of_text, slugify
@@ -785,8 +790,8 @@ class Processor:
         old_destination = self._stale_destinations.get(source_key)
         cache_kwargs = {
             "sport_id": match.sport.id,
-            "season_key": self._season_cache_key(match),
-            "episode_key": self._episode_cache_key(match),
+            "season_key": season_cache_key(match),
+            "episode_key": episode_cache_key(match),
         }
 
         stale_record = self._stale_records.get(source_key)
@@ -1129,30 +1134,6 @@ class Processor:
             return False
 
         return session_specificity > min(baseline_scores)
-
-    @staticmethod
-    def _season_cache_key(match: SportFileMatch) -> Optional[str]:
-        season = match.season
-        key = season.key
-        if key is not None:
-            return str(key)
-        if season.display_number is not None:
-            return f"display:{season.display_number}"
-        return f"index:{season.index}"
-
-    @staticmethod
-    def _episode_cache_key(match: SportFileMatch) -> str:
-        episode = match.episode
-        metadata = episode.metadata or {}
-        for field in ("id", "guid", "episode_id", "uuid"):
-            value = metadata.get(field)
-            if value:
-                return f"{field}:{value}"
-        if episode.display_number is not None:
-            return f"display:{episode.display_number}"
-        if episode.title:
-            return f"title:{episode.title}"
-        return f"index:{episode.index}"
 
     def _format_relative_destination(self, destination: Path) -> str:
         base = self.config.settings.destination_dir

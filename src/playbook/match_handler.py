@@ -130,10 +130,56 @@ def alias_candidates(match: SportFileMatch) -> List[str]:
     return unique_candidates
 
 
+def season_cache_key(match: SportFileMatch) -> Optional[str]:
+    """Generate a cache key for a season.
+
+    The cache key is used to track processed files across different runs.
+    It prefers explicit season keys, then display numbers, and falls back
+    to season index.
+
+    Args:
+        match: The matched file containing season information.
+
+    Returns:
+        A string cache key for the season, or None if the season has no key.
+    """
+    season = match.season
+    key = season.key
+    if key is not None:
+        return str(key)
+    if season.display_number is not None:
+        return f"display:{season.display_number}"
+    return f"index:{season.index}"
+
+
+def episode_cache_key(match: SportFileMatch) -> str:
+    """Generate a cache key for an episode.
+
+    The cache key is used to track processed files across different runs.
+    It prefers metadata IDs (id, guid, episode_id, uuid), then display number,
+    then title, and falls back to episode index.
+
+    Args:
+        match: The matched file containing episode information.
+
+    Returns:
+        A string cache key for the episode.
+    """
+    episode = match.episode
+    metadata = episode.metadata or {}
+    for field in ("id", "guid", "episode_id", "uuid"):
+        value = metadata.get(field)
+        if value:
+            return f"{field}:{value}"
+    if episode.display_number is not None:
+        return f"display:{episode.display_number}"
+    if episode.title:
+        return f"title:{episode.title}"
+    return f"index:{episode.index}"
+
+
 # Functions to be extracted from processor.py:
 # - handle_match() (from _handle_match)
 # - should_overwrite_existing() (from _should_overwrite_existing)
-# - season_cache_key() (from _season_cache_key)
-# - episode_cache_key() (from _episode_cache_key)
 # - cleanup_old_destination() (from _cleanup_old_destination)
 # - record_destination_touch() (from _record_destination_touch)
