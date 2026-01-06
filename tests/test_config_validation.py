@@ -12,6 +12,7 @@ from playbook.validation import (
     extract_yaml_line_numbers,
     extract_yaml_line_numbers_from_file,
     get_fix_suggestion,
+    group_validation_issues,
     validate_config_data,
 )
 
@@ -749,4 +750,374 @@ def test_fix_suggestions_integration_with_validation() -> None:
     assert len(url_errors) > 0
     assert url_errors[0].fix_suggestion is not None
     assert "URL" in url_errors[0].fix_suggestion
+
+
+# ============================================================================
+# Issue Grouping Tests
+# ============================================================================
+
+
+def test_group_validation_issues_simple_settings_paths() -> None:
+    """Test grouping of simple non-array paths in settings section."""
+    issues = [
+        ValidationIssue(
+            severity="error",
+            path="settings.notifications.flush_time",
+            message="Invalid time format",
+            code="flush-time",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="settings.notifications.batch_daily",
+            message="Must be boolean",
+            code="schema",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="settings.file_watcher.debounce_seconds",
+            message="Must be non-negative",
+            code="schema",
+        ),
+    ]
+
+    grouped = group_validation_issues(issues)
+
+    # Should have one root section: settings
+    assert "settings" in grouped
+    assert len(grouped) == 1
+
+    # Should have two sub-sections: notifications and file_watcher
+    assert "notifications" in grouped["settings"]
+    assert "file_watcher" in grouped["settings"]
+    assert len(grouped["settings"]) == 2
+
+    # Notifications sub-section should have 2 issues
+    assert len(grouped["settings"]["notifications"]) == 2
+    assert grouped["settings"]["notifications"][0].path == "settings.notifications.flush_time"
+    assert grouped["settings"]["notifications"][1].path == "settings.notifications.batch_daily"
+
+    # File watcher sub-section should have 1 issue
+    assert len(grouped["settings"]["file_watcher"]) == 1
+    assert grouped["settings"]["file_watcher"][0].path == "settings.file_watcher.debounce_seconds"
+
+
+def test_group_validation_issues_array_paths() -> None:
+    """Test grouping of array paths (sports[0], sports[1], etc.)."""
+    issues = [
+        ValidationIssue(
+            severity="error",
+            path="sports[0].id",
+            message="Missing required field",
+            code="schema",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="sports[0].metadata.url",
+            message="Blank URL",
+            code="metadata-url",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="sports[1].metadata.url",
+            message="Blank URL",
+            code="metadata-url",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="sports[2].id",
+            message="Duplicate ID",
+            code="duplicate-id",
+        ),
+    ]
+
+    grouped = group_validation_issues(issues)
+
+    # Should have one root section: sports
+    assert "sports" in grouped
+    assert len(grouped) == 1
+
+    # Should have three sub-sections: sports[0], sports[1], sports[2]
+    assert "sports[0]" in grouped["sports"]
+    assert "sports[1]" in grouped["sports"]
+    assert "sports[2]" in grouped["sports"]
+    assert len(grouped["sports"]) == 3
+
+    # sports[0] should have 2 issues
+    assert len(grouped["sports"]["sports[0]"]) == 2
+    assert grouped["sports"]["sports[0]"][0].path == "sports[0].id"
+    assert grouped["sports"]["sports[0]"][1].path == "sports[0].metadata.url"
+
+    # sports[1] should have 1 issue
+    assert len(grouped["sports"]["sports[1]"]) == 1
+    assert grouped["sports"]["sports[1]"][0].path == "sports[1].metadata.url"
+
+    # sports[2] should have 1 issue
+    assert len(grouped["sports"]["sports[2]"]) == 1
+    assert grouped["sports"]["sports[2]"][0].path == "sports[2].id"
+
+
+def test_group_validation_issues_nested_array_paths() -> None:
+    """Test grouping of nested array paths (sports[0].variants[1], etc.)."""
+    issues = [
+        ValidationIssue(
+            severity="error",
+            path="sports[0].variants[0].metadata.url",
+            message="Blank URL",
+            code="metadata-url",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="sports[0].variants[1].metadata.url",
+            message="Blank URL",
+            code="metadata-url",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="sports[0].variants[1].id",
+            message="Missing ID",
+            code="schema",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="sports[1].variants[0].metadata",
+            message="Missing metadata",
+            code="metadata-missing",
+        ),
+    ]
+
+    grouped = group_validation_issues(issues)
+
+    # Should have one root section: sports
+    assert "sports" in grouped
+    assert len(grouped) == 1
+
+    # Should have three sub-sections: sports[0].variants[0], sports[0].variants[1], sports[1].variants[0]
+    assert "sports[0].variants[0]" in grouped["sports"]
+    assert "sports[0].variants[1]" in grouped["sports"]
+    assert "sports[1].variants[0]" in grouped["sports"]
+    assert len(grouped["sports"]) == 3
+
+    # sports[0].variants[0] should have 1 issue
+    assert len(grouped["sports"]["sports[0].variants[0]"]) == 1
+    assert grouped["sports"]["sports[0].variants[0]"][0].path == "sports[0].variants[0].metadata.url"
+
+    # sports[0].variants[1] should have 2 issues
+    assert len(grouped["sports"]["sports[0].variants[1]"]) == 2
+    assert grouped["sports"]["sports[0].variants[1]"][0].path == "sports[0].variants[1].metadata.url"
+    assert grouped["sports"]["sports[0].variants[1]"][1].path == "sports[0].variants[1].id"
+
+    # sports[1].variants[0] should have 1 issue
+    assert len(grouped["sports"]["sports[1].variants[0]"]) == 1
+    assert grouped["sports"]["sports[1].variants[0]"][0].path == "sports[1].variants[0].metadata"
+
+
+def test_group_validation_issues_mixed_sections() -> None:
+    """Test grouping with multiple root sections and various path types."""
+    issues = [
+        ValidationIssue(
+            severity="error",
+            path="settings.notifications.flush_time",
+            message="Invalid time",
+            code="flush-time",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="sports[0].id",
+            message="Missing ID",
+            code="schema",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="pattern_sets.common[0].regex",
+            message="Invalid regex",
+            code="schema",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="pattern_sets.common[1].priority",
+            message="Invalid priority",
+            code="schema",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="sports[1].variants[0].metadata.url",
+            message="Blank URL",
+            code="metadata-url",
+        ),
+    ]
+
+    grouped = group_validation_issues(issues)
+
+    # Should have three root sections: settings, sports, pattern_sets
+    assert "settings" in grouped
+    assert "sports" in grouped
+    assert "pattern_sets" in grouped
+    assert len(grouped) == 3
+
+    # Settings section
+    assert "notifications" in grouped["settings"]
+    assert len(grouped["settings"]["notifications"]) == 1
+
+    # Sports section
+    assert "sports[0]" in grouped["sports"]
+    assert "sports[1].variants[0]" in grouped["sports"]
+    assert len(grouped["sports"]["sports[0]"]) == 1
+    assert len(grouped["sports"]["sports[1].variants[0]"]) == 1
+
+    # Pattern sets section
+    assert "pattern_sets.common[0]" in grouped["pattern_sets"]
+    assert "pattern_sets.common[1]" in grouped["pattern_sets"]
+    assert len(grouped["pattern_sets"]["pattern_sets.common[0]"]) == 1
+    assert len(grouped["pattern_sets"]["pattern_sets.common[1]"]) == 1
+
+
+def test_group_validation_issues_multiple_issues_same_location() -> None:
+    """Test that multiple issues for the same location are correctly grouped together."""
+    issues = [
+        ValidationIssue(
+            severity="error",
+            path="sports[0].id",
+            message="Missing required field",
+            code="schema",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="sports[0].name",
+            message="Missing required field",
+            code="schema",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="sports[0].metadata.url",
+            message="Blank URL",
+            code="metadata-url",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="sports[0].metadata.ttl_hours",
+            message="Invalid type",
+            code="schema",
+        ),
+    ]
+
+    grouped = group_validation_issues(issues)
+
+    # All issues should be under sports[0]
+    assert "sports" in grouped
+    assert "sports[0]" in grouped["sports"]
+    assert len(grouped["sports"]["sports[0]"]) == 4
+
+    # Verify all issues are present
+    paths = [issue.path for issue in grouped["sports"]["sports[0]"]]
+    assert "sports[0].id" in paths
+    assert "sports[0].name" in paths
+    assert "sports[0].metadata.url" in paths
+    assert "sports[0].metadata.ttl_hours" in paths
+
+
+def test_group_validation_issues_empty_list() -> None:
+    """Test that grouping an empty list of issues returns an empty dictionary."""
+    grouped = group_validation_issues([])
+    assert grouped == {}
+
+
+def test_group_validation_issues_root_level_path() -> None:
+    """Test grouping of root-level paths (no sub-sections)."""
+    issues = [
+        ValidationIssue(
+            severity="error",
+            path="sports",
+            message="Must be an array",
+            code="schema",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="settings",
+            message="Must be an object",
+            code="schema",
+        ),
+    ]
+
+    grouped = group_validation_issues(issues)
+
+    # Each root section should have itself as the sub-section key
+    assert "sports" in grouped
+    assert "settings" in grouped
+    assert "sports" in grouped["sports"]
+    assert "settings" in grouped["settings"]
+    assert len(grouped["sports"]["sports"]) == 1
+    assert len(grouped["settings"]["settings"]) == 1
+
+
+def test_group_validation_issues_preserves_issue_order() -> None:
+    """Test that issues are preserved in the order they appear within each group."""
+    issues = [
+        ValidationIssue(
+            severity="error",
+            path="sports[0].id",
+            message="First issue",
+            code="schema",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="sports[0].name",
+            message="Second issue",
+            code="schema",
+        ),
+        ValidationIssue(
+            severity="error",
+            path="sports[0].metadata.url",
+            message="Third issue",
+            code="metadata-url",
+        ),
+    ]
+
+    grouped = group_validation_issues(issues)
+
+    # Verify order is preserved
+    assert grouped["sports"]["sports[0]"][0].message == "First issue"
+    assert grouped["sports"]["sports[0]"][1].message == "Second issue"
+    assert grouped["sports"]["sports[0]"][2].message == "Third issue"
+
+
+def test_group_validation_issues_integration_with_validation() -> None:
+    """Test that grouping works correctly with actual validation output."""
+    config = {
+        "settings": {
+            "notifications": {
+                "flush_time": "25:99",  # Invalid time
+            },
+            "file_watcher": {
+                "debounce_seconds": -5,  # Invalid (negative)
+            },
+        },
+        "sports": [
+            {
+                "id": "test1",
+                "metadata": {
+                    "url": "",  # Blank URL
+                },
+            },
+            {
+                "id": "test1",  # Duplicate ID
+                "metadata": {
+                    "url": "https://example.com/test.yaml",
+                },
+            },
+        ],
+    }
+
+    report = validate_config_data(config)
+    grouped = group_validation_issues(report.errors)
+
+    # Should have settings and sports sections
+    assert "settings" in grouped
+    assert "sports" in grouped
+
+    # Settings should have multiple sub-sections
+    assert len(grouped["settings"]) >= 1
+
+    # Sports should have sub-sections for each sport
+    # Note: exact structure depends on validation logic, but we should have some grouping
+    assert len(grouped["sports"]) >= 1
 
