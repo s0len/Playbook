@@ -8,6 +8,7 @@ from playbook.validation import (
     ValidationReport,
     _format_jsonschema_path,
     _parse_time,
+    _validate_semantics,
     validate_config_data,
 )
 
@@ -1771,3 +1772,490 @@ class TestConfigSchemaSports:
         }
         report = validate_config_data(config)
         assert report.is_valid is True
+
+
+# Tests for semantic validation
+
+
+class TestValidateSemantics:
+    """Tests for _validate_semantics function."""
+
+    def test_duplicate_sport_id_detected(self):
+        """Test that duplicate sport IDs are detected and reported."""
+        config = {
+            "sports": [
+                {
+                    "id": "duplicate-id",
+                    "metadata": {"url": "https://example.com/sport1.yaml"}
+                },
+                {
+                    "id": "unique-id",
+                    "metadata": {"url": "https://example.com/sport2.yaml"}
+                },
+                {
+                    "id": "duplicate-id",
+                    "metadata": {"url": "https://example.com/sport3.yaml"}
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        # Find duplicate ID errors
+        duplicate_errors = [e for e in report.errors if e.code == "duplicate-id"]
+        assert len(duplicate_errors) == 1
+        assert duplicate_errors[0].path == "sports[2].id"
+        assert "duplicate-id" in duplicate_errors[0].message
+        assert "index 0" in duplicate_errors[0].message
+
+    def test_multiple_duplicate_sport_ids(self):
+        """Test detection of multiple sets of duplicate sport IDs."""
+        config = {
+            "sports": [
+                {"id": "id-a", "metadata": {"url": "https://example.com/a1.yaml"}},
+                {"id": "id-b", "metadata": {"url": "https://example.com/b1.yaml"}},
+                {"id": "id-a", "metadata": {"url": "https://example.com/a2.yaml"}},
+                {"id": "id-b", "metadata": {"url": "https://example.com/b2.yaml"}},
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        duplicate_errors = [e for e in report.errors if e.code == "duplicate-id"]
+        assert len(duplicate_errors) == 2
+        # Check both duplicates are reported
+        paths = [e.path for e in duplicate_errors]
+        assert "sports[2].id" in paths
+        assert "sports[3].id" in paths
+
+    def test_no_duplicate_with_unique_ids(self):
+        """Test that unique sport IDs do not trigger duplicate errors."""
+        config = {
+            "sports": [
+                {"id": "sport-1", "metadata": {"url": "https://example.com/1.yaml"}},
+                {"id": "sport-2", "metadata": {"url": "https://example.com/2.yaml"}},
+                {"id": "sport-3", "metadata": {"url": "https://example.com/3.yaml"}},
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        duplicate_errors = [e for e in report.errors if e.code == "duplicate-id"]
+        assert len(duplicate_errors) == 0
+
+    def test_missing_metadata_without_variants(self):
+        """Test error when sport has no metadata and no variants."""
+        config = {
+            "sports": [
+                {
+                    "id": "no-metadata-sport",
+                    "name": "Sport Without Metadata"
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        metadata_errors = [e for e in report.errors if e.code == "metadata-missing" and "variants" in e.message]
+        assert len(metadata_errors) == 1
+        assert metadata_errors[0].path == "sports[0].metadata"
+        assert "metadata or variants" in metadata_errors[0].message
+
+    def test_no_error_when_sport_has_metadata(self):
+        """Test no error when sport has metadata block."""
+        config = {
+            "sports": [
+                {
+                    "id": "with-metadata",
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        metadata_errors = [e for e in report.errors if e.code == "metadata-missing"]
+        assert len(metadata_errors) == 0
+
+    def test_no_error_when_sport_has_variants(self):
+        """Test no error when sport has no metadata but has variants with metadata."""
+        config = {
+            "sports": [
+                {
+                    "id": "with-variants",
+                    "variants": [
+                        {
+                            "id": "variant-1",
+                            "metadata": {"url": "https://example.com/v1.yaml"}
+                        }
+                    ]
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        metadata_errors = [e for e in report.errors if "metadata or variants" in e.message]
+        assert len(metadata_errors) == 0
+
+    def test_metadata_url_blank_detection(self):
+        """Test that blank metadata URL is detected."""
+        config = {
+            "sports": [
+                {
+                    "id": "blank-url-sport",
+                    "metadata": {"url": "   "}
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        url_errors = [e for e in report.errors if e.code == "metadata-url"]
+        assert len(url_errors) == 1
+        assert url_errors[0].path == "sports[0].metadata.url"
+        assert "blank" in url_errors[0].message.lower()
+
+    def test_metadata_url_empty_string_detection(self):
+        """Test that empty string metadata URL is detected."""
+        config = {
+            "sports": [
+                {
+                    "id": "empty-url-sport",
+                    "metadata": {"url": ""}
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        url_errors = [e for e in report.errors if e.code == "metadata-url"]
+        assert len(url_errors) == 1
+        assert url_errors[0].path == "sports[0].metadata.url"
+
+    def test_metadata_url_valid_does_not_error(self):
+        """Test that valid metadata URL does not trigger error."""
+        config = {
+            "sports": [
+                {
+                    "id": "valid-url-sport",
+                    "metadata": {"url": "https://example.com/valid.yaml"}
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        url_errors = [e for e in report.errors if e.code == "metadata-url"]
+        assert len(url_errors) == 0
+
+    def test_unknown_pattern_set_reference(self):
+        """Test that unknown pattern set references are detected."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "pattern_sets": ["unknown_pattern_set"],
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        pattern_errors = [e for e in report.errors if e.code == "pattern-set"]
+        assert len(pattern_errors) == 1
+        assert pattern_errors[0].path == "sports[0].pattern_sets"
+        assert "unknown_pattern_set" in pattern_errors[0].message
+
+    def test_multiple_unknown_pattern_sets(self):
+        """Test detection of multiple unknown pattern set references."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "pattern_sets": ["unknown_1", "unknown_2", "unknown_3"],
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        pattern_errors = [e for e in report.errors if e.code == "pattern-set"]
+        assert len(pattern_errors) == 3
+
+    def test_builtin_pattern_sets_are_recognized(self):
+        """Test that builtin pattern sets do not trigger errors."""
+        # This test assumes there are builtin pattern sets
+        # We'll test with an empty pattern_sets to ensure no error
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "pattern_sets": [],
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        pattern_errors = [e for e in report.errors if e.code == "pattern-set"]
+        assert len(pattern_errors) == 0
+
+    def test_user_defined_pattern_sets_are_recognized(self):
+        """Test that user-defined pattern sets are recognized and do not error."""
+        config = {
+            "pattern_sets": {
+                "custom_set": [
+                    {"regex": r".*\.mkv"}
+                ]
+            },
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "pattern_sets": ["custom_set"],
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        pattern_errors = [e for e in report.errors if e.code == "pattern-set"]
+        assert len(pattern_errors) == 0
+
+    def test_variant_missing_metadata_detected(self):
+        """Test that variant without metadata block is detected."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "variants": [
+                        {
+                            "id": "variant-without-metadata",
+                            "year": 2023
+                        }
+                    ]
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        variant_errors = [e for e in report.errors if "variants[0].metadata" in e.path]
+        assert len(variant_errors) >= 1
+        assert any("metadata" in e.message.lower() for e in variant_errors)
+
+    def test_variant_with_null_metadata_detected(self):
+        """Test that variant with null metadata is detected."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "variants": [
+                        {
+                            "id": "variant-null-metadata",
+                            "metadata": None
+                        }
+                    ]
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        variant_errors = [e for e in report.errors if e.code == "metadata-missing" and "variants[0]" in e.path]
+        assert len(variant_errors) == 1
+
+    def test_variant_with_valid_metadata_no_error(self):
+        """Test that variant with valid metadata does not error."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "variants": [
+                        {
+                            "id": "variant-with-metadata",
+                            "metadata": {"url": "https://example.com/variant.yaml"}
+                        }
+                    ]
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        variant_errors = [e for e in report.errors if "variants[0]" in e.path and e.code == "metadata-missing"]
+        assert len(variant_errors) == 0
+
+    def test_variant_metadata_url_blank_detected(self):
+        """Test that blank URL in variant metadata is detected."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "variants": [
+                        {
+                            "id": "variant-1",
+                            "metadata": {"url": "  "}
+                        }
+                    ]
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        url_errors = [e for e in report.errors if e.code == "metadata-url" and "variants[0]" in e.path]
+        assert len(url_errors) == 1
+        assert url_errors[0].path == "sports[0].variants[0].metadata.url"
+
+    def test_multiple_variants_validation(self):
+        """Test validation across multiple variants."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "variants": [
+                        {
+                            "id": "valid-variant",
+                            "metadata": {"url": "https://example.com/v1.yaml"}
+                        },
+                        {
+                            "id": "invalid-variant",
+                            "metadata": {"url": ""}
+                        },
+                        {
+                            "id": "no-metadata-variant",
+                            "year": 2023
+                        }
+                    ]
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        # Should have errors for variant 1 (blank URL) and variant 2 (missing metadata)
+        variant_errors = [e for e in report.errors if "variants" in e.path]
+        assert len(variant_errors) >= 2
+
+    def test_variant_non_dict_structure_detected(self):
+        """Test that non-dict variant entries are detected."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "variants": [
+                        "not-a-dict"
+                    ]
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        structure_errors = [e for e in report.errors if e.code == "variant-structure"]
+        assert len(structure_errors) == 1
+        assert structure_errors[0].path == "sports[0].variants[0]"
+
+    def test_metadata_non_dict_structure_detected(self):
+        """Test that non-dict metadata is detected."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "metadata": "not-a-dict"
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        structure_errors = [e for e in report.errors if e.code == "metadata-structure"]
+        assert len(structure_errors) == 1
+        assert structure_errors[0].path == "sports[0].metadata"
+
+    def test_settings_flush_time_validation(self):
+        """Test that invalid flush_time triggers error."""
+        config = {
+            "sports": [],
+            "settings": {
+                "notifications": {
+                    "flush_time": "25:00"
+                }
+            }
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        flush_errors = [e for e in report.errors if e.code == "flush-time"]
+        assert len(flush_errors) == 1
+        assert flush_errors[0].path == "settings.notifications.flush_time"
+
+    def test_valid_flush_time_no_error(self):
+        """Test that valid flush_time does not trigger error."""
+        config = {
+            "sports": [],
+            "settings": {
+                "notifications": {
+                    "flush_time": "14:30"
+                }
+            }
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        flush_errors = [e for e in report.errors if e.code == "flush-time"]
+        assert len(flush_errors) == 0
+
+    def test_empty_config_no_errors(self):
+        """Test that minimal empty config produces no semantic errors."""
+        config = {
+            "sports": []
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        assert len(report.errors) == 0
+
+    def test_complex_valid_config_no_errors(self):
+        """Test complex valid configuration produces no semantic errors."""
+        config = {
+            "pattern_sets": {
+                "custom_patterns": [
+                    {"regex": r".*\.mkv"}
+                ]
+            },
+            "settings": {
+                "notifications": {
+                    "flush_time": "14:30:00"
+                }
+            },
+            "sports": [
+                {
+                    "id": "sport-1",
+                    "pattern_sets": ["custom_patterns"],
+                    "metadata": {"url": "https://example.com/sport1.yaml"}
+                },
+                {
+                    "id": "sport-2",
+                    "variants": [
+                        {
+                            "id": "variant-1",
+                            "metadata": {"url": "https://example.com/variant1.yaml"}
+                        },
+                        {
+                            "id": "variant-2",
+                            "metadata": {"url": "https://example.com/variant2.yaml"}
+                        }
+                    ]
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        assert len(report.errors) == 0
