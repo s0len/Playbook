@@ -2259,3 +2259,443 @@ class TestValidateSemantics:
         _validate_semantics(config, report)
 
         assert len(report.errors) == 0
+
+
+# Integration tests for validate_config_data
+
+
+class TestValidateConfigDataIntegration:
+    """Integration tests for the main validate_config_data function."""
+
+    def test_fully_valid_config_returns_is_valid_true(self):
+        """Test that a fully valid config returns is_valid=True."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "name": "Test Sport",
+                    "enabled": True,
+                    "metadata": {
+                        "url": "https://example.com/test.yaml",
+                        "show_key": "test-show",
+                        "ttl_hours": 24
+                    }
+                }
+            ]
+        }
+        report = validate_config_data(config)
+
+        assert report.is_valid is True
+        assert len(report.errors) == 0
+        assert len(report.warnings) == 0
+
+    def test_minimal_valid_config_returns_is_valid_true(self, minimal_valid_config):
+        """Test that minimal valid config (empty sports array) is valid."""
+        report = validate_config_data(minimal_valid_config)
+
+        assert report.is_valid is True
+        assert len(report.errors) == 0
+
+    def test_valid_config_with_settings_returns_is_valid_true(self, valid_config_with_settings):
+        """Test that valid config with settings block is valid."""
+        report = validate_config_data(valid_config_with_settings)
+
+        assert report.is_valid is True
+        assert len(report.errors) == 0
+
+    def test_multiple_errors_are_collected(self):
+        """Test that multiple validation errors are collected in a single report."""
+        config = {
+            "sports": [
+                {
+                    "id": "",
+                    "metadata": {"url": ""}
+                },
+                {
+                    "id": "sport-2",
+                    "link_mode": "invalid_mode",
+                    "metadata": None
+                }
+            ],
+            "settings": {
+                "link_mode": "bad_mode",
+                "notifications": {
+                    "flush_time": "25:99"
+                },
+                "file_watcher": {
+                    "debounce_seconds": -5
+                }
+            }
+        }
+        report = validate_config_data(config)
+
+        assert report.is_valid is False
+        assert len(report.errors) >= 5
+
+    def test_errors_have_correct_paths(self):
+        """Test that errors include correct paths to problematic fields."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "metadata": {"url": ""}
+                }
+            ],
+            "settings": {
+                "notifications": {
+                    "flush_time": "invalid"
+                }
+            }
+        }
+        report = validate_config_data(config)
+
+        assert report.is_valid is False
+
+        error_paths = [e.path for e in report.errors]
+        assert "sports[0].metadata.url" in error_paths
+        assert "settings.notifications.flush_time" in error_paths
+
+    def test_errors_have_correct_codes(self):
+        """Test that errors include appropriate error codes."""
+        config = {
+            "sports": [
+                {
+                    "id": "sport-1",
+                    "metadata": {"url": "https://example.com/1.yaml"}
+                },
+                {
+                    "id": "sport-1",
+                    "metadata": {"url": "https://example.com/2.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+
+        assert report.is_valid is False
+
+        error_codes = [e.code for e in report.errors]
+        assert "duplicate-id" in error_codes
+
+    def test_schema_validation_errors_have_schema_code(self):
+        """Test that schema validation errors use 'schema' code."""
+        config = {
+            "sports": "not-an-array"
+        }
+        report = validate_config_data(config)
+
+        assert report.is_valid is False
+        assert len(report.errors) >= 1
+
+        schema_errors = [e for e in report.errors if e.code == "schema"]
+        assert len(schema_errors) >= 1
+
+    def test_semantic_errors_have_specific_codes(self):
+        """Test that semantic validation errors have specific error codes."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "pattern_sets": ["nonexistent_pattern_set"],
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+
+        assert report.is_valid is False
+
+        pattern_errors = [e for e in report.errors if e.code == "pattern-set"]
+        assert len(pattern_errors) >= 1
+
+    def test_missing_required_field_error(self):
+        """Test that missing required 'sports' field produces error."""
+        config = {
+            "settings": {
+                "source_dir": "/source"
+            }
+        }
+        report = validate_config_data(config)
+
+        assert report.is_valid is False
+        assert len(report.errors) >= 1
+
+        required_errors = [e for e in report.errors if "sports" in e.path.lower() or "<root>" in e.path]
+        assert len(required_errors) >= 1
+
+    def test_complex_valid_config_with_all_features(self):
+        """Test complex configuration with all features enabled."""
+        config = {
+            "pattern_sets": {
+                "custom_set_1": [
+                    {"regex": r".*\.mkv"},
+                    {"regex": r".*\.mp4"}
+                ],
+                "custom_set_2": [
+                    {"regex": r"S\d+E\d+"}
+                ]
+            },
+            "settings": {
+                "source_dir": "/media/source",
+                "destination_dir": "/media/destination",
+                "cache_dir": "/media/cache",
+                "dry_run": False,
+                "skip_existing": True,
+                "link_mode": "hardlink",
+                "destination": {
+                    "root_template": "{sport_id}",
+                    "season_dir_template": "Season {season}",
+                    "episode_template": "{title}.{ext}"
+                },
+                "notifications": {
+                    "batch_daily": True,
+                    "flush_time": "14:30:00"
+                },
+                "file_watcher": {
+                    "enabled": True,
+                    "paths": ["/watch/path1", "/watch/path2"],
+                    "include": ["*.mkv", "*.mp4"],
+                    "ignore": ["*.tmp"],
+                    "debounce_seconds": 5,
+                    "reconcile_interval": 300
+                },
+                "kometa_trigger": {
+                    "enabled": True,
+                    "mode": "docker",
+                    "docker": {
+                        "binary": "docker",
+                        "image": "kometateam/kometa:latest",
+                        "config_path": "/config/config.yml"
+                    }
+                }
+            },
+            "sports": [
+                {
+                    "id": "sport-1",
+                    "name": "First Sport",
+                    "enabled": True,
+                    "team_alias_map": "nhl",
+                    "pattern_sets": ["custom_set_1"],
+                    "file_patterns": [
+                        {
+                            "regex": r"Game\s+\d+",
+                            "description": "Game files",
+                            "season_selector": {
+                                "mode": "round",
+                                "offset": 1
+                            },
+                            "episode_selector": {
+                                "group": "episode"
+                            },
+                            "priority": 100
+                        }
+                    ],
+                    "source_globs": ["**/*.mkv"],
+                    "source_extensions": [".mkv", ".mp4"],
+                    "link_mode": "copy",
+                    "allow_unmatched": False,
+                    "destination": {
+                        "root_template": "{sport_id}/{year}",
+                        "season_dir_template": "Season {season}",
+                        "episode_template": "{title}.{ext}"
+                    },
+                    "metadata": {
+                        "url": "https://example.com/sport1.yaml",
+                        "show_key": "sport-1-show",
+                        "ttl_hours": 48,
+                        "headers": {
+                            "Authorization": "Bearer token123"
+                        }
+                    }
+                },
+                {
+                    "id": "sport-2",
+                    "name": "Second Sport",
+                    "pattern_sets": ["custom_set_2"],
+                    "variants": [
+                        {
+                            "id": "variant-2023",
+                            "year": 2023,
+                            "name": "2023 Season",
+                            "metadata": {
+                                "url": "https://example.com/sport2-2023.yaml",
+                                "ttl_hours": 24
+                            }
+                        },
+                        {
+                            "id_suffix": "-2024",
+                            "year": "2024",
+                            "name": "2024 Season",
+                            "metadata": {
+                                "url": "https://example.com/sport2-2024.yaml"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        report = validate_config_data(config)
+
+        assert report.is_valid is True
+        assert len(report.errors) == 0
+
+    def test_multiple_validation_types_combined(self):
+        """Test that both schema and semantic errors are collected together."""
+        config = {
+            "sports": [
+                {
+                    "id": "",
+                    "metadata": {"url": "  "}
+                },
+                {
+                    "id": "sport-2",
+                    "link_mode": "bad_mode"
+                }
+            ]
+        }
+        report = validate_config_data(config)
+
+        assert report.is_valid is False
+        assert len(report.errors) >= 2
+
+        has_schema_error = any(e.code == "schema" for e in report.errors)
+        has_semantic_error = any(e.code in ["metadata-url", "metadata-missing"] for e in report.errors)
+        assert has_schema_error or has_semantic_error
+
+    def test_error_collection_preserves_all_errors(self):
+        """Test that all errors are preserved and not truncated."""
+        config = {
+            "sports": [
+                {"id": f"sport-{i}", "metadata": {"url": ""}} for i in range(10)
+            ]
+        }
+        report = validate_config_data(config)
+
+        assert report.is_valid is False
+        assert len(report.errors) >= 10
+
+    def test_report_structure_with_errors(self):
+        """Test ValidationReport structure when errors are present."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "metadata": {"url": ""}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+
+        assert isinstance(report, ValidationReport)
+        assert isinstance(report.errors, list)
+        assert isinstance(report.warnings, list)
+        assert report.is_valid is False
+        assert len(report.errors) >= 1
+
+        for error in report.errors:
+            assert isinstance(error, ValidationIssue)
+            assert error.severity == "error"
+            assert isinstance(error.path, str)
+            assert isinstance(error.message, str)
+            assert isinstance(error.code, str)
+
+    def test_report_structure_with_no_errors(self):
+        """Test ValidationReport structure when config is valid."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+
+        assert isinstance(report, ValidationReport)
+        assert isinstance(report.errors, list)
+        assert isinstance(report.warnings, list)
+        assert report.is_valid is True
+        assert len(report.errors) == 0
+
+    def test_warnings_are_separate_from_errors(self):
+        """Test that warnings list exists separately from errors."""
+        config = {
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+
+        assert hasattr(report, "errors")
+        assert hasattr(report, "warnings")
+        assert report.errors is not report.warnings
+        assert isinstance(report.errors, list)
+        assert isinstance(report.warnings, list)
+
+    def test_config_with_sport_variants_only(self):
+        """Test config where sport only has variants, no direct metadata."""
+        config = {
+            "sports": [
+                {
+                    "id": "multi-variant-sport",
+                    "variants": [
+                        {
+                            "id": "variant-1",
+                            "metadata": {"url": "https://example.com/v1.yaml"}
+                        },
+                        {
+                            "id": "variant-2",
+                            "metadata": {"url": "https://example.com/v2.yaml"}
+                        }
+                    ]
+                }
+            ]
+        }
+        report = validate_config_data(config)
+
+        assert report.is_valid is True
+        assert len(report.errors) == 0
+
+    def test_config_with_custom_and_builtin_pattern_sets(self):
+        """Test config with both custom and potentially builtin pattern sets."""
+        config = {
+            "pattern_sets": {
+                "my_custom_patterns": [
+                    {"regex": r".*\.mkv"}
+                ]
+            },
+            "sports": [
+                {
+                    "id": "test-sport",
+                    "pattern_sets": ["my_custom_patterns"],
+                    "metadata": {"url": "https://example.com/test.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+
+        assert report.is_valid is True
+
+    def test_duplicate_ids_with_valid_schema(self):
+        """Test that duplicate IDs are caught even when schema is valid."""
+        config = {
+            "sports": [
+                {
+                    "id": "duplicate-id",
+                    "metadata": {"url": "https://example.com/1.yaml"}
+                },
+                {
+                    "id": "duplicate-id",
+                    "metadata": {"url": "https://example.com/2.yaml"}
+                }
+            ]
+        }
+        report = validate_config_data(config)
+
+        assert report.is_valid is False
+
+        duplicate_errors = [e for e in report.errors if e.code == "duplicate-id"]
+        assert len(duplicate_errors) >= 1
+        assert "duplicate-id" in duplicate_errors[0].message
