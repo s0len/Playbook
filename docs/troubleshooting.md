@@ -59,9 +59,39 @@ python -m playbook.cli kometa-trigger --config /config/playbook.yaml --mode dock
 
 ### Autoscan / Plex refreshes
 
-- 404 or SSL errors → confirm Autoscan URL is reachable from Playbook’s network namespace; set `verify_ssl: false` only for trusted lab setups.
-- Nothing happens after linking files → verify `rewrite` entries translate Playbook’s destination into what Autoscan/Plex can see (inside Docker, paths often differ).
-- Plex scans stale metadata → pair Autoscan with Kometa triggers; Plex rescans directories immediately while Kometa updates titles/artwork.
+- **404 errors** → Confirm Autoscan URL is reachable from Playbook's network namespace; check Docker network configuration and port mappings.
+- **SSL/TLS certificate errors** → See [Certificate Configuration](#certificate-configuration) below for proper solutions. **Do not disable SSL verification** unless you understand the security risks.
+- **Nothing happens after linking files** → Verify `rewrite` entries translate Playbook's destination into what Autoscan/Plex can see (inside Docker, paths often differ).
+- **Plex scans stale metadata** → Pair Autoscan with Kometa triggers; Plex rescans directories immediately while Kometa updates titles/artwork.
+
+#### Certificate Configuration
+
+If you encounter SSL/TLS certificate verification errors when connecting to Autoscan, **do not immediately disable verification**. Instead, use one of these proper solutions:
+
+1. **Use a CA-signed certificate** (recommended for production):
+   - Obtain a certificate from Let's Encrypt or another trusted Certificate Authority
+   - Configure your Autoscan server to use the CA-signed certificate
+   - No Playbook configuration changes needed—verification will work automatically
+
+2. **Add self-signed certificate to trust store** (for development/internal networks):
+   ```bash
+   # Copy your self-signed certificate into the container
+   docker cp autoscan-cert.crt playbook:/usr/local/share/ca-certificates/
+
+   # Update the certificate trust store
+   docker exec playbook update-ca-certificates
+
+   # Restart Playbook to pick up the new certificate
+   docker restart playbook
+   ```
+
+3. **Disable verification (⚠️ NOT RECOMMENDED):**
+   - **Only use this as a last resort in isolated development/testing environments**
+   - Setting `verify_ssl: false` exposes your system to **man-in-the-middle (MITM) attacks**
+   - **NEVER use this in production or on networks you don't fully control**
+   - See the [Autoscan integration docs](integrations.md#autoscan-hooks) for detailed security warnings
+
+The proper certificate configuration approach protects your system from MITM attacks while eliminating SSL errors. If you're still having issues after trying the above, review your certificate's Common Name (CN) or Subject Alternative Names (SAN) to ensure they match the hostname in your Autoscan URL.
 
 ### Autobrr / Downloader feeds
 
