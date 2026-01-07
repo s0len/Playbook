@@ -122,9 +122,10 @@ def parse_args(argv: tuple[str, ...] | None = None) -> argparse.Namespace:
         namespace.command = "run"
 
     # Validate run-specific argument conflicts
-    if namespace.command == "run":
-        if getattr(namespace, "watch", False) and getattr(namespace, "no_watch", False):
-            parser.error("--watch and --no-watch cannot be used together")
+    if (namespace.command == "run"
+            and getattr(namespace, "watch", False)
+            and getattr(namespace, "no_watch", False)):
+        parser.error("--watch and --no-watch cannot be used together")
 
     return namespace
 
@@ -633,7 +634,7 @@ def _print_sample_diff(sample_path: Path, target_path: Path) -> None:
 
     CONSOLE.print("\n[cyan]Unified diff against sample configuration:[/cyan]")
     for line in diff_lines:
-        style: Optional[str]
+        style: str | None
         if line.startswith("---") or line.startswith("+++"):
             style = "bold"
         elif line.startswith("@@"):
@@ -647,7 +648,7 @@ def _print_sample_diff(sample_path: Path, target_path: Path) -> None:
         CONSOLE.print(line, style=style)
 
 
-def main(argv: Optional[Tuple[str, ...]] = None) -> int:
+def main(argv: tuple[str, ...] | None = None) -> int:
     args = parse_args(argv)
 
     # Handle --examples flag for all commands
