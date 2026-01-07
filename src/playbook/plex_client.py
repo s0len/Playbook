@@ -446,6 +446,26 @@ class PlexClient:
         self._request("PUT", f"/library/metadata/{rating_key}", params=clean_params)
         return True
 
+    def unlock_field(self, rating_key: str, field: str) -> None:
+        """Unlock a metadata field to allow updates.
+
+        Args:
+            rating_key: The Plex rating key of the item.
+            field: Field name to unlock (e.g., 'thumb' for poster, 'title', etc.)
+        """
+        params = {f"{field}.locked": 0}
+        self._request("PUT", f"/library/metadata/{rating_key}", params=params)
+
+    def lock_field(self, rating_key: str, field: str) -> None:
+        """Lock a metadata field to prevent agent overwrites.
+
+        Args:
+            rating_key: The Plex rating key of the item.
+            field: Field name to lock (e.g., 'thumb' for poster, 'title', etc.)
+        """
+        params = {f"{field}.locked": 1}
+        self._request("PUT", f"/library/metadata/{rating_key}", params=params)
+
     def set_asset(self, rating_key: str, element: str, url: str) -> bool:
         """Set an artwork asset (poster/thumb, art/background) from a URL.
 
