@@ -199,3 +199,8 @@ def validate_url(url: str | None) -> bool:
         return parsed.scheme in ("http", "https") and bool(parsed.netloc)
     except Exception:  # noqa: BLE001 - defensive
         return False
+
+
+# Backwards-compatible aliases for renamed functions
+sha1_of_file = hash_file
+sha1_of_text = hash_text
