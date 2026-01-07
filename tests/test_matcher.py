@@ -601,6 +601,96 @@ class TestMatchFileWithDateProximity:
         assert episode.originally_available == dt.date(2024, 10, 15)
 
 
+def test_session_to_episode_resolution() -> None:
+    """Test that different session types (Race/Practice/Qualifying) from the same round map to the same episode.
+
+    This validates the critical behavior for racing content where:
+    - Metadata defines one episode per race weekend/round
+    - Filenames include session types (Practice/Qualifying/Race)
+    - All sessions from the same round must resolve to the same episode
+    """
+    # Create IndyCar pattern
+    pattern = PatternConfig(
+        regex=r"(?i)^IndyCar\.Series\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<location>[^.]+)\.(?P<session>Race|Practice|Qualifying)\..*\.mkv$",
+        season_selector=SeasonSelector(mode="round", group="round"),
+        episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
+        priority=10,
+    )
+
+    sport = SportConfig(
+        id="indycar",
+        name="IndyCar Series",
+        metadata=MetadataConfig(url="https://example.com"),
+        patterns=[pattern],
+        destination=DestinationTemplates(),
+    )
+
+    # Create show with one episode per round (not per session)
+    episode = Episode(
+        title="The Thermal Club IndyCar Grand Prix",
+        summary=None,
+        originally_available=dt.date(2025, 3, 23),
+        index=2,
+    )
+
+    season = Season(
+        key="2025",
+        title="2025 Season",
+        summary=None,
+        index=1,
+        episodes=[episode],
+        display_number=1,
+        round_number=2,
+    )
+
+    show = Show(key="indycar", title="NTT IndyCar Series", summary=None, seasons=[season])
+
+    patterns = compile_patterns(sport)
+
+    # Test that Practice session maps to episode
+    practice_result = match_file_to_episode(
+        "IndyCar.Series.2025.Round02.Thermal.Practice.STAN.WEB-DL.1080p.h264.English-MWR.mkv",
+        sport,
+        show,
+        patterns,
+    )
+
+    # Test that Qualifying session maps to same episode
+    qualifying_result = match_file_to_episode(
+        "IndyCar.Series.2025.Round02.Thermal.Qualifying.STAN.WEB-DL.1080p.h264.English-MWR.mkv",
+        sport,
+        show,
+        patterns,
+    )
+
+    # Test that Race session maps to same episode
+    race_result = match_file_to_episode(
+        "IndyCar.Series.2025.Round02.Thermal.Race.STAN.WEB-DL.1080p.h264.English-MWR.mkv",
+        sport,
+        show,
+        patterns,
+    )
+
+    # All three sessions should resolve to the same episode
+    assert practice_result is not None, "Practice session should resolve to episode"
+    assert qualifying_result is not None, "Qualifying session should resolve to episode"
+    assert race_result is not None, "Race session should resolve to episode"
+
+    # Verify all map to the same episode
+    assert practice_result["episode"] is episode
+    assert qualifying_result["episode"] is episode
+    assert race_result["episode"] is episode
+
+    # Verify all have correct season
+    assert practice_result["season"] is season
+    assert qualifying_result["season"] is season
+    assert race_result["season"] is season
+
+    # Verify episode details are correct
+    assert practice_result["episode"].title == "The Thermal Club IndyCar Grand Prix"
+    assert practice_result["episode"].index == 2
+
+
 def test_indycar_pattern_matching() -> None:
     """Test IndyCar pattern matching with round-based fallback and fuzzy location matching.
 
