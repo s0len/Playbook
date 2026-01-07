@@ -268,7 +268,7 @@ Start with `config/playbook.sample.yaml`. The schema mirrors `playbook.config` d
 |-------|-------------|---------|
 | `source_dir` | Root directory containing downloads to normalize. | `/data/source` |
 | `destination_dir` | Library root where organized folders/files are created. | `/data/destination` |
-| `cache_dir` | Metadata cache directory (`metadata/<sha1>.json`). Safe to delete to force refetch. | `/data/cache` |
+| `cache_dir` | Metadata cache directory (`metadata/<hash>.json`). Safe to delete to force refetch. | `/data/cache` |
 | `dry_run` | When `true`, logs intent but skips filesystem writes. | `false` |
 | `skip_existing` | Leave destination files untouched unless a higher-priority release arrives. | `true` |
 | `link_mode` | Default link behavior: `hardlink`, `copy`, or `symlink`. | `hardlink` |
