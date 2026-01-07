@@ -227,6 +227,23 @@ samples:
                 - "Washington Wizards at Boston Celtics"
                 - "Washington Wizards vs Boston Celtics"
                 - "Wizards vs Celtics"
+        - title: "Week 4"
+          display_number: 4
+          episodes: []
+        - title: "Week 5"
+          display_number: 5
+          episodes: []
+        - title: "Week 6"
+          display_number: 6
+          episodes: []
+        - title: "Week 7"
+          display_number: 7
+          episodes:
+            - title: "76ers at Bucks"
+              aliases:
+                - "Philadelphia 76ers at Milwaukee Bucks"
+                - "Philadelphia 76ers vs Milwaukee Bucks"
+                - "76ers vs Bucks"
     filenames:
       - value: "nba.2025.11.04.phoenix.suns.vs.golden.state.warriors.1080p.web.h264-gametime.mkv"
         expect_episode: "Suns at Warriors"
@@ -249,6 +266,9 @@ samples:
         expect_episode: "Wizards at Celtics"
       - value: "NBA RS 2025 Heat at Spurs 02 11 720pEN60fps FDSN.mkv"
         expect_episode: "Heat at Spurs"
+      # Issue #74 exact failing NBA filename
+      - value: "NBA RS 2025 Philadelphia 76ers vs Milwaukee Bucks 05 12 720pEN60fps FDSN.mkv"
+        expect_episode: "76ers at Bucks"
 
   - description: "NHL 2025-26 regular season samples"
     sport:
@@ -629,8 +649,8 @@ samples:
                 - "Broncos at Chiefs"
                 - "Broncos vs Chiefs"
     filenames:
-      # Primary failing filenames from Issue #74
-      - value: "NFL 2025 2026 Week 18 New Orleans Saints @ Atlanta Falcons 720p 60fps.mkv"
+      # Primary failing filenames from Issue #74 (exact filenames)
+      - value: "NFL 2025 2026 Week 18 New Orleans Saints @ Atlanta Falcons 720p 60fps MKV H 264 EN.mkv"
         expect_episode: "New Orleans Saints at Atlanta Falcons"
       - value: "NFL 2025 2026 Week 18 Dallas Cowboys @ New York Giants 04 01 1080pEN30fps.mkv"
         expect_episode: "Dallas Cowboys at New York Giants"
