@@ -238,6 +238,27 @@ def _select_season(show: Show, selector: SeasonSelector, match_groups: dict[str,
             return show.seasons[round_number - 1]
         return None
 
+    if mode == "week":
+        value = _resolve_selector_value(selector, match_groups, "week")
+        if value is None:
+            return None
+        try:
+            week_number = int(value)
+        except ValueError:
+            return None
+        week_number += selector.offset
+        # Match against display_number (most common for week-based seasons)
+        for season in show.seasons:
+            if season.display_number == week_number:
+                return season
+        # Fallback: match against "Week N" title pattern
+        week_title = f"Week {week_number}"
+        normalized_week = normalize_token(week_title)
+        for season in show.seasons:
+            if normalize_token(season.title) == normalized_week:
+                return season
+        return None
+
     if mode == "key":
         key = _resolve_selector_value(selector, match_groups, "season")
         if key is None:
