@@ -14,6 +14,7 @@ from playbook.config import (
 from playbook.matcher import (
     _build_team_alias_lookup,
     _dates_within_proximity,
+    _location_matches_title,
     _parse_date_from_groups,
     _score_structured_match,
     compile_patterns,
@@ -794,3 +795,61 @@ def test_indycar_pattern_matching() -> None:
     assert result3 is not None
     assert result3["episode"].title == "Streets of St. Petersburg Grand Prix"
     assert result3["episode"].index == 1
+
+
+def test_fuzzy_location_matching() -> None:
+    """Test fuzzy location matching for racing content where filenames have
+    abbreviated location names (e.g., "Thermal") and episode titles have full
+    location names (e.g., "The Thermal Club IndyCar Grand Prix").
+
+    This validates the _location_matches_title function which uses rapidfuzz
+    partial_ratio for fuzzy substring matching.
+    """
+
+    # Test exact substring match (case-sensitive)
+    assert _location_matches_title("Thermal", "The Thermal Club IndyCar Grand Prix") is True
+
+    # Test case-insensitive exact match
+    assert _location_matches_title("thermal", "The Thermal Club IndyCar Grand Prix") is True
+
+    # Test partial match with common racing locations
+    assert _location_matches_title("Indianapolis", "Indianapolis 500") is True
+    assert _location_matches_title("Indy", "Indianapolis 500") is True
+
+    # Test St. Petersburg variations
+    assert _location_matches_title("St.Petersburg", "Streets of St. Petersburg Grand Prix") is True
+    assert _location_matches_title("St Petersburg", "Streets of St. Petersburg Grand Prix") is True
+    assert _location_matches_title("Petersburg", "Streets of St. Petersburg Grand Prix") is True
+
+    # Test location with punctuation variations
+    assert _location_matches_title("St.Pete", "Streets of St. Petersburg Grand Prix") is True
+
+    # Test non-matching locations (should return False)
+    assert _location_matches_title("Miami", "Indianapolis 500") is False
+    assert _location_matches_title("Texas", "The Thermal Club IndyCar Grand Prix") is False
+
+    # Test empty/None inputs
+    assert _location_matches_title("", "Indianapolis 500") is False
+    assert _location_matches_title("Indianapolis", "") is False
+    assert _location_matches_title("", "") is False
+
+    # Test threshold behavior - very different strings should not match
+    assert _location_matches_title("xyz", "Indianapolis 500") is False
+    assert _location_matches_title("abc", "The Thermal Club IndyCar Grand Prix") is False
+
+    # Test multi-word locations
+    assert _location_matches_title("Long Beach", "Acura Grand Prix of Long Beach") is True
+    assert _location_matches_title("Road America", "Road America 250") is True
+
+    # Test abbreviated vs full location names
+    assert _location_matches_title("Barber", "Honda Indy Grand Prix of Alabama at Barber Motorsports Park") is True
+    assert _location_matches_title("Alabama", "Honda Indy Grand Prix of Alabama at Barber Motorsports Park") is True
+
+    # Test with default threshold (80.0) - close matches should work
+    assert _location_matches_title("Laguna Seca", "WeatherTech Raceway Laguna Seca") is True
+
+    # Test custom threshold
+    # Very strict threshold (99.0) - only exact substring should match
+    assert _location_matches_title("Thermal", "The Thermal Club IndyCar Grand Prix", threshold=99.0) is True
+    # Looser threshold should allow more fuzzy matches
+    assert _location_matches_title("Therm", "The Thermal Club IndyCar Grand Prix", threshold=70.0) is True
