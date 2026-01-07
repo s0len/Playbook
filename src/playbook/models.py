@@ -69,7 +69,7 @@ class ProcessingStats:
     ignored_by_sport: dict[str, int] = field(default_factory=dict)
     processed_by_sport: dict[str, int] = field(default_factory=dict)
 
-    def register_processed(self, *, sport_id: Optional[str] = None) -> None:
+    def register_processed(self, *, sport_id: str | None = None) -> None:
         self.processed += 1
         if sport_id:
             self.processed_by_sport[sport_id] = self.processed_by_sport.get(sport_id, 0) + 1

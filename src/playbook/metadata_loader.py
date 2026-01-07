@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING
 
 from .logging_utils import render_fields_block
 from .matcher import compile_patterns
@@ -26,6 +26,7 @@ from .metadata import (
 if TYPE_CHECKING:
     from .cache import MetadataHttpCache
     from .config import AppSettings, SportConfig
+    from .matcher import PatternRuntime
     from .models import Show
 
 LOGGER = logging.getLogger(__name__)
@@ -38,10 +39,11 @@ class SportRuntime:
     Holds the sport configuration, show metadata, compiled pattern matchers,
     and set of valid file extensions for this sport.
     """
+
     sport: SportConfig
     show: Show
-    patterns: List[PatternRuntime]
-    extensions: Set[str]
+    patterns: list[PatternRuntime]
+    extensions: set[str]
 
 
 @dataclass
@@ -51,14 +53,15 @@ class MetadataLoadResult:
     Contains the loaded sport runtimes, metadata change tracking information,
     and fetch statistics for cache performance monitoring.
     """
-    runtimes: List[SportRuntime]
-    changed_sports: List[Tuple[str, str]]  # List of (sport_id, sport_name)
-    change_map: Dict[str, MetadataChangeResult]
+
+    runtimes: list[SportRuntime]
+    changed_sports: list[tuple[str, str]]  # List of (sport_id, sport_name)
+    change_map: dict[str, MetadataChangeResult]
     fetch_stats: MetadataFetchStatistics
 
 
 def load_sports(
-    sports: List[SportConfig],
+    sports: list[SportConfig],
     settings: AppSettings,
     metadata_http_cache: MetadataHttpCache,
     metadata_fingerprints: MetadataFingerprintStore,
@@ -87,9 +90,9 @@ def load_sports(
         Sports that fail to load are logged and skipped. The result will only
         contain successfully loaded sports.
     """
-    runtimes: List[SportRuntime] = []
-    changed_sports: List[Tuple[str, str]] = []
-    change_map: Dict[str, MetadataChangeResult] = {}
+    runtimes: list[SportRuntime] = []
+    changed_sports: list[tuple[str, str]] = []
+    change_map: dict[str, MetadataChangeResult] = {}
     fetch_stats = MetadataFetchStatistics()
 
     # Log disabled sports
@@ -108,7 +111,7 @@ def load_sports(
         )
 
     # Load metadata in parallel
-    shows: Dict[str, Show] = {}
+    shows: dict[str, Show] = {}
     max_workers = min(8, max(1, len(enabled_sports)))
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:

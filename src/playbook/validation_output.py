@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from rich.console import Console, Group, RenderableType
 from rich.panel import Panel
@@ -24,9 +24,9 @@ class ValidationFormatter:
 
     def __init__(
         self,
-        console: Optional[Console] = None,
+        console: Console | None = None,
         show_suggestions: bool = True,
-        config_data: Optional[Dict[str, Any]] = None,
+        config_data: dict[str, Any] | None = None,
     ):
         """Initialize the ValidationFormatter.
 
@@ -71,7 +71,7 @@ class ValidationFormatter:
 
     def _format_issues(
         self,
-        issues: List[ValidationIssue],
+        issues: list[ValidationIssue],
         severity: str,
         header_text: str,
         header_style: str,
@@ -98,7 +98,7 @@ class ValidationFormatter:
     def _format_section(
         self,
         root_section: str,
-        sub_sections: Dict[str, List[ValidationIssue]],
+        sub_sections: dict[str, list[ValidationIssue]],
         severity: str,
     ) -> None:
         """Format and display a single section with its sub-sections.
@@ -112,7 +112,7 @@ class ValidationFormatter:
         section_display = get_section_display_name(root_section, self.config_data)
 
         # Create renderables for all sub-sections
-        renderables: List[RenderableType] = []
+        renderables: list[RenderableType] = []
 
         for sub_section, section_issues in sub_sections.items():
             # Get display name for sub-section
@@ -143,7 +143,7 @@ class ValidationFormatter:
 
     def _create_issues_table(
         self,
-        issues: List[ValidationIssue],
+        issues: list[ValidationIssue],
         severity: str,
     ) -> Table:
         """Create a Rich table for a list of validation issues.

@@ -100,14 +100,19 @@ select = [
 "*.py" = ["TCH"]  # Don't enforce TYPE_CHECKING in root scripts
 # Allow long lines in error messages and log strings, and specific style patterns
 "src/playbook/cli.py" = ["SIM105"]
+"src/playbook/command_help.py" = ["E501"]  # Docker command examples in help text
 "src/playbook/config.py" = ["E501"]
+"src/playbook/help_formatter.py" = ["E501"]  # Help message formatting
 "src/playbook/kometa_trigger.py" = ["E501"]
 "src/playbook/logging_utils.py" = ["UP007"]
+"src/playbook/match_handler.py" = ["SIM102"]  # Complex conditional logic
 "src/playbook/matcher.py" = ["E402", "B905", "C413", "SIM102"]  # Delayed imports + style patterns
 "src/playbook/metadata.py" = ["SIM105", "SIM108"]
-"src/playbook/notifications.py" = ["E501", "SIM105"]
+"src/playbook/notifications/**/*.py" = ["E501", "SIM105"]  # Notification modules
 "src/playbook/plex_metadata_sync.py" = ["E501"]
 "src/playbook/processor.py" = ["E501", "SIM102", "SIM108"]
+"src/playbook/run_summary.py" = ["E501", "SIM108"]  # Regex patterns and error formatting
+"src/playbook/summary_table.py" = ["E501", "SIM108"]  # Log format strings
 "src/playbook/utils.py" = ["UP031"]
 "src/playbook/watcher.py" = ["SIM102"]
 

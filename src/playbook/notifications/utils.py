@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from requests import Response
 
@@ -10,14 +10,14 @@ from .types import NotificationEvent
 LOGGER = logging.getLogger(__name__)
 
 
-def _normalize_mentions_map(value: Any) -> Dict[str, str]:
+def _normalize_mentions_map(value: Any) -> dict[str, str]:
     """Normalize a raw mentions configuration into a dictionary of string-to-string mappings."""
     if not value:
         return {}
     if not isinstance(value, dict):
         LOGGER.warning("Ignoring discord target mentions because value is not a mapping")
         return {}
-    mentions: Dict[str, str] = {}
+    mentions: dict[str, str] = {}
     for key, raw_value in value.items():
         if raw_value is None:
             continue
@@ -31,7 +31,7 @@ def _normalize_mentions_map(value: Any) -> Dict[str, str]:
     return mentions
 
 
-def _flatten_event(event: NotificationEvent) -> Dict[str, Any]:
+def _flatten_event(event: NotificationEvent) -> dict[str, Any]:
     """Convert a NotificationEvent into a flat dictionary for templating."""
     data = {
         "sport_id": event.sport_id,
@@ -55,7 +55,7 @@ def _flatten_event(event: NotificationEvent) -> Dict[str, Any]:
     return data
 
 
-def _render_template(template: Any, data: Dict[str, Any]) -> Any:
+def _render_template(template: Any, data: dict[str, Any]) -> Any:
     """Recursively render template structures by formatting strings with the provided data."""
     if isinstance(template, dict):
         return {key: _render_template(value, data) for key, value in template.items()}

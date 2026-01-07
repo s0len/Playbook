@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .templating import render_template
 from .utils import sanitize_component, slugify
@@ -26,9 +26,9 @@ def build_match_context(
     source_path: Path,
     season: Season,
     episode: Episode,
-    groups: Dict[str, Any],
+    groups: dict[str, Any],
     source_dir: Path,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Build template context from match information.
 
     Args:
@@ -45,7 +45,7 @@ def build_match_context(
     show = runtime.show
     sport = runtime.sport
 
-    context: Dict[str, Any] = {}
+    context: dict[str, Any] = {}
     context.update(groups)
 
     context.update(
@@ -70,9 +70,7 @@ def build_match_context(
             "episode_originally_available": (
                 episode.originally_available.isoformat() if episode.originally_available else ""
             ),
-            "originally_available": (
-                episode.originally_available.isoformat() if episode.originally_available else ""
-            ),
+            "originally_available": (episode.originally_available.isoformat() if episode.originally_available else ""),
             "extension": source_path.suffix.lstrip("."),
             "suffix": source_path.suffix,
             "source_filename": source_path.name,
@@ -91,7 +89,7 @@ def build_match_context(
 def build_destination(
     runtime: SportRuntime,
     pattern: PatternRuntime,
-    context: Dict[str, Any],
+    context: dict[str, Any],
     settings: Settings,
 ) -> Path:
     """Build destination path from context using templates.
@@ -131,19 +129,12 @@ def build_destination(
     episode_filename = render_template(episode_template, context)
     episode_component = sanitize_component(episode_filename)
 
-    destination = (
-        settings.destination_dir
-        / root_component
-        / season_component
-        / episode_component
-    )
+    destination = settings.destination_dir / root_component / season_component / episode_component
 
     base_dir = settings.destination_dir.resolve()
     destination_resolved = destination.resolve(strict=False)
     if not destination_resolved.is_relative_to(base_dir):
-        raise ValueError(
-            f"destination {destination_resolved} escapes destination_dir {base_dir}"
-        )
+        raise ValueError(f"destination {destination_resolved} escapes destination_dir {base_dir}")
 
     return destination
 

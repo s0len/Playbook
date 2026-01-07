@@ -4,7 +4,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..config import NotificationSettings
 from .autoscan import AutoscanTarget
@@ -37,7 +37,7 @@ class NotificationService:
             destination_dir,
         )
         self._throttle_map = settings.throttle
-        self._last_sent: Dict[str, datetime] = {}
+        self._last_sent: dict[str, datetime] = {}
 
     @property
     def enabled(self) -> bool:
@@ -67,7 +67,7 @@ class NotificationService:
                 )
                 return
 
-        successes: List[str] = []
+        successes: list[str] = []
         for target in self._targets:
             if not target.enabled():
                 continue
@@ -96,11 +96,11 @@ class NotificationService:
 
     def _build_targets(
         self,
-        targets_raw: List[Dict[str, Any]],
+        targets_raw: list[dict[str, Any]],
         cache_dir: Path,
         destination_dir: Path,
-    ) -> List[NotificationTarget]:
-        targets: List[NotificationTarget] = []
+    ) -> list[NotificationTarget]:
+        targets: list[NotificationTarget] = []
         configs = list(targets_raw)
 
         for entry in configs:
@@ -153,7 +153,7 @@ class NotificationService:
 
         return [target for target in targets if target.enabled()]
 
-    def _discord_webhook_from(self, entry: Dict[str, Any]) -> Optional[str]:
+    def _discord_webhook_from(self, entry: dict[str, Any]) -> str | None:
         webhook = entry.get("webhook_url")
         if isinstance(webhook, str):
             webhook = webhook.strip()
@@ -164,7 +164,7 @@ class NotificationService:
         if env_name is None:
             return None
 
-        value: Optional[str] = None
+        value: str | None = None
         env_key = str(env_name).strip()
         if env_key:
             raw_value = os.environ.get(env_key)

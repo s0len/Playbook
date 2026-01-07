@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 import requests
 from requests.exceptions import RequestException
@@ -16,7 +15,7 @@ class SlackTarget(NotificationTarget):
 
     name = "slack"
 
-    def __init__(self, webhook_url: Optional[str], template: Optional[str] = None) -> None:
+    def __init__(self, webhook_url: str | None, template: str | None = None) -> None:
         self.webhook_url = webhook_url.strip() if isinstance(webhook_url, str) else None
         self.template = template
 
@@ -51,9 +50,9 @@ class SlackTarget(NotificationTarget):
             )
         base = f"{event.sport_name}: {event.episode} ({event.session})"
         if event.action == "error":
-            return f":warning: Failed {base}{' - '+event.skip_reason if event.skip_reason else ''}"
+            return f":warning: Failed {base}{' - ' + event.skip_reason if event.skip_reason else ''}"
         if event.action == "skipped":
-            return f":information_source: Skipped {base}{' - '+event.skip_reason if event.skip_reason else ''}"
+            return f":information_source: Skipped {base}{' - ' + event.skip_reason if event.skip_reason else ''}"
         if event.action == "dry-run":
             return f":grey_question: [Dry-Run] {base} via {event.link_mode}"
         replaced = " (replaced)" if event.replaced else ""

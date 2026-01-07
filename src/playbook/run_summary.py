@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import re
 from collections import Counter
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .models import ProcessingStats
@@ -31,13 +31,7 @@ def has_activity(stats: ProcessingStats) -> bool:
     Returns:
         True if there was any processing activity (processed, skipped, ignored, errors, or warnings).
     """
-    return bool(
-        stats.processed
-        or stats.skipped
-        or stats.ignored
-        or stats.errors
-        or stats.warnings
-    )
+    return bool(stats.processed or stats.skipped or stats.ignored or stats.errors or stats.warnings)
 
 
 def has_detailed_activity(stats: ProcessingStats) -> bool:
@@ -49,15 +43,10 @@ def has_detailed_activity(stats: ProcessingStats) -> bool:
     Returns:
         True if there are errors, warnings, or detailed skip/ignore information.
     """
-    return bool(
-        stats.errors
-        or stats.warnings
-        or stats.skipped_details
-        or stats.ignored_details
-    )
+    return bool(stats.errors or stats.warnings or stats.skipped_details or stats.ignored_details)
 
 
-def filtered_ignored_details(stats: ProcessingStats) -> List[str]:
+def filtered_ignored_details(stats: ProcessingStats) -> list[str]:
     """Filter ignored details to suppress common non-actionable messages.
 
     Args:
@@ -66,7 +55,7 @@ def filtered_ignored_details(stats: ProcessingStats) -> List[str]:
     Returns:
         Filtered list of ignored details with suppression counts added.
     """
-    filtered: List[str] = []
+    filtered: list[str] = []
     suppressed_non_video = 0
     for detail in stats.ignored_details:
         if "No configured sport accepts extension" in detail:
@@ -82,7 +71,7 @@ def filtered_ignored_details(stats: ProcessingStats) -> List[str]:
     return filtered
 
 
-def summarize_counts(counts: Dict[str, int], total: int, label: str) -> List[str]:
+def summarize_counts(counts: dict[str, int], total: int, label: str) -> list[str]:
     """Summarize counts by sport/category with verbose prompt.
 
     Args:
@@ -95,7 +84,7 @@ def summarize_counts(counts: Dict[str, int], total: int, label: str) -> List[str
     """
     if total <= 0:
         return []
-    lines: List[str] = []
+    lines: list[str] = []
     if counts:
         ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
         for sport, value in ordered:
@@ -109,7 +98,7 @@ def summarize_counts(counts: Dict[str, int], total: int, label: str) -> List[str
     return lines
 
 
-def summarize_messages(entries: List[str], *, limit: int = 5) -> List[str]:
+def summarize_messages(entries: list[str], *, limit: int = 5) -> list[str]:
     """Summarize messages by grouping duplicates and showing top N.
 
     Args:
@@ -123,7 +112,7 @@ def summarize_messages(entries: List[str], *, limit: int = 5) -> List[str]:
         return []
     counter = Counter(entries)
     ordered = sorted(counter.items(), key=lambda item: (-item[1], item[0]))
-    lines: List[str] = []
+    lines: list[str] = []
     for text, count in ordered[:limit]:
         prefix = f"{count}× " if count > 1 else ""
         lines.append(f"{prefix}{text}")
@@ -135,7 +124,7 @@ def summarize_messages(entries: List[str], *, limit: int = 5) -> List[str]:
     return lines
 
 
-def summarize_plex_errors(errors: List[str], *, limit: int = 10) -> List[str]:
+def summarize_plex_errors(errors: list[str], *, limit: int = 10) -> list[str]:
     """Summarize Plex sync errors, grouping by error type.
 
     Extracts and displays library name, metadata source URL, and close matches
@@ -152,7 +141,7 @@ def summarize_plex_errors(errors: List[str], *, limit: int = 10) -> List[str]:
         return []
 
     # Group errors by type (first part before colon or first few words)
-    grouped: Dict[str, List[str]] = {}
+    grouped: dict[str, list[str]] = {}
     for error in errors:
         # Extract error category (e.g., "Show not found", "Season not found", etc.)
         if ":" in error:
@@ -162,7 +151,7 @@ def summarize_plex_errors(errors: List[str], *, limit: int = 10) -> List[str]:
             category = error[:30].strip()
         grouped.setdefault(category, []).append(error)
 
-    lines: List[str] = []
+    lines: list[str] = []
     shown = 0
     for category, errs in sorted(grouped.items(), key=lambda x: -len(x[1])):
         if shown >= limit:
@@ -197,7 +186,7 @@ def summarize_plex_errors(errors: List[str], *, limit: int = 10) -> List[str]:
     return lines
 
 
-def extract_error_context(error: str) -> Optional[str]:
+def extract_error_context(error: str) -> str | None:
     """Extract actionable context from Plex error strings.
 
     Parses error strings to extract library name, metadata source URL,
@@ -271,7 +260,7 @@ def extract_error_context(error: str) -> Optional[str]:
 def log_detailed_summary(
     stats: ProcessingStats,
     *,
-    plex_sync_stats: Optional[PlexSyncStats] = None,
+    plex_sync_stats: PlexSyncStats | None = None,
     level: int = logging.INFO,
 ) -> None:
     """Log detailed summary of processing results.
@@ -288,7 +277,7 @@ def log_detailed_summary(
     show_entries = LOGGER.isEnabledFor(logging.DEBUG)
     builder = LogBlockBuilder("Detailed Summary", pad_top=True)
 
-    fields: Dict[str, object] = {
+    fields: dict[str, object] = {
         "Processed": stats.processed,
         "Skipped": stats.skipped,
         "Ignored": stats.ignored,
@@ -340,10 +329,10 @@ def log_run_recap(
     stats: ProcessingStats,
     duration: float,
     *,
-    touched_destinations: List[str],
+    touched_destinations: list[str],
     plex_sync_enabled: bool,
     plex_sync_ran: bool = False,
-    plex_sync_stats: Optional[PlexSyncStats] = None,
+    plex_sync_stats: PlexSyncStats | None = None,
     plex_sync_dry_run: bool = False,
     global_dry_run: bool = False,
     kometa_enabled: bool = False,
@@ -370,7 +359,7 @@ def log_run_recap(
     destinations = sorted(touched_destinations)
     builder = LogBlockBuilder("Run Recap")
 
-    fields: Dict[str, object] = {
+    fields: dict[str, object] = {
         "Duration": f"{duration:.2f}s",
         "Processed": stats.processed,
         "Skipped": stats.skipped,
@@ -389,10 +378,7 @@ def log_run_recap(
                 f"{plex_summary['episodes']['updated']} (show/season/ep)"
             )
             # Show not-found counts if any
-            not_found = (
-                plex_summary["seasons"]["not_found"]
-                + plex_summary["episodes"]["not_found"]
-            )
+            not_found = plex_summary["seasons"]["not_found"] + plex_summary["episodes"]["not_found"]
             if not_found:
                 plex_status += f" [{not_found} not found]"
             if plex_sync_stats.errors:
@@ -423,13 +409,11 @@ def log_run_recap(
             summarize_plex_errors(plex_sync_stats.errors, limit=5),
         )
 
-    follow_ups: List[str] = []
+    follow_ups: list[str] = []
     if stats.errors:
         follow_ups.append("Resolve processing errors above before next run.")
     if plex_sync_stats and plex_sync_stats.errors:
-        follow_ups.append(
-            f"Check Plex library and metadata YAML for {len(plex_sync_stats.errors)} sync error(s)."
-        )
+        follow_ups.append(f"Check Plex library and metadata YAML for {len(plex_sync_stats.errors)} sync error(s).")
 
     if follow_ups:
         builder.add_section("Follow-Ups", follow_ups)

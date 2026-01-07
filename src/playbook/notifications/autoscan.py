@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -19,7 +19,7 @@ class AutoscanTarget(NotificationTarget):
 
     name = "autoscan"
 
-    def __init__(self, config: Dict[str, Any], *, destination_dir: Path) -> None:
+    def __init__(self, config: dict[str, Any], *, destination_dir: Path) -> None:
         self._destination_dir = destination_dir
         self._endpoint = self._build_endpoint(config.get("url"), config.get("trigger"))
         self._timeout = self._parse_timeout(config.get("timeout"))
@@ -37,7 +37,7 @@ class AutoscanTarget(NotificationTarget):
         self._rewrite_rules = self._build_rewrite_rules(config.get("rewrite"))
 
     @staticmethod
-    def _build_endpoint(url_value: Any, trigger_value: Any) -> Optional[str]:
+    def _build_endpoint(url_value: Any, trigger_value: Any) -> str | None:
         if not url_value:
             return None
         base = str(url_value).strip().rstrip("/")
@@ -57,7 +57,7 @@ class AutoscanTarget(NotificationTarget):
         return max(1.0, timeout)
 
     @staticmethod
-    def _build_rewrite_rules(value: Any) -> List[Tuple[str, str]]:
+    def _build_rewrite_rules(value: Any) -> list[tuple[str, str]]:
         if not value:
             return []
         entries = value
@@ -65,7 +65,7 @@ class AutoscanTarget(NotificationTarget):
             entries = [entries]
         if not isinstance(entries, list):
             return []
-        rules: List[Tuple[str, str]] = []
+        rules: list[tuple[str, str]] = []
         for entry in entries:
             if not isinstance(entry, dict):
                 continue
@@ -130,7 +130,7 @@ class AutoscanTarget(NotificationTarget):
                 directory,
             )
 
-    def _directory_for_event(self, event: NotificationEvent) -> Optional[str]:
+    def _directory_for_event(self, event: NotificationEvent) -> str | None:
         details = event.match_details or {}
         destination_raw = details.get("destination_path")
         if destination_raw:

@@ -5,7 +5,7 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import requests
 from requests import Response
@@ -26,17 +26,17 @@ class DiscordTarget(NotificationTarget):
 
     def __init__(
         self,
-        webhook_url: Optional[str],
+        webhook_url: str | None,
         *,
         cache_dir: Path,
         settings: NotificationSettings,
-        batch: Optional[bool] = None,
-        mentions: Optional[Dict[str, str]] = None,
+        batch: bool | None = None,
+        mentions: dict[str, str] | None = None,
     ) -> None:
         self.webhook_url = webhook_url.strip() if isinstance(webhook_url, str) else None
         self._settings = settings
         use_batch = batch if batch is not None else settings.batch_daily
-        self._batcher: Optional[NotificationBatcher]
+        self._batcher: NotificationBatcher | None
         if self.enabled() and use_batch:
             self._batcher = NotificationBatcher(cache_dir, settings)
         else:
@@ -68,8 +68,8 @@ class DiscordTarget(NotificationTarget):
         payload = self._build_single_payload(event, now)
         self._send_with_retries("POST", self.webhook_url, payload)
 
-    def _build_single_payload(self, event: NotificationEvent, now: datetime) -> Dict[str, Any]:
-        embed: Dict[str, Any] = {
+    def _build_single_payload(self, event: NotificationEvent, now: datetime) -> dict[str, Any]:
+        embed: dict[str, Any] = {
             "title": _trim(f"{event.show_title} – {event.session}", 256),
             "color": self._embed_color(event),
             "timestamp": now.isoformat(),
@@ -83,12 +83,12 @@ class DiscordTarget(NotificationTarget):
         content = self._apply_mention_prefix(content, event.sport_id, limit=2000)
         return {"content": content, "embeds": [embed]}
 
-    def _build_batch_payload(self, request: BatchRequest, now: datetime) -> Dict[str, Any]:
+    def _build_batch_payload(self, request: BatchRequest, now: datetime) -> dict[str, Any]:
         events = request.events
         total = len(events)
         visible_events = events[-20:]
 
-        lines: List[str] = []
+        lines: list[str] = []
         for item in visible_events:
             action = item.get("action", "link")
             indicator = self._event_indicator(item.get("event_type"))
@@ -96,7 +96,7 @@ class DiscordTarget(NotificationTarget):
             reason = f" [{item.get('skip_reason')}]" if item.get("skip_reason") else ""
             destination_label = self._destination_label(item.get("destination"))
             line = (
-                f"• {indicator+' ' if indicator else ''}{season_part}{item.get('episode')} "
+                f"• {indicator + ' ' if indicator else ''}{season_part}{item.get('episode')} "
                 f"({item.get('session')}) [{action}]"
                 f"{' — ' + destination_label if destination_label else ''}{reason}"
             )
@@ -125,7 +125,7 @@ class DiscordTarget(NotificationTarget):
         )
         fields.append(self._embed_field("Latest", latest_value, inline=False))
 
-        embed: Dict[str, Any] = {
+        embed: dict[str, Any] = {
             "title": _trim(f"{request.sport_name} – {request.bucket_date.isoformat()}", 256),
             "color": 0x5865F2,
             "timestamp": latest_timestamp,
@@ -157,7 +157,7 @@ class DiscordTarget(NotificationTarget):
             return f"{base} (replaced existing)"
         return base
 
-    def _fields_for_event(self, event: NotificationEvent) -> List[Optional[Dict[str, Any]]]:
+    def _fields_for_event(self, event: NotificationEvent) -> list[dict[str, Any] | None]:
         destination_label = self._destination_label(event.destination) or event.destination
         fields = [
             self._embed_field("Sport", event.sport_name, inline=True),
@@ -180,7 +180,7 @@ class DiscordTarget(NotificationTarget):
             return 0x95A5A6
         return 0x5865F2
 
-    def _send_with_retries(self, method: str, url: str, payload: Dict[str, Any]) -> Optional[Response]:
+    def _send_with_retries(self, method: str, url: str, payload: dict[str, Any]) -> Response | None:
         attempt = 0
         max_attempts = 5
         backoff = 1.0
@@ -218,12 +218,12 @@ class DiscordTarget(NotificationTarget):
         LOGGER.error("Discord notification failed after %d attempts due to rate limiting.", max_attempts)
         return None
 
-    def _message_url(self, message_id: Optional[str]) -> str:
+    def _message_url(self, message_id: str | None) -> str:
         if not message_id:
             return self.webhook_url
         return f"{self.webhook_url}/messages/{message_id}"
 
-    def _embed_field(self, name: str, value: Optional[str], *, inline: bool) -> Optional[Dict[str, Any]]:
+    def _embed_field(self, name: str, value: str | None, *, inline: bool) -> dict[str, Any] | None:
         if value is None:
             return None
         text = _trim(str(value), 1024)
@@ -231,7 +231,7 @@ class DiscordTarget(NotificationTarget):
             return None
         return {"name": _trim(name, 256), "value": text, "inline": inline}
 
-    def _mention_for_sport(self, sport_id: Optional[str]) -> Optional[str]:
+    def _mention_for_sport(self, sport_id: str | None) -> str | None:
         base_mentions = getattr(self._settings, "mentions", {}) or {}
         mentions = dict(base_mentions)
         if self._mentions_override:
@@ -265,7 +265,7 @@ class DiscordTarget(NotificationTarget):
 
         return mentions.get("default")
 
-    def _apply_mention_prefix(self, text: str, sport_id: Optional[str], *, limit: int) -> str:
+    def _apply_mention_prefix(self, text: str, sport_id: str | None, *, limit: int) -> str:
         mention = self._mention_for_sport(sport_id)
         if not mention:
             return text
@@ -278,15 +278,15 @@ class DiscordTarget(NotificationTarget):
         return any(char in value for char in "*?[")
 
     @staticmethod
-    def _sport_prefixes(sport_id: str) -> List[str]:
+    def _sport_prefixes(sport_id: str) -> list[str]:
         parts = sport_id.split("_")
-        prefixes: List[str] = []
+        prefixes: list[str] = []
         for end in range(len(parts) - 1, 0, -1):
             prefixes.append("_".join(parts[:end]))
         return prefixes
 
     @staticmethod
-    def _event_indicator(event_type: Optional[str]) -> str:
+    def _event_indicator(event_type: str | None) -> str:
         mapping = {
             "new": "[NEW]",
             "changed": "[UPDATED]",
@@ -297,7 +297,7 @@ class DiscordTarget(NotificationTarget):
         return mapping.get(str(event_type).lower(), "")
 
     @staticmethod
-    def _destination_label(value: Optional[str]) -> str:
+    def _destination_label(value: str | None) -> str:
         if not value:
             return ""
         path = Path(value)
@@ -305,7 +305,7 @@ class DiscordTarget(NotificationTarget):
         return label
 
     @staticmethod
-    def _extract_message_id(response: Response) -> Optional[str]:
+    def _extract_message_id(response: Response) -> str | None:
         try:
             payload = response.json()
         except ValueError:

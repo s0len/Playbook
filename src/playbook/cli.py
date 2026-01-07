@@ -122,9 +122,7 @@ def parse_args(argv: tuple[str, ...] | None = None) -> argparse.Namespace:
         namespace.command = "run"
 
     # Validate run-specific argument conflicts
-    if (namespace.command == "run"
-            and getattr(namespace, "watch", False)
-            and getattr(namespace, "no_watch", False)):
+    if namespace.command == "run" and getattr(namespace, "watch", False) and getattr(namespace, "no_watch", False):
         parser.error("--watch and --no-watch cannot be used together")
 
     return namespace
@@ -385,7 +383,6 @@ def apply_runtime_overrides(config: AppConfig, args: argparse.Namespace) -> None
     config.settings.file_watcher.enabled = bool(watch_enabled)
 
 
-
 def _execute_run(args: argparse.Namespace) -> int:
     env_verbose = _env_bool("VERBOSE")
     verbose = args.verbose
@@ -410,7 +407,7 @@ def _execute_run(args: argparse.Namespace) -> int:
     log_level_env = os.getenv("LOG_LEVEL")
     console_level_env = os.getenv("CONSOLE_LEVEL")
 
-    resolved_log_level = (args.log_level or log_level_env or ("DEBUG" if verbose else "INFO"))
+    resolved_log_level = args.log_level or log_level_env or ("DEBUG" if verbose else "INFO")
     resolved_console_level: str | None
     if args.console_level:
         resolved_console_level = args.console_level
@@ -525,9 +522,7 @@ def run_kometa_trigger(args: argparse.Namespace) -> int:
         trigger_settings.enabled = True
 
     if not trigger_settings.enabled:
-        LOGGER.error(
-            "Kometa trigger is disabled in the configuration. Enable it or supply --mode to force a trigger."
-        )
+        LOGGER.error("Kometa trigger is disabled in the configuration. Enable it or supply --mode to force a trigger.")
         return 1
 
     trigger = build_kometa_trigger(trigger_settings)

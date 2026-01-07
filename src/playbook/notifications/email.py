@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import smtplib
 from email.message import EmailMessage
-from typing import Any, Dict
+from typing import Any
 
 from .types import NotificationEvent, NotificationTarget
 from .utils import _flatten_event
@@ -16,7 +16,7 @@ class EmailTarget(NotificationTarget):
 
     name = "email"
 
-    def __init__(self, config: Dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any]) -> None:
         smtp_config = config.get("smtp") or {}
         self.host = smtp_config.get("host")
         self.port = int(smtp_config.get("port", 587))

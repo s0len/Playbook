@@ -11,7 +11,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .logging_utils import render_fields_block
 from .utils import ensure_directory, hash_text
@@ -27,15 +27,16 @@ class TraceOptions:
         enabled: Whether trace persistence is enabled.
         output_dir: Directory to write trace files. Defaults to cache_dir/traces if None.
     """
+
     enabled: bool = False
-    output_dir: Optional[Path] = None
+    output_dir: Path | None = None
 
 
 def persist_trace(
-    trace: Optional[Dict[str, Any]],
+    trace: dict[str, Any] | None,
     trace_options: TraceOptions,
     cache_dir: Path,
-) -> Optional[Path]:
+) -> Path | None:
     """Persist a debug trace to disk for pattern matching diagnostics.
 
     Args:

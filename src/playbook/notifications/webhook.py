@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
 from requests.exceptions import RequestException
@@ -19,11 +19,11 @@ class GenericWebhookTarget(NotificationTarget):
 
     def __init__(
         self,
-        url: Optional[str],
+        url: str | None,
         *,
         method: str = "POST",
-        headers: Optional[Dict[str, str]] = None,
-        template: Optional[Any] = None,
+        headers: dict[str, str] | None = None,
+        template: Any | None = None,
     ) -> None:
         self.url = url.strip() if isinstance(url, str) else None
         self.method = method.upper()

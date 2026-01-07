@@ -2,36 +2,37 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
+from typing import Any
 
 from rich.progress import Progress
 
 from .cache import CachedFileRecord, MetadataHttpCache, ProcessedFileCache
-from .config import AppConfig, SportConfig
+from .config import AppConfig
+from .destination_builder import build_destination, build_match_context, format_relative_destination
+from .file_discovery import gather_source_files, matches_globs, should_suppress_sample_ignored
 from .kometa_trigger import build_kometa_trigger
-from .logging_utils import LogBlockBuilder, render_fields_block
-from .matcher import PatternRuntime, match_file_to_episode
+from .logging_utils import render_fields_block
+from .match_handler import handle_match
+from .matcher import match_file_to_episode
 from .metadata import (
     MetadataChangeResult,
     MetadataFetchStatistics,
     MetadataFingerprintStore,
 )
-from .metadata_loader import MetadataLoadResult, SportRuntime, load_sports
+from .metadata_loader import SportRuntime, load_sports
 from .models import ProcessingStats, SportFileMatch
 from .notifications import NotificationEvent, NotificationService
 from .plex_metadata_sync import PlexMetadataSync, PlexSyncStats, create_plex_sync_from_config
+from .post_run_triggers import run_plex_sync_if_needed, trigger_kometa_if_needed
 from .run_summary import (
     has_activity,
     has_detailed_activity,
     log_detailed_summary,
     log_run_recap,
 )
-from .file_discovery import gather_source_files, matches_globs, should_suppress_sample_ignored
-from .match_handler import handle_match
-from .destination_builder import build_destination, build_match_context, format_relative_destination
 from .trace_writer import TraceOptions, persist_trace
-from .post_run_triggers import run_plex_sync_if_needed, trigger_kometa_if_needed
 from .utils import ensure_directory
 
 LOGGER = logging.getLogger(__name__)
@@ -43,7 +44,7 @@ class Processor:
         config: AppConfig,
         *,
         enable_notifications: bool = True,
-        trace_options: Optional[TraceOptions] = None,
+        trace_options: TraceOptions | None = None,
     ) -> None:
         self.config = config
         if not self.config.settings.dry_run:
@@ -63,27 +64,27 @@ class Processor:
         self._kometa_trigger = build_kometa_trigger(settings.kometa_trigger)
         self._kometa_trigger_fired = False
         self._kometa_trigger_needed = False
-        self._plex_sync: Optional[PlexMetadataSync] = create_plex_sync_from_config(config)
-        self._plex_sync_stats: Optional[PlexSyncStats] = None
+        self._plex_sync: PlexMetadataSync | None = create_plex_sync_from_config(config)
+        self._plex_sync_stats: PlexSyncStats | None = None
         self._plex_sync_ran = False
-        self._previous_summary: Optional[Tuple[int, int, int]] = None
-        self._metadata_changed_sports: List[Tuple[str, str]] = []
-        self._metadata_change_map: Dict[str, MetadataChangeResult] = {}
-        self._stale_destinations: Dict[str, Path] = {}
-        self._stale_records: Dict[str, CachedFileRecord] = {}
+        self._previous_summary: tuple[int, int, int] | None = None
+        self._metadata_changed_sports: list[tuple[str, str]] = []
+        self._metadata_change_map: dict[str, MetadataChangeResult] = {}
+        self._stale_destinations: dict[str, Path] = {}
+        self._stale_records: dict[str, CachedFileRecord] = {}
         self._metadata_fetch_stats = MetadataFetchStatistics()
-        self._touched_destinations: Set[str] = set()
-        self._sports_with_processed_files: Set[str] = set()
+        self._touched_destinations: set[str] = set()
+        self._sports_with_processed_files: set[str] = set()
 
     @staticmethod
-    def _format_log(event: str, fields: Optional[Mapping[str, object]] = None) -> str:
+    def _format_log(event: str, fields: Mapping[str, object] | None = None) -> str:
         return render_fields_block(event, fields or {}, pad_top=True)
 
     @staticmethod
-    def _format_inline_log(event: str, fields: Optional[Mapping[str, object]] = None) -> str:
+    def _format_inline_log(event: str, fields: Mapping[str, object] | None = None) -> str:
         return render_fields_block(event, fields or {}, pad_top=False)
 
-    def _load_sports(self) -> List[SportRuntime]:
+    def _load_sports(self) -> list[SportRuntime]:
         """Load sports metadata in parallel and track changes.
 
         Delegates to metadata_loader.load_sports() and unpacks results into
@@ -141,9 +142,7 @@ class Processor:
             )
             removed_records = self.processed_cache.remove_by_metadata_changes(self._metadata_change_map)
             self._stale_destinations = {
-                source: Path(record.destination)
-                for source, record in removed_records.items()
-                if record.destination
+                source: Path(record.destination) for source, record in removed_records.items() if record.destination
             }
             self._stale_records = removed_records
         stats = ProcessingStats()
@@ -153,7 +152,7 @@ class Processor:
 
         try:
             all_source_files = list(self._gather_source_files(stats))
-            filtered_source_files: List[Path] = []
+            filtered_source_files: list[Path] = []
             skipped_by_cache = 0
             for source_path in all_source_files:
                 if self.processed_cache.is_processed(source_path):
@@ -240,7 +239,7 @@ class Processor:
                 self.processed_cache.save()
                 self.metadata_fingerprints.save()
 
-    def _gather_source_files(self, stats: Optional[ProcessingStats] = None) -> Iterable[Path]:
+    def _gather_source_files(self, stats: ProcessingStats | None = None) -> Iterable[Path]:
         """Discover and yield source files for processing.
 
         Delegates to file_discovery.gather_source_files().
@@ -250,14 +249,14 @@ class Processor:
     def _process_single_file(
         self,
         source_path: Path,
-        runtimes: List[SportRuntime],
+        runtimes: list[SportRuntime],
         stats: ProcessingStats,
         *,
         is_sample_file: bool = False,
-    ) -> Tuple[bool, List[Tuple[str, str, Optional[str]]]]:
+    ) -> tuple[bool, list[tuple[str, str, str | None]]]:
         suffix = source_path.suffix.lower()
         matching_runtimes = [runtime for runtime in runtimes if suffix in runtime.extensions]
-        ignored_reasons: List[Tuple[str, str, Optional[str]]] = []
+        ignored_reasons: list[tuple[str, str, str | None]] = []
 
         if not matching_runtimes:
             message = f"No configured sport accepts extension '{suffix or '<no extension>'}'"
@@ -274,7 +273,7 @@ class Processor:
             return False, ignored_reasons
 
         for runtime in matching_runtimes:
-            trace_context: Optional[Dict[str, Any]] = None
+            trace_context: dict[str, Any] | None = None
             if self.trace_options.enabled:
                 trace_context = {
                     "filename": str(source_path),
@@ -307,7 +306,7 @@ class Processor:
                     self._persist_trace(trace_context)
                 continue
 
-            detection_messages: List[Tuple[str, str]] = []
+            detection_messages: list[tuple[str, str]] = []
             detection = match_file_to_episode(
                 source_path.name,
                 runtime.sport,
@@ -331,9 +330,7 @@ class Processor:
                 try:
                     destination = self._build_destination(runtime, pattern, context)
                 except ValueError as exc:
-                    message = (
-                        f"{runtime.sport.id}: Unsafe destination for {source_path.name} - {exc}"
-                    )
+                    message = f"{runtime.sport.id}: Unsafe destination for {source_path.name} - {exc}"
                     LOGGER.error(
                         self._format_log(
                             "Unsafe Destination",
@@ -413,19 +410,19 @@ class Processor:
 
         return False, ignored_reasons
 
-    def _persist_trace(self, trace: Optional[Dict[str, Any]]) -> Optional[Path]:
+    def _persist_trace(self, trace: dict[str, Any] | None) -> Path | None:
         return persist_trace(trace, self.trace_options, self.config.settings.cache_dir)
 
     def _format_ignored_detail(
         self,
         source_path: Path,
-        diagnostics: List[Tuple[str, str, Optional[str]]],
+        diagnostics: list[tuple[str, str, str | None]],
     ) -> str:
         if not diagnostics:
             return f"{source_path.name}\n  - [IGNORED] No diagnostics recorded"
 
         lines = [source_path.name]
-        seen: Set[str] = set()
+        seen: set[str] = set()
         for severity, message, sport_id in diagnostics:
             key = f"{severity}:{sport_id}:{message}"
             if key in seen:
@@ -461,7 +458,7 @@ class Processor:
             kometa_fired=self._kometa_trigger_fired,
         )
 
-    def _build_context(self, runtime: SportRuntime, source_path: Path, season, episode, groups) -> Dict[str, object]:
+    def _build_context(self, runtime: SportRuntime, source_path: Path, season, episode, groups) -> dict[str, object]:
         return build_match_context(
             runtime=runtime,
             source_path=source_path,
@@ -471,7 +468,7 @@ class Processor:
             source_dir=self.config.settings.source_dir,
         )
 
-    def _build_destination(self, runtime: SportRuntime, pattern, context: Dict[str, object]) -> Path:
+    def _build_destination(self, runtime: SportRuntime, pattern, context: dict[str, object]) -> Path:
         return build_destination(
             runtime=runtime,
             pattern=pattern,
@@ -479,7 +476,7 @@ class Processor:
             settings=self.config.settings,
         )
 
-    def _handle_match(self, match: SportFileMatch, stats: ProcessingStats) -> Optional[NotificationEvent]:
+    def _handle_match(self, match: SportFileMatch, stats: ProcessingStats) -> NotificationEvent | None:
         """Process a file match: create link, update cache, handle overwrites.
 
         Delegates to match_handler.handle_match().

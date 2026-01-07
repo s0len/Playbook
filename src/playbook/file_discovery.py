@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Iterable
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Iterable, Optional
 
 from .config import SportConfig
 from .logging_utils import render_fields_block
@@ -24,7 +24,7 @@ LOGGER = logging.getLogger(__name__)
 SAMPLE_FILENAME_PATTERN = re.compile(r"(?<![a-z0-9])sample(?![a-z0-9])")
 
 
-def skip_reason_for_source_file(path: Path) -> Optional[str]:
+def skip_reason_for_source_file(path: Path) -> str | None:
     """Check if a source file should be skipped.
 
     Args:
@@ -68,7 +68,7 @@ def should_suppress_sample_ignored(source_path: Path) -> bool:
     return bool(SAMPLE_FILENAME_PATTERN.search(name))
 
 
-def gather_source_files(source_dir: Path, stats: Optional[ProcessingStats] = None) -> Iterable[Path]:
+def gather_source_files(source_dir: Path, stats: ProcessingStats | None = None) -> Iterable[Path]:
     """Discover and yield source files for processing.
 
     Iterates through the source directory recursively, filtering out:

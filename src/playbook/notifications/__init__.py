@@ -19,19 +19,19 @@ Public API:
 
 from __future__ import annotations
 
-# Core types and base classes
-from .types import BatchRequest, NotificationEvent, NotificationTarget
-
 # Notification targets
 from .autoscan import AutoscanTarget
 from .batcher import NotificationBatcher
 from .discord import DiscordTarget
 from .email import EmailTarget
-from .slack import SlackTarget
-from .webhook import GenericWebhookTarget
 
 # Main service
 from .service import NotificationService
+from .slack import SlackTarget
+
+# Core types and base classes
+from .types import BatchRequest, NotificationEvent, NotificationTarget
+from .webhook import GenericWebhookTarget
 
 __all__ = [
     # Core types

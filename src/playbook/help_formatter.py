@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import argparse
 import shutil
-from typing import List, Optional, Tuple
 
 from rich.console import Console
-from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -30,8 +28,8 @@ class RichHelpFormatter(argparse.HelpFormatter):
         prog: str,
         indent_increment: int = 2,
         max_help_position: int = 24,
-        width: Optional[int] = None,
-        console: Optional[Console] = None,
+        width: int | None = None,
+        console: Console | None = None,
     ) -> None:
         """
         Initialize the RichHelpFormatter.
@@ -106,16 +104,16 @@ class RichHelpFormatter(argparse.HelpFormatter):
         standard_help = super().format_help()
 
         # Parse and enhance the standard help
-        lines = standard_help.split('\n')
+        lines = standard_help.split("\n")
         current_section = None
         section_content: list[str] = []
 
         for line in lines:
             # Detect section headers (lines ending with ':' and not indented)
-            if line and not line[0].isspace() and line.endswith(':'):
+            if line and not line[0].isspace() and line.endswith(":"):
                 # Save previous section
                 if current_section:
-                    self._render_section(current_section, '\n'.join(section_content), help_parts)
+                    self._render_section(current_section, "\n".join(section_content), help_parts)
                 current_section = line[:-1]
                 section_content = []
             else:
@@ -123,7 +121,7 @@ class RichHelpFormatter(argparse.HelpFormatter):
 
         # Save last section
         if current_section:
-            self._render_section(current_section, '\n'.join(section_content), help_parts)
+            self._render_section(current_section, "\n".join(section_content), help_parts)
 
         # Add examples section
         if self._examples:
@@ -137,7 +135,7 @@ class RichHelpFormatter(argparse.HelpFormatter):
         if self._tips:
             help_parts.append(self._render_tips())
 
-        return '\n'.join(help_parts)
+        return "\n".join(help_parts)
 
     def _render_section(self, title: str, content: str, output: list[str]) -> None:
         """
@@ -174,7 +172,7 @@ class RichHelpFormatter(argparse.HelpFormatter):
         if content.strip():
             output.append(content)
 
-        output.append('')  # Blank line after section
+        output.append("")  # Blank line after section
 
     def _render_examples(self) -> str:
         """
@@ -206,7 +204,9 @@ class RichHelpFormatter(argparse.HelpFormatter):
 
             # Add note about --examples flag with icon
             self.console.print()
-            self.console.print("  💡 Run with --examples to see more comprehensive usage examples", style="dim italic bright_blue")
+            self.console.print(
+                "  💡 Run with --examples to see more comprehensive usage examples", style="dim italic bright_blue"
+            )
 
         return capture.get()
 
@@ -258,8 +258,8 @@ class RichHelpFormatter(argparse.HelpFormatter):
 
 def render_extended_examples(
     command_name: str,
-    examples: List[Tuple[str, str]],
-    console: Optional[Console] = None,
+    examples: list[tuple[str, str]],
+    console: Console | None = None,
 ) -> None:
     """
     Render extended examples in a comprehensive cookbook-style format.

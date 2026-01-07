@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING
 
 from rich.console import Console
 from rich.table import Table
@@ -28,7 +28,7 @@ IGNORE_SYMBOL = "○"
 class SummaryTableRenderer:
     """Renders processing statistics as Rich Tables with color-coded status indicators."""
 
-    def __init__(self, console: Optional[Console] = None) -> None:
+    def __init__(self, console: Console | None = None) -> None:
         """Initialize the renderer.
 
         Args:
@@ -130,15 +130,13 @@ class SummaryTableRenderer:
             is_skip=is_skip,
             is_ignore=is_ignore,
         )
-        color = SummaryTableRenderer._get_status_color(
-            value, is_error=is_error, is_warning=is_warning
-        )
+        color = SummaryTableRenderer._get_status_color(value, is_error=is_error, is_warning=is_warning)
         return f"[{color}]{symbol} {value}[/{color}]"
 
     def render_summary_table(
         self,
         stats: ProcessingStats,
-        plex_sync_stats: Optional[PlexSyncStats] = None,
+        plex_sync_stats: PlexSyncStats | None = None,
     ) -> Table:
         """Render a summary table of processing statistics.
 
@@ -172,9 +170,9 @@ class SummaryTableRenderer:
         self,
         stats: ProcessingStats,
         duration: float,
-        destinations: List[str],
-        plex_sync_status: Optional[str] = None,
-        kometa_triggered: Optional[bool] = None,
+        destinations: list[str],
+        plex_sync_status: str | None = None,
+        kometa_triggered: bool | None = None,
     ) -> Table:
         """Render a run recap table with overall statistics.
 
@@ -215,9 +213,9 @@ class SummaryTableRenderer:
     def render_sport_breakdown_table(
         self,
         stats: ProcessingStats,
-        sports_by_id: Dict[str, SportConfig],
-        processed_by_sport: Optional[Dict[str, int]] = None,
-    ) -> Optional[Table]:
+        sports_by_id: dict[str, SportConfig],
+        processed_by_sport: dict[str, int] | None = None,
+    ) -> Table | None:
         """Render a sport-by-sport breakdown table.
 
         Shows one row per sport with activity, displaying Sport ID, Sport Name,
@@ -264,7 +262,7 @@ class SummaryTableRenderer:
         # Sort sports by ID for consistent output
         for sport_id in sorted(sport_ids_with_activity):
             # Get sport name from config, fallback to ID if not found
-            sport_name = sports_by_id.get(sport_id, None)
+            sport_name = sports_by_id.get(sport_id)
             if sport_name:
                 sport_name_str = sport_name.name
             else:
@@ -300,7 +298,7 @@ class SummaryTableRenderer:
     def print_summary_table(
         self,
         stats: ProcessingStats,
-        plex_sync_stats: Optional[PlexSyncStats] = None,
+        plex_sync_stats: PlexSyncStats | None = None,
     ) -> None:
         """Print a summary table to the console.
 
@@ -316,9 +314,9 @@ class SummaryTableRenderer:
         self,
         stats: ProcessingStats,
         duration: float,
-        destinations: List[str],
-        plex_sync_status: Optional[str] = None,
-        kometa_triggered: Optional[bool] = None,
+        destinations: list[str],
+        plex_sync_status: str | None = None,
+        kometa_triggered: bool | None = None,
     ) -> None:
         """Print a run recap table to the console.
 
@@ -342,7 +340,7 @@ class SummaryTableRenderer:
     @staticmethod
     def render_summary_plain_text(
         stats: ProcessingStats,
-        plex_sync_stats: Optional[PlexSyncStats] = None,
+        plex_sync_stats: PlexSyncStats | None = None,
     ) -> str:
         """Render a summary as plain text without Rich formatting.
 
@@ -375,9 +373,9 @@ class SummaryTableRenderer:
     def render_run_recap_plain_text(
         stats: ProcessingStats,
         duration: float,
-        destinations: List[str],
-        plex_sync_status: Optional[str] = None,
-        kometa_triggered: Optional[bool] = None,
+        destinations: list[str],
+        plex_sync_status: str | None = None,
+        kometa_triggered: bool | None = None,
     ) -> str:
         """Render a run recap as plain text without Rich formatting.
 
@@ -418,9 +416,9 @@ class SummaryTableRenderer:
     @staticmethod
     def render_sport_breakdown_plain_text(
         stats: ProcessingStats,
-        sports_by_id: Dict[str, SportConfig],
-        processed_by_sport: Optional[Dict[str, int]] = None,
-    ) -> Optional[str]:
+        sports_by_id: dict[str, SportConfig],
+        processed_by_sport: dict[str, int] | None = None,
+    ) -> str | None:
         """Render a sport-by-sport breakdown as plain text.
 
         Args:
@@ -460,7 +458,7 @@ class SummaryTableRenderer:
         # Sort sports by ID for consistent output
         for sport_id in sorted(sport_ids_with_activity):
             # Get sport name from config, fallback to ID if not found
-            sport_name = sports_by_id.get(sport_id, None)
+            sport_name = sports_by_id.get(sport_id)
             if sport_name:
                 sport_name_str = sport_name.name
             else:
@@ -481,6 +479,8 @@ class SummaryTableRenderer:
             else:
                 status = "IDLE"
 
-            lines.append(f"    {sport_id:15s} | {sport_name_str:25s} | Processed: {processed:3d} | Warnings: {warnings:3d} | Errors: {errors:3d} | Status: {status}")
+            lines.append(
+                f"    {sport_id:15s} | {sport_name_str:25s} | Processed: {processed:3d} | Warnings: {warnings:3d} | Errors: {errors:3d} | Status: {status}"
+            )
 
         return "\n".join(lines)

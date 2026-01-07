@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from ..config import NotificationSettings
 from ..utils import ensure_directory
@@ -19,7 +19,7 @@ class NotificationBatcher:
     def __init__(self, cache_dir: Path, settings: NotificationSettings) -> None:
         self._settings = settings
         self._path = cache_dir / "state" / "discord-batches.json"
-        self._state: Dict[str, Dict[str, Any]] = {}
+        self._state: dict[str, dict[str, Any]] = {}
         self._dirty = False
         self._load()
 
@@ -113,7 +113,7 @@ class NotificationBatcher:
             LOGGER.warning("Ignoring malformed notification batch cache %s", self._path)
             return
 
-        state: Dict[str, Dict[str, Any]] = {}
+        state: dict[str, dict[str, Any]] = {}
         for sport_id, entry in payload.items():
             if not isinstance(sport_id, str) or not isinstance(entry, dict):
                 continue
@@ -122,7 +122,7 @@ class NotificationBatcher:
             if not isinstance(events_raw, list):
                 events_raw = []
 
-            events: List[Dict[str, Any]] = []
+            events: list[dict[str, Any]] = []
             for item in events_raw:
                 if not isinstance(item, dict):
                     continue

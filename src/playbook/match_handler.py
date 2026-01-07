@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Set
 
 from .cache import CachedFileRecord, ProcessedFileCache
 from .models import ProcessingStats, SportFileMatch
@@ -87,7 +86,7 @@ def specificity_score(value: str) -> int:
     return score
 
 
-def alias_candidates(match: SportFileMatch) -> List[str]:
+def alias_candidates(match: SportFileMatch) -> list[str]:
     """Get all possible alias candidates for a matched file.
 
     This includes the episode's canonical title, its configured aliases,
@@ -99,7 +98,7 @@ def alias_candidates(match: SportFileMatch) -> List[str]:
     Returns:
         A deduplicated list of alias candidates in priority order.
     """
-    candidates: List[str] = []
+    candidates: list[str] = []
 
     canonical = match.episode.title
     if canonical:
@@ -118,8 +117,8 @@ def alias_candidates(match: SportFileMatch) -> List[str]:
                 break
 
     # Deduplicate while preserving order and skip falsy values
-    seen: Set[str] = set()
-    unique_candidates: List[str] = []
+    seen: set[str] = set()
+    unique_candidates: list[str] = []
     for value in candidates:
         if not value:
             continue
@@ -130,7 +129,7 @@ def alias_candidates(match: SportFileMatch) -> List[str]:
     return unique_candidates
 
 
-def season_cache_key(match: SportFileMatch) -> Optional[str]:
+def season_cache_key(match: SportFileMatch) -> str | None:
     """Generate a cache key for a season.
 
     The cache key is used to track processed files across different runs.
@@ -215,11 +214,7 @@ def should_overwrite_existing(match: SportFileMatch) -> bool:
     session_token = normalize_token(session_raw)
     candidates = alias_candidates(match)
 
-    baseline_scores = [
-        specificity_score(alias)
-        for alias in candidates
-        if normalize_token(alias) != session_token
-    ]
+    baseline_scores = [specificity_score(alias) for alias in candidates if normalize_token(alias) != session_token]
 
     if not baseline_scores:
         return False
@@ -229,12 +224,12 @@ def should_overwrite_existing(match: SportFileMatch) -> bool:
 
 def cleanup_old_destination(
     source_key: str,
-    old_destination: Optional[Path],
+    old_destination: Path | None,
     new_destination: Path,
     *,
     dry_run: bool,
-    stale_records: Dict[str, CachedFileRecord],
-    stale_destinations: Dict[str, Path],
+    stale_records: dict[str, CachedFileRecord],
+    stale_destinations: dict[str, Path],
     format_destination_fn,
     logger,
 ) -> None:
@@ -270,6 +265,7 @@ def cleanup_old_destination(
 
     if dry_run:
         from .logging_utils import render_fields_block
+
         logger.debug(
             render_fields_block(
                 "Dry-Run: Would Remove Obsolete Destination",
@@ -288,6 +284,7 @@ def cleanup_old_destination(
         old_destination.unlink()
     except OSError as exc:
         from .logging_utils import render_fields_block
+
         logger.warning(
             render_fields_block(
                 "Failed To Remove Obsolete Destination",
@@ -301,6 +298,7 @@ def cleanup_old_destination(
         )
     else:
         from .logging_utils import render_fields_block
+
         logger.debug(
             render_fields_block(
                 "Removed Obsolete Destination",
@@ -321,14 +319,14 @@ def handle_match(
     stats: ProcessingStats,
     *,
     processed_cache: ProcessedFileCache,
-    stale_destinations: Dict[str, Path],
-    stale_records: Dict[str, CachedFileRecord],
+    stale_destinations: dict[str, Path],
+    stale_records: dict[str, CachedFileRecord],
     skip_existing: bool,
     dry_run: bool,
     link_mode: str,
     format_destination_fn,
     logger,
-) -> tuple[Optional[NotificationEvent], bool, Optional[str]]:
+) -> tuple[NotificationEvent | None, bool, str | None]:
     """Process a file match: create link, update cache, handle overwrites.
 
     This is the core file processing logic that:
@@ -372,7 +370,7 @@ def handle_match(
     destination_display = format_destination_fn(destination)
 
     # Calculate file checksum
-    file_checksum: Optional[str] = None
+    file_checksum: str | None = None
     try:
         file_checksum = hash_file(match.source_path)
     except ValueError as exc:  # pragma: no cover - depends on filesystem state

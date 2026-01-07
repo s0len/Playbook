@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple
 
 
 @dataclass
@@ -13,19 +12,19 @@ class CommandHelp:
     for use with the RichHelpFormatter.
     """
 
-    examples: List[Tuple[str, str]] = field(default_factory=list)
+    examples: list[tuple[str, str]] = field(default_factory=list)
     """List of (description, command) tuples showing usage examples."""
 
-    brief_examples: List[Tuple[str, str]] = field(default_factory=list)
+    brief_examples: list[tuple[str, str]] = field(default_factory=list)
     """Brief examples shown in --help (2-3 most common use cases)."""
 
-    extended_examples: List[Tuple[str, str]] = field(default_factory=list)
+    extended_examples: list[tuple[str, str]] = field(default_factory=list)
     """Extended examples shown in --examples (comprehensive cookbook-style)."""
 
-    env_vars: List[Tuple[str, str]] = field(default_factory=list)
+    env_vars: list[tuple[str, str]] = field(default_factory=list)
     """List of (variable_name, description) tuples documenting environment variables."""
 
-    tips: List[str] = field(default_factory=list)
+    tips: list[str] = field(default_factory=list)
     """List of helpful tips and best practices."""
 
 
@@ -395,7 +394,7 @@ KOMETA_TRIGGER_COMMAND_HELP = CommandHelp(
 
 
 # Command help registry mapping command names to their help content
-COMMAND_HELP: Dict[str, CommandHelp] = {
+COMMAND_HELP: dict[str, CommandHelp] = {
     "run": RUN_COMMAND_HELP,
     "validate-config": VALIDATE_CONFIG_COMMAND_HELP,
     "kometa-trigger": KOMETA_TRIGGER_COMMAND_HELP,
