@@ -13,6 +13,7 @@ from typing import Optional, Tuple
 from rich.console import Console
 from rich.logging import RichHandler
 
+from .banner import build_banner_info, print_startup_banner
 from .command_help import get_command_help
 from .config import AppConfig, Settings, load_config
 from .help_formatter import RichHelpFormatter, render_extended_examples
@@ -454,6 +455,9 @@ def _execute_run(args: argparse.Namespace) -> int:
             LOGGER.info("Notifications disabled for this run because the processed cache was cleared")
         processor.clear_processed_cache()
 
+    banner_info = build_banner_info(config, verbose=verbose, trace_matches=trace_enabled)
+    print_startup_banner(banner_info, CONSOLE)
+
     LOGGER.info("Starting Playbook%s", " (dry-run)" if config.settings.dry_run else "")
 
     watcher_settings = config.settings.file_watcher
@@ -510,6 +514,9 @@ def run_kometa_trigger(args: argparse.Namespace) -> int:
     except Exception as exc:  # noqa: BLE001
         LOGGER.exception("Failed to load configuration: %s", exc)
         return 1
+
+    banner_info = build_banner_info(config, verbose=args.verbose, trace_matches=False)
+    print_startup_banner(banner_info, CONSOLE)
 
     trigger_settings = dataclasses.replace(config.settings.kometa_trigger)
     if args.mode:
