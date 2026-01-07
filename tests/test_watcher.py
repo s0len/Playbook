@@ -549,7 +549,7 @@ class TestFileWatcherLoopInit:
     def test_initialization_with_empty_paths_uses_source_dir(self, mock_processor, minimal_watcher_settings, mock_observer, tmp_path):
         """Test that FileWatcherLoop uses source_dir as default when paths is empty."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
         minimal_watcher_settings.paths = []
 
@@ -564,7 +564,7 @@ class TestFileWatcherLoopInit:
     def test_initialization_resolves_relative_paths(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that FileWatcherLoop resolves relative paths against source_dir."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
 
         # Set relative path
@@ -618,7 +618,7 @@ class TestFileWatcherLoopInit:
     def test_initialization_creates_directories_if_not_exist(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that FileWatcherLoop creates watch directories if they don't exist."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
 
         # Set path that doesn't exist yet
@@ -635,7 +635,7 @@ class TestFileWatcherLoopInit:
     def test_initialization_with_multiple_paths_mixed_types(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test FileWatcherLoop initialization with mixed absolute and relative paths."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
 
         # Create one absolute path
@@ -691,7 +691,7 @@ class TestFileWatcherLoopResolveRoots:
     def test_default_to_source_dir_when_paths_empty(self, mock_processor, minimal_watcher_settings, mock_observer, tmp_path):
         """Test that _resolve_roots returns source_dir when paths is empty."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
         minimal_watcher_settings.paths = []
 
@@ -706,7 +706,7 @@ class TestFileWatcherLoopResolveRoots:
     def test_default_to_source_dir_when_paths_none(self, mock_processor, minimal_watcher_settings, mock_observer, tmp_path):
         """Test that _resolve_roots returns source_dir when paths is None."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
         minimal_watcher_settings.paths = None
 
@@ -721,7 +721,7 @@ class TestFileWatcherLoopResolveRoots:
     def test_resolves_relative_path_against_source_dir(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that _resolve_roots resolves relative paths against source_dir."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
 
         watcher_settings.paths = ["relative/path"]
@@ -738,7 +738,7 @@ class TestFileWatcherLoopResolveRoots:
     def test_resolves_multiple_relative_paths(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that _resolve_roots handles multiple relative paths."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
 
         watcher_settings.paths = ["rel1", "rel2/sub", "rel3"]
@@ -756,7 +756,7 @@ class TestFileWatcherLoopResolveRoots:
     def test_preserves_absolute_paths(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that _resolve_roots preserves absolute paths."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
 
         absolute_path = tmp_path / "absolute/watch"
@@ -773,7 +773,7 @@ class TestFileWatcherLoopResolveRoots:
     def test_handles_mixed_absolute_and_relative_paths(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that _resolve_roots correctly handles mixed path types."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
 
         absolute_path = tmp_path / "absolute"
@@ -792,7 +792,7 @@ class TestFileWatcherLoopResolveRoots:
     def test_creates_directory_for_absolute_path(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that _resolve_roots creates directory for non-existent absolute path."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
 
         # Use a path that doesn't exist yet
@@ -811,7 +811,7 @@ class TestFileWatcherLoopResolveRoots:
     def test_creates_directory_for_relative_path(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that _resolve_roots creates directory for non-existent relative path."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
 
         watcher_settings.paths = ["new/relative/path"]
@@ -829,7 +829,7 @@ class TestFileWatcherLoopResolveRoots:
     def test_creates_nested_directories(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that _resolve_roots creates deeply nested directories."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
 
         watcher_settings.paths = ["level1/level2/level3/level4"]
@@ -849,7 +849,7 @@ class TestFileWatcherLoopResolveRoots:
     def test_expands_user_home_directory(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that _resolve_roots expands ~ to user home directory."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
 
         watcher_settings.paths = ["~/watch_dir"]
@@ -877,7 +877,7 @@ class TestFileWatcherLoopResolveRoots:
     def test_expands_user_home_in_relative_path(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that _resolve_roots expands ~ even when path becomes relative to source_dir."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
 
         # Path with ~ that's not at the start (though this is unusual)
@@ -894,7 +894,7 @@ class TestFileWatcherLoopResolveRoots:
     def test_returns_pathlib_path_objects(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that _resolve_roots returns Path objects, not strings."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
 
         watcher_settings.paths = [str(tmp_path / "path1"), "relative_path2"]
@@ -910,7 +910,7 @@ class TestFileWatcherLoopResolveRoots:
     def test_handles_duplicate_paths(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that _resolve_roots preserves duplicate paths (doesn't deduplicate)."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
 
         # Same path specified twice
@@ -927,7 +927,7 @@ class TestFileWatcherLoopResolveRoots:
     def test_handles_path_with_dots(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that _resolve_roots handles paths with . and .. components."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         mock_processor.config.settings.source_dir = source_dir
 
         # Relative path with ..
@@ -946,7 +946,7 @@ class TestFileWatcherLoopResolveRoots:
     def test_source_dir_as_string_path(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that _resolve_roots works when source_dir is a Path object."""
         source_dir = tmp_path / "source"
-        source_dir.mkdir()
+        source_dir.mkdir(exist_ok=True)
         # Ensure source_dir is a Path object
         mock_processor.config.settings.source_dir = source_dir
 

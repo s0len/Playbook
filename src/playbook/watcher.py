@@ -132,9 +132,18 @@ class FileWatcherLoop:
             roots = [str(default_root)]
         resolved: List[Path] = []
         for raw in roots:
-            path = Path(raw).expanduser()
+            try:
+                path = Path(raw).expanduser()
+            except RuntimeError:
+                # expanduser() fails for non-existent users (e.g., ~nonexistent)
+                # In this case, treat it as a literal path
+                path = Path(raw)
             if not path.is_absolute():
-                path = (default_root / path).expanduser()
+                try:
+                    path = (default_root / path).expanduser()
+                except RuntimeError:
+                    # If expansion fails again, use without expansion
+                    path = default_root / path
             path.mkdir(parents=True, exist_ok=True)
             resolved.append(path)
         return resolved
