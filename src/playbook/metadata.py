@@ -678,7 +678,11 @@ def _season_sort_value(key: Any) -> tuple[int, str]:
 
 
 class MetadataNormalizer:
-    """Normalize remote YAML into structured objects."""
+    """Normalize remote YAML into structured objects.
+
+    Preserves original title casing from metadata to maintain acronyms
+    (e.g., "NTT IndyCar Series" keeps "NTT" in uppercase).
+    """
 
     def __init__(self, metadata_cfg: MetadataConfig) -> None:
         self.metadata_cfg = metadata_cfg
@@ -698,6 +702,8 @@ class MetadataNormalizer:
                 raise ValueError("Multiple shows found; specify 'show_key' in config")
             key, show_raw = next(iter(catalog.items()))
 
+        # Preserve title exactly as provided in metadata to maintain acronym casing
+        # (e.g., "NTT IndyCar Series" not "Ntt Indycar Series")
         title = show_raw.get("title", key)
         summary = show_raw.get("summary")
         seasons_raw = show_raw.get("seasons", {})
