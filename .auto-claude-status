@@ -1,15 +1,15 @@
 {
   "active": true,
-  "spec": "025-add-startup-banner-with-version-and-mode-informati",
+  "spec": "026-show-progress-bar-at-info-level-for-long-operation",
   "state": "building",
   "subtasks": {
-    "completed": 0,
-    "total": 0,
+    "completed": 2,
+    "total": 3,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Create Banner Module",
+    "current": "Testing and Verification",
     "id": null,
     "total": 2
   },
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 2,
-    "started_at": "2026-01-06T13:18:22.131184"
+    "number": 4,
+    "started_at": "2026-01-06T13:18:24.855422"
   },
-  "last_update": "2026-01-06T13:20:44.158077"
+  "last_update": "2026-01-06T13:23:58.567328"
 }
