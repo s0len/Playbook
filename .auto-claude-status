@@ -1,15 +1,15 @@
 {
   "active": true,
-  "spec": "027-nba-nfl-no-longer-match-since-most-recent-develop-",
+  "spec": "028-indycar-not-recognized-as-a-show",
   "state": "building",
   "subtasks": {
-    "completed": 8,
-    "total": 12,
+    "completed": 10,
+    "total": 11,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Harden and Prevent Regression",
+    "current": "Integration and End-to-End Verification",
     "id": null,
     "total": 3
   },
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 40,
-    "started_at": "2026-01-07T16:29:16.108392"
+    "number": 43,
+    "started_at": "2026-01-07T16:32:49.007042"
   },
-  "last_update": "2026-01-07T17:03:14.383845"
+  "last_update": "2026-01-07T17:20:05.102239"
 }
