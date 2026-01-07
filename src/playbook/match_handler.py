@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Set
 from .cache import CachedFileRecord, ProcessedFileCache
 from .models import ProcessingStats, SportFileMatch
 from .notifications import NotificationEvent
-from .utils import link_file, normalize_token, sha1_of_file
+from .utils import hash_file, link_file, normalize_token
 
 LOGGER = logging.getLogger(__name__)
 
@@ -374,7 +374,7 @@ def handle_match(
     # Calculate file checksum
     file_checksum: Optional[str] = None
     try:
-        file_checksum = sha1_of_file(match.source_path)
+        file_checksum = hash_file(match.source_path)
     except ValueError as exc:  # pragma: no cover - depends on filesystem state
         logger.debug(
             render_fields_block(

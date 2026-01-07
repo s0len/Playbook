@@ -701,8 +701,8 @@ def test_indycar_pattern_matching() -> None:
     # Create IndyCar pattern (simplified version of actual pattern)
     pattern = PatternConfig(
         regex=r"(?i)^IndyCar\.Series\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<location>[^.]+)\.(?P<session>Race|Practice|Qualifying)\..*\.mkv$",
-        season_selector=SeasonSelector(mode="round", group="round"),
-        episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
+        season_selector=SeasonSelector(mode="key", group="year"),
+        episode_selector=EpisodeSelector(group="round", allow_fallback_to_title=True),
         priority=10,
     )
 
@@ -784,9 +784,9 @@ def test_indycar_pattern_matching() -> None:
     assert result2["episode"].title == "Indianapolis 500"
     assert result2["episode"].index == 6
 
-    # Test case 3: Round 1 with location "St.Petersburg" should match "Streets of St. Petersburg Grand Prix"
+    # Test case 3: Round 1 with location "StPetersburg" should match "Streets of St. Petersburg Grand Prix"
     result3 = match_file_to_episode(
-        "IndyCar.Series.2025.Round01.St.Petersburg.Qualifying.STAN.WEB-DL.1080p.h264.English-MWR.mkv",
+        "IndyCar.Series.2025.Round01.StPetersburg.Qualifying.STAN.WEB-DL.1080p.h264.English-MWR.mkv",
         sport,
         show,
         patterns,

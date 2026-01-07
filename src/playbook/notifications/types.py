@@ -5,7 +5,7 @@ from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
-@dataclass(slots=True)
+@dataclass
 class BatchRequest:
     action: str  # "POST" or "PATCH"
     sport_id: str
@@ -15,7 +15,7 @@ class BatchRequest:
     events: List[Dict[str, Any]]
 
 
-@dataclass(slots=True)
+@dataclass
 class NotificationEvent:
     sport_id: str
     sport_name: str

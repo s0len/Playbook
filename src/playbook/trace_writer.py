@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .logging_utils import render_fields_block
-from .utils import ensure_directory, sha1_of_text
+from .utils import ensure_directory, hash_text
 
 LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ def persist_trace(
     ensure_directory(output_dir)
 
     trace_key = f"{trace.get('filename', '')}|{trace.get('sport_id', '')}"
-    trace_path = output_dir / f"{sha1_of_text(trace_key)}.json"
+    trace_path = output_dir / f"{hash_text(trace_key)}.json"
     trace["trace_path"] = str(trace_path)
 
     try:
