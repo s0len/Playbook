@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-import json
 import logging
-import re
 import time
-from collections import Counter
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
 
@@ -26,28 +22,17 @@ from .models import ProcessingStats, SportFileMatch
 from .notifications import NotificationEvent, NotificationService
 from .plex_metadata_sync import PlexMetadataSync, PlexSyncStats, create_plex_sync_from_config
 from .run_summary import (
-    extract_error_context,
-    filtered_ignored_details,
     has_activity,
     has_detailed_activity,
     log_detailed_summary,
     log_run_recap,
-    summarize_counts,
-    summarize_messages,
-    summarize_plex_errors,
 )
-from .file_discovery import gather_source_files, matches_globs, should_suppress_sample_ignored, skip_reason_for_source_file
-from .match_handler import (
-    cleanup_old_destination,
-    episode_cache_key,
-    handle_match,
-    season_cache_key,
-    should_overwrite_existing,
-)
+from .file_discovery import gather_source_files, matches_globs, should_suppress_sample_ignored
+from .match_handler import handle_match
 from .destination_builder import build_destination, build_match_context, format_relative_destination
 from .trace_writer import TraceOptions, persist_trace
 from .post_run_triggers import run_plex_sync_if_needed, trigger_kometa_if_needed
-from .utils import ensure_directory, sha1_of_text
+from .utils import ensure_directory
 
 LOGGER = logging.getLogger(__name__)
 
@@ -549,32 +534,8 @@ class Processor:
             metadata_changed_sports=self._metadata_changed_sports,
         )
 
-    def _should_overwrite_existing(self, match: SportFileMatch) -> bool:
-        """Determine if an existing destination should be overwritten (delegates to match_handler)."""
-        return should_overwrite_existing(match)
-
     def _format_relative_destination(self, destination: Path) -> str:
         return format_relative_destination(destination, self.config.settings.destination_dir)
 
     def _record_destination_touch(self, destination: Path) -> None:
         self._touched_destinations.add(self._format_relative_destination(destination))
-
-    def _cleanup_old_destination(
-        self,
-        source_key: str,
-        old_destination: Optional[Path],
-        new_destination: Path,
-        *,
-        dry_run: bool,
-    ) -> None:
-        """Clean up old destination when source moves (delegates to match_handler)."""
-        cleanup_old_destination(
-            source_key,
-            old_destination,
-            new_destination,
-            dry_run=dry_run,
-            stale_records=self._stale_records,
-            stale_destinations=self._stale_destinations,
-            format_destination_fn=self._format_relative_destination,
-            logger=LOGGER,
-        )
