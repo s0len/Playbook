@@ -190,7 +190,7 @@ def _store_cache(cache_file: Path, content: Dict[str, Any]) -> None:
         json.dump(payload, handle, ensure_ascii=False, indent=2, default=_json_default)
 
 
-@dataclass(slots=True)
+@dataclass
 class ShowFingerprint:
     digest: str
     season_hashes: Dict[str, str]
@@ -225,7 +225,7 @@ class ShowFingerprint:
         return cls(digest=digest, season_hashes=season_hashes, episode_hashes=episode_hashes, content_hash=content_hash)
 
 
-@dataclass(slots=True)
+@dataclass
 class MetadataChangeResult:
     updated: bool
     changed_seasons: Set[str]

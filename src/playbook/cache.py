@@ -13,7 +13,7 @@ from .utils import ensure_directory
 LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(slots=True)
+@dataclass
 class MetadataHttpEntry:
     etag: Optional[str] = None
     last_modified: Optional[str] = None
@@ -118,7 +118,7 @@ class MetadataHttpCache:
                 LOGGER.error("Failed to write metadata HTTP cache %s: %s", self.path, exc)
 
 
-@dataclass(slots=True)
+@dataclass
 class CachedFileRecord:
     mtime_ns: int
     size: int
@@ -129,7 +129,7 @@ class CachedFileRecord:
     episode_key: Optional[str] = None
 
 
-@dataclass(slots=True)
+@dataclass
 class ProcessedFileCache:
     cache_dir: Path
     cache_filename: str = "processed-files.json"

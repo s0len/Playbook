@@ -138,7 +138,7 @@ _NOISE_TOKENS = (
 )
 
 
-@dataclass(slots=True)
+@dataclass
 class PatternRuntime:
     config: PatternConfig
     regex: re.Pattern[str]

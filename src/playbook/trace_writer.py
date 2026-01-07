@@ -19,7 +19,7 @@ from .utils import ensure_directory, sha1_of_text
 LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(slots=True)
+@dataclass
 class TraceOptions:
     """Configuration for debug trace persistence.
 

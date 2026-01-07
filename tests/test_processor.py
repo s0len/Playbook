@@ -383,7 +383,7 @@ def test_skips_mac_resource_fork_files(tmp_path, monkeypatch) -> None:
 
     monkeypatch.setattr("playbook.metadata_loader.load_show", lambda settings_arg, metadata_cfg_arg, **kwargs: show)
     monkeypatch.setattr(
-        "playbook.metadata_loader.compute_show_fingerprint",
+        "playbook.metadata_loader.compute_show_fingerprint_cached",
         lambda show_arg, metadata_cfg_arg: ShowFingerprint(digest="fingerprint", season_hashes={}, episode_hashes={}),
     )
 
@@ -438,7 +438,7 @@ def test_destination_stays_within_root_for_hostile_metadata(tmp_path, monkeypatc
 
     monkeypatch.setattr("playbook.metadata_loader.load_show", lambda *args, **kwargs: show)
     monkeypatch.setattr(
-        "playbook.metadata_loader.compute_show_fingerprint",
+        "playbook.metadata_loader.compute_show_fingerprint_cached",
         lambda *args, **kwargs: ShowFingerprint(digest="fingerprint", season_hashes={}, episode_hashes={}),
     )
 
@@ -517,7 +517,7 @@ def test_symlink_sources_are_skipped(tmp_path, monkeypatch) -> None:
 
     monkeypatch.setattr("playbook.metadata_loader.load_show", lambda *args, **kwargs: show)
     monkeypatch.setattr(
-        "playbook.metadata_loader.compute_show_fingerprint",
+        "playbook.metadata_loader.compute_show_fingerprint_cached",
         lambda *args, **kwargs: ShowFingerprint(digest="fingerprint", season_hashes={}, episode_hashes={}),
     )
 
@@ -664,7 +664,7 @@ def test_ts_extension_is_processed_correctly(tmp_path, monkeypatch) -> None:
 
     monkeypatch.setattr("playbook.metadata_loader.load_show", lambda *args, **kwargs: show)
     monkeypatch.setattr(
-        "playbook.metadata_loader.compute_show_fingerprint",
+        "playbook.metadata_loader.compute_show_fingerprint_cached",
         lambda *args, **kwargs: ShowFingerprint(digest="fingerprint", season_hashes={}, episode_hashes={}),
     )
 

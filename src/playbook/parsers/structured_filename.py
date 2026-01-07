@@ -32,7 +32,7 @@ _PROVIDER_TOKENS = {
 }
 
 
-@dataclass(slots=True)
+@dataclass
 class StructuredName:
     raw: str
     competition: Optional[str] = None

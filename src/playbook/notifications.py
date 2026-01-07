@@ -23,7 +23,7 @@ from .utils import ensure_directory
 LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(slots=True)
+@dataclass
 class BatchRequest:
     action: str  # "POST" or "PATCH"
     sport_id: str
@@ -33,7 +33,7 @@ class BatchRequest:
     events: List[Dict[str, Any]]
 
 
-@dataclass(slots=True)
+@dataclass
 class NotificationEvent:
     sport_id: str
     sport_name: str

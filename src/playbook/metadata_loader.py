@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(slots=True)
+@dataclass
 class SportRuntime:
     """Runtime state for a loaded sport configuration.
 
@@ -44,7 +44,7 @@ class SportRuntime:
     extensions: Set[str]
 
 
-@dataclass(slots=True)
+@dataclass
 class MetadataLoadResult:
     """Result of loading sports metadata.
 

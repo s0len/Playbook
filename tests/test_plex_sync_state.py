@@ -6,7 +6,7 @@ import json
 import pytest
 from pathlib import Path
 
-from src.playbook.plex_sync_state import (
+from playbook.plex_sync_state import (
     PlexSyncState,
     PlexSyncStateStore,
     SportSyncState,
