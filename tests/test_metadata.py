@@ -315,3 +315,29 @@ def test_metadata_normalizer_falls_back_to_index_when_no_numeric_hint() -> None:
     assert show.seasons[0].display_number == 1
     assert show.seasons[1].round_number == 2
     assert show.seasons[1].display_number == 2
+
+
+def test_title_case_preservation() -> None:
+    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="indycar_2025")
+    normalizer = MetadataNormalizer(metadata_cfg)
+
+    raw = {
+        "metadata": {
+            "indycar_2025": {
+                "title": "NTT IndyCar Series 2025",
+                "summary": "Racing series with acronym in title",
+                "seasons": {
+                    "1": {
+                        "title": "Round 1 St. Petersburg",
+                        "episodes": [{"title": "Race"}],
+                    },
+                },
+            }
+        }
+    }
+
+    show = normalizer.load_show(raw)
+
+    assert show.title == "NTT IndyCar Series 2025"
+    assert "NTT" in show.title
+    assert show.title != "Ntt IndyCar Series 2025"
