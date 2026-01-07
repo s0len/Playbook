@@ -71,5 +71,16 @@ vulnerabilities:
       compressed data. Playbook doesn't process user-provided compressed
       streams.
 
+  # ============================================================================
+  # gnupg2 vulnerabilities
+  # ============================================================================
+
+  - id: CVE-2025-68973
+    statement: >
+      gnupg2 out-of-bounds write in armor filter. Only exploitable when
+      processing malicious GPG armored input. Playbook is a CLI tool for
+      media management and doesn't process GPG armored data from
+      untrusted sources.
+
 # Note: These exceptions are for the base Docker image only.
 # Python dependency vulnerabilities are scanned separately via pip-audit.

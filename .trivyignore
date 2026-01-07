@@ -21,6 +21,10 @@ CVE-2024-25062
 # zlib heap buffer overflow - Doesn't process user-provided compressed streams
 CVE-2023-45853
 
+# gnupg2 out-of-bounds write - Only affects armor filter with malicious input
+# Playbook doesn't process GPG armored data from untrusted sources
+CVE-2025-68973
+
 # Additional common base image CVEs that may be detected
 CVE-2024-0567
 CVE-2024-6119
