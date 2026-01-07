@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Tuple
 
 
-@dataclass(slots=True)
+@dataclass
 class CommandHelp:
     """
     Structured help content for a CLI command.

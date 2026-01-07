@@ -770,6 +770,15 @@ def _score_structured_match(
             score += 0.55
         else:
             overlap = structured_tokens.intersection(episode_tokens)
+
+            # For team sports matchups (2+ teams), reject partial matches
+            # This prevents matching "Pacers vs Celtics" to "Celtics vs Heat"
+            if len(structured.teams) >= 2 and len(overlap) < len(structured_tokens):
+                # Partial match - some teams missing
+                # This is likely a wrong match (different game, same teams)
+                return 0.0
+
+            # All teams present (might be reordered) or single-team content
             if overlap:
                 score += 0.35 + 0.05 * len(overlap)
     elif structured_tokens:
@@ -800,6 +809,15 @@ def _structured_match(
     structured = parse_structured_filename(filename, alias_lookup)
     if not structured:
         return None
+
+    # Validate structured parsing - if a "team" is actually the competition name, parsing failed
+    if structured.competition and structured.teams:
+        competition_normalized = normalize_token(structured.competition)
+        for team in structured.teams:
+            if normalize_token(team) == competition_normalized:
+                # Parser extracted sport name as a team - this is a parsing error
+                # Skip structured matching and fall back to pattern-based matching
+                return None
 
     best: tuple[Season, Episode] | None = None
     best_score = 0.0

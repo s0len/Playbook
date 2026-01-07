@@ -10,7 +10,7 @@ from . import __version__
 from .config import AppConfig
 
 
-@dataclass(slots=True)
+@dataclass
 class BannerInfo:
     version: str
     dry_run: bool
