@@ -434,10 +434,22 @@ def _apply_metadata(
             LOGGER.debug("Dry-run: would set %s %s %s to %s", label, rating_key, display_name, asset_url)
         else:
             try:
+                # Unlock field before upload to ensure Plex accepts the update
+                LOGGER.debug("Unlocking %s field for %s (key=%s)", element, label, rating_key)
+                client.unlock_field(rating_key, element)
+                stats.api_calls += 1
+
+                # Upload the asset
                 client.set_asset(rating_key, element, asset_url)
                 LOGGER.debug("Successfully set %s for %s (key=%s)", display_name, label, rating_key)
                 stats.assets_updated += 1
                 stats.api_calls += 1
+
+                # Lock field after upload to prevent overwrites from metadata refresh
+                LOGGER.debug("Locking %s field for %s (key=%s)", element, label, rating_key)
+                client.lock_field(rating_key, element)
+                stats.api_calls += 1
+
                 updated = True
             except PlexApiError as exc:
                 LOGGER.error("Failed to set %s for %s (key=%s): %s", display_name, label, rating_key, exc)
