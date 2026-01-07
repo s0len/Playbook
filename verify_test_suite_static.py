@@ -10,7 +10,7 @@ to verify that our fixes don't introduce regressions.
 import ast
 import re
 from pathlib import Path
-from typing import List, Dict, Tuple
+
 
 class TestSuiteVerifier:
     def __init__(self, project_root: Path):
@@ -71,18 +71,16 @@ class TestSuiteVerifier:
         all_valid = True
         for test_file in test_files:
             try:
-                with open(test_file, 'r') as f:
+                with open(test_file) as f:
                     ast.parse(f.read())
                 print(f"  ✓ {test_file.name} - syntax valid")
             except SyntaxError as e:
                 print(f"  ✗ {test_file.name} - syntax error: {e}")
                 all_valid = False
 
-        self.results.append({
-            "name": "Test Files Syntax",
-            "passed": all_valid,
-            "details": f"Verified {len(test_files)} test files"
-        })
+        self.results.append(
+            {"name": "Test Files Syntax", "passed": all_valid, "details": f"Verified {len(test_files)} test files"}
+        )
         print()
         return all_valid
 
@@ -119,7 +117,7 @@ class TestSuiteVerifier:
                 continue
 
             # Check if object exists in file
-            with open(file_path, 'r') as f:
+            with open(file_path) as f:
                 content = f.read()
 
             # Look for function or class definition
@@ -137,11 +135,13 @@ class TestSuiteVerifier:
                 print(f"  ✗ {module_name}.{obj_name} not found")
                 all_valid = False
 
-        self.results.append({
-            "name": "Test Imports Resolution",
-            "passed": all_valid,
-            "details": f"Verified {len(critical_imports)} critical imports"
-        })
+        self.results.append(
+            {
+                "name": "Test Imports Resolution",
+                "passed": all_valid,
+                "details": f"Verified {len(critical_imports)} critical imports",
+            }
+        )
         print()
         return all_valid
 
@@ -150,13 +150,13 @@ class TestSuiteVerifier:
         print("Verifying matcher tests compatibility...")
 
         matcher_file = self.src_dir / "matcher.py"
-        with open(matcher_file, 'r') as f:
+        with open(matcher_file) as f:
             matcher_content = f.read()
 
         # Check that the import we fixed is present (supports both absolute and relative imports)
         has_import = (
-            "from .parsers.structured_filename import" in matcher_content or
-            "from playbook.parsers.structured_filename import" in matcher_content
+            "from .parsers.structured_filename import" in matcher_content
+            or "from playbook.parsers.structured_filename import" in matcher_content
         )
 
         # Check that the functions we use are imported
@@ -173,11 +173,13 @@ class TestSuiteVerifier:
         print(f"  ✓ parse_structured_filename imported: {has_parse_structured}")
         print(f"  ✓ match_file_to_episode function exists: {bool(has_main_function)}")
 
-        self.results.append({
-            "name": "Matcher Tests Compatibility",
-            "passed": all_checks_pass,
-            "details": "All matcher.py imports and functions verified"
-        })
+        self.results.append(
+            {
+                "name": "Matcher Tests Compatibility",
+                "passed": all_checks_pass,
+                "details": "All matcher.py imports and functions verified",
+            }
+        )
         print()
         return all_checks_pass
 
@@ -186,7 +188,7 @@ class TestSuiteVerifier:
         print("Verifying config tests compatibility...")
 
         config_file = self.src_dir / "config.py"
-        with open(config_file, 'r') as f:
+        with open(config_file) as f:
             config_content = f.read()
 
         # Check that load_config function exists
@@ -204,11 +206,13 @@ class TestSuiteVerifier:
         print(f"  ✓ Builtin pattern sets loading: {has_builtin_load}")
         print(f"  ✓ Pattern set validation present: {has_validation}")
 
-        self.results.append({
-            "name": "Config Tests Compatibility",
-            "passed": all_checks_pass,
-            "details": "Config loading and validation verified"
-        })
+        self.results.append(
+            {
+                "name": "Config Tests Compatibility",
+                "passed": all_checks_pass,
+                "details": "Config loading and validation verified",
+            }
+        )
         print()
         return all_checks_pass
 
@@ -217,7 +221,7 @@ class TestSuiteVerifier:
         print("Verifying structured filename tests compatibility...")
 
         sf_file = self.src_dir / "parsers" / "structured_filename.py"
-        with open(sf_file, 'r') as f:
+        with open(sf_file) as f:
             sf_content = f.read()
 
         # Check that both restored functions exist
@@ -228,7 +232,7 @@ class TestSuiteVerifier:
         has_class = re.search(r"^class StructuredName", sf_content, re.MULTILINE)
 
         # Count lines to ensure file is complete (should be ~253 lines)
-        line_count = len(sf_content.split('\n'))
+        line_count = len(sf_content.split("\n"))
         has_sufficient_content = line_count > 200
 
         all_checks_pass = bool(has_parse) and bool(has_build) and bool(has_class) and has_sufficient_content
@@ -238,11 +242,13 @@ class TestSuiteVerifier:
         print(f"  ✓ StructuredName class exists: {bool(has_class)}")
         print(f"  ✓ File has sufficient content: {line_count} lines (expected ~253)")
 
-        self.results.append({
-            "name": "Structured Filename Tests Compatibility",
-            "passed": all_checks_pass,
-            "details": f"All functions restored, {line_count} lines"
-        })
+        self.results.append(
+            {
+                "name": "Structured Filename Tests Compatibility",
+                "passed": all_checks_pass,
+                "details": f"All functions restored, {line_count} lines",
+            }
+        )
         print()
         return all_checks_pass
 
@@ -251,15 +257,20 @@ class TestSuiteVerifier:
         print("Verifying sports pattern sets (no regression)...")
 
         pattern_file = self.src_dir / "pattern_templates.yaml"
-        with open(pattern_file, 'r') as f:
+        with open(pattern_file) as f:
             pattern_content = f.read()
 
         # Key sports that should be present
         expected_sports = [
-            'nfl', 'nba', 'nhl',  # Major North American sports
-            'formula1', 'formula_e',  # Formula racing
-            'motogp', 'moto2', 'moto3',  # Motorcycle racing
-            'indycar',  # IndyCar
+            "nfl",
+            "nba",
+            "nhl",  # Major North American sports
+            "formula1",
+            "formula_e",  # Formula racing
+            "motogp",
+            "moto2",
+            "moto3",  # Motorcycle racing
+            "indycar",  # IndyCar
         ]
 
         all_present = True
@@ -280,13 +291,16 @@ class TestSuiteVerifier:
                     print(f"  ✗ {sport} pattern set MISSING")
                     all_present = False
 
-        self.results.append({
-            "name": "Sports Pattern Sets (No Regression)",
-            "passed": all_present,
-            "details": f"Verified {len(expected_sports)} sport pattern sets"
-        })
+        self.results.append(
+            {
+                "name": "Sports Pattern Sets (No Regression)",
+                "passed": all_present,
+                "details": f"Verified {len(expected_sports)} sport pattern sets",
+            }
+        )
         print()
         return all_present
+
 
 def main():
     project_root = Path(__file__).parent
@@ -295,6 +309,7 @@ def main():
     success = verifier.verify_all()
 
     exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     main()

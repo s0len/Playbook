@@ -140,4 +140,3 @@ def test_docker_trigger_execs_into_container(monkeypatch) -> None:
     assert trigger.trigger() is True
     assert recorded["cmd"][:3] == ["docker", "exec", "kometa"]
     assert recorded["cmd"][3:5] == ["python3", "/app/kometa/kometa.py"]
-

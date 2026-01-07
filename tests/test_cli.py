@@ -3,8 +3,6 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-import pytest
-
 from playbook import cli
 
 
@@ -96,4 +94,3 @@ sports:
     )
 
     assert cli.run_kometa_trigger(args) == 1
-

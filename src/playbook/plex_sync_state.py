@@ -6,7 +6,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional, Set
+from typing import Any
 
 from .utils import ensure_directory
 
@@ -34,7 +34,7 @@ class PlexSyncState:
     3. Skip sync only when already synced AND unchanged
     """
 
-    sports: Dict[str, SportSyncState] = field(default_factory=dict)
+    sports: dict[str, SportSyncState] = field(default_factory=dict)
     _dirty: bool = field(default=False, repr=False)
 
     def needs_sync(self, sport_id: str, current_fingerprint: str) -> bool:
@@ -72,14 +72,14 @@ class PlexSyncState:
 
         self.sports[sport_id] = SportSyncState(
             fingerprint=fingerprint,
-            synced_at=dt.datetime.now(dt.timezone.utc).isoformat(),
+            synced_at=dt.datetime.now(dt.UTC).isoformat(),
             shows_synced=shows,
             seasons_synced=seasons,
             episodes_synced=episodes,
         )
         self._dirty = True
 
-    def get_unsynced_sports(self, sport_ids: Set[str], fingerprints: Dict[str, str]) -> Set[str]:
+    def get_unsynced_sports(self, sport_ids: set[str], fingerprints: dict[str, str]) -> set[str]:
         """Get sports that need syncing (never synced or changed)."""
         needs_sync = set()
         for sport_id in sport_ids:
@@ -99,7 +99,7 @@ class PlexSyncStateStore:
     def __init__(self, cache_dir: Path, filename: str = "plex-sync-state.json") -> None:
         self.cache_dir = cache_dir
         self.state_file = cache_dir / "state" / filename
-        self._state: Optional[PlexSyncState] = None
+        self._state: PlexSyncState | None = None
 
     @property
     def state(self) -> PlexSyncState:
@@ -119,7 +119,7 @@ class PlexSyncStateStore:
             LOGGER.warning("Failed to load Plex sync state: %s", exc)
             return PlexSyncState()
 
-        sports: Dict[str, SportSyncState] = {}
+        sports: dict[str, SportSyncState] = {}
         for sport_id, sport_data in data.get("sports", {}).items():
             try:
                 sports[sport_id] = SportSyncState(
@@ -140,7 +140,7 @@ class PlexSyncStateStore:
 
         ensure_directory(self.state_file.parent)
 
-        data: Dict[str, Any] = {"sports": {}}
+        data: dict[str, Any] = {"sports": {}}
         for sport_id, state in self._state.sports.items():
             data["sports"][sport_id] = {
                 "fingerprint": state.fingerprint,
@@ -180,7 +180,6 @@ class PlexSyncStateStore:
             episodes=episodes,
         )
 
-    def get_unsynced_sports(self, sport_ids: Set[str], fingerprints: Dict[str, str]) -> Set[str]:
+    def get_unsynced_sports(self, sport_ids: set[str], fingerprints: dict[str, str]) -> set[str]:
         """Get sports that need syncing."""
         return self.state.get_unsynced_sports(sport_ids, fingerprints)
-

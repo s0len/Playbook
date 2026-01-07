@@ -4,7 +4,6 @@ import datetime as dt
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple
 
 from ..utils import normalize_token, sanitize_component
 
@@ -35,22 +34,22 @@ _PROVIDER_TOKENS = {
 @dataclass(slots=True)
 class StructuredName:
     raw: str
-    competition: Optional[str] = None
-    season: Optional[str] = None
-    year: Optional[int] = None
-    date: Optional[dt.date] = None
-    round: Optional[int] = None
-    matchday: Optional[int] = None
-    teams: List[str] = field(default_factory=list)
-    home_team: Optional[str] = None
-    away_team: Optional[str] = None
-    resolution: Optional[str] = None
-    fps: Optional[int] = None
-    provider: Optional[str] = None
-    language: Optional[str] = None
-    extra: Dict[str, str] = field(default_factory=dict)
+    competition: str | None = None
+    season: str | None = None
+    year: int | None = None
+    date: dt.date | None = None
+    round: int | None = None
+    matchday: int | None = None
+    teams: list[str] = field(default_factory=list)
+    home_team: str | None = None
+    away_team: str | None = None
+    resolution: str | None = None
+    fps: int | None = None
+    provider: str | None = None
+    language: str | None = None
+    extra: dict[str, str] = field(default_factory=dict)
 
-    def canonical_matchup(self) -> Optional[str]:
+    def canonical_matchup(self) -> str | None:
         if len(self.teams) >= 2:
             return f"{self.teams[0]} vs {self.teams[1]}"
         if self.home_team and self.away_team:
@@ -66,21 +65,21 @@ def _clean_tokens(text: str) -> str:
     return normalized.strip()
 
 
-def _coerce_int(value: str) -> Optional[int]:
+def _coerce_int(value: str) -> int | None:
     try:
         return int(value)
     except ValueError:
         return None
 
 
-def _coerce_date(year: int, month: int, day: int) -> Optional[dt.date]:
+def _coerce_date(year: int, month: int, day: int) -> dt.date | None:
     try:
         return dt.date(year, month, day)
     except ValueError:
         return None
 
 
-def _parse_date_candidates(text: str) -> Tuple[Optional[dt.date], Optional[int]]:
+def _parse_date_candidates(text: str) -> tuple[dt.date | None, int | None]:
     """Return (date, standalone_year) parsed from the text."""
     cleaned = text.replace(".", " ").replace("-", " ").replace("_", " ")
     tokens = [token for token in re.split(r"\s+", cleaned) if token]
@@ -121,7 +120,7 @@ def _parse_date_candidates(text: str) -> Tuple[Optional[dt.date], Optional[int]]
 
 def _trim_noise(segment: str) -> str:
     words = [word for word in re.split(r"\s+", segment) if word]
-    cleaned: List[str] = []
+    cleaned: list[str] = []
     for word in words:
         lowered = word.lower()
         if lowered.isdigit():
@@ -136,7 +135,7 @@ def _trim_noise(segment: str) -> str:
     return " ".join(cleaned).strip()
 
 
-def _extract_matchup(text: str) -> Tuple[List[str], Optional[str], Optional[str]]:
+def _extract_matchup(text: str) -> tuple[list[str], str | None, str | None]:
     normalized = _clean_tokens(text)
     pattern = re.compile(r"(?P<a>[A-Za-z0-9 .&'/-]+?)\s+(?:vs|v|at|@)\s+(?P<b>[A-Za-z0-9 .&'/-]+)", re.IGNORECASE)
     match = pattern.search(normalized)
@@ -149,7 +148,7 @@ def _extract_matchup(text: str) -> Tuple[List[str], Optional[str], Optional[str]
     return teams, home_raw or None, away_raw or None
 
 
-def _extract_resolution(text: str) -> Tuple[Optional[str], Optional[int]]:
+def _extract_resolution(text: str) -> tuple[str | None, int | None]:
     res = None
     fps = None
     res_match = re.search(r"\b(2160p|1080p|720p)\b", text, re.IGNORECASE)
@@ -161,7 +160,7 @@ def _extract_resolution(text: str) -> Tuple[Optional[str], Optional[int]]:
     return res, fps
 
 
-def _extract_provider(text: str) -> Optional[str]:
+def _extract_provider(text: str) -> str | None:
     lowered = text.lower()
     normalized = lowered.replace("+", "")
     for provider in _PROVIDER_TOKENS:
@@ -171,7 +170,7 @@ def _extract_provider(text: str) -> Optional[str]:
     return None
 
 
-def _canonicalize_team(team: str, alias_lookup: Dict[str, str]) -> str:
+def _canonicalize_team(team: str, alias_lookup: dict[str, str]) -> str:
     normalized = normalize_token(team)
     if alias_lookup:
         mapped = alias_lookup.get(normalized)
@@ -180,7 +179,7 @@ def _canonicalize_team(team: str, alias_lookup: Dict[str, str]) -> str:
     return team.strip()
 
 
-def parse_structured_filename(filename: str, alias_lookup: Optional[Dict[str, str]] = None) -> Optional[StructuredName]:
+def parse_structured_filename(filename: str, alias_lookup: dict[str, str] | None = None) -> StructuredName | None:
     alias_lookup = alias_lookup or {}
     name = Path(filename).stem
     cleaned = _clean_tokens(name)
@@ -227,7 +226,7 @@ def parse_structured_filename(filename: str, alias_lookup: Optional[Dict[str, st
 
 def build_canonical_filename(structured: StructuredName, *, language: str = "EN", extension: str = "mkv") -> str:
     """Assemble a normalized filename from structured components."""
-    parts: List[str] = []
+    parts: list[str] = []
     if structured.competition:
         parts.append(structured.competition.upper())
     if structured.date:

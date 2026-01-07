@@ -4,7 +4,7 @@ import logging
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -27,7 +27,7 @@ RETRY_STATUS_CODES = frozenset({500, 502, 503, 504, 429})
 class PlexApiError(RuntimeError):
     """Raised when Plex API requests fail."""
 
-    def __init__(self, message: str, status_code: Optional[int] = None) -> None:
+    def __init__(self, message: str, status_code: int | None = None) -> None:
         super().__init__(message)
         self.status_code = status_code
 
@@ -47,7 +47,7 @@ def _sanitize_url_for_logging(url: str) -> str:
     return re.sub(r"[?&]X-Plex-Token=[^&]*", "", url)
 
 
-def _parse_json_response(response: requests.Response) -> Dict[str, Any]:
+def _parse_json_response(response: requests.Response) -> dict[str, Any]:
     try:
         return response.json()
     except ValueError as exc:  # pragma: no cover - defensive
@@ -58,7 +58,7 @@ def _parse_json_response(response: requests.Response) -> Dict[str, Any]:
         ) from exc
 
 
-def validate_plex_url(url: Optional[str]) -> bool:
+def validate_plex_url(url: str | None) -> bool:
     """Validate that URL is a valid http/https URL."""
     if not url:
         return False
@@ -73,7 +73,7 @@ def validate_plex_url(url: Optional[str]) -> bool:
 class PlexLibrary:
     key: str
     title: str
-    type: Optional[str]
+    type: str | None
 
 
 @dataclass(slots=True)
@@ -91,7 +91,7 @@ class PlexSyncStats:
     assets_updated: int = 0
     assets_failed: int = 0
     api_calls: int = 0
-    errors: List[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
 
     def has_activity(self) -> bool:
         return any(
@@ -104,7 +104,7 @@ class PlexSyncStats:
             )
         )
 
-    def summary(self) -> Dict[str, Any]:
+    def summary(self) -> dict[str, Any]:
         return {
             "shows": {"updated": self.shows_updated, "skipped": self.shows_skipped},
             "seasons": {
@@ -129,8 +129,8 @@ class SearchResult:
 
     searched_title: str
     library_id: str
-    close_matches: List[str] = field(default_factory=list)
-    result: Optional[Dict[str, Any]] = None
+    close_matches: list[str] = field(default_factory=list)
+    result: dict[str, Any] | None = None
 
 
 class PlexClient:
@@ -146,7 +146,7 @@ class PlexClient:
         token: str,
         *,
         timeout: float = 15.0,
-        session: Optional[requests.Session] = None,
+        session: requests.Session | None = None,
         max_retries: int = DEFAULT_RETRIES,
         backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
         rate_limit_delay: float = 0.0,
@@ -187,8 +187,8 @@ class PlexClient:
         method: str,
         path: str,
         *,
-        params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
         allow_error: bool = False,
         **kwargs: Any,
     ) -> requests.Response:
@@ -236,13 +236,13 @@ class PlexClient:
 
         return response
 
-    def list_libraries(self, *, type_filter: Optional[str] = None) -> List[PlexLibrary]:
+    def list_libraries(self, *, type_filter: str | None = None) -> list[PlexLibrary]:
         """List all Plex libraries, optionally filtered by type."""
         response = self._request("GET", "/library/sections")
         payload = _parse_json_response(response)
         container = payload.get("MediaContainer", {})
         directories = container.get("Directory", []) or []
-        libraries: List[PlexLibrary] = []
+        libraries: list[PlexLibrary] = []
         for entry in directories:
             key = entry.get("key")
             title = entry.get("title")
@@ -257,9 +257,9 @@ class PlexClient:
     def find_library(
         self,
         *,
-        library_id: Optional[str],
-        library_name: Optional[str],
-        require_type: Optional[str] = "show",
+        library_id: str | None,
+        library_name: str | None,
+        require_type: str | None = "show",
     ) -> str:
         """Find a library by ID or name, optionally requiring a specific type."""
         if library_id:
@@ -324,13 +324,13 @@ class PlexClient:
         if len(words) > 1:
             # Try first word + first number sequence
             first_word = words[0]
-            numbers = re.findall(r'\d+', title)
+            numbers = re.findall(r"\d+", title)
             if numbers:
                 simplified = f"{first_word} {numbers[0]}"
                 if simplified.lower() != title.lower():
                     search_terms.append(simplified)
 
-        all_entries: List[Dict[str, Any]] = []
+        all_entries: list[dict[str, Any]] = []
         seen_keys: set = set()
 
         for search_term in search_terms:
@@ -390,7 +390,7 @@ class PlexClient:
             result=None,
         )
 
-    def get_metadata(self, rating_key: str) -> Optional[Dict[str, Any]]:
+    def get_metadata(self, rating_key: str) -> dict[str, Any] | None:
         """Get full metadata for an item by rating key."""
         response = self._request("GET", f"/library/metadata/{rating_key}", allow_error=True)
         if response.status_code == 404:
@@ -404,7 +404,7 @@ class PlexClient:
         metadata_list = payload.get("MediaContainer", {}).get("Metadata") or []
         return metadata_list[0] if metadata_list else None
 
-    def list_children(self, rating_key: str) -> List[Dict[str, Any]]:
+    def list_children(self, rating_key: str) -> list[dict[str, Any]]:
         """List children of an item (e.g., seasons of a show, episodes of a season)."""
         response = self._request("GET", f"/library/metadata/{rating_key}/children")
         payload = _parse_json_response(response)
@@ -413,7 +413,7 @@ class PlexClient:
     def update_metadata(
         self,
         rating_key: str,
-        params: Dict[str, Any],
+        params: dict[str, Any],
         *,
         lock_fields: bool = True,
     ) -> bool:
@@ -427,7 +427,7 @@ class PlexClient:
         Returns:
             True if update was performed, False if nothing to update.
         """
-        clean_params: Dict[str, Any] = {}
+        clean_params: dict[str, Any] = {}
         for key, value in params.items():
             if value is None:
                 continue

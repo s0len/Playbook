@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from playbook.cache import CachedFileRecord, ProcessedFileCache
 from playbook.metadata import MetadataChangeResult
 
@@ -278,4 +276,3 @@ def test_prune_missing_sources_explicit_call(tmp_path) -> None:
 
     # Verify the dirty flag was set to True
     assert cache._dirty is True
-

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-
 import pytest
 
 from playbook.utils import (
@@ -209,4 +207,3 @@ class TestNormalizeCaching:
         assert info_after_third.hits == 1, "Hits should still be 1"
         assert info_after_third.misses == 2, "Should have 2 misses after new input"
         assert info_after_third.currsize == 2, "Should have 2 entries in cache"
-

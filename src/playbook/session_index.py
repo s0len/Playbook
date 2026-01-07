@@ -21,10 +21,10 @@ Optimization Strategy:
     retrieve only the keys that satisfy conditions #2 and #3 in O(1) time, eliminating
     ~98% of unnecessary distance calculations.
 """
+
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Dict, List, Optional
 
 
 class SessionLookupIndex:
@@ -95,7 +95,7 @@ class SessionLookupIndex:
         """
         # Direct mapping for exact lookups (e.g., {"race": "s01e03", "qualifying": "s01e02"})
         # Used by get_direct() to return values for exact key matches in O(1) time
-        self._mapping: Dict[str, str] = {}
+        self._mapping: dict[str, str] = {}
 
         # Two-level bucketed index: first_char -> length -> [keys]
         # Structure: {'r': {4: ['race'], 5: ['races']}, 'p': {8: ['practice', 'practise']}}
@@ -103,7 +103,7 @@ class SessionLookupIndex:
         # - First level: 26 buckets (a-z) for first character matching
         # - Second level: ~50 buckets (typical key lengths) for length ±1 matching
         # - Result: ~98% reduction in candidates (n/78 on average)
-        self._index: Dict[str, Dict[int, List[str]]] = defaultdict(lambda: defaultdict(list))
+        self._index: dict[str, dict[int, list[str]]] = defaultdict(lambda: defaultdict(list))
 
     def add(self, key: str, value: str) -> None:
         """Add a key-value pair to the index.
@@ -130,7 +130,7 @@ class SessionLookupIndex:
         # Index by first character and length for O(1) candidate filtering
         if key:  # Only index non-empty keys
             first_char = key[0]  # Extract first character (e.g., "race" -> "r")
-            length = len(key)     # Calculate length (e.g., "race" -> 4)
+            length = len(key)  # Calculate length (e.g., "race" -> 4)
 
             # Append to the appropriate bucket: _index[first_char][length]
             # Example: "race" goes to _index["r"][4].append("race")
@@ -138,7 +138,7 @@ class SessionLookupIndex:
             # by checking _index["r"][2], _index["r"][3], _index["r"][4]
             self._index[first_char][length].append(key)
 
-    def get_direct(self, token: str) -> Optional[str]:
+    def get_direct(self, token: str) -> str | None:
         """Get exact match for a token.
 
         Performs an O(1) dictionary lookup for exact key matches.
@@ -162,7 +162,7 @@ class SessionLookupIndex:
         """
         return self._mapping.get(token)
 
-    def get_candidates(self, token: str) -> List[str]:
+    def get_candidates(self, token: str) -> list[str]:
         """Get candidate keys for fuzzy matching.
 
         Returns only keys that match the first character and are within ±1
@@ -187,9 +187,9 @@ class SessionLookupIndex:
 
         Example:
             >>> index = SessionLookupIndex()
-            >>> index.add("practice", "s01e01")    # Length 8, first char 'p'
+            >>> index.add("practice", "s01e01")  # Length 8, first char 'p'
             >>> index.add("qualifying", "s01e02")  # Length 10, first char 'q'
-            >>> index.add("race", "s01e03")        # Length 4, first char 'r'
+            >>> index.add("race", "s01e03")  # Length 4, first char 'r'
             >>>
             >>> # Token "practce" (length 7, first char 'p')
             >>> # Returns keys with first char 'p' and length in {6, 7, 8}
@@ -206,11 +206,11 @@ class SessionLookupIndex:
 
         # Extract filtering criteria from the token
         first_char = token[0]  # e.g., "practce" -> 'p'
-        length = len(token)     # e.g., "practce" -> 7
+        length = len(token)  # e.g., "practce" -> 7
 
         # Retrieve candidates matching the bucketing constraints
         # This is where the optimization happens: O(1) bucket access instead of O(n) scan
-        candidates: List[str] = []
+        candidates: list[str] = []
 
         if first_char in self._index:
             # Access the first-level bucket (first character match)
@@ -231,7 +231,7 @@ class SessionLookupIndex:
         # instead of all 200, enabling _tokens_close() to run 98% fewer times
         return candidates
 
-    def keys(self) -> List[str]:
+    def keys(self) -> list[str]:
         """Get all keys in the index.
 
         Returns all keys that have been added to the index, in arbitrary order.
@@ -252,7 +252,7 @@ class SessionLookupIndex:
         return list(self._mapping.keys())
 
     @classmethod
-    def from_dict(cls, mapping: Dict[str, str]) -> SessionLookupIndex:
+    def from_dict(cls, mapping: dict[str, str]) -> SessionLookupIndex:
         """Create a SessionLookupIndex from an existing dictionary.
 
         Convenience constructor for migrating from Dict[str, str] to SessionLookupIndex.
@@ -267,11 +267,7 @@ class SessionLookupIndex:
         Complexity: O(n) where n is the number of entries in mapping
 
         Example:
-            >>> session_dict = {
-            ...     "practice": "s01e01",
-            ...     "qualifying": "s01e02",
-            ...     "race": "s01e03"
-            ... }
+            >>> session_dict = {"practice": "s01e01", "qualifying": "s01e02", "race": "s01e03"}
             >>> index = SessionLookupIndex.from_dict(session_dict)
             >>> index.get_direct("race")
             's01e03'

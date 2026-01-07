@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import pytest
 from pathlib import Path
 
 from src.playbook.plex_sync_state import (
@@ -149,4 +148,3 @@ class TestPlexSyncStateStore:
         assert data["sports"]["nhl"]["seasons_synced"] == 2
         assert data["sports"]["nhl"]["episodes_synced"] == 10
         assert "synced_at" in data["sports"]["nhl"]
-

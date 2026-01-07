@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any
 
 
 class TemplateDict(dict):
@@ -9,6 +8,6 @@ class TemplateDict(dict):
         return "{" + key + "}"
 
 
-def render_template(template: str, context: Dict[str, Any]) -> str:
+def render_template(template: str, context: dict[str, Any]) -> str:
     enriched = TemplateDict(context)
     return template.format_map(enriched)

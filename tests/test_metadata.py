@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 import requests
 
@@ -36,7 +34,7 @@ def test_fetch_metadata_uses_cache(monkeypatch, settings) -> None:
         title: Demo Series
     """
 
-    requests_called: List[str] = []
+    requests_called: list[str] = []
 
     def fake_get(url, headers=None, timeout=None):
         requests_called.append(url)
@@ -317,4 +315,3 @@ def test_metadata_normalizer_falls_back_to_index_when_no_numeric_hint() -> None:
     assert show.seasons[0].display_number == 1
     assert show.seasons[1].round_number == 2
     assert show.seasons[1].display_number == 2
-

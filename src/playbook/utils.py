@@ -9,11 +9,10 @@ import shutil
 import string
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 import yaml
-
 
 NORMALIZE_PATTERN = re.compile(r"[^a-z0-9]+")
 
@@ -89,13 +88,13 @@ def expand_env(value: Any) -> Any:
     return value
 
 
-def load_yaml_file(path: Path) -> Dict[str, Any]:
+def load_yaml_file(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
         data = yaml.safe_load(handle) or {}
     return expand_env(data)
 
 
-def dump_yaml_file(path: Path, data: Dict[str, Any]) -> None:
+def dump_yaml_file(path: Path, data: dict[str, Any]) -> None:
     ensure_directory(path.parent)
     with path.open("w", encoding="utf-8") as handle:
         yaml.safe_dump(data, handle, sort_keys=False, allow_unicode=True)
@@ -123,7 +122,7 @@ def sha1_of_file(path: Path, chunk_size: int = 65536) -> str:
 @dataclass
 class LinkResult:
     created: bool
-    reason: Optional[str] = None
+    reason: str | None = None
 
 
 def link_file(source: Path, destination: Path, mode: str = "hardlink") -> LinkResult:
@@ -155,7 +154,7 @@ def link_file(source: Path, destination: Path, mode: str = "hardlink") -> LinkRe
     return LinkResult(created=True)
 
 
-def parse_env_bool(value: Optional[str]) -> Optional[bool]:
+def parse_env_bool(value: str | None) -> bool | None:
     """Parse a boolean from an environment variable string.
 
     Returns None if value is None or not a recognized boolean string.
@@ -170,7 +169,7 @@ def parse_env_bool(value: Optional[str]) -> Optional[bool]:
     return None
 
 
-def env_bool(name: str) -> Optional[bool]:
+def env_bool(name: str) -> bool | None:
     """Get a boolean from an environment variable.
 
     Returns None if not set or not a recognized boolean string.
@@ -178,7 +177,7 @@ def env_bool(name: str) -> Optional[bool]:
     return parse_env_bool(os.getenv(name))
 
 
-def env_list(name: str, separator: str = ",") -> Optional[List[str]]:
+def env_list(name: str, separator: str = ",") -> list[str] | None:
     """Get a list of strings from an environment variable.
 
     Returns None if not set, empty list if set but empty.
@@ -190,7 +189,7 @@ def env_list(name: str, separator: str = ",") -> Optional[List[str]]:
     return parts
 
 
-def validate_url(url: Optional[str]) -> bool:
+def validate_url(url: str | None) -> bool:
     """Validate that URL is a valid http/https URL."""
     if not url:
         return False

@@ -13,7 +13,7 @@ from .pattern_templates import expand_regex_with_tokens, load_builtin_pattern_se
 from .utils import load_yaml_file, validate_url
 
 
-@dataclass(slots=True)
+@dataclass
 class SeasonSelector:
     mode: str = "round"  # round | key | title | sequential | date
     group: Optional[str] = None
@@ -23,14 +23,14 @@ class SeasonSelector:
     value_template: Optional[str] = None
 
 
-@dataclass(slots=True)
+@dataclass
 class EpisodeSelector:
     group: str = "session"
     allow_fallback_to_title: bool = True
     default_value: Optional[str] = None
 
 
-@dataclass(slots=True)
+@dataclass
 class PlexSyncSettings:
     enabled: bool = False
     url: Optional[str] = None
@@ -44,7 +44,7 @@ class PlexSyncSettings:
     scan_wait: float = 5.0  # Seconds to wait after triggering library scan
 
 
-@dataclass(slots=True)
+@dataclass
 class PatternConfig:
     regex: str
     description: Optional[str] = None
@@ -61,7 +61,7 @@ class PatternConfig:
         return re.compile(self.regex, re.IGNORECASE)
 
 
-@dataclass(slots=True)
+@dataclass
 class MetadataConfig:
     url: str
     show_key: Optional[str] = None
@@ -70,7 +70,7 @@ class MetadataConfig:
     season_overrides: Dict[str, Dict[str, Any]] = field(default_factory=dict)
 
 
-@dataclass(slots=True)
+@dataclass
 class DestinationTemplates:
     root_template: str = "{show_title}"
     season_dir_template: str = "{season_number:02d} {season_title}"
@@ -79,7 +79,7 @@ class DestinationTemplates:
     )
 
 
-@dataclass(slots=True)
+@dataclass
 class NotificationSettings:
     batch_daily: bool = False
     flush_time: dt.time = field(default_factory=lambda: dt.time(hour=0, minute=0))
@@ -88,7 +88,7 @@ class NotificationSettings:
     mentions: Dict[str, str] = field(default_factory=dict)
 
 
-@dataclass(slots=True)
+@dataclass
 class WatcherSettings:
     enabled: bool = False
     paths: List[str] = field(default_factory=list)
@@ -98,7 +98,7 @@ class WatcherSettings:
     reconcile_interval: int = 900
 
 
-@dataclass(slots=True)
+@dataclass
 class KometaTriggerSettings:
     enabled: bool = False
     mode: str = "kubernetes"  # kubernetes | docker
@@ -121,7 +121,7 @@ class KometaTriggerSettings:
     docker_exec_command: Optional[List[str]] = None
 
 
-@dataclass(slots=True)
+@dataclass
 class SportConfig:
     id: str
     name: str
@@ -138,7 +138,7 @@ class SportConfig:
     allow_unmatched: bool = False
 
 
-@dataclass(slots=True)
+@dataclass
 class Settings:
     source_dir: Path
     destination_dir: Path
@@ -153,7 +153,7 @@ class Settings:
     plex_sync: PlexSyncSettings = field(default_factory=PlexSyncSettings)
 
 
-@dataclass(slots=True)
+@dataclass
 class AppConfig:
     settings: Settings
     sports: List[SportConfig]

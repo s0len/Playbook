@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -323,4 +321,3 @@ class TestSearchShowFuzzyMatching:
             assert result.result is None
             assert result.close_matches == []
             assert result.searched_title == "NHL 2025-2026"
-

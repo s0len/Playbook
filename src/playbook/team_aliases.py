@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Dict, Iterable, Optional
+from collections.abc import Iterable
 
 from .utils import normalize_token
 
 
-def _build_alias_map(entries: Dict[str, Iterable[str]]) -> Dict[str, str]:
-    mapping: Dict[str, str] = {}
+def _build_alias_map(entries: dict[str, Iterable[str]]) -> dict[str, str]:
+    mapping: dict[str, str] = {}
     for canonical, aliases in entries.items():
         canonical_clean = canonical.strip()
         normalized_canonical = normalize_token(canonical_clean)
@@ -20,7 +20,7 @@ def _build_alias_map(entries: Dict[str, Iterable[str]]) -> Dict[str, str]:
     return mapping
 
 
-_NHL_TEAM_SYNONYMS: Dict[str, Iterable[str]] = {
+_NHL_TEAM_SYNONYMS: dict[str, Iterable[str]] = {
     "Anaheim Ducks": ["Ducks", "Anaheim", "ANA"],
     "Arizona Coyotes": ["Coyotes", "Arizona", "Yotes", "ARI"],
     "Boston Bruins": ["Bruins", "Boston", "BOS"],
@@ -56,7 +56,7 @@ _NHL_TEAM_SYNONYMS: Dict[str, Iterable[str]] = {
     "Winnipeg Jets": ["Jets", "Winnipeg", "WPG"],
 }
 
-_EPL_TEAM_SYNONYMS: Dict[str, Iterable[str]] = {
+_EPL_TEAM_SYNONYMS: dict[str, Iterable[str]] = {
     "Arsenal": ["Arsenal FC", "Gunners", "ARS"],
     "Aston Villa": ["Villa", "AVFC", "AVL"],
     "Bournemouth": ["AFC Bournemouth", "Cherries", "BOU"],
@@ -92,7 +92,7 @@ _EPL_TEAM_SYNONYMS: Dict[str, Iterable[str]] = {
 }
 
 
-_NBA_TEAM_SYNONYMS: Dict[str, Iterable[str]] = {
+_NBA_TEAM_SYNONYMS: dict[str, Iterable[str]] = {
     "Atlanta Hawks": ["Hawks", "Atlanta", "ATL"],
     "Boston Celtics": ["Celtics", "Boston", "BOS"],
     "Brooklyn Nets": ["Nets", "Brooklyn", "BKN"],
@@ -126,15 +126,14 @@ _NBA_TEAM_SYNONYMS: Dict[str, Iterable[str]] = {
 }
 
 
-_TEAM_ALIAS_MAPS: Dict[str, Dict[str, str]] = {
+_TEAM_ALIAS_MAPS: dict[str, dict[str, str]] = {
     "nhl": _build_alias_map(_NHL_TEAM_SYNONYMS),
     "nba": _build_alias_map(_NBA_TEAM_SYNONYMS),
     "premier_league": _build_alias_map(_EPL_TEAM_SYNONYMS),
 }
 
 
-def get_team_alias_map(name: Optional[str]) -> Dict[str, str]:
+def get_team_alias_map(name: str | None) -> dict[str, str]:
     if not name:
         return {}
     return _TEAM_ALIAS_MAPS.get(name, {})
-

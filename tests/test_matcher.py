@@ -2,9 +2,6 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
-from typing import Dict, List, Tuple
-
-import pytest
 
 from playbook.config import (
     DestinationTemplates,
@@ -15,17 +12,19 @@ from playbook.config import (
     SportConfig,
 )
 from playbook.matcher import (
+    _build_team_alias_lookup,
+    _dates_within_proximity,
+    _parse_date_from_groups,
+    _score_structured_match,
     compile_patterns,
     match_file_to_episode,
-    _build_team_alias_lookup,
-    _score_structured_match,
 )
 from playbook.models import Episode, Season, Show
 from playbook.parsers.structured_filename import StructuredName
 from playbook.team_aliases import get_team_alias_map
 
 
-def build_show() -> Tuple[Show, Season]:
+def build_show() -> tuple[Show, Season]:
     practice = Episode(
         title="Free Practice 1",
         summary=None,
@@ -55,7 +54,7 @@ def build_show() -> Tuple[Show, Season]:
     return show, season
 
 
-def build_sport(patterns: List[PatternConfig]) -> SportConfig:
+def build_sport(patterns: list[PatternConfig]) -> SportConfig:
     return SportConfig(
         id="f1",
         name="Formula 1",
@@ -76,7 +75,7 @@ def test_match_file_to_episode_resolves_aliases() -> None:
 
     patterns = compile_patterns(sport)
 
-    diagnostics: List[Tuple[str, str]] = []
+    diagnostics: list[tuple[str, str]] = []
     result = match_file_to_episode("01.fp1.release.mkv", sport, show, patterns, diagnostics=diagnostics)
 
     assert result is not None
@@ -98,7 +97,7 @@ def test_match_file_to_episode_warns_when_season_missing() -> None:
 
     patterns = compile_patterns(sport)
 
-    diagnostics: List[Tuple[str, str]] = []
+    diagnostics: list[tuple[str, str]] = []
     result = match_file_to_episode("99.fp1.release.mkv", sport, show, patterns, diagnostics=diagnostics)
 
     assert result is None
@@ -120,7 +119,7 @@ def test_match_file_to_episode_suppresses_warnings_when_requested(caplog) -> Non
 
     patterns = compile_patterns(sport)
 
-    diagnostics: List[Tuple[str, str]] = []
+    diagnostics: list[tuple[str, str]] = []
     caplog.set_level(logging.WARNING, logger="playbook.matcher")
     result = match_file_to_episode(
         "99.fp1.release.mkv",
@@ -150,7 +149,7 @@ def test_match_file_to_episode_includes_trace_details() -> None:
 
     patterns = compile_patterns(sport)
 
-    trace: Dict[str, object] = {}
+    trace: dict[str, object] = {}
     result = match_file_to_episode(
         "01.qualifying.mkv",
         sport,
@@ -263,9 +262,7 @@ class TestNBATeamAliases:
         # Get all unique canonical team names from the alias map
         canonical_teams = set(alias_map.values())
 
-        assert len(canonical_teams) == 30, (
-            f"Expected 30 NBA teams in alias map, got {len(canonical_teams)}"
-        )
+        assert len(canonical_teams) == 30, f"Expected 30 NBA teams in alias map, got {len(canonical_teams)}"
 
         # Verify each team is present
         for team in self.NBA_TEAMS:
@@ -288,8 +285,7 @@ class TestNBATeamAliases:
 
         for abbr, expected_team in abbreviation_mappings.items():
             assert alias_map.get(abbr) == expected_team, (
-                f"Abbreviation '{abbr}' should resolve to '{expected_team}', "
-                f"got '{alias_map.get(abbr)}'"
+                f"Abbreviation '{abbr}' should resolve to '{expected_team}', got '{alias_map.get(abbr)}'"
             )
 
     def test_nicknames_resolve(self) -> None:
@@ -310,8 +306,7 @@ class TestNBATeamAliases:
 
         for nickname, expected_team in nickname_mappings.items():
             assert alias_map.get(nickname) == expected_team, (
-                f"Nickname '{nickname}' should resolve to '{expected_team}', "
-                f"got '{alias_map.get(nickname)}'"
+                f"Nickname '{nickname}' should resolve to '{expected_team}', got '{alias_map.get(nickname)}'"
             )
 
     def test_city_names_resolve(self) -> None:
@@ -331,9 +326,10 @@ class TestNBATeamAliases:
 
         for city, expected_team in city_mappings.items():
             assert alias_map.get(city) == expected_team, (
-                f"City '{city}' should resolve to '{expected_team}', "
-                f"got '{alias_map.get(city)}'"
+                f"City '{city}' should resolve to '{expected_team}', got '{alias_map.get(city)}'"
             )
+
+
 # ========================== Date Proximity Tests ==========================
 
 
@@ -407,7 +403,7 @@ class TestParseDateFromGroups:
 class TestScoreStructuredMatchWithDates:
     """Tests for _score_structured_match date proximity behavior."""
 
-    def build_nhl_show_with_repeat_games(self) -> Tuple[Show, Season]:
+    def build_nhl_show_with_repeat_games(self) -> tuple[Show, Season]:
         """Build a show where the same teams play multiple times."""
         # Jets vs Stars game on October 15
         october_game = Episode(
@@ -603,4 +599,3 @@ class TestMatchFileWithDateProximity:
         # Should match October episode (index 5), not December (index 45)
         assert episode.index == 5
         assert episode.originally_available == dt.date(2024, 10, 15)
-

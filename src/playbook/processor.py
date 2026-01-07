@@ -5,11 +5,12 @@ import logging
 import re
 import time
 from collections import Counter
+from collections.abc import Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
+from typing import Any
 
 from rich.progress import Progress
 
@@ -23,7 +24,6 @@ from .metadata import (
     MetadataFetchError,
     MetadataFetchStatistics,
     MetadataFingerprintStore,
-    compute_show_fingerprint,
     compute_show_fingerprint_cached,
     load_show,
 )
@@ -43,14 +43,14 @@ SAMPLE_FILENAME_PATTERN = re.compile(r"(?<![a-z0-9])sample(?![a-z0-9])")
 class SportRuntime:
     sport: SportConfig
     show: Show
-    patterns: List[PatternRuntime]
-    extensions: Set[str]
+    patterns: list[PatternRuntime]
+    extensions: set[str]
 
 
 @dataclass(slots=True)
 class TraceOptions:
     enabled: bool = False
-    output_dir: Optional[Path] = None
+    output_dir: Path | None = None
 
 
 class Processor:
@@ -59,7 +59,7 @@ class Processor:
         config: AppConfig,
         *,
         enable_notifications: bool = True,
-        trace_options: Optional[TraceOptions] = None,
+        trace_options: TraceOptions | None = None,
     ) -> None:
         self.config = config
         if not self.config.settings.dry_run:
@@ -79,28 +79,28 @@ class Processor:
         self._kometa_trigger = build_kometa_trigger(settings.kometa_trigger)
         self._kometa_trigger_fired = False
         self._kometa_trigger_needed = False
-        self._plex_sync: Optional[PlexMetadataSync] = create_plex_sync_from_config(config)
-        self._plex_sync_stats: Optional[PlexSyncStats] = None
+        self._plex_sync: PlexMetadataSync | None = create_plex_sync_from_config(config)
+        self._plex_sync_stats: PlexSyncStats | None = None
         self._plex_sync_ran = False
-        self._previous_summary: Optional[Tuple[int, int, int]] = None
-        self._metadata_changed_sports: List[Tuple[str, str]] = []
-        self._metadata_change_map: Dict[str, MetadataChangeResult] = {}
-        self._stale_destinations: Dict[str, Path] = {}
-        self._stale_records: Dict[str, CachedFileRecord] = {}
+        self._previous_summary: tuple[int, int, int] | None = None
+        self._metadata_changed_sports: list[tuple[str, str]] = []
+        self._metadata_change_map: dict[str, MetadataChangeResult] = {}
+        self._stale_destinations: dict[str, Path] = {}
+        self._stale_records: dict[str, CachedFileRecord] = {}
         self._metadata_fetch_stats = MetadataFetchStatistics()
-        self._touched_destinations: Set[str] = set()
-        self._sports_with_processed_files: Set[str] = set()
+        self._touched_destinations: set[str] = set()
+        self._sports_with_processed_files: set[str] = set()
 
     @staticmethod
-    def _format_log(event: str, fields: Optional[Mapping[str, object]] = None) -> str:
+    def _format_log(event: str, fields: Mapping[str, object] | None = None) -> str:
         return render_fields_block(event, fields or {}, pad_top=True)
 
     @staticmethod
-    def _format_inline_log(event: str, fields: Optional[Mapping[str, object]] = None) -> str:
+    def _format_inline_log(event: str, fields: Mapping[str, object] | None = None) -> str:
         return render_fields_block(event, fields or {}, pad_top=False)
 
-    def _load_sports(self) -> List[SportRuntime]:
-        runtimes: List[SportRuntime] = []
+    def _load_sports(self) -> list[SportRuntime]:
+        runtimes: list[SportRuntime] = []
         self._metadata_changed_sports = []
         self._metadata_change_map = {}
         self._metadata_fetch_stats = MetadataFetchStatistics()
@@ -113,7 +113,7 @@ class Processor:
         if not enabled_sports:
             return runtimes
 
-        shows: Dict[str, Show] = {}
+        shows: dict[str, Show] = {}
         max_workers = min(8, max(1, len(enabled_sports)))
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -239,9 +239,7 @@ class Processor:
             )
             removed_records = self.processed_cache.remove_by_metadata_changes(self._metadata_change_map)
             self._stale_destinations = {
-                source: Path(record.destination)
-                for source, record in removed_records.items()
-                if record.destination
+                source: Path(record.destination) for source, record in removed_records.items() if record.destination
             }
             self._stale_records = removed_records
         stats = ProcessingStats()
@@ -251,7 +249,7 @@ class Processor:
 
         try:
             all_source_files = list(self._gather_source_files(stats))
-            filtered_source_files: List[Path] = []
+            filtered_source_files: list[Path] = []
             skipped_by_cache = 0
             for source_path in all_source_files:
                 if self.processed_cache.is_processed(source_path):
@@ -338,7 +336,7 @@ class Processor:
                 self.processed_cache.save()
                 self.metadata_fingerprints.save()
 
-    def _gather_source_files(self, stats: Optional[ProcessingStats] = None) -> Iterable[Path]:
+    def _gather_source_files(self, stats: ProcessingStats | None = None) -> Iterable[Path]:
         root = self.config.settings.source_dir
         if not root.exists():
             LOGGER.warning(
@@ -383,7 +381,7 @@ class Processor:
             yield path
 
     @staticmethod
-    def _skip_reason_for_source_file(path: Path) -> Optional[str]:
+    def _skip_reason_for_source_file(path: Path) -> str | None:
         name = path.name
         if name.startswith("._") and len(name) > 2:
             return "macOS resource fork (._ prefix)"
@@ -398,14 +396,14 @@ class Processor:
     def _process_single_file(
         self,
         source_path: Path,
-        runtimes: List[SportRuntime],
+        runtimes: list[SportRuntime],
         stats: ProcessingStats,
         *,
         is_sample_file: bool = False,
-    ) -> Tuple[bool, List[Tuple[str, str, Optional[str]]]]:
+    ) -> tuple[bool, list[tuple[str, str, str | None]]]:
         suffix = source_path.suffix.lower()
         matching_runtimes = [runtime for runtime in runtimes if suffix in runtime.extensions]
-        ignored_reasons: List[Tuple[str, str, Optional[str]]] = []
+        ignored_reasons: list[tuple[str, str, str | None]] = []
 
         if not matching_runtimes:
             message = f"No configured sport accepts extension '{suffix or '<no extension>'}'"
@@ -422,7 +420,7 @@ class Processor:
             return False, ignored_reasons
 
         for runtime in matching_runtimes:
-            trace_context: Optional[Dict[str, Any]] = None
+            trace_context: dict[str, Any] | None = None
             if self.trace_options.enabled:
                 trace_context = {
                     "filename": str(source_path),
@@ -455,7 +453,7 @@ class Processor:
                     self._persist_trace(trace_context)
                 continue
 
-            detection_messages: List[Tuple[str, str]] = []
+            detection_messages: list[tuple[str, str]] = []
             detection = match_file_to_episode(
                 source_path.name,
                 runtime.sport,
@@ -479,9 +477,7 @@ class Processor:
                 try:
                     destination = self._build_destination(runtime, pattern, context)
                 except ValueError as exc:
-                    message = (
-                        f"{runtime.sport.id}: Unsafe destination for {source_path.name} - {exc}"
-                    )
+                    message = f"{runtime.sport.id}: Unsafe destination for {source_path.name} - {exc}"
                     LOGGER.error(
                         self._format_log(
                             "Unsafe Destination",
@@ -566,7 +562,7 @@ class Processor:
         name = source_path.name.lower()
         return bool(SAMPLE_FILENAME_PATTERN.search(name))
 
-    def _persist_trace(self, trace: Optional[Dict[str, Any]]) -> Optional[Path]:
+    def _persist_trace(self, trace: dict[str, Any] | None) -> Path | None:
         if not trace or not self.trace_options.enabled:
             return None
         output_dir = self.trace_options.output_dir or (self.config.settings.cache_dir / "traces")
@@ -601,13 +597,13 @@ class Processor:
     def _format_ignored_detail(
         self,
         source_path: Path,
-        diagnostics: List[Tuple[str, str, Optional[str]]],
+        diagnostics: list[tuple[str, str, str | None]],
     ) -> str:
         if not diagnostics:
             return f"{source_path.name}\n  - [IGNORED] No diagnostics recorded"
 
         lines = [source_path.name]
-        seen: Set[str] = set()
+        seen: set[str] = set()
         for severity, message, sport_id in diagnostics:
             key = f"{severity}:{sport_id}:{message}"
             if key in seen:
@@ -624,7 +620,7 @@ class Processor:
         show_entries = LOGGER.isEnabledFor(logging.DEBUG)
         builder = LogBlockBuilder("Detailed Summary", pad_top=True)
 
-        fields: Dict[str, Any] = {
+        fields: dict[str, Any] = {
             "Processed": stats.processed,
             "Skipped": stats.skipped,
             "Ignored": stats.ignored,
@@ -675,7 +671,7 @@ class Processor:
         destinations = sorted(self._touched_destinations)
         builder = LogBlockBuilder("Run Recap")
 
-        fields: Dict[str, Any] = {
+        fields: dict[str, Any] = {
             "Duration": f"{duration:.2f}s",
             "Processed": stats.processed,
             "Skipped": stats.skipped,
@@ -694,10 +690,7 @@ class Processor:
                     f"{plex_summary['episodes']['updated']} (show/season/ep)"
                 )
                 # Show not-found counts if any
-                not_found = (
-                    plex_summary["seasons"]["not_found"]
-                    + plex_summary["episodes"]["not_found"]
-                )
+                not_found = plex_summary["seasons"]["not_found"] + plex_summary["episodes"]["not_found"]
                 if not_found:
                     plex_status += f" [{not_found} not found]"
                 if self._plex_sync_stats.errors:
@@ -728,7 +721,7 @@ class Processor:
                 self._summarize_plex_errors(self._plex_sync_stats.errors, limit=5),
             )
 
-        follow_ups: List[str] = []
+        follow_ups: list[str] = []
         if stats.errors:
             follow_ups.append("Resolve processing errors above before next run.")
         if self._plex_sync_stats and self._plex_sync_stats.errors:
@@ -742,8 +735,8 @@ class Processor:
         LOGGER.info(builder.render())
 
     @staticmethod
-    def _filtered_ignored_details(stats: ProcessingStats) -> List[str]:
-        filtered: List[str] = []
+    def _filtered_ignored_details(stats: ProcessingStats) -> list[str]:
+        filtered: list[str] = []
         suppressed_non_video = 0
         for detail in stats.ignored_details:
             if "No configured sport accepts extension" in detail:
@@ -759,10 +752,10 @@ class Processor:
         return filtered
 
     @staticmethod
-    def _summarize_counts(counts: Dict[str, int], total: int, label: str) -> List[str]:
+    def _summarize_counts(counts: dict[str, int], total: int, label: str) -> list[str]:
         if total <= 0:
             return []
-        lines: List[str] = []
+        lines: list[str] = []
         if counts:
             ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
             for sport, value in ordered:
@@ -776,12 +769,12 @@ class Processor:
         return lines
 
     @staticmethod
-    def _summarize_messages(entries: List[str], *, limit: int = 5) -> List[str]:
+    def _summarize_messages(entries: list[str], *, limit: int = 5) -> list[str]:
         if not entries:
             return []
         counter = Counter(entries)
         ordered = sorted(counter.items(), key=lambda item: (-item[1], item[0]))
-        lines: List[str] = []
+        lines: list[str] = []
         for text, count in ordered[:limit]:
             prefix = f"{count}× " if count > 1 else ""
             lines.append(f"{prefix}{text}")
@@ -793,7 +786,7 @@ class Processor:
         return lines
 
     @staticmethod
-    def _summarize_plex_errors(errors: List[str], *, limit: int = 10) -> List[str]:
+    def _summarize_plex_errors(errors: list[str], *, limit: int = 10) -> list[str]:
         """Summarize Plex sync errors, grouping by error type.
 
         Extracts and displays library name, metadata source URL, and close matches
@@ -803,7 +796,7 @@ class Processor:
             return []
 
         # Group errors by type (first part before colon or first few words)
-        grouped: Dict[str, List[str]] = {}
+        grouped: dict[str, list[str]] = {}
         for error in errors:
             # Extract error category (e.g., "Show not found", "Season not found", etc.)
             if ":" in error:
@@ -813,7 +806,7 @@ class Processor:
                 category = error[:30].strip()
             grouped.setdefault(category, []).append(error)
 
-        lines: List[str] = []
+        lines: list[str] = []
         shown = 0
         for category, errs in sorted(grouped.items(), key=lambda x: -len(x[1])):
             if shown >= limit:
@@ -848,7 +841,7 @@ class Processor:
         return lines
 
     @staticmethod
-    def _extract_error_context(error: str) -> Optional[str]:
+    def _extract_error_context(error: str) -> str | None:
         """Extract actionable context from Plex error strings.
 
         Parses error strings to extract library name, metadata source URL,
@@ -916,28 +909,17 @@ class Processor:
 
     @staticmethod
     def _has_activity(stats: ProcessingStats) -> bool:
-        return bool(
-            stats.processed
-            or stats.skipped
-            or stats.ignored
-            or stats.errors
-            or stats.warnings
-        )
+        return bool(stats.processed or stats.skipped or stats.ignored or stats.errors or stats.warnings)
 
     @staticmethod
     def _has_detailed_activity(stats: ProcessingStats) -> bool:
-        return bool(
-            stats.errors
-            or stats.warnings
-            or stats.skipped_details
-            or stats.ignored_details
-        )
+        return bool(stats.errors or stats.warnings or stats.skipped_details or stats.ignored_details)
 
-    def _build_context(self, runtime: SportRuntime, source_path: Path, season, episode, groups) -> Dict[str, object]:
+    def _build_context(self, runtime: SportRuntime, source_path: Path, season, episode, groups) -> dict[str, object]:
         show = runtime.show
         sport = runtime.sport
 
-        context: Dict[str, object] = {}
+        context: dict[str, object] = {}
         context.update(groups)
 
         context.update(
@@ -979,7 +961,7 @@ class Processor:
 
         return context
 
-    def _build_destination(self, runtime: SportRuntime, pattern, context: Dict[str, object]) -> Path:
+    def _build_destination(self, runtime: SportRuntime, pattern, context: dict[str, object]) -> Path:
         settings = self.config.settings
         sport = runtime.sport
 
@@ -1004,23 +986,16 @@ class Processor:
         episode_filename = render_template(episode_template, context)
         episode_component = sanitize_component(episode_filename)
 
-        destination = (
-            settings.destination_dir
-            / root_component
-            / season_component
-            / episode_component
-        )
+        destination = settings.destination_dir / root_component / season_component / episode_component
 
         base_dir = settings.destination_dir.resolve()
         destination_resolved = destination.resolve(strict=False)
         if not destination_resolved.is_relative_to(base_dir):
-            raise ValueError(
-                f"destination {destination_resolved} escapes destination_dir {base_dir}"
-            )
+            raise ValueError(f"destination {destination_resolved} escapes destination_dir {base_dir}")
 
         return destination
 
-    def _handle_match(self, match: SportFileMatch, stats: ProcessingStats) -> Optional[NotificationEvent]:
+    def _handle_match(self, match: SportFileMatch, stats: ProcessingStats) -> NotificationEvent | None:
         destination = match.destination_path
         settings = self.config.settings
         link_mode = (match.sport.link_mode or settings.link_mode).lower()
@@ -1036,7 +1011,7 @@ class Processor:
 
         destination_display = self._format_relative_destination(destination)
 
-        file_checksum: Optional[str] = None
+        file_checksum: str | None = None
         try:
             file_checksum = sha1_of_file(match.source_path)
         except ValueError as exc:  # pragma: no cover - depends on filesystem state
@@ -1363,9 +1338,7 @@ class Processor:
         alias_candidates = self._alias_candidates(match)
 
         baseline_scores = [
-            self._specificity_score(alias)
-            for alias in alias_candidates
-            if normalize_token(alias) != session_token
+            self._specificity_score(alias) for alias in alias_candidates if normalize_token(alias) != session_token
         ]
 
         if not baseline_scores:
@@ -1373,8 +1346,8 @@ class Processor:
 
         return session_specificity > min(baseline_scores)
 
-    def _alias_candidates(self, match: SportFileMatch) -> List[str]:
-        candidates: List[str] = []
+    def _alias_candidates(self, match: SportFileMatch) -> list[str]:
+        candidates: list[str] = []
 
         canonical = match.episode.title
         if canonical:
@@ -1393,8 +1366,8 @@ class Processor:
                     break
 
         # Deduplicate while preserving order and skip falsy values
-        seen: Set[str] = set()
-        unique_candidates: List[str] = []
+        seen: set[str] = set()
+        unique_candidates: list[str] = []
         for value in candidates:
             if not value:
                 continue
@@ -1455,7 +1428,7 @@ class Processor:
         return score
 
     @staticmethod
-    def _season_cache_key(match: SportFileMatch) -> Optional[str]:
+    def _season_cache_key(match: SportFileMatch) -> str | None:
         season = match.season
         key = season.key
         if key is not None:
@@ -1492,7 +1465,7 @@ class Processor:
     def _cleanup_old_destination(
         self,
         source_key: str,
-        old_destination: Optional[Path],
+        old_destination: Path | None,
         new_destination: Path,
         *,
         dry_run: bool,

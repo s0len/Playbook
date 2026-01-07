@@ -18,10 +18,93 @@ Run into snags? Start with the quick triage grid below, then follow the deeper d
 2. **Instrumented dry-run:** `python -m playbook.cli --config playbook.yaml --dry-run --verbose --trace-matches`. This produces console DEBUG output, persistent logs, and per-file trace JSON (under `cache_dir/traces`).
 3. **Review logs:** Inspect `playbook.log` for warnings (missing metadata, Kometa trigger failures, Autoscan errors). The file rotates to `playbook.log.previous` every run—keep both when filing issues.
 4. **Reset processed cache (optional):** `--clear-processed-cache` (or `CLEAR_PROCESSED_CACHE=true`) forces Playbook to treat every file as new—useful when you want to re-run test datasets.
-5. **Isolate integrations:** 
+5. **Isolate integrations:**
    - Kometa: `python -m playbook.cli kometa-trigger --config ... --mode docker`
    - Autoscan: temporarily disable other targets so logs only contain Autoscan responses.
    - Notifications: point Discord/Slack webhooks at a test channel until you confirm formatting.
+
+## Understanding Validation Output
+
+The `validate-config` command provides enhanced error reporting with grouped issues, line numbers, and actionable fix suggestions to help you quickly identify and resolve configuration problems.
+
+### Output Format
+
+Validation errors are organized by configuration section with visual panels:
+
+```
+Validation Errors: 3 error(s) detected
+
+╭─ Settings ─────────────────────────────────────────╮
+│ → Notification Settings                            │
+│  L6    settings.notifications.flush_time           │
+│        Invalid time format: 'invalid_number'       │
+│        (flush-time)                                │
+│        💡 Use HH:MM or HH:MM:SS format (e.g.,      │
+│           '23:30' or '23:30:00')                   │
+╰────────────────────────────────────────────────────╯
+
+╭─ Sport #1 (demo) ──────────────────────────────────╮
+│  L10   sports[0].metadata.url                      │
+│        Invalid metadata URL format                 │
+│        (metadata-url)                              │
+│        💡 Ensure the URL starts with http:// or    │
+│           https://                                 │
+│                                                    │
+│  L11   sports[0].id                                │
+│        Duplicate sport ID: 'demo'                  │
+│        (duplicate-id)                              │
+│        💡 Change the 'id' field to a unique value  │
+╰────────────────────────────────────────────────────╯
+```
+
+### Key Elements
+
+- **Grouped sections:** Errors are grouped by configuration area (Settings, Sport #1, Pattern Sets, etc.) making it easy to focus on one part of your config at a time
+- **Line numbers:** Each error shows `L<number>` indicating the exact line in your YAML file where the issue occurs
+- **Full path:** The complete path to the problematic field (e.g., `sports[0].metadata.url`)
+- **Error codes:** Technical error identifiers in parentheses (e.g., `(flush-time)`, `(metadata-url)`) useful for searching documentation
+- **Fix suggestions:** Actionable guidance marked with 💡 that explains how to correct the issue
+
+### Interpreting Fix Suggestions
+
+Fix suggestions are context-aware and provide specific guidance based on the error:
+
+- **Schema errors:** Show expected type/format and provide valid examples
+  ```
+  💡 Expected type: string, but got: integer
+     Wrap the value in quotes to make it a string
+  ```
+
+- **Format errors:** Explain the required format with concrete examples
+  ```
+  💡 Use HH:MM or HH:MM:SS format (e.g., '23:30' or '23:30:00')
+  ```
+
+- **Missing fields:** Tell you exactly which required field to add
+  ```
+  💡 Add a 'metadata' section with 'url' and 'pattern_sets' fields
+  ```
+
+- **Invalid values:** Suggest valid alternatives or corrections
+  ```
+  💡 Change the 'id' field to a unique value. Current duplicates: demo
+  ```
+
+### Command Options
+
+**Hide fix suggestions for cleaner output:**
+```bash
+python -m playbook.cli validate-config --config playbook.yaml --no-suggestions
+```
+
+This shows only the errors and line numbers without the 💡 guidance—useful for quick scans or when you're already familiar with the fixes.
+
+**Full validation with all features:**
+```bash
+python -m playbook.cli validate-config --config playbook.yaml --diff-sample --show-trace
+```
+
+Includes diff samples and trace information for deep debugging alongside the grouped error output.
 
 ## Command Cheat Sheet
 
