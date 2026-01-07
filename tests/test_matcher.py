@@ -599,3 +599,108 @@ class TestMatchFileWithDateProximity:
         # Should match October episode (index 5), not December (index 45)
         assert episode.index == 5
         assert episode.originally_available == dt.date(2024, 10, 15)
+
+
+def test_indycar_pattern_matching() -> None:
+    """Test IndyCar pattern matching with round-based fallback and fuzzy location matching.
+
+    This validates the fix for IndyCar series where session names (Race/Practice/Qualifying)
+    don't match episode titles, requiring fallback to round number + location fuzzy matching.
+    """
+    # Create IndyCar pattern (simplified version of actual pattern)
+    pattern = PatternConfig(
+        regex=r"(?i)^IndyCar\.Series\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<location>[^.]+)\.(?P<session>Race|Practice|Qualifying)\..*\.mkv$",
+        season_selector=SeasonSelector(mode="round", group="round"),
+        episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
+        priority=10,
+    )
+
+    sport = SportConfig(
+        id="indycar",
+        name="IndyCar Series",
+        metadata=MetadataConfig(url="https://example.com"),
+        patterns=[pattern],
+        destination=DestinationTemplates(),
+    )
+
+    # Create IndyCar show with realistic episode structure
+    # Note: Episode titles have full location names, not just session types
+    episode1 = Episode(
+        title="Streets of St. Petersburg Grand Prix",
+        summary=None,
+        originally_available=dt.date(2025, 3, 2),
+        index=1,
+    )
+    episode2 = Episode(
+        title="The Thermal Club IndyCar Grand Prix",
+        summary=None,
+        originally_available=dt.date(2025, 3, 23),
+        index=2,
+    )
+    episode3 = Episode(
+        title="Indianapolis 500",
+        summary=None,
+        originally_available=dt.date(2025, 5, 25),
+        index=6,
+    )
+
+    season = Season(
+        key="2025",
+        title="2025 Season",
+        summary=None,
+        index=1,
+        episodes=[episode1, episode2, episode3],
+        display_number=1,
+        round_number=1,
+    )
+
+    show = Show(key="indycar", title="NTT IndyCar Series", summary=None, seasons=[season])
+
+    patterns = compile_patterns(sport)
+
+    # Test case 1: Round 2 with location "Thermal" should fuzzy-match to "The Thermal Club IndyCar Grand Prix"
+    trace: dict[str, object] = {}
+    result = match_file_to_episode(
+        "IndyCar.Series.2025.Round02.Thermal.Race.STAN.WEB-DL.1080p.h264.English-MWR.mkv",
+        sport,
+        show,
+        patterns,
+        trace=trace,
+    )
+
+    assert result is not None, "Should match IndyCar file with round-based fallback"
+    assert result["season"] is season
+    assert result["episode"].title == "The Thermal Club IndyCar Grand Prix"
+    assert result["episode"].index == 2
+    assert result["pattern"] is pattern
+
+    # Verify trace shows round-based fallback was used
+    assert trace.get("status") == "matched"
+    attempts = trace.get("attempts")
+    assert attempts
+    matched_attempt = next((item for item in attempts if item.get("status") == "matched"), None)
+    assert matched_attempt is not None
+
+    # Test case 2: Round 6 with location "Indianapolis" should match "Indianapolis 500"
+    result2 = match_file_to_episode(
+        "IndyCar.Series.2025.Round06.Indianapolis.Race.STAN.WEB-DL.1080p.h264.English-MWR.mkv",
+        sport,
+        show,
+        patterns,
+    )
+
+    assert result2 is not None
+    assert result2["episode"].title == "Indianapolis 500"
+    assert result2["episode"].index == 6
+
+    # Test case 3: Round 1 with location "St.Petersburg" should match "Streets of St. Petersburg Grand Prix"
+    result3 = match_file_to_episode(
+        "IndyCar.Series.2025.Round01.St.Petersburg.Qualifying.STAN.WEB-DL.1080p.h264.English-MWR.mkv",
+        sport,
+        show,
+        patterns,
+    )
+
+    assert result3 is not None
+    assert result3["episode"].title == "Streets of St. Petersburg Grand Prix"
+    assert result3["episode"].index == 1
