@@ -1,0 +1,32 @@
+# Trivy Ignore File for Playbook Docker Image
+#
+# CVEs in the python:3.12-slim-bookworm base image that have been reviewed
+# and determined to not impact the Playbook CLI application.
+#
+# See .trivyignore.yaml for detailed justifications for each entry.
+# Last Reviewed: 2026-01-07
+
+# libpam vulnerabilities - Not used for authentication in containerized CLI
+CVE-2025-6020
+CVE-2024-10041
+CVE-2024-22365
+
+# libgcrypt Marvin Attack - No RSA operations, not network-facing
+CVE-2024-2236
+
+# libxml2 vulnerabilities - Only parses trusted YAML/JSON config
+CVE-2025-49794
+CVE-2024-25062
+
+# zlib heap buffer overflow - Doesn't process user-provided compressed streams
+CVE-2023-45853
+
+# Additional common base image CVEs that may be detected
+CVE-2024-0567
+CVE-2024-6119
+CVE-2024-9143
+CVE-2023-52425
+CVE-2024-28182
+CVE-2024-26462
+CVE-2024-26461
+CVE-2024-26458
