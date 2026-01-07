@@ -5,6 +5,7 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
 RUN apk add --no-cache \
+    bash \
     ca-certificates \
     tzdata \
     curl
