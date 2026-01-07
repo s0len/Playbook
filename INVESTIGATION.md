@@ -337,7 +337,7 @@ Setting to `false` allows Plex agents to update posters during automatic refresh
 ## Next Steps
 
 1. ✅ **COMPLETED:** Research Plex API field locking endpoints
-2. **PENDING:** Identify integration points in PlexClient (subtask-2-2)
+2. ✅ **COMPLETED:** Identify integration points in PlexClient (subtask-2-2)
 3. **PENDING:** Implement `unlock_field()` and `lock_field()` methods (subtask-3-1)
 4. **PENDING:** Integrate into `_apply_metadata()` workflow (subtask-3-2)
 5. **PENDING:** Add configuration option (subtask-3-3)
@@ -371,8 +371,92 @@ These methods follow existing patterns in `PlexClient.update_metadata()` which a
 
 ---
 
+## Implementation Location in PlexClient (subtask-2-2)
+
+### Where to Add unlock_field() and lock_field() Methods
+
+**File:** `src/playbook/plex_client.py`
+
+**Insertion Point:** After line 447 (end of `update_metadata()` method), before line 449 (`set_asset()` method)
+
+**Rationale:**
+
+1. **Logical Grouping:** The new methods are field manipulation operations, which aligns with `update_metadata()` (lines 413-447)
+2. **Code Organization:** Placing them between `update_metadata()` and `set_asset()` creates a logical flow:
+   - `update_metadata()` - Update text fields with locking
+   - `unlock_field()` / `lock_field()` - Generic field lock management
+   - `set_asset()` - Upload assets (which will use unlock/lock methods)
+   - `refresh_metadata()` - Trigger cache refresh
+
+3. **Follows Existing Pattern:** The `update_metadata()` method already implements field locking (line 440-441):
+   ```python
+   if lock_fields:
+       clean_params[f"{key}.locked"] = 1
+   ```
+   The new methods extract this pattern into standalone, reusable functions.
+
+4. **Minimal Code Disruption:** Adding methods at line 448 doesn't require modifying any existing method logic, only insertion.
+
+**Method Signatures:**
+
+```python
+def unlock_field(self, rating_key: str, field: str) -> None:
+    """Unlock a metadata field to allow updates.
+
+    Args:
+        rating_key: The Plex rating key of the item.
+        field: Field name (e.g., 'thumb', 'art', 'title', 'summary').
+    """
+    params = {f"{field}.locked": 0}
+    self._request("PUT", f"/library/metadata/{rating_key}", params=params)
+    LOGGER.debug("Unlocked field '%s' for rating_key=%s", field, rating_key)
+
+def lock_field(self, rating_key: str, field: str) -> None:
+    """Lock a metadata field to prevent agent overwrites.
+
+    Args:
+        rating_key: The Plex rating key of the item.
+        field: Field name (e.g., 'thumb', 'art', 'title', 'summary').
+    """
+    params = {f"{field}.locked": 1}
+    self._request("PUT", f"/library/metadata/{rating_key}", params=params)
+    LOGGER.debug("Locked field '%s' for rating_key=%s", field, rating_key)
+```
+
+**Visual Context:**
+
+```python
+# src/playbook/plex_client.py
+
+class PlexClient:
+    ...
+
+    def update_metadata(self, ...):         # Lines 413-447
+        """Update metadata fields for an item."""
+        ...
+        self._request("PUT", f"/library/metadata/{rating_key}", params=clean_params)
+        return True
+
+    # ↓↓↓ INSERT unlock_field() and lock_field() HERE (after line 447) ↓↓↓
+
+    def set_asset(self, ...):               # Lines 449-466
+        """Set an artwork asset from a URL."""
+        ...
+```
+
+**Verification:**
+
+After implementation, verify methods exist:
+```bash
+python -c "from src.playbook.plex_client import PlexClient; import inspect; print('unlock_field' in dir(PlexClient) and 'lock_field' in dir(PlexClient))"
+```
+
+Expected output: `True`
+
+---
+
 **Investigation Status:** ✅ COMPLETE
 
 **Date:** January 7, 2026
 
-**Next Subtask:** subtask-2-2 - Identify where to add unlock logic in PlexClient
+**Next Subtask:** subtask-3-1 - Implement unlock_field() and lock_field() methods in PlexClient
