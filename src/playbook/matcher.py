@@ -573,6 +573,56 @@ def _select_episode(
                     trace["lookup_attempts"] = trace_lookup_records
                 return episode
 
+    # Round-based episode resolution fallback for racing content
+    # When session doesn't match episode title (e.g., "Race" vs "The Thermal Club IndyCar Grand Prix"),
+    # fallback to finding episode by round number with optional location fuzzy matching
+    round_value = match_groups.get("round")
+    if round_value:
+        try:
+            round_number = int(round_value)
+            location_value = match_groups.get("location")
+
+            # Find candidate episodes by round number (matching index or display_number)
+            round_episodes = [
+                ep for ep in season.episodes if ep.index == round_number or ep.display_number == round_number
+            ]
+
+            if round_episodes:
+                # If location is available, prefer episodes where location appears in title
+                if location_value:
+                    location_normalized = normalize_token(location_value)
+                    if location_normalized:
+                        for episode in round_episodes:
+                            title_normalized = normalize_token(episode.title)
+                            if title_normalized and location_normalized in title_normalized:
+                                if trace is not None:
+                                    trace["match"] = {
+                                        "label": "round+location",
+                                        "value": f"round={round_value}, location={location_value}",
+                                        "normalized": f"{round_number}+{location_normalized}",
+                                        "token": title_normalized,
+                                        "episode_title": episode.title,
+                                        "matched_via_round_fallback": True,
+                                    }
+                                    trace["lookup_attempts"] = trace_lookup_records
+                                return episode
+
+                # No location match found, return first episode for this round
+                episode = round_episodes[0]
+                if trace is not None:
+                    trace["match"] = {
+                        "label": "round",
+                        "value": round_value,
+                        "normalized": str(round_number),
+                        "token": normalize_token(episode.title),
+                        "episode_title": episode.title,
+                        "matched_via_round_fallback": True,
+                    }
+                    trace["lookup_attempts"] = trace_lookup_records
+                return episode
+        except ValueError:
+            pass  # Round value wasn't a valid integer
+
     if attempted_variants:
         match_groups["_attempted_session_tokens"] = attempted_variants
     if trace is not None:
