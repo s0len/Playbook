@@ -5,6 +5,18 @@ dates, posters, backgrounds) from the remote metadata YAML files to Plex.
 
 Shows and seasons are updated on first run or when metadata changes.
 Episodes are updated when their content changes (fingerprint-based detection).
+
+Title Case Preservation:
+    Plex automatically normalizes show titles (e.g., "NTT" → "Ntt"), but this
+    module preserves original title casing from metadata by:
+    1. Using PlexClient.search_show() which handles case-insensitive matching
+       to find shows even when Plex has normalized the title
+    2. Syncing metadata back with lock_fields=True to override Plex's
+       normalization and restore original casing (e.g., "NTT IndyCar Series 2025")
+
+    Example: If metadata specifies "NTT IndyCar Series 2025" but Plex has
+    normalized it to "Ntt Indycar Series 2025", the search will still find it,
+    and the sync will restore the correct "NTT" capitalization.
 """
 
 from __future__ import annotations
@@ -716,7 +728,9 @@ class PlexMetadataSync:
             is_first_sync,
         )
 
-        # Find show in Plex
+        # Find show in Plex using case-insensitive matching.
+        # Plex may have normalized the title (e.g., "NTT" → "Ntt"), but search_show
+        # handles this. We'll restore original casing when syncing metadata back.
         search_result = self.client.search_show(library_id, show.title)
         stats.api_calls += 1
 
@@ -807,7 +821,12 @@ class PlexMetadataSync:
         is_first_sync: bool,
         stats: PlexSyncStats,
     ) -> None:
-        """Sync show-level metadata."""
+        """Sync show-level metadata.
+
+        Preserves original title casing from metadata (e.g., "NTT IndyCar Series 2025")
+        by using lock_fields=True in update_metadata, which overrides Plex's automatic
+        title normalization (e.g., "NTT" → "Ntt").
+        """
         should_update = self.force or change.updated or is_first_sync
 
         if not should_update:
@@ -816,6 +835,7 @@ class PlexMetadataSync:
             return
 
         mapped = _map_show_metadata(show, base_url)
+        # Apply metadata with lock_fields=True to preserve original title casing
         if _apply_metadata(
             self.client,
             show_rating,
