@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "016-extract-notification-targets-into-separate-files",
+  "spec": "018-add-dependency-vulnerability-scanning-to-ci-pipeli",
   "state": "building",
   "subtasks": {
-    "completed": 11,
-    "total": 16,
+    "completed": 5,
+    "total": 6,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Update Imports and Remove Old File",
+    "current": "Documentation",
     "id": null,
-    "total": 3
+    "total": 1
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 1,
-    "started_at": "2026-01-06T21:50:24.700083"
+    "number": 7,
+    "started_at": "2026-01-06T13:17:29.057377"
   },
-  "last_update": "2026-01-06T21:50:24.757515"
+  "last_update": "2026-01-06T13:27:52.115294"
 }
