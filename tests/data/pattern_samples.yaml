@@ -590,3 +590,53 @@ samples:
         expect_episode: "Exhibition Gala"
       - value: "Figure Skating Grand Prix Final 2025 Women Free Program 06.12.2025 1080pEN50fps.mkv"
         expect_episode: "Women Free Program"
+
+  - description: "NFL 2025-26 Week-based regular season samples"
+    sport:
+      id: "nfl_week_based"
+      name: "NFL Week-Based Regular Season"
+      pattern_sets:
+        - nfl
+    show:
+      key: "nfl_2025_26"
+      title: "NFL 2025-2026"
+      seasons:
+        - title: "Week 17"
+          display_number: 17
+          episodes:
+            - title: "Philadelphia Eagles at Dallas Cowboys"
+              aliases:
+                - "Philadelphia Eagles vs Dallas Cowboys"
+                - "Eagles at Cowboys"
+                - "Eagles vs Cowboys"
+        - title: "Week 18"
+          display_number: 18
+          episodes:
+            - title: "New Orleans Saints at Atlanta Falcons"
+              aliases:
+                - "New Orleans Saints vs Atlanta Falcons"
+                - "Saints at Falcons"
+                - "Saints vs Falcons"
+            - title: "Dallas Cowboys at New York Giants"
+              aliases:
+                - "Dallas Cowboys vs New York Giants"
+                - "Cowboys at Giants"
+                - "Cowboys vs Giants"
+            - title: "Denver Broncos at Kansas City Chiefs"
+              aliases:
+                - "Denver Broncos vs Kansas City Chiefs"
+                - "Broncos at Chiefs"
+                - "Broncos vs Chiefs"
+    filenames:
+      # Primary failing filenames from Issue #74
+      - value: "NFL 2025 2026 Week 18 New Orleans Saints @ Atlanta Falcons 720p 60fps.mkv"
+        expect_episode: "New Orleans Saints at Atlanta Falcons"
+      - value: "NFL 2025 2026 Week 18 Dallas Cowboys @ New York Giants 04 01 1080pEN30fps.mkv"
+        expect_episode: "Dallas Cowboys at New York Giants"
+      # Additional test cases with variations
+      - value: "NFL 2025 2026 Week 18 Denver Broncos vs Kansas City Chiefs 720p 60fps EN.mkv"
+        expect_episode: "Denver Broncos at Kansas City Chiefs"
+      - value: "NFL.2025.2026.Week.17.Philadelphia.Eagles.vs.Dallas.Cowboys.1080p.WEB.H264.mkv"
+        expect_episode: "Philadelphia Eagles at Dallas Cowboys"
+      - value: "NFL 2025 2026 Week 17 Eagles @ Cowboys 720p60fps.mkv"
+        expect_episode: "Philadelphia Eagles at Dallas Cowboys"
