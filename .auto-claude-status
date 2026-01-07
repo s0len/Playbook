@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "014-split-processor-py-into-focused-modules",
+  "spec": "016-extract-notification-targets-into-separate-files",
   "state": "building",
   "subtasks": {
-    "completed": 37,
-    "total": 39,
+    "completed": 11,
+    "total": 16,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Final Cleanup and Documentation",
+    "current": "Update Imports and Remove Old File",
     "id": null,
-    "total": 7
+    "total": 3
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 730,
-    "started_at": "2026-01-06T21:50:31.192904"
+    "number": 1,
+    "started_at": "2026-01-06T21:50:24.700083"
   },
-  "last_update": "2026-01-07T07:46:18.069947"
+  "last_update": "2026-01-06T21:50:24.757515"
 }
