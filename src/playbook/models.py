@@ -67,9 +67,12 @@ class ProcessingStats:
     errors_by_sport: dict[str, int] = field(default_factory=dict)
     warnings_by_sport: dict[str, int] = field(default_factory=dict)
     ignored_by_sport: dict[str, int] = field(default_factory=dict)
+    processed_by_sport: dict[str, int] = field(default_factory=dict)
 
-    def register_processed(self) -> None:
+    def register_processed(self, *, sport_id: Optional[str] = None) -> None:
         self.processed += 1
+        if sport_id:
+            self.processed_by_sport[sport_id] = self.processed_by_sport.get(sport_id, 0) + 1
 
     def register_skipped(self, reason: str, *, is_error: bool = True, sport_id: str | None = None) -> None:
         self.skipped += 1
