@@ -42,6 +42,7 @@ class PlexSyncSettings:
     dry_run: bool = False
     sports: list[str] = field(default_factory=list)
     scan_wait: float = 5.0  # Seconds to wait after triggering library scan
+    lock_poster_fields: bool = False  # Whether to lock poster fields to prevent updates
 
 
 @dataclass
@@ -434,6 +435,7 @@ def _build_plex_sync_settings(data: dict[str, Any]) -> PlexSyncSettings:
         dry_run=bool(data.get("dry_run", False)),
         sports=sports,
         scan_wait=scan_wait,
+        lock_poster_fields=bool(data.get("lock_poster_fields", False)),
     )
 
 
