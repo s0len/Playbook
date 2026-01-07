@@ -337,6 +337,22 @@ pattern_sets:
       season_dir_template: "{season_number:02d} {season_title}"
       filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
 
+    - description: NBA regular season spaced/dotted releases
+      # Example: NBA RS 2025 Philadelphia 76ers vs Milwaukee Bucks 05 12 720pEN60fps FDSN.mkv
+      regex: >-
+        (?i)^NBA(?:[\s._-]*RS)?[\s._-]+(?P<year>\d{4})[\s._-]+(?P<session>(?P<away><matchup_team>)[\s._-]+(?P<separator>vs\.?|v|at|@)[\s._-]+(?P<home><matchup_team>))[\s._-]+(?P<day>\d{1,2})[\s._-]+(?P<month>\d{1,2})(?:[\s._-]+(?P<date_year>\d{4}))?(?:[\s._-]+(?:<suffix_token>|[A-Za-z0-9]+))*\.(?P<extension><extension>)$
+      season_selector:
+        mode: date
+        value_template: "{date_year}-{month:0>2}-{day:0>2}"
+      episode_selector:
+        group: session
+        allow_fallback_to_title: true
+      metadata_filters:
+        team_alias_map: nba
+      destination_root_template: "{show_title}"
+      season_dir_template: "{season_number:02d} {season_title}"
+      filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
   # ------------------------------------------------------------------
   # NHL releases
   # ------------------------------------------------------------------
