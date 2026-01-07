@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "021-add-requirements-lock-file-with-hash-verification",
+  "spec": "022-add-interactive-help-with-examples-for-each-comman",
   "state": "building",
   "subtasks": {
-    "completed": 0,
-    "total": 10,
+    "completed": 9,
+    "total": 12,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "",
-    "id": 0,
-    "total": 0
+    "current": "Testing & Documentation",
+    "id": null,
+    "total": 3
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 424,
-    "started_at": "2026-01-06T21:50:15.230404"
+    "number": 420,
+    "started_at": "2026-01-06T21:50:09.428388"
   },
-  "last_update": "2026-01-06T23:03:09.667118"
+  "last_update": "2026-01-06T23:00:04.574674"
 }
