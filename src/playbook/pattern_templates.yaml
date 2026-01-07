@@ -5916,3 +5916,20 @@ pattern_sets:
       season_dir_template: "{season_number:02d} {season_title}"
       filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
 
+    - description: NFL week-based space-separated releases
+      # Example: NFL 2025 2026 Week 18 New Orleans Saints @ Atlanta Falcons 720p 60fps.mkv
+      # Example: NFL 2025 2026 Week 18 Dallas Cowboys @ New York Giants 04 01 1080pEN30fps.mkv
+      regex: >-
+        (?i)^NFL[\s._-]+(?P<start_year>\d{4})[\s._-]+(?P<end_year>\d{4})[\s._-]+Week[\s._-]+(?P<week>\d{1,2})[\s._-]+(?P<session>(?P<away><matchup_team>)[\s._-]+(?P<separator>vs\.?|v|at|@)[\s._-]+(?P<home><matchup_team>))(?:[\s._-]+(?P<day>\d{1,2})[\s._-]+(?P<month>\d{1,2}))?(?:[\s._-]+(?:<suffix_token>|[A-Za-z0-9]+))*\.(?P<extension><extension>)$
+      season_selector:
+        mode: week
+        group: week
+      episode_selector:
+        group: session
+        allow_fallback_to_title: true
+      metadata_filters:
+        team_alias_map: nfl
+      destination_root_template: "{show_title}"
+      season_dir_template: "{season_number:02d} {season_title}"
+      filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
