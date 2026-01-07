@@ -420,17 +420,27 @@ def _apply_metadata(
         if not asset_url:
             LOGGER.debug("No %s URL found for %s (%s)", display_name, label, rating_key)
             continue
+
+        LOGGER.debug(
+            "Attempting to set %s for %s (key=%s): url=%s, element=%s",
+            display_name,
+            label,
+            rating_key,
+            asset_url,
+            element,
+        )
+
         if dry_run:
             LOGGER.debug("Dry-run: would set %s %s %s to %s", label, rating_key, display_name, asset_url)
         else:
             try:
                 client.set_asset(rating_key, element, asset_url)
-                LOGGER.debug("Set %s %s for %s", display_name, label, rating_key)
+                LOGGER.debug("Successfully set %s for %s (key=%s)", display_name, label, rating_key)
                 stats.assets_updated += 1
                 stats.api_calls += 1
                 updated = True
             except PlexApiError as exc:
-                LOGGER.error("Failed to set %s %s for %s: %s", label, display_name, rating_key, exc)
+                LOGGER.error("Failed to set %s for %s (key=%s): %s", display_name, label, rating_key, exc)
                 stats.assets_failed += 1
                 # Build error with actionable context
                 context_parts = [f"{label} {display_name} (key={rating_key})"]
