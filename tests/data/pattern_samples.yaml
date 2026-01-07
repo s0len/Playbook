@@ -237,6 +237,17 @@ samples:
         expect_episode: "Wizards at Celtics"
       - value: "NBA.2025.11.08.Miami.Heat.vs.LA.Clippers.PROPER.1080p.WEB.H264-GAMETiME.mkv"
         expect_episode: "Heat at Clippers"
+      # Space-separated NBA RS format (similar to NHL RS format)
+      - value: "NBA RS 2025 Phoenix Suns vs Golden State Warriors 04 11 720pEN60fps TNT.mkv"
+        expect_episode: "Suns at Warriors"
+      - value: "NBA RS 2025 Miami Heat vs LA Clippers 08 11 720pEN60fps FDSN.mkv"
+        expect_episode: "Heat at Clippers"
+      - value: "NBA RS 2025 Warriors at Bucks 31 10 720pEN60fps NBATV.mkv"
+        expect_episode: "Warriors at Bucks"
+      - value: "NBA RS 2025 Washington Wizards vs Boston Celtics 05 11 1080pEN60fps NBC.mkv"
+        expect_episode: "Wizards at Celtics"
+      - value: "NBA RS 2025 Heat at Spurs 02 11 720pEN60fps FDSN.mkv"
+        expect_episode: "Heat at Spurs"
 
   - description: "NHL 2025-26 regular season samples"
     sport:
