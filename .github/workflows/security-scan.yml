@@ -18,12 +18,14 @@ on:
       - 'requirements.txt'
       - 'requirements-dev.txt'
       - 'Dockerfile'
+      - '.trivyignore.yaml'
       - '.github/workflows/security-scan.yml'
   pull_request:
     paths:
       - 'requirements.txt'
       - 'requirements-dev.txt'
       - 'Dockerfile'
+      - '.trivyignore.yaml'
       - '.github/workflows/security-scan.yml'
   schedule:
     # Run every Monday at 9:00 AM UTC
@@ -72,6 +74,7 @@ jobs:
           output: 'trivy-results.sarif'
           severity: 'HIGH,CRITICAL'
           exit-code: '1'
+          trivyignores: '.trivyignore.yaml'
 
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
