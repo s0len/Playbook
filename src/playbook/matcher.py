@@ -8,8 +8,10 @@ from dataclasses import dataclass
 from typing import Any
 
 try:
+    from rapidfuzz import fuzz
     from rapidfuzz.distance import DamerauLevenshtein, Levenshtein
 except ImportError:  # pragma: no cover - optional dependency
+    fuzz = None  # type: ignore[assignment]
     DamerauLevenshtein = None  # type: ignore[assignment]
     Levenshtein = None  # type: ignore[assignment]
 
@@ -54,6 +56,36 @@ def _parse_date_from_groups(match_groups: dict[str, str]) -> dt.date | None:
         return dt.date(year, month, day)
     except (ValueError, TypeError):
         return None
+
+
+def _location_matches_title(location: str, title: str, threshold: float = 80.0) -> bool:
+    """Check if a location fuzzy-matches within a title using partial ratio.
+
+    Uses rapidfuzz's partial_ratio for fuzzy substring matching.
+    Falls back to simple substring matching if rapidfuzz is not available.
+
+    Args:
+        location: The location string to search for (e.g., "Thermal")
+        title: The title to search within (e.g., "The Thermal Club IndyCar Grand Prix")
+        threshold: Minimum score (0-100) to consider a match (default: 80.0)
+
+    Returns:
+        True if location matches within title, False otherwise
+    """
+    if not location or not title:
+        return False
+
+    # Try exact substring match first (fastest)
+    if location in title:
+        return True
+
+    # Use rapidfuzz partial_ratio for fuzzy matching if available
+    if fuzz:
+        score = fuzz.partial_ratio(location, title)
+        return score >= threshold
+
+    # Fallback to simple substring matching
+    return location in title
 
 
 def _tokens_close(candidate: str, target: str) -> bool:
@@ -594,7 +626,7 @@ def _select_episode(
                     if location_normalized:
                         for episode in round_episodes:
                             title_normalized = normalize_token(episode.title)
-                            if title_normalized and location_normalized in title_normalized:
+                            if title_normalized and _location_matches_title(location_normalized, title_normalized):
                                 if trace is not None:
                                     trace["match"] = {
                                         "label": "round+location",
