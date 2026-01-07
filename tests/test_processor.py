@@ -3,10 +3,12 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import Dict, List
 
 import pytest
 
 from playbook.config import AppConfig, KometaTriggerSettings, MetadataConfig, PatternConfig, Settings, SportConfig
+from playbook.file_discovery import should_suppress_sample_ignored
 from playbook.metadata import (
     MetadataChangeResult,
     MetadataFingerprintStore,
@@ -17,6 +19,7 @@ from playbook.metadata import (
 )
 from playbook.models import Episode, ProcessingStats, Season, Show
 from playbook.processor import Processor
+from playbook.run_summary import extract_error_context, summarize_plex_errors
 from playbook.utils import sanitize_component
 
 
@@ -149,7 +152,9 @@ def test_processor_removes_changed_entries_when_metadata_changes(tmp_path, monke
 
     state_dir = settings.cache_dir / "state"
     state_dir.mkdir(parents=True, exist_ok=True)
-    (state_dir / "metadata-digests.json").write_text(json.dumps({"demo": fingerprint_v1.to_dict()}))
+    (state_dir / "metadata-digests.json").write_text(
+        json.dumps({"demo": fingerprint_v1.to_dict()})
+    )
 
     call_counter = {"value": 0}
 
@@ -159,10 +164,10 @@ def test_processor_removes_changed_entries_when_metadata_changes(tmp_path, monke
         raw = raw_v1 if index == 0 else raw_v2
         return normalizer.load_show(raw)
 
-    monkeypatch.setattr("playbook.processor.load_show", fake_load_show)
+    monkeypatch.setattr("playbook.metadata_loader.load_show", fake_load_show)
 
     processor = Processor(config, enable_notifications=False)
-    remove_calls: list[dict[str, MetadataChangeResult]] = []
+    remove_calls: List[Dict[str, MetadataChangeResult]] = []
     original_remove = processor.processed_cache.remove_by_metadata_changes
 
     def tracking_remove(self, changes):
@@ -309,17 +314,27 @@ def test_metadata_change_relinks_and_removes_old_destination(tmp_path, monkeypat
         raw = raw_v1 if index == 0 else raw_v2
         return normalizer.load_show(raw)
 
-    monkeypatch.setattr("playbook.processor.load_show", fake_load_show)
+    monkeypatch.setattr("playbook.metadata_loader.load_show", fake_load_show)
 
     processor = Processor(config, enable_notifications=False)
     processor.process_all()
 
-    old_destination = settings.destination_dir / "Demo Series" / "01 Season 1" / "Demo Series - S01E01 - Qualifying.mkv"
+    old_destination = (
+        settings.destination_dir
+        / "Demo Series"
+        / "01 Season 1"
+        / "Demo Series - S01E01 - Qualifying.mkv"
+    )
     assert old_destination.exists()
 
     processor.process_all()
 
-    new_destination = settings.destination_dir / "Demo Series" / "01 Season 1" / "Demo Series - S01E02 - Qualifying.mkv"
+    new_destination = (
+        settings.destination_dir
+        / "Demo Series"
+        / "01 Season 1"
+        / "Demo Series - S01E02 - Qualifying.mkv"
+    )
 
     assert new_destination.exists()
     assert not old_destination.exists()
@@ -366,9 +381,9 @@ def test_skips_mac_resource_fork_files(tmp_path, monkeypatch) -> None:
     )
     show = Show(key="demo", title="Demo Series", summary=None, seasons=[season])
 
-    monkeypatch.setattr("playbook.processor.load_show", lambda settings_arg, metadata_cfg_arg, **kwargs: show)
+    monkeypatch.setattr("playbook.metadata_loader.load_show", lambda settings_arg, metadata_cfg_arg, **kwargs: show)
     monkeypatch.setattr(
-        "playbook.processor.compute_show_fingerprint",
+        "playbook.metadata_loader.compute_show_fingerprint_cached",
         lambda show_arg, metadata_cfg_arg: ShowFingerprint(digest="fingerprint", season_hashes={}, episode_hashes={}),
     )
 
@@ -421,9 +436,9 @@ def test_destination_stays_within_root_for_hostile_metadata(tmp_path, monkeypatc
     )
     show = Show(key="demo", title="../Evil Series", summary=None, seasons=[season])
 
-    monkeypatch.setattr("playbook.processor.load_show", lambda *args, **kwargs: show)
+    monkeypatch.setattr("playbook.metadata_loader.load_show", lambda *args, **kwargs: show)
     monkeypatch.setattr(
-        "playbook.processor.compute_show_fingerprint",
+        "playbook.metadata_loader.compute_show_fingerprint_cached",
         lambda *args, **kwargs: ShowFingerprint(digest="fingerprint", season_hashes={}, episode_hashes={}),
     )
 
@@ -500,9 +515,9 @@ def test_symlink_sources_are_skipped(tmp_path, monkeypatch) -> None:
     )
     show = Show(key="demo", title="Demo Series", summary=None, seasons=[season])
 
-    monkeypatch.setattr("playbook.processor.load_show", lambda *args, **kwargs: show)
+    monkeypatch.setattr("playbook.metadata_loader.load_show", lambda *args, **kwargs: show)
     monkeypatch.setattr(
-        "playbook.processor.compute_show_fingerprint",
+        "playbook.metadata_loader.compute_show_fingerprint_cached",
         lambda *args, **kwargs: ShowFingerprint(digest="fingerprint", season_hashes={}, episode_hashes={}),
     )
 
@@ -515,15 +530,14 @@ def test_symlink_sources_are_skipped(tmp_path, monkeypatch) -> None:
     assert stats.errors == []
     assert stats.warnings == []
 
-
 def test_should_suppress_sample_variants() -> None:
-    assert Processor._should_suppress_sample_ignored(Path("sample.mkv"))
-    assert Processor._should_suppress_sample_ignored(
+    assert should_suppress_sample_ignored(Path("sample.mkv"))
+    assert should_suppress_sample_ignored(
         Path("nba.2025.11.08.chicago.bulls.vs.cleveland.cavaliers.1080p.web.h264-gametime-sample.mkv")
     )
-    assert Processor._should_suppress_sample_ignored(Path("nba.sample.1080p.web.h264-gametime.mkv"))
-    assert not Processor._should_suppress_sample_ignored(Path("nba.sampleshow.1080p.mkv"))
-    assert not Processor._should_suppress_sample_ignored(Path("nba.example.1080p.mkv"))
+    assert should_suppress_sample_ignored(Path("nba.sample.1080p.web.h264-gametime.mkv"))
+    assert not should_suppress_sample_ignored(Path("nba.sampleshow.1080p.mkv"))
+    assert not should_suppress_sample_ignored(Path("nba.example.1080p.mkv"))
 
 
 def test_processor_triggers_post_run_when_needed(tmp_path, monkeypatch) -> None:
@@ -648,9 +662,9 @@ def test_ts_extension_is_processed_correctly(tmp_path, monkeypatch) -> None:
     )
     show = Show(key="demo", title="Demo Series", summary=None, seasons=[season])
 
-    monkeypatch.setattr("playbook.processor.load_show", lambda *args, **kwargs: show)
+    monkeypatch.setattr("playbook.metadata_loader.load_show", lambda *args, **kwargs: show)
     monkeypatch.setattr(
-        "playbook.processor.compute_show_fingerprint",
+        "playbook.metadata_loader.compute_show_fingerprint_cached",
         lambda *args, **kwargs: ShowFingerprint(digest="fingerprint", season_hashes={}, episode_hashes={}),
     )
 
@@ -666,10 +680,10 @@ def test_ts_extension_is_processed_correctly(tmp_path, monkeypatch) -> None:
 
 
 class TestSummarizePlexErrors:
-    """Tests for Processor._summarize_plex_errors."""
+    """Tests for run_summary.summarize_plex_errors."""
 
     def test_summarize_plex_errors_empty_list(self) -> None:
-        result = Processor._summarize_plex_errors([])
+        result = summarize_plex_errors([])
         assert result == []
 
     def test_summarize_plex_errors_groups_by_category(self) -> None:
@@ -678,7 +692,7 @@ class TestSummarizePlexErrors:
             "Show not found: 'NBA' in library 2 (metadata: http://example.com/nba.yaml). Similar: NBA Games",
             "Season not found: S01 in show 'Demo' | library=1 | source=http://example.com. Available: S02, S03",
         ]
-        result = Processor._summarize_plex_errors(errors)
+        result = summarize_plex_errors(errors)
 
         # Should have 2 groups: "Show not found" (2 items) and "Season not found" (1 item)
         assert len(result) == 4  # 2 lines for show group + 2 lines for season
@@ -689,7 +703,7 @@ class TestSummarizePlexErrors:
         errors = [
             "Show not found: 'F1' in library 1 (metadata: http://example.com/f1.yaml). Similar: Formula 1",
         ]
-        result = Processor._summarize_plex_errors(errors)
+        result = summarize_plex_errors(errors)
 
         # Single error should not have count prefix
         assert len(result) == 1
@@ -703,7 +717,7 @@ class TestSummarizePlexErrors:
             "Type C: error 3",
             "Type D: error 4",
         ]
-        result = Processor._summarize_plex_errors(errors, limit=2)
+        result = summarize_plex_errors(errors, limit=2)
 
         # Should show only 2 error types and a "more" message
         assert any("2 more error types" in line for line in result)
@@ -712,7 +726,7 @@ class TestSummarizePlexErrors:
         errors = [
             "Show not found: 'Formula 1' in library 5 (metadata: http://example.com/metadata.yaml). Similar: F1, Formula One",
         ]
-        result = Processor._summarize_plex_errors(errors)
+        result = summarize_plex_errors(errors)
 
         assert len(result) == 1
         # Should contain extracted context
@@ -724,7 +738,7 @@ class TestSummarizePlexErrors:
         errors = [
             "Season not found: S01 in show 'Demo Series' | library=3 | source=http://example.com/demo.yaml. Available: S02, S03",
         ]
-        result = Processor._summarize_plex_errors(errors)
+        result = summarize_plex_errors(errors)
 
         assert len(result) == 1
         assert "S01" in result[0]
@@ -736,7 +750,7 @@ class TestSummarizePlexErrors:
         errors = [
             "Episode not found: E05 in season S01 of 'Demo Series' | library=2 | source=http://example.com/demo.yaml. Available: E01, E02, E03",
         ]
-        result = Processor._summarize_plex_errors(errors)
+        result = summarize_plex_errors(errors)
 
         assert len(result) == 1
         assert "E05" in result[0]
@@ -748,7 +762,7 @@ class TestSummarizePlexErrors:
         errors = [
             "Unknown error format that does not match patterns",
         ]
-        result = Processor._summarize_plex_errors(errors)
+        result = summarize_plex_errors(errors)
 
         assert len(result) == 1
         assert "Unknown error format" in result[0]
@@ -756,7 +770,7 @@ class TestSummarizePlexErrors:
     def test_summarize_plex_errors_truncates_long_errors(self) -> None:
         long_error = "Category: " + "x" * 100
         errors = [long_error]
-        result = Processor._summarize_plex_errors(errors)
+        result = summarize_plex_errors(errors)
 
         assert len(result) == 1
         # Should be truncated to ~80 chars with "..."
@@ -765,13 +779,11 @@ class TestSummarizePlexErrors:
 
 
 class TestExtractErrorContext:
-    """Tests for Processor._extract_error_context."""
+    """Tests for run_summary.extract_error_context."""
 
     def test_extract_show_not_found_context(self) -> None:
-        error = (
-            "Show not found: 'Formula 1' in library 5 (metadata: http://example.com/f1.yaml). Similar: F1, Formula One"
-        )
-        result = Processor._extract_error_context(error)
+        error = "Show not found: 'Formula 1' in library 5 (metadata: http://example.com/f1.yaml). Similar: F1, Formula One"
+        result = extract_error_context(error)
 
         assert result is not None
         assert "'Formula 1'" in result
@@ -781,7 +793,7 @@ class TestExtractErrorContext:
 
     def test_extract_show_not_found_without_similar(self) -> None:
         error = "Show not found: 'Demo' in library 1 (metadata: http://example.com/demo.yaml)."
-        result = Processor._extract_error_context(error)
+        result = extract_error_context(error)
 
         assert result is not None
         assert "'Demo'" in result
@@ -791,7 +803,7 @@ class TestExtractErrorContext:
     def test_extract_show_not_found_truncates_long_url(self) -> None:
         long_url = "http://example.com/" + "a" * 50 + "/metadata.yaml"
         error = f"Show not found: 'Demo' in library 1 (metadata: {long_url})."
-        result = Processor._extract_error_context(error)
+        result = extract_error_context(error)
 
         assert result is not None
         assert "..." in result  # URL should be truncated
@@ -799,7 +811,7 @@ class TestExtractErrorContext:
 
     def test_extract_season_not_found_context(self) -> None:
         error = "Season not found: S01 in show 'Demo Series' | library=3 | source=http://example.com/demo.yaml. Available: S02, S03"
-        result = Processor._extract_error_context(error)
+        result = extract_error_context(error)
 
         assert result is not None
         assert "S01" in result
@@ -809,7 +821,7 @@ class TestExtractErrorContext:
 
     def test_extract_season_not_found_without_available(self) -> None:
         error = "Season not found: S01 in show 'Demo Series' | library=3 | source=http://example.com/demo.yaml."
-        result = Processor._extract_error_context(error)
+        result = extract_error_context(error)
 
         assert result is not None
         assert "S01" in result
@@ -818,7 +830,7 @@ class TestExtractErrorContext:
 
     def test_extract_episode_not_found_context(self) -> None:
         error = "Episode not found: E05 in season S01 of 'Demo Series' | library=2 | source=http://example.com/demo.yaml. Available: E01, E02, E03"
-        result = Processor._extract_error_context(error)
+        result = extract_error_context(error)
 
         assert result is not None
         assert "E05" in result
@@ -827,10 +839,8 @@ class TestExtractErrorContext:
         assert "plex has=[E01, E02, E03]" in result
 
     def test_extract_episode_not_found_without_available(self) -> None:
-        error = (
-            "Episode not found: E05 in season S01 of 'Demo Series' | library=2 | source=http://example.com/demo.yaml."
-        )
-        result = Processor._extract_error_context(error)
+        error = "Episode not found: E05 in season S01 of 'Demo Series' | library=2 | source=http://example.com/demo.yaml."
+        result = extract_error_context(error)
 
         assert result is not None
         assert "E05" in result
@@ -839,14 +849,14 @@ class TestExtractErrorContext:
 
     def test_extract_returns_none_for_unrecognized_pattern(self) -> None:
         error = "Some random error message that doesn't match any pattern"
-        result = Processor._extract_error_context(error)
+        result = extract_error_context(error)
 
         assert result is None
 
     def test_extract_returns_none_for_partial_match(self) -> None:
         # Error starts like show not found but doesn't have full format
         error = "Show not found: some incomplete format"
-        result = Processor._extract_error_context(error)
+        result = extract_error_context(error)
 
         assert result is None
 
@@ -1053,9 +1063,7 @@ def test_content_hash_determinism() -> None:
     fingerprint3 = compute_show_fingerprint(show3, metadata_cfg)
 
     assert fingerprint3.content_hash is not None
-    assert fingerprint3.content_hash != fingerprint1.content_hash, (
-        "Different metadata should produce different content_hash"
-    )
+    assert fingerprint3.content_hash != fingerprint1.content_hash, "Different metadata should produce different content_hash"
 
     # Test 3: Different season_overrides produces different content_hash
     metadata_cfg_with_overrides = MetadataConfig(
@@ -1065,6 +1073,5 @@ def test_content_hash_determinism() -> None:
     fingerprint4 = compute_show_fingerprint(show4, metadata_cfg_with_overrides)
 
     assert fingerprint4.content_hash is not None
-    assert fingerprint4.content_hash != fingerprint1.content_hash, (
-        "Different season_overrides should produce different content_hash"
-    )
+    assert fingerprint4.content_hash != fingerprint1.content_hash, "Different season_overrides should produce different content_hash"
+

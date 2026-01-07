@@ -69,14 +69,14 @@ def validate_plex_url(url: str | None) -> bool:
         return False
 
 
-@dataclass(slots=True)
+@dataclass
 class PlexLibrary:
     key: str
     title: str
     type: str | None
 
 
-@dataclass(slots=True)
+@dataclass
 class PlexSyncStats:
     """Track statistics for a Plex sync operation."""
 
@@ -123,7 +123,7 @@ class PlexSyncStats:
         }
 
 
-@dataclass(slots=True)
+@dataclass
 class SearchResult:
     """Capture search diagnostics for debugging failed lookups."""
 

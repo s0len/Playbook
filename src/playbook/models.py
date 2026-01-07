@@ -9,7 +9,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from .config import PatternConfig, SportConfig
 
 
-@dataclass(slots=True)
+@dataclass
 class Episode:
     title: str
     summary: str | None
@@ -20,7 +20,7 @@ class Episode:
     aliases: list[str] = field(default_factory=list)
 
 
-@dataclass(slots=True)
+@dataclass
 class Season:
     key: str
     title: str
@@ -33,7 +33,7 @@ class Season:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass(slots=True)
+@dataclass
 class Show:
     key: str
     title: str
@@ -42,7 +42,7 @@ class Show:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass(slots=True)
+@dataclass
 class SportFileMatch:
     source_path: Path
     destination_path: Path
@@ -54,7 +54,7 @@ class SportFileMatch:
     sport: SportConfig
 
 
-@dataclass(slots=True)
+@dataclass
 class ProcessingStats:
     processed: int = 0
     skipped: int = 0

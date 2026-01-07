@@ -42,7 +42,7 @@ from .utils import env_bool, env_list
 LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(slots=True)
+@dataclass
 class MappedMetadata:
     """Metadata fields mapped for Plex API update."""
 

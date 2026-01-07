@@ -14,7 +14,8 @@ from rich.logging import RichHandler
 
 from .config import AppConfig, load_config
 from .kometa_trigger import build_kometa_trigger
-from .processor import Processor, TraceOptions
+from .processor import Processor
+from .trace_writer import TraceOptions
 from .utils import load_yaml_file
 from .validation import ValidationIssue, validate_config_data
 from .watcher import FileWatcherLoop, WatchdogUnavailableError

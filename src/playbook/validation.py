@@ -10,7 +10,7 @@ from jsonschema import Draft7Validator
 from .pattern_templates import load_builtin_pattern_sets
 
 
-@dataclass(slots=True)
+@dataclass
 class ValidationIssue:
     """Represents a single validation problem."""
 
@@ -20,7 +20,7 @@ class ValidationIssue:
     code: str
 
 
-@dataclass(slots=True)
+@dataclass
 class ValidationReport:
     """Aggregates validation warnings and errors."""
 

@@ -13,7 +13,7 @@ from .utils import ensure_directory
 LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(slots=True)
+@dataclass
 class SportSyncState:
     """State of a single sport's Plex sync."""
 
@@ -24,7 +24,7 @@ class SportSyncState:
     episodes_synced: int = 0
 
 
-@dataclass(slots=True)
+@dataclass
 class PlexSyncState:
     """Tracks what has been successfully synced to Plex.
 

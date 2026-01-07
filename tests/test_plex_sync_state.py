@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from src.playbook.plex_sync_state import (
+from playbook.plex_sync_state import (
     PlexSyncState,
     PlexSyncStateStore,
     SportSyncState,
