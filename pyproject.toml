@@ -62,11 +62,16 @@ exclude = [
     "*.egg-info",
     ".pytest_cache",
     ".ruff_cache",
+    ".worktrees",
     "build",
     "dist",
     ".tox",
     "qa_*.py",  # Temporary QA validation scripts
-    "test_*.py",  # Root-level test files
+    "test_*.py",  # Root-level test files (not in tests/)
+    "verify_*.py",  # Temporary verification scripts
+    "validate_*.py",  # Temporary validation scripts
+    "integration_test*.py",  # Temporary integration test scripts
+    "code_quality_check.py",  # Temporary code quality script
 ]
 
 [tool.ruff.lint]

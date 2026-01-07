@@ -3,17 +3,15 @@
 import ast
 import sys
 from pathlib import Path
-from typing import List, Tuple
 
-def check_module(filepath: Path) -> Tuple[bool, List[str]]:
+
+def check_module(filepath: Path) -> tuple[bool, list[str]]:
     """Check a module for code quality issues."""
     issues = []
 
     try:
         content = filepath.read_text()
-        tree = ast.parse(content, filename=str(filepath))
-
-        # Check for syntax errors (already done by ast.parse)
+        ast.parse(content, filename=str(filepath))
 
         # Check for undefined names (basic check)
         lines = content.split('\n')
@@ -27,9 +25,9 @@ def check_module(filepath: Path) -> Tuple[bool, List[str]]:
 
         # Check for trailing whitespace
         for i, line in enumerate(lines, 1):
-            if line.rstrip() != line.rstrip('\n').rstrip('\r'):
-                if line.endswith(' \n') or line.endswith('\t\n'):
-                    issues.append(f"Line {i}: Trailing whitespace")
+            if (line.rstrip() != line.rstrip('\n').rstrip('\r')
+                    and (line.endswith(' \n') or line.endswith('\t\n'))):
+                issues.append(f"Line {i}: Trailing whitespace")
 
         return len(issues) == 0, issues
 
@@ -37,6 +35,7 @@ def check_module(filepath: Path) -> Tuple[bool, List[str]]:
         return False, [f"Syntax error: {e}"]
     except Exception as e:
         return False, [f"Error reading file: {e}"]
+
 
 def main():
     modules = [
@@ -53,14 +52,12 @@ def main():
     print("Running code quality checks...")
     print("=" * 60)
 
-    all_passed = True
     total_issues = 0
 
     for module_path in modules:
         filepath = Path(module_path)
         if not filepath.exists():
             print(f"✗ {module_path}: File not found")
-            all_passed = False
             continue
 
         passed, issues = check_module(filepath)
@@ -84,6 +81,7 @@ def main():
     else:
         print(f"⚠ Found {total_issues} code quality issues")
         return 0  # Don't fail for minor issues
+
 
 if __name__ == '__main__':
     sys.exit(main())
