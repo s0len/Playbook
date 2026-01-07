@@ -540,3 +540,62 @@ class TestEpisodeNotFoundLogging:
         assert "3: Ep 3" in plex_episodes_str
         assert "4: Ep 4" not in plex_episodes_str
         assert "(+2 more)" in plex_episodes_str
+
+
+class TestPosterUnlockWorkflow:
+    """Tests for poster unlock workflow before upload."""
+
+    def test_poster_unlock_before_upload(self) -> None:
+        """Test that unlock_field is called before set_asset for poster upload."""
+        from unittest.mock import MagicMock, call
+
+        from playbook.plex_client import PLEX_TYPE_SHOW, PlexSyncStats
+        from playbook.plex_metadata_sync import MappedMetadata, _apply_metadata
+
+        # Create a mock PlexClient
+        mock_client = MagicMock()
+        mock_client.unlock_field = MagicMock()
+        mock_client.set_asset = MagicMock()
+        mock_client.lock_field = MagicMock()
+        mock_client.update_metadata = MagicMock(return_value=True)
+
+        # Create metadata with a poster URL
+        mapped = MappedMetadata(
+            title="Test Show",
+            sort_title=None,
+            original_title=None,
+            originally_available_at=None,
+            summary="Test summary",
+            poster_url="https://example.com/poster.jpg",
+            background_url=None,
+        )
+
+        stats = PlexSyncStats()
+
+        # Apply metadata (should trigger unlock -> set_asset -> lock)
+        _apply_metadata(
+            mock_client,
+            "12345",
+            mapped,
+            type_code=PLEX_TYPE_SHOW,
+            label="show 'Test Show'",
+            dry_run=False,
+            stats=stats,
+        )
+
+        # Verify unlock_field was called before set_asset
+        mock_client.unlock_field.assert_called_once_with("12345", "thumb")
+        mock_client.set_asset.assert_called_once_with("12345", "thumb", "https://example.com/poster.jpg")
+        mock_client.lock_field.assert_called_once_with("12345", "thumb")
+
+        # Verify the order: unlock -> set_asset -> lock
+        expected_calls = [
+            call.unlock_field("12345", "thumb"),
+            call.set_asset("12345", "thumb", "https://example.com/poster.jpg"),
+            call.lock_field("12345", "thumb"),
+        ]
+        assert mock_client.mock_calls[-3:] == expected_calls
+
+        # Verify stats were updated
+        assert stats.assets_updated == 1
+        assert stats.assets_failed == 0
