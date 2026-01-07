@@ -1,20 +1,19 @@
 """Reproduction tests for Issue #74 - NBA/NFL pattern matching regression.
 
-These tests verify that specific NBA and NFL filenames from Issue #74 fail to match
-the current pattern configurations. Once the patterns are fixed, these tests should
-be updated to expect matches.
+These tests verify that specific NBA and NFL filenames from Issue #74 are properly
+matched after the pattern fixes. The patterns now support:
 
-Current failing filenames:
+Fixed filenames:
 - NBA RS 2025 Philadelphia 76ers vs Milwaukee Bucks 05 12 720pEN60fps FDSN.mkv
 - NFL 2025 2026 Week 18 New Orleans Saints @ Atlanta Falcons 720p 60fps MKV H 264 EN.mkv
 - NFL 2025 2026 Week 18 Dallas Cowboys @ New York Giants 04 01 1080pEN30fps.mkv
 
 Test Status:
-- NBA test: PASSES via structured matcher fallback (regex patterns don't match)
-- NFL tests: FAIL (neither regex patterns nor structured matcher work)
+- NBA test: PASSES (space-separated format with RS prefix supported)
+- NFL tests: PASS (Week N format with @ separator supported)
 
-The NFL failures demonstrate the bug. The NBA filename works via the structured
-matcher fallback, but the regex patterns should be fixed for proper support.
+These tests serve as regression tests to ensure the Issue #74 patterns continue
+working in future updates.
 """
 
 from __future__ import annotations
@@ -169,7 +168,7 @@ ISSUE_74_NFL_FILENAMES = [
 
 
 class TestIssue74NBAReproduction:
-    """Reproduction tests for NBA pattern matching failures in Issue #74."""
+    """Regression tests for NBA pattern matching (Issue #74 fix)."""
 
     @pytest.fixture
     def nba_sport(self) -> SportConfig:
@@ -185,17 +184,14 @@ class TestIssue74NBAReproduction:
     def test_nba_space_separated_filename_matches(
         self, nba_sport: SportConfig, nba_show: Show, filename: str
     ) -> None:
-        """Verify NBA space-separated filenames match (Issue #74).
+        """Verify NBA space-separated filenames match (Issue #74 regression test).
 
-        Note: This test currently PASSES via the structured matcher fallback,
-        even though the NBA regex patterns do not support:
+        The NBA patterns now support:
         - Space-separated format (vs dot-separated)
         - RS (Regular Season) prefix
         - Trailing date format (DD MM)
 
-        The structured matcher parses team names and matches against episode
-        titles/aliases, providing a workaround. However, regex patterns should
-        be fixed for explicit and reliable pattern support.
+        This test ensures the Issue #74 fix continues to work.
         """
         patterns = compile_patterns(nba_sport)
         diagnostics: list = []
@@ -209,13 +205,13 @@ class TestIssue74NBAReproduction:
         )
 
         assert result is not None, (
-            f"Issue #74: NBA filename '{filename}' did not match any pattern. "
-            f"This is the bug we need to fix. Diagnostics: {diagnostics}"
+            f"Issue #74 regression: NBA filename '{filename}' did not match any pattern. "
+            f"This pattern should be supported after the Issue #74 fix. Diagnostics: {diagnostics}"
         )
 
 
 class TestIssue74NFLReproduction:
-    """Reproduction tests for NFL pattern matching failures in Issue #74."""
+    """Regression tests for NFL pattern matching (Issue #74 fix)."""
 
     @pytest.fixture
     def nfl_sport(self) -> SportConfig:
@@ -231,16 +227,16 @@ class TestIssue74NFLReproduction:
     def test_nfl_week_based_filename_matches(
         self, nfl_sport: SportConfig, nfl_show: Show, filename: str
     ) -> None:
-        """Verify NFL week-based filenames match (Issue #74).
+        """Verify NFL week-based filenames match (Issue #74 regression test).
 
-        This test currently FAILS because the NFL patterns do not support:
+        The NFL patterns now support:
         - Space-separated format (vs dot-separated)
         - Week N format (vs date-based)
         - Season span format (YYYY YYYY)
         - @ symbol as separator (vs "vs" or "at")
         - Trailing date format (DD MM)
 
-        After fix: These filenames should match successfully.
+        This test ensures the Issue #74 fix continues to work.
         """
         patterns = compile_patterns(nfl_sport)
         diagnostics: list = []
@@ -254,6 +250,6 @@ class TestIssue74NFLReproduction:
         )
 
         assert result is not None, (
-            f"Issue #74: NFL filename '{filename}' did not match any pattern. "
-            f"This is the bug we need to fix. Diagnostics: {diagnostics}"
+            f"Issue #74 regression: NFL filename '{filename}' did not match any pattern. "
+            f"This pattern should be supported after the Issue #74 fix. Diagnostics: {diagnostics}"
         )
