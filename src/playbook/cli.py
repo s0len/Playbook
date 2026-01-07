@@ -294,7 +294,7 @@ def _resolve_level(name: str) -> int:
     return getattr(logging, name.upper(), logging.INFO)
 
 
-def configure_logging(log_level_name: str, log_file: Path, console_level_name: Optional[str] = None) -> None:
+def configure_logging(log_level_name: str, log_file: Path, console_level_name: str | None = None) -> None:
     log_level = _resolve_level(log_level_name)
     console_level = _resolve_level(console_level_name or log_level_name)
 
@@ -410,7 +410,7 @@ def _execute_run(args: argparse.Namespace) -> int:
     console_level_env = os.getenv("CONSOLE_LEVEL")
 
     resolved_log_level = (args.log_level or log_level_env or ("DEBUG" if verbose else "INFO"))
-    resolved_console_level: Optional[str]
+    resolved_console_level: str | None
     if args.console_level:
         resolved_console_level = args.console_level
     elif console_level_env:
@@ -420,7 +420,8 @@ def _execute_run(args: argparse.Namespace) -> int:
     else:
         resolved_console_level = None
 
-    configure_logging(resolved_log_level.upper(), log_file, resolved_console_level.upper() if resolved_console_level else None)
+    console_level_arg = resolved_console_level.upper() if resolved_console_level else None
+    configure_logging(resolved_log_level.upper(), log_file, console_level_arg)
 
     if not args.config.exists():
         LOGGER.error("Configuration file %s does not exist", args.config)
@@ -600,7 +601,7 @@ def run_validate_config(args: argparse.Namespace) -> int:
     return 0 if report.is_valid else 1
 
 
-def _resolve_sample_config_path() -> Optional[Path]:
+def _resolve_sample_config_path() -> Path | None:
     root = Path(__file__).resolve().parents[2]
     sample_path = root / "config" / "playbook.sample.yaml"
     if sample_path.exists():
