@@ -124,6 +124,36 @@ class TestPlexClient:
             # art is the correct name for background
             client.set_asset("12345", "art", "http://example.com/bg.jpg")
 
+    def test_unlock_field(self) -> None:
+        """Verify unlock_field sends correct parameters."""
+        client = PlexClient("http://localhost:32400", "token")
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+
+        with patch.object(client.session, "request", return_value=mock_response) as mock_req:
+            client.unlock_field("12345", "thumb")
+
+            call_kwargs = mock_req.call_args[1]
+            params = call_kwargs.get("params", {})
+
+            # Should set field.locked to 0
+            assert params.get("thumb.locked") == 0
+
+    def test_lock_field(self) -> None:
+        """Verify lock_field sends correct parameters."""
+        client = PlexClient("http://localhost:32400", "token")
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+
+        with patch.object(client.session, "request", return_value=mock_response) as mock_req:
+            client.lock_field("12345", "title")
+
+            call_kwargs = mock_req.call_args[1]
+            params = call_kwargs.get("params", {})
+
+            # Should set field.locked to 1
+            assert params.get("title.locked") == 1
+
 
 class TestPlexSyncStats:
     def test_empty_stats_no_activity(self) -> None:
