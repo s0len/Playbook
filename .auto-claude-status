@@ -3,13 +3,13 @@
   "spec": "027-nba-nfl-no-longer-match-since-most-recent-develop-",
   "state": "building",
   "subtasks": {
-    "completed": 6,
+    "completed": 8,
     "total": 12,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Fix NFL Week-Based Pattern",
+    "current": "Harden and Prevent Regression",
     "id": null,
     "total": 3
   },
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 38,
+    "number": 40,
     "started_at": "2026-01-07T16:29:16.108392"
   },
-  "last_update": "2026-01-07T16:57:26.010123"
+  "last_update": "2026-01-07T17:03:14.383845"
 }

@@ -342,8 +342,9 @@ pattern_sets:
       regex: >-
         (?i)^NBA(?:[\s._-]*RS)?[\s._-]+(?P<year>\d{4})[\s._-]+(?P<session>(?P<away><matchup_team>)[\s._-]+(?P<separator>vs\.?|v|at|@)[\s._-]+(?P<home><matchup_team>))[\s._-]+(?P<day>\d{1,2})[\s._-]+(?P<month>\d{1,2})(?:[\s._-]+(?P<date_year>\d{4}))?(?:[\s._-]+(?:<suffix_token>|[A-Za-z0-9]+))*\.(?P<extension><extension>)$
       season_selector:
-        mode: date
-        value_template: "{date_year}-{month:0>2}-{day:0>2}"
+        mode: key
+        value_template: "{year}.{month:0>2}.{day:0>2}"
+        mapping: *premier_league_round_map
       episode_selector:
         group: session
         allow_fallback_to_title: true
@@ -363,7 +364,7 @@ pattern_sets:
         (?i)^NHL(?:[\s._-]*RS)?[\s._-]+(?P<year>\d{4})[\s._-]+(?P<session>(?P<away><matchup_team>)[\s._-]+(?P<separator>vs\.?|v|at|@)[\s._-]+(?P<home><matchup_team>))[\s._-]+(?P<day>\d{1,2})[\s._-]+(?P<month>\d{1,2})(?:[\s._-]+(?P<date_year>\d{4}))?(?:[\s._-]+(?:<suffix_token>|[A-Za-z0-9]+))*\.(?P<extension><extension>)$
       season_selector:
         mode: date
-        value_template: "{date_year}-{month:0>2}-{day:0>2}"
+        value_template: "{year}-{month:0>2}-{day:0>2}"
       episode_selector:
         group: session
         allow_fallback_to_title: true
