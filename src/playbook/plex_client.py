@@ -138,6 +138,11 @@ class PlexClient:
 
     Token is passed via X-Plex-Token header (not query params) for security.
     Includes automatic retries with exponential backoff for transient failures.
+
+    Title Case Preservation:
+        Plex automatically normalizes titles (e.g., "NTT" → "Ntt"). Use the
+        update_metadata() method with lock_fields=True to override this
+        normalization and preserve the original casing from your metadata.
     """
 
     def __init__(
@@ -419,13 +424,24 @@ class PlexClient:
     ) -> bool:
         """Update metadata fields for an item.
 
+        This method overrides Plex's automatic metadata normalization. For example,
+        Plex automatically converts "NTT" to "Ntt" in titles. When lock_fields=True
+        (the default), the exact casing provided in params is preserved and locked
+        to prevent Plex agents from overwriting it.
+
         Args:
             rating_key: The Plex rating key of the item.
             params: Dict of field names to values. Use Plex field names (title, sortTitle, etc.)
+                    The exact casing provided here will be preserved when lock_fields=True.
             lock_fields: If True, lock fields to prevent Plex agents from overwriting.
+                        This is essential for preserving acronym casing like "NTT".
 
         Returns:
             True if update was performed, False if nothing to update.
+
+        Example:
+            # Preserve "NTT" acronym casing (prevents Plex from changing it to "Ntt")
+            client.update_metadata(show_key, {"title": "NTT IndyCar Series 2025"})
         """
         clean_params: dict[str, Any] = {}
         for key, value in params.items():
