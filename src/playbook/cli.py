@@ -8,14 +8,13 @@ import os
 import sys
 import traceback
 from pathlib import Path
-from typing import Optional, Tuple
 
 from rich.console import Console
 from rich.logging import RichHandler
 
 from .banner import build_banner_info, print_startup_banner
 from .command_help import get_command_help
-from .config import AppConfig, Settings, load_config
+from .config import AppConfig, load_config
 from .help_formatter import RichHelpFormatter, render_extended_examples
 from .kometa_trigger import build_kometa_trigger
 from .processor import Processor, TraceOptions
@@ -58,7 +57,7 @@ def _make_help_formatter(command_name: str):
     return CommandHelpFormatter
 
 
-def _parse_env_bool(value: Optional[str]) -> Optional[bool]:
+def _parse_env_bool(value: str | None) -> bool | None:
     if value is None:
         return None
     lowered = value.strip().lower()
@@ -69,11 +68,11 @@ def _parse_env_bool(value: Optional[str]) -> Optional[bool]:
     return None
 
 
-def _env_bool(name: str) -> Optional[bool]:
+def _env_bool(name: str) -> bool | None:
     return _parse_env_bool(os.getenv(name))
 
 
-def parse_args(argv: Optional[Tuple[str, ...]] = None) -> argparse.Namespace:
+def parse_args(argv: tuple[str, ...] | None = None) -> argparse.Namespace:
     """
     Parse command-line arguments using argparse subparsers.
 
