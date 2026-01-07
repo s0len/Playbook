@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 from io import StringIO
-from typing import List, Tuple
 
 import pytest
 from rich.console import Console
@@ -213,7 +212,7 @@ class TestRenderExtendedExamples:
     def test_render_extended_examples_basic(self) -> None:
         """Test rendering extended examples without errors."""
         console = Console(file=StringIO(), force_terminal=True)
-        examples: List[Tuple[str, str]] = [
+        examples: list[tuple[str, str]] = [
             ("Basic usage", "playbook run"),
             ("Dry run", "playbook run --dry-run"),
         ]
@@ -228,7 +227,7 @@ class TestRenderExtendedExamples:
     def test_render_extended_examples_with_docker(self) -> None:
         """Test rendering examples that include Docker commands."""
         console = Console(file=StringIO(), force_terminal=True)
-        examples: List[Tuple[str, str]] = [
+        examples: list[tuple[str, str]] = [
             ("CLI usage", "playbook run --dry-run"),
             ("Docker usage", "docker run playbook playbook run"),
         ]
@@ -241,7 +240,7 @@ class TestRenderExtendedExamples:
     def test_render_extended_examples_with_kubernetes(self) -> None:
         """Test rendering examples that include Kubernetes commands."""
         console = Console(file=StringIO(), force_terminal=True)
-        examples: List[Tuple[str, str]] = [
+        examples: list[tuple[str, str]] = [
             ("CLI usage", "playbook run --dry-run"),
             ("Kubernetes usage", "kubectl exec pod -- playbook run"),
         ]
@@ -254,7 +253,7 @@ class TestRenderExtendedExamples:
     def test_render_extended_examples_with_python(self) -> None:
         """Test rendering examples that include Python module commands."""
         console = Console(file=StringIO(), force_terminal=True)
-        examples: List[Tuple[str, str]] = [
+        examples: list[tuple[str, str]] = [
             ("CLI usage", "playbook run --dry-run"),
             ("Python module", "python -m playbook.cli run"),
         ]
@@ -267,7 +266,7 @@ class TestRenderExtendedExamples:
     def test_render_extended_examples_empty_list(self) -> None:
         """Test rendering with empty examples list."""
         console = Console(file=StringIO(), force_terminal=True)
-        examples: List[Tuple[str, str]] = []
+        examples: list[tuple[str, str]] = []
 
         # Should not raise any exceptions
         render_extended_examples("run", examples, console=console)
@@ -279,7 +278,7 @@ class TestRenderExtendedExamples:
     def test_render_extended_examples_mixed_categories(self) -> None:
         """Test rendering examples from multiple categories."""
         console = Console(file=StringIO(), force_terminal=True)
-        examples: List[Tuple[str, str]] = [
+        examples: list[tuple[str, str]] = [
             ("Basic CLI", "playbook run"),
             ("Docker example", "docker run playbook"),
             ("Kubernetes example", "kubectl exec pod -- playbook"),
@@ -296,7 +295,7 @@ class TestRenderExtendedExamples:
         """Test that render_extended_examples uses provided console."""
         string_io = StringIO()
         console = Console(file=string_io, force_terminal=True)
-        examples: List[Tuple[str, str]] = [("Test", "playbook run")]
+        examples: list[tuple[str, str]] = [("Test", "playbook run")]
 
         render_extended_examples("test-command", examples, console=console)
 
@@ -307,7 +306,7 @@ class TestRenderExtendedExamples:
 
     def test_render_extended_examples_creates_console_when_none(self) -> None:
         """Test that render_extended_examples creates console when None provided."""
-        examples: List[Tuple[str, str]] = [("Test", "playbook run")]
+        examples: list[tuple[str, str]] = [("Test", "playbook run")]
 
         # Should not raise any exceptions when console=None
         render_extended_examples("run", examples, console=None)

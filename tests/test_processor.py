@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List
 
 import pytest
 
@@ -167,7 +166,7 @@ def test_processor_removes_changed_entries_when_metadata_changes(tmp_path, monke
     monkeypatch.setattr("playbook.metadata_loader.load_show", fake_load_show)
 
     processor = Processor(config, enable_notifications=False)
-    remove_calls: List[Dict[str, MetadataChangeResult]] = []
+    remove_calls: list[dict[str, MetadataChangeResult]] = []
     original_remove = processor.processed_cache.remove_by_metadata_changes
 
     def tracking_remove(self, changes):
