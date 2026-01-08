@@ -168,8 +168,9 @@
             "command": "pytest tests/test_matcher.py::test_nhl_date_season_resolution -v",
             "expected": "Test passes"
           },
-          "status": "pending",
-          "notes": "Add tests for: (1) 2025-01-07 \u2192 2025-2026 season, (2) 2025-10-01 \u2192 2025-2026 season (season start), (3) Invalid dates handled gracefully"
+          "status": "completed",
+          "notes": "Test test_nhl_date_season_resolution already exists in tests/test_matcher.py (lines 858-987) and passes successfully. Test comprehensively covers: (1) January 2025 date \u2192 2025-2026 season, (2) October 2024 date \u2192 2024-2025 season, (3) December 2024 date \u2192 2024-2025 season, (4) October 2025 season start \u2192 2025-2026 season. Uses exact filename from GitHub Issue #86. Invalid date handling tested separately in test_parse_date_invalid_date.",
+          "updated_at": "2026-01-08T13:23:13.807895+00:00"
         }
       ]
     },
@@ -394,6 +395,7 @@
   "qa_signoff": null,
   "status": "in_progress",
   "planStatus": "in_progress",
-  "updated_at": "2026-01-08T12:44:18.049Z",
-  "last_updated": "2026-01-08T13:02:40.742347+00:00"
+  "updated_at": "2026-01-08T13:20:59.661Z",
+  "last_updated": "2026-01-08T13:23:13.807903+00:00",
+  "recoveryNote": "Task recovered from stuck state at 2026-01-08T13:20:59.623Z"
 }
