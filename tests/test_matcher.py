@@ -855,6 +855,49 @@ def test_fuzzy_location_matching() -> None:
     assert _location_matches_title("Therm", "The Thermal Club IndyCar Grand Prix", threshold=70.0) is True
 
 
+def test_nhl_team_name_cleaning() -> None:
+    """Test that team names are cleaned of quality metadata and source codes.
+
+    This validates the fix for GitHub Issue #86 where quality metadata like
+    "720p60_EN_Utah16" was being captured as part of team names. The
+    _strip_team_noise() function should remove resolution tags, FPS indicators,
+    and source codes from team names.
+    """
+    from playbook.matcher import _strip_team_noise
+
+    # Test case 1: Team with 720p60 quality tag
+    result1 = _strip_team_noise("Utah Mammoth 720p60")
+    assert result1 == "Utah Mammoth", f"Expected 'Utah Mammoth', got '{result1}'"
+
+    # Test case 2: Team with 1080p quality tag
+    result2 = _strip_team_noise("Ottawa Senators 1080p")
+    assert result2 == "Ottawa Senators", f"Expected 'Ottawa Senators', got '{result2}'"
+
+    # Test case 3: Team with source code like _EN_Utah16
+    result3 = _strip_team_noise("Dallas Stars EN")
+    assert result3 == "Dallas Stars EN", f"Expected 'Dallas Stars EN', got '{result3}'"
+
+    # Test case 4: Team with multiple quality indicators
+    result4 = _strip_team_noise("Boston Bruins 720p 60fps")
+    assert result4 == "Boston Bruins", f"Expected 'Boston Bruins', got '{result4}'"
+
+    # Test case 5: Team with provider tag
+    result5 = _strip_team_noise("Toronto Maple Leafs sky")
+    assert result5 == "Toronto Maple Leafs", f"Expected 'Toronto Maple Leafs', got '{result5}'"
+
+    # Test case 6: Team with web/hdtv tag
+    result6 = _strip_team_noise("Montreal Canadiens web")
+    assert result6 == "Montreal Canadiens", f"Expected 'Montreal Canadiens', got '{result6}'"
+
+    # Test case 7: Team name that's clean (no noise)
+    result7 = _strip_team_noise("Winnipeg Jets")
+    assert result7 == "Winnipeg Jets", f"Expected 'Winnipeg Jets', got '{result7}'"
+
+    # Test case 8: Complex case - the exact scenario from GitHub Issue #86
+    result8 = _strip_team_noise("Utah Mammoth 720p60_EN_Utah16")
+    assert result8 == "Utah Mammoth", f"Expected 'Utah Mammoth', got '{result8}'"
+
+
 def test_nhl_date_season_resolution() -> None:
     """Test that NHL files with date patterns resolve to correct seasons.
 
