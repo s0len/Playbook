@@ -19,7 +19,7 @@ from .help_formatter import RichHelpFormatter, render_extended_examples
 from .kometa_trigger import build_kometa_trigger
 from .processor import Processor, TraceOptions
 from .utils import load_yaml_file
-from .validation import ValidationIssue, extract_yaml_line_numbers_from_file, validate_config_data
+from .validation import ValidationIssue, validate_config_data
 from .validation_output import ValidationFormatter
 from .watcher import FileWatcherLoop, WatchdogUnavailableError
 
@@ -555,15 +555,8 @@ def run_validate_config(args: argparse.Namespace) -> int:
             CONSOLE.print(traceback.format_exc(), style="dim")
         return 1
 
-    # Extract line numbers from the YAML file
-    try:
-        line_map = extract_yaml_line_numbers_from_file(config_path)
-    except Exception:  # noqa: BLE001
-        # If line number extraction fails, continue without line numbers
-        line_map = None
-
-    # Validate configuration with line number mapping
-    report = validate_config_data(data, line_map=line_map)
+    # Validate configuration
+    report = validate_config_data(data)
 
     if report.is_valid:
         try:
