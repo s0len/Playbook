@@ -75,7 +75,7 @@ jobs:
         run: docker build -t playbook:scan .
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: 'playbook:scan'
           format: 'sarif'
@@ -93,7 +93,7 @@ jobs:
           sarif_file: 'trivy-results.sarif'
 
       - name: Run Trivy scanner for detailed output
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.33.1
         if: always()
         with:
           image-ref: 'playbook:scan'
