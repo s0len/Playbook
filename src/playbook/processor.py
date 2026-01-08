@@ -15,7 +15,7 @@ from .file_discovery import gather_source_files, matches_globs, should_suppress_
 from .kometa_trigger import build_kometa_trigger
 from .logging_utils import render_fields_block
 from .match_handler import handle_match
-from .matcher import match_file_to_episode
+from .matcher import PatternRuntime, match_file_to_episode
 from .metadata import (
     MetadataChangeResult,
     MetadataFetchStatistics,
@@ -468,7 +468,7 @@ class Processor:
             source_dir=self.config.settings.source_dir,
         )
 
-    def _build_destination(self, runtime: SportRuntime, pattern, context: dict[str, object]) -> Path:
+    def _build_destination(self, runtime: SportRuntime, pattern: PatternRuntime, context: dict[str, object]) -> Path:
         return build_destination(
             runtime=runtime,
             pattern=pattern,
