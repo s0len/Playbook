@@ -6,11 +6,13 @@ from unittest.mock import Mock
 
 import pytest
 
+from playbook.config import PatternConfig
 from playbook.destination_builder import (
     build_destination,
     build_match_context,
     format_relative_destination,
 )
+from playbook.matcher import PatternRuntime
 
 
 class TestBuildMatchContext:
@@ -620,6 +622,60 @@ class TestBuildDestination:
 
         expected = Path("/media/sports/Basketball/NBA 2023-24/Regular Season/Game 42.mkv")
         assert destination == expected
+
+    def test_with_pattern_runtime_object(self) -> None:
+        """Test build_destination with real PatternRuntime to verify attribute access."""
+        # Create real PatternConfig with templates
+        pattern_config = PatternConfig(
+            regex=r"test",
+            destination_root_template="{show_title}",
+            season_dir_template="Season {season_number}",
+            filename_template="Episode {episode_number}.{extension}",
+        )
+
+        # Create real PatternRuntime wrapping the config
+        pattern_runtime = PatternRuntime(
+            config=pattern_config,
+            regex=pattern_config.compiled_regex(),
+            session_lookup=Mock(),  # Mock the session lookup as it's not needed for this test
+        )
+
+        # Create mock runtime (SportRuntime)
+        sport = Mock()
+        sport.destination = Mock()
+        sport.destination.root_template = None
+        sport.destination.season_dir_template = None
+        sport.destination.episode_template = None
+
+        runtime = Mock()
+        runtime.sport = sport
+
+        # Create mock settings
+        settings = Mock()
+        settings.destination_dir = Path("/dest")
+        settings.default_destination = Mock()
+        settings.default_destination.root_template = "default"
+        settings.default_destination.season_dir_template = "default"
+        settings.default_destination.episode_template = "default"
+
+        # Context dict
+        context = {
+            "show_title": "Test Show",
+            "season_number": 1,
+            "episode_number": 5,
+            "extension": "mkv",
+        }
+
+        # This should work without AttributeError
+        destination = build_destination(
+            runtime=runtime,
+            pattern=pattern_runtime,
+            context=context,
+            settings=settings,
+        )
+
+        # Verify pattern templates were used (not sport or default)
+        assert destination == Path("/dest/Test Show/Season 1/Episode 5.mkv")
 
 
 class TestFormatRelativeDestination:
