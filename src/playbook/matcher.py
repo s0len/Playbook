@@ -848,7 +848,12 @@ def _structured_match(
         }
         groups = {key: value for key, value in groups.items() if value is not None}
 
-        pattern = PatternConfig(regex="structured", description="Structured filename matcher")
+        pattern_config = PatternConfig(regex="structured", description="Structured filename matcher")
+        pattern = PatternRuntime(
+            config=pattern_config,
+            regex=re.compile("structured"),
+            session_lookup=SessionLookupIndex(),
+        )
 
         if diagnostics is not None:
             diagnostics.append(("info", "Matched via structured filename parser"))
@@ -1081,7 +1086,7 @@ def match_file_to_episode(
         result = {
             "season": season,
             "episode": episode,
-            "pattern": pattern_runtime.config,
+            "pattern": pattern_runtime,
             "groups": groups,
         }
         if trace_attempts is not None:
