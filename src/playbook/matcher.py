@@ -469,8 +469,10 @@ def _select_episode(
     # Strip noise from team names (resolution, fps, providers, etc.)
     if away_value:
         away_value = _strip_team_noise(away_value)
+        match_groups["away"] = away_value
     if home_value:
         home_value = _strip_team_noise(home_value)
+        match_groups["home"] = home_value
 
     team_alias_map_name = pattern_config.metadata_filters.get("team_alias_map")
     alias_lookup = get_team_alias_map(team_alias_map_name) if team_alias_map_name else {}
