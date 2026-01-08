@@ -349,6 +349,114 @@ def validate_config_data(data: dict[str, Any]) -> ValidationReport:
     return report
 
 
+def get_section_display_name(section: str, config_data: dict[str, Any] | None = None) -> str:
+    """Convert a section path to a human-readable display name.
+
+    Args:
+        section: Section path like "settings", "sports[0]", "pattern_sets"
+        config_data: Optional configuration data for extracting display names
+            (e.g., sport names from sports array).
+
+    Returns:
+        Human-readable display name for the section.
+    """
+    if not section:
+        return "Configuration"
+
+    # Handle indexed sections like "sports[0]"
+    import re
+
+    array_match = re.match(r"^(\w+)\[(\d+)\]$", section)
+    if array_match:
+        base_name = array_match.group(1)
+        index = int(array_match.group(2))
+
+        # For sports, try to get the actual sport name from config_data
+        if base_name == "sports" and config_data:
+            sports = config_data.get("sports", [])
+            if isinstance(sports, list) and index < len(sports):
+                sport = sports[index]
+                if isinstance(sport, dict):
+                    sport_name = sport.get("name") or sport.get("id")
+                    if sport_name:
+                        return str(sport_name)
+
+        # Fallback: return "Sports[0]" style
+        return f"{base_name.replace('_', ' ').title()}[{index}]"
+
+    # Simple section names - convert to title case
+    # Map common section names to display names
+    display_names = {
+        "settings": "Settings",
+        "sports": "Sports",
+        "pattern_sets": "Pattern Sets",
+        "file_watcher": "File Watcher",
+        "kometa_trigger": "Kometa Trigger",
+        "notifications": "Notifications",
+        "destination": "Destination",
+        "metadata": "Metadata",
+        "variants": "Variants",
+        "file_patterns": "File Patterns",
+        "docker": "Docker",
+    }
+
+    if section in display_names:
+        return display_names[section]
+
+    # Default: replace underscores with spaces and title case
+    return section.replace("_", " ").title()
+
+
+def group_validation_issues(
+    issues: list[ValidationIssue],
+) -> dict[str, dict[str, list[ValidationIssue]]]:
+    """Group validation issues by root section and sub-section.
+
+    Args:
+        issues: List of ValidationIssue objects to group.
+
+    Returns:
+        Nested dictionary mapping root_section -> sub_section -> list of issues.
+        Example: {"settings": {"notifications": [issue1, issue2]}}
+    """
+    from collections import defaultdict
+
+    result: dict[str, dict[str, list[ValidationIssue]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+
+    for issue in issues:
+        path = issue.path
+
+        # Handle root-level issues
+        if not path or path == "<root>":
+            result["<root>"]["<root>"].append(issue)
+            continue
+
+        # Parse the path to extract root and sub-section
+        # Paths look like: "settings.notifications.flush_time", "sports[0].metadata.url"
+        parts = path.split(".")
+
+        if not parts:
+            result["<root>"]["<root>"].append(issue)
+            continue
+
+        root_section = parts[0]
+
+        # Determine sub-section (second level, or root if only one level)
+        if len(parts) >= 2:
+            sub_section = parts[1]
+        else:
+            sub_section = root_section
+
+        result[root_section][sub_section].append(issue)
+
+    # Convert defaultdicts to regular dicts for cleaner return type
+    return {
+        root: dict(sub_sections) for root, sub_sections in result.items()
+    }
+
+
 def _validate_semantics(data: dict[str, Any], report: ValidationReport) -> None:
     settings = data.get("settings") or {}
     notifications = settings.get("notifications") or {}
@@ -453,4 +561,11 @@ def _validate_semantics(data: dict[str, Any], report: ValidationReport) -> None:
                 )
 
 
-__all__ = ["ValidationIssue", "ValidationReport", "validate_config_data", "CONFIG_SCHEMA"]
+__all__ = [
+    "ValidationIssue",
+    "ValidationReport",
+    "validate_config_data",
+    "CONFIG_SCHEMA",
+    "get_section_display_name",
+    "group_validation_issues",
+]
