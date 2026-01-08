@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "028-indycar-not-recognized-as-a-show",
+  "spec": "032-1-4-2-develop-run-issues",
   "state": "building",
   "subtasks": {
-    "completed": 10,
+    "completed": 7,
     "total": 11,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Integration and End-to-End Verification",
+    "current": "Fix Team Name Extraction",
     "id": null,
-    "total": 3
+    "total": 2
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 43,
-    "started_at": "2026-01-07T16:32:49.007042"
+    "number": 2,
+    "started_at": "2026-01-08T14:21:07.390721"
   },
-  "last_update": "2026-01-07T17:20:05.102239"
+  "last_update": "2026-01-08T14:23:50.809221"
 }

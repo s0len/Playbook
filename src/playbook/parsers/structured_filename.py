@@ -118,20 +118,49 @@ def _parse_date_candidates(text: str) -> tuple[dt.date | None, int | None]:
     return None, standalone_year
 
 
+def _is_noise_word(word: str) -> bool:
+    """Check if a word is noise (date, quality tokens, resolution, etc.)."""
+    lowered = word.lower()
+    if lowered.isdigit():
+        return True
+    if lowered in _QUALITY_TOKENS:
+        return True
+    if re.match(r"\d{3,4}p", lowered):
+        return True
+    if re.match(r"\d{2}fps", lowered):
+        return True
+    # Common competition abbreviations that shouldn't be team names
+    if lowered in {"rs", "ps", "reg", "pre"}:  # regular season, post season, etc.
+        return True
+    # Date-like patterns (e.g., "NHL-2025-11-22" or "2025-11-22")
+    if re.search(r"\d{4}-\d{2}-\d{2}", word):
+        return True
+    # Competition prefix with date (e.g., "NHL-2025-11-22")
+    if re.match(r"[A-Za-z]+-\d{4}", word):
+        return True
+    return False
+
+
 def _trim_noise(segment: str) -> str:
+    """Trim noise from the END of a segment (used for away team after vs)."""
     words = [word for word in re.split(r"\s+", segment) if word]
     cleaned: list[str] = []
     for word in words:
-        lowered = word.lower()
-        if lowered.isdigit():
-            break
-        if lowered in _QUALITY_TOKENS:
-            break
-        if re.match(r"\d{3,4}p", lowered):
-            break
-        if re.match(r"\d{2}fps", lowered):
+        if _is_noise_word(word):
             break
         cleaned.append(word)
+    return " ".join(cleaned).strip()
+
+
+def _trim_noise_reverse(segment: str) -> str:
+    """Trim noise from the START of a segment (used for home team before vs)."""
+    words = [word for word in re.split(r"\s+", segment) if word]
+    # Work backwards to find where the team name starts
+    cleaned: list[str] = []
+    for word in reversed(words):
+        if _is_noise_word(word):
+            break
+        cleaned.insert(0, word)
     return " ".join(cleaned).strip()
 
 
@@ -142,7 +171,9 @@ def _extract_matchup(text: str) -> tuple[list[str], str | None, str | None]:
     if not match:
         return [], None, None
 
-    home_raw = _trim_noise(match.group("a"))
+    # Home team is at the END of group 'a' (after competition/date prefix)
+    # Away team is at the START of group 'b' (before quality/codec suffix)
+    home_raw = _trim_noise_reverse(match.group("a"))
     away_raw = _trim_noise(match.group("b"))
     teams = [team for team in [home_raw, away_raw] if team]
     return teams, home_raw or None, away_raw or None

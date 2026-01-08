@@ -1,0 +1,88 @@
+=== AUTO-BUILD PROGRESS ===
+
+Project: Playbook v1.4.2 NHL File Processing Fixes
+Workspace: /Users/solen/GitHub/Playbook
+Spec: 032-1-4-2-develop-run-issues
+Started: 2026-01-08
+
+Workflow Type: investigation
+Rationale: This task requires investigation of three distinct failure modes before implementing fixes:
+           (1) AttributeError crash in destination_builder.py,
+           (2) NHL season resolution failure for date-based patterns,
+           (3) team name pollution from quality metadata.
+           The error logs provide symptoms but not root causes. This is diagnostic work followed by targeted bug fixes.
+
+Session 1 (Planner):
+- Completed deep codebase investigation
+- Analyzed matcher.py, destination_builder.py, processor.py
+- Identified root causes for all three failures:
+  * AttributeError: PatternConfig passed instead of PatternRuntime to build_destination()
+  * Season resolution: Date mode doesn't construct date from day/month/year groups
+  * Team names: Quality metadata not stripped from away/home captures
+- Created implementation_plan.json with 5 phases, 11 subtasks
+- Created init.sh setup script
+- Created build-progress.txt tracking document
+
+Phase Summary:
+- Phase 1 (Reproduce & Analyze Failures): 3 investigation subtasks - document root causes
+- Phase 2 (Fix Critical AttributeError): 2 implementation subtasks - fix crash in processor.py
+- Phase 3 (Fix NHL Season Resolution): 2 implementation subtasks - implement date-to-season conversion
+- Phase 4 (Fix Team Name Extraction): 2 implementation subtasks - apply _strip_team_noise() to teams
+- Phase 5 (Integration Testing): 2 integration subtasks - verify end-to-end with exact test files
+
+Services Involved:
+- main: All file processing, matching, and metadata handling (Python CLI application)
+
+Parallelism Analysis:
+- Max parallel phases: 2
+- Recommended workers: 1 (investigation phase blocks initial parallelism)
+- Parallel groups: Phase 3 (season fix) and Phase 4 (team fix) can run in parallel after investigation
+- Speedup estimate: 1.3x faster than sequential
+
+Key Technical Findings:
+1. AttributeError Root Cause:
+   - Function: build_destination() in destination_builder.py line 112
+   - Expected: PatternRuntime (which has .config attribute)
+   - Receiving: PatternConfig (no .config attribute)
+   - Fix location: processor.py line ~472 where build_destination() is called
+
+2. Season Resolution Root Cause:
+   - Function: _select_season() date mode in matcher.py lines 338-349
+   - Problem: Looks for unified 'date' group, but regex extracts day/month/year separately
+   - Solution: Use _parse_date_from_groups() to construct date from components
+   - NHL season logic: October-June spans two calendar years (2025-01-07 → 2025-2026)
+
+3. Team Name Pollution Root Cause:
+   - Function: match_file_to_episode() in matcher.py line ~956
+   - Problem: Regex captures quality tags as part of team names
+   - Solution: Apply existing _strip_team_noise() function (lines 696-712) to away/home after extraction
+   - Example: "Utah Mammoth 720p60_EN_Utah16" → "Utah Mammoth"
+
+Test Files from GitHub Issue #86:
+- NHL 07-01-2025 RS Ottawa Senators vs. Utah Mammoth 720p60_EN_Utah16.mkv
+- NHL 07-01-2026 RS St Louis Blues vs Chicago Blackhawks 1080p60_EN_TNT.mkv
+- NHL 07-01-2026 RS San Jose Sharks vs. Los Angeles Kings 720p60_EN_FDSNW.mkv
+
+Success Criteria:
+[ ] All three test files process without AttributeError
+[ ] Season resolves to 2025-2026 for 2025-01-07 date
+[ ] Team names extracted without quality metadata
+[ ] All existing tests pass (no regressions in F1, NBA, NFL, etc.)
+[ ] New unit tests added for date-to-season conversion
+[ ] New unit tests added for team name cleaning
+[ ] Integration test with exact GitHub Issue #86 filename passes
+
+=== STARTUP COMMAND ===
+
+To continue building this spec, run:
+
+  cd /Users/solen/GitHub/Playbook
+  source .venv/bin/activate
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 032-1-4-2-develop-run-issues --parallel 1
+
+Or run init.sh first:
+
+  cd /Users/solen/GitHub/Playbook/.auto-claude/specs/032-1-4-2-develop-run-issues
+  ./init.sh
+
+=== END SESSION 1 ===

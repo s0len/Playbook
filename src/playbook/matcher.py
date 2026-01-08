@@ -466,6 +466,12 @@ def _select_episode(
     home_value = match_groups.get("home")
     separator_value = match_groups.get("separator")
 
+    # Strip noise from team names (resolution, fps, providers, etc.)
+    if away_value:
+        away_value = _strip_team_noise(away_value)
+    if home_value:
+        home_value = _strip_team_noise(home_value)
+
     team_alias_map_name = pattern_config.metadata_filters.get("team_alias_map")
     alias_lookup = get_team_alias_map(team_alias_map_name) if team_alias_map_name else {}
 
@@ -753,7 +759,15 @@ def _score_structured_match(
 ) -> float:
     score = 0.0
     episode_teams = _extract_teams_from_text(episode.title, alias_lookup)
-    structured_tokens = {normalize_token(team) for team in structured.teams if team}
+    # Resolve structured teams through alias lookup before comparing
+    # This allows "Celtics" to match "Boston Celtics" via the alias map
+    structured_tokens = set()
+    for team in structured.teams:
+        if team:
+            normalized = normalize_token(team)
+            # Look up the alias to get canonical name, then normalize that
+            resolved = alias_lookup.get(normalized, team)
+            structured_tokens.add(normalize_token(resolved))
     episode_tokens = {normalize_token(team) for team in episode_teams if team}
 
     # Date proximity check - critical for sports where same teams play multiple times
@@ -842,7 +856,12 @@ def _structured_match(
         }
         groups = {key: value for key, value in groups.items() if value is not None}
 
-        pattern = PatternConfig(regex="structured", description="Structured filename matcher")
+        pattern_config = PatternConfig(regex="structured", description="Structured filename matcher")
+        pattern = PatternRuntime(
+            config=pattern_config,
+            regex=re.compile("structured"),
+            session_lookup=SessionLookupIndex(),
+        )
 
         if diagnostics is not None:
             diagnostics.append(("info", "Matched via structured filename parser"))
@@ -1075,7 +1094,7 @@ def match_file_to_episode(
         result = {
             "season": season,
             "episode": episode,
-            "pattern": pattern_runtime.config,
+            "pattern": pattern_runtime,
             "groups": groups,
         }
         if trace_attempts is not None:
