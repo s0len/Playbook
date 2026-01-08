@@ -444,10 +444,7 @@ def group_validation_issues(
         root_section = parts[0]
 
         # Determine sub-section (second level, or root if only one level)
-        if len(parts) >= 2:
-            sub_section = parts[1]
-        else:
-            sub_section = root_section
+        sub_section = parts[1] if len(parts) >= 2 else root_section
 
         result[root_section][sub_section].append(issue)
 
