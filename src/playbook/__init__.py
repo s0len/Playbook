@@ -19,11 +19,10 @@ The main entry point for file processing is the ``Processor`` class.
 
 from .processor import Processor
 from .trace_writer import TraceOptions
+from .version import __version__
 
 __all__ = [
     "__version__",
     "Processor",
     "TraceOptions",
 ]
-
-__version__ = "2.0.0-dev"

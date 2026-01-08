@@ -18,7 +18,7 @@ RUN pip install --require-hashes -r /app/requirements.lock
 
 COPY src /app/src
 COPY entrypoint.sh /entrypoint.sh
-COPY README.md LICENSE /app/
+COPY README.md LICENSE CHANGELOG.md /app/
 
 RUN chmod +x /entrypoint.sh
 
