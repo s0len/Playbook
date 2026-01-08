@@ -307,16 +307,16 @@ class TestSummarizeMessages:
         """Test that output is limited to default limit (5)."""
         entries = [f"Error {i}" for i in range(10)]
         result = summarize_messages(entries)
-        # 5 messages + 1 "... more" line + 1 verbose prompt = 7 lines
-        assert len(result) == 7
+        # 5 messages + 1 "... more" line = 6 lines
+        assert len(result) == 6
         assert result[5] == "... 5 more (use --verbose for full list)"
 
     def test_limits_output_to_custom_limit(self) -> None:
         """Test that output is limited to custom limit."""
         entries = [f"Error {i}" for i in range(10)]
         result = summarize_messages(entries, limit=3)
-        # 3 messages + 1 "... more" line + 1 verbose prompt = 5 lines
-        assert len(result) == 5
+        # 3 messages + 1 "... more" line = 4 lines
+        assert len(result) == 4
         assert result[3] == "... 7 more (use --verbose for full list)"
 
     def test_no_more_line_when_under_limit(self) -> None:

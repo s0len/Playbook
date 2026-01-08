@@ -759,7 +759,15 @@ def _score_structured_match(
 ) -> float:
     score = 0.0
     episode_teams = _extract_teams_from_text(episode.title, alias_lookup)
-    structured_tokens = {normalize_token(team) for team in structured.teams if team}
+    # Resolve structured teams through alias lookup before comparing
+    # This allows "Celtics" to match "Boston Celtics" via the alias map
+    structured_tokens = set()
+    for team in structured.teams:
+        if team:
+            normalized = normalize_token(team)
+            # Look up the alias to get canonical name, then normalize that
+            resolved = alias_lookup.get(normalized, team)
+            structured_tokens.add(normalize_token(resolved))
     episode_tokens = {normalize_token(team) for team in episode_teams if team}
 
     # Date proximity check - critical for sports where same teams play multiple times
