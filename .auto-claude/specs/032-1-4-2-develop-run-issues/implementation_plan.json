@@ -63,7 +63,9 @@
             "type": "manual",
             "instructions": "Review investigation notes - must propose solution (regex fix vs post-processing)"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Investigation completed successfully. Root cause identified: regex pattern <matchup_team> is greedy and captures quality metadata (720p60_EN_Utah16) as part of team names. Existing _strip_team_noise() function (lines 696-712) handles all quality metadata types but is NOT applied to away/home values from regex groups. RECOMMENDED SOLUTION: Post-processing approach - apply _strip_team_noise() to away/home values in _select_episode() after line 466. This is clean, safe, low-risk, and reuses existing tested code. Implementation: Add 4 lines after matcher.py:466 to strip noise before canonicalization. Complete investigation documented in investigation-notes-subtask-1-3.md with pattern analysis, code analysis, two solution options evaluated, and recommended approach with test cases.",
+          "updated_at": "2026-01-08T12:52:55.242377+00:00"
         }
       ]
     },
@@ -390,5 +392,5 @@
   "status": "in_progress",
   "planStatus": "in_progress",
   "updated_at": "2026-01-08T12:44:18.049Z",
-  "last_updated": "2026-01-08T12:49:13.347886+00:00"
+  "last_updated": "2026-01-08T12:52:55.242384+00:00"
 }
