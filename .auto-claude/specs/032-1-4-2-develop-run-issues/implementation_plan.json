@@ -45,7 +45,9 @@
             "type": "manual",
             "instructions": "Review investigation notes - must document current date mode logic flow and identify missing date construction step"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Investigation completed successfully. Root cause identified: date mode in _select_season() only handles unified 'date' groups, not separate day/month/year components. When NHL pattern extracts {'day': '07', 'month': '01', 'year': '2025'}, _resolve_selector_value() returns None because it looks for a 'date' key that doesn't exist. Solution: Add fallback to existing _parse_date_from_groups() helper function (lines 43-58) in _select_season() date mode (lines 338-349). This is a simple 3-line addition that leverages existing, tested code. Complete investigation documented in investigation-notes-subtask-1-2.md with logic flow analysis, root cause, fix location, and verification strategy.",
+          "updated_at": "2026-01-08T12:49:13.347876+00:00"
         },
         {
           "id": "subtask-1-3",
@@ -388,5 +390,5 @@
   "status": "in_progress",
   "planStatus": "in_progress",
   "updated_at": "2026-01-08T12:44:18.049Z",
-  "last_updated": "2026-01-08T12:47:14.632556+00:00"
+  "last_updated": "2026-01-08T12:49:13.347886+00:00"
 }
