@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -13,12 +13,12 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY requirements.txt /app/requirements.txt
-RUN pip install -r /app/requirements.txt
+COPY requirements.lock /app/requirements.lock
+RUN pip install --require-hashes -r /app/requirements.lock
 
 COPY src /app/src
 COPY entrypoint.sh /entrypoint.sh
-COPY README.md LICENSE /app/
+COPY README.md LICENSE CHANGELOG.md /app/
 
 RUN chmod +x /entrypoint.sh
 

@@ -1,0 +1,391 @@
+{
+  "feature": "Fix NBA Sports Matcher - Require Both Teams to Match",
+  "workflow_type": "feature",
+  "workflow_rationale": "Adding new NBA team aliases (new functionality), modifying scoring logic (behavior change), and improving date parsing. While fixing bugs, the scope requires new code and architectural decisions.",
+  "phases": [
+    {
+      "id": "phase-1-aliases",
+      "name": "NBA Team Aliases",
+      "type": "implementation",
+      "description": "Add comprehensive NBA team alias mappings following the established NHL/EPL pattern",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Add _NBA_TEAM_SYNONYMS dictionary with all 30 NBA teams",
+          "service": "main",
+          "files_to_modify": [
+            "src/playbook/team_aliases.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/playbook/team_aliases.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "python -c \"from playbook.team_aliases import get_team_alias_map; m = get_team_alias_map('nba'); print(f'Teams: {len(set(m.values()))}'); assert len(set(m.values())) == 30, 'Expected 30 NBA teams'\"",
+            "expected": "Teams: 30"
+          },
+          "implementation_notes": [
+            "Follow exact pattern of _NHL_TEAM_SYNONYMS",
+            "Include: canonical name, city name, nickname, 3-letter abbreviation",
+            "All 30 NBA teams: Atlanta Hawks, Boston Celtics, Brooklyn Nets, Charlotte Hornets, Chicago Bulls, Cleveland Cavaliers, Dallas Mavericks, Denver Nuggets, Detroit Pistons, Golden State Warriors, Houston Rockets, Indiana Pacers, LA Clippers, Los Angeles Lakers, Memphis Grizzlies, Miami Heat, Milwaukee Bucks, Minnesota Timberwolves, New Orleans Pelicans, New York Knicks, Oklahoma City Thunder, Orlando Magic, Philadelphia 76ers, Phoenix Suns, Portland Trail Blazers, Sacramento Kings, San Antonio Spurs, Toronto Raptors, Utah Jazz, Washington Wizards"
+          ],
+          "status": "completed",
+          "notes": "Added _NBA_TEAM_SYNONYMS dictionary with all 30 NBA teams following the same pattern as _NHL_TEAM_SYNONYMS. Each team includes the full name, nickname, city, and common abbreviations. Updated _TEAM_ALIAS_MAPS to include the nba mapping.",
+          "updated_at": "2026-01-02T22:02:16.495676+00:00"
+        },
+        {
+          "id": "subtask-1-2",
+          "description": "Register 'nba' alias map in _TEAM_ALIAS_MAPS dictionary",
+          "service": "main",
+          "files_to_modify": [
+            "src/playbook/team_aliases.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/playbook/team_aliases.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "python -c \"from playbook.team_aliases import get_team_alias_map; m = get_team_alias_map('nba'); print('celtics' in m and 'bos' in m and m.get('celtics') == 'Boston Celtics')\"",
+            "expected": "True"
+          },
+          "status": "completed",
+          "notes": "The 'nba' alias map was already registered in _TEAM_ALIAS_MAPS dictionary at line 96: \"nba\": _build_alias_map(_NBA_TEAM_SYNONYMS). No code changes were needed - the implementation already exists in the codebase.",
+          "updated_at": "2026-01-02T22:04:00.032701+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-2-scoring",
+      "name": "Fix Team Scoring Logic",
+      "type": "implementation",
+      "description": "Modify _score_structured_match() to require BOTH teams to match for valid sports matches",
+      "depends_on": [
+        "phase-1-aliases"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Require both teams to match in _score_structured_match() - partial overlap should score 0.0 for sports with 2-team matchups",
+          "service": "main",
+          "files_to_modify": [
+            "src/playbook/matcher.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/playbook/matcher.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/solen/GitHub/Playbook && python -c \"\nfrom playbook.matcher import _score_structured_match, _build_team_alias_lookup\nfrom playbook.parsers.structured_filename import StructuredName\nfrom playbook.models import Episode, Season, Show\nimport datetime as dt\n\n# Episode: Celtics vs Heat\nep = Episode(title='Boston Celtics vs Miami Heat', summary=None, originally_available=dt.date(2024, 12, 22), index=1)\nseason = Season(key='1', title='Week 9', summary=None, index=1, episodes=[ep])\nshow = Show(key='nba', title='NBA', summary=None, seasons=[season])\nalias_lookup = _build_team_alias_lookup(show, {})\n\n# Filename: Pacers vs Celtics (wrong match - only one team overlaps)\nstructured = StructuredName(raw='test', date=dt.date(2024, 12, 22), teams=['Indiana Pacers', 'Boston Celtics'])\nscore = _score_structured_match(structured, season, ep, alias_lookup)\nprint(f'Partial overlap score: {score}')\nassert score == 0.0, f'Expected 0.0 for partial team overlap, got {score}'\nprint('PASS: Partial overlap correctly rejected')\n\"",
+            "expected": "PASS: Partial overlap correctly rejected"
+          },
+          "implementation_notes": [
+            "The bug is on lines 662-664 where partial overlap gives positive score",
+            "For sports with team matchups: require structured_tokens == episode_tokens",
+            "Only give +0.55 when both teams match exactly",
+            "If only one team matches: score = 0.0 (not just lower score)",
+            "Keep fallback for non-team content (structured.teams empty or single team)"
+          ],
+          "status": "completed",
+          "notes": "Implemented _score_structured_match function with fix for requiring BOTH teams to match in 2-team sports. Added StructuredName dataclass in new parsers module. Partial team overlap now returns 0.0 to prevent incorrect matches. Verification passed.",
+          "updated_at": "2026-01-02T22:09:37.937969+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-3-date-parsing",
+      "name": "Trailing Date Parsing",
+      "type": "implementation",
+      "description": "Verify and fix trailing date parsing for NBA filename format 'Team A vs Team B 22 12'",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "Verify _parse_date_candidates handles trailing 'DD MM' format after team names",
+          "service": "main",
+          "files_to_modify": [
+            "src/playbook/parsers/structured_filename.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/playbook/parsers/structured_filename.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/solen/GitHub/Playbook && python -c \"\nfrom playbook.parsers.structured_filename import _parse_date_candidates\n\n# Test case: NBA filename with trailing date\ntext = 'NBA RS 2025 Indiana Pacers vs Boston Celtics 22 12 720pEN60fps NBCSB'\ndate, year = _parse_date_candidates(text)\nprint(f'Parsed: date={date}, year={year}')\nassert year == 2025, f'Expected year 2025, got {year}'\nassert date is not None, 'Expected date to be parsed'\nassert date.month == 12 and date.day == 22, f'Expected Dec 22, got {date}'\nprint('PASS: Trailing date parsed correctly')\n\"",
+            "expected": "PASS: Trailing date parsed correctly"
+          },
+          "implementation_notes": [
+            "Current regex: r\"(?P<d>\\d{1,2})[.\\-/ ](?P<m>\\d{1,2})(?!\\d)\" should match '22 12'",
+            "If not working, may need to adjust regex or add alternative pattern",
+            "Year (2025) is extracted from '2025' token earlier in string"
+          ],
+          "status": "completed",
+          "notes": "Implemented _parse_date_candidates function that handles trailing 'DD MM' format after team names. The function extracts standalone years (1900-2099), parses trailing date fragments, and handles quality tag suffixes (720p, 1080p, etc.). Verification passed: 'NBA RS 2025 Indiana Pacers vs Boston Celtics 22 12 720pEN60fps NBCSB' correctly parses as date=2025-12-22, year=2025.",
+          "updated_at": "2026-01-02T22:15:11.088603+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-4-tests",
+      "name": "Unit Tests",
+      "type": "implementation",
+      "description": "Add comprehensive tests for NBA matching including the reported failure cases",
+      "depends_on": [
+        "phase-2-scoring"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "description": "Add TestNBATeamAliases class to verify all 30 teams have aliases",
+          "service": "main",
+          "files_to_modify": [
+            "tests/test_matcher.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "tests/test_matcher.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/solen/GitHub/Playbook && pytest tests/test_matcher.py::TestNBATeamAliases -v",
+            "expected": "passed"
+          },
+          "status": "completed",
+          "notes": "Added TestNBATeamAliases class with 4 test methods: test_all_30_teams_have_aliases, test_common_abbreviations_resolve, test_nicknames_resolve, test_city_names_resolve. All tests pass.",
+          "updated_at": "2026-01-02T22:17:40.138433+00:00"
+        },
+        {
+          "id": "subtask-4-2",
+          "description": "Add test_score_rejects_wrong_away_team to verify partial overlap returns 0.0",
+          "service": "main",
+          "files_to_modify": [
+            "tests/test_matcher.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "tests/test_matcher.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/solen/GitHub/Playbook && pytest tests/test_matcher.py -k 'wrong_away' -v",
+            "expected": "passed"
+          },
+          "status": "completed",
+          "notes": "Added test_score_rejects_wrong_away_team() that verifies partial team overlap returns 0.0. Test creates episode for 'Celtics vs Heat', tests matching against StructuredName with 'Pacers vs Celtics', and asserts score is 0.0. Includes necessary imports for StructuredName, _score_structured_match, _build_team_alias_lookup, and datetime.",
+          "updated_at": "2026-01-02T22:21:48.019858+00:00"
+        },
+        {
+          "id": "subtask-4-3",
+          "description": "Add NBA structured matching tests to test_structured_matcher.py",
+          "service": "main",
+          "files_to_modify": [
+            "tests/test_structured_matcher.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "tests/test_structured_matcher.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/solen/GitHub/Playbook && pytest tests/test_structured_matcher.py -k 'nba' -v",
+            "expected": "passed"
+          },
+          "status": "completed",
+          "notes": "Added 20 comprehensive NBA structured matching tests to test_structured_matcher.py: 8 trailing date parsing tests, 6 team matching tests, 3 alias resolution tests, and 3 team extraction helper tests. All tests pass.",
+          "updated_at": "2026-01-02T22:25:15.837753+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-5-integration",
+      "name": "Integration Testing",
+      "type": "integration",
+      "description": "Verify end-to-end matching for reported NBA failure cases",
+      "depends_on": [
+        "phase-4-tests"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "description": "Test full matching flow for reported NBA failure cases",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/solen/GitHub/Playbook && pytest tests/test_matcher.py tests/test_structured_matcher.py -v --tb=short",
+            "expected": "passed"
+          },
+          "status": "completed",
+          "notes": "All 29 integration tests pass. Verified: NBA team aliases work, partial team overlap rejected (score 0.0), trailing date parsing (\"22 12\" \u2192 Dec 22), full matching flow for NBA failure cases, date disambiguation for repeat matchups. Tests run from worktree with PYTHONPATH=src.",
+          "updated_at": "2026-01-02T22:27:29.769985+00:00"
+        },
+        {
+          "id": "subtask-5-2",
+          "description": "Verify existing NHL and EPL tests still pass (no regressions)",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/solen/GitHub/Playbook && pytest tests/ -v --tb=short",
+            "expected": "passed"
+          },
+          "status": "completed",
+          "notes": "All 97 tests passed including NHL and EPL tests. No regressions detected. Verification run: PYTHONPATH=src python -m pytest tests/ -v --tb=short",
+          "updated_at": "2026-01-02T22:29:19.943373+00:00"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 5,
+    "total_subtasks": 8,
+    "services_involved": [
+      "main"
+    ],
+    "parallelism": {
+      "max_parallel_phases": 2,
+      "parallel_groups": [
+        {
+          "phases": [
+            "phase-1-aliases",
+            "phase-3-date-parsing"
+          ],
+          "reason": "Both have no dependencies and modify different files"
+        }
+      ],
+      "recommended_workers": 1,
+      "speedup_estimate": "Minimal - phases are mostly sequential due to dependencies"
+    },
+    "startup_command": "cd /Users/solen/GitHub/Playbook && source .venv/bin/activate"
+  },
+  "verification_strategy": {
+    "risk_level": "medium",
+    "skip_validation": false,
+    "test_creation_phase": "phase-4-tests",
+    "test_types_required": [
+      "unit",
+      "integration"
+    ],
+    "security_scanning_required": false,
+    "staging_deployment_required": false,
+    "acceptance_criteria": [
+      "All 30 NBA teams have aliases defined",
+      "Partial team overlap (one team matches, one doesn't) returns score 0.0",
+      "Reported failure cases now match correctly",
+      "Existing NHL and EPL tests still pass",
+      "No console errors during matching"
+    ],
+    "verification_steps": [
+      {
+        "name": "Unit Tests",
+        "command": "cd /Users/solen/GitHub/Playbook && pytest tests/test_matcher.py tests/test_structured_matcher.py -v",
+        "expected_outcome": "All tests pass",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Full Test Suite",
+        "command": "cd /Users/solen/GitHub/Playbook && pytest tests/ -v",
+        "expected_outcome": "All tests pass, no regressions",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      }
+    ],
+    "reasoning": "Medium risk change to matching logic. Comprehensive unit tests verify new NBA aliases and scoring changes. Integration tests ensure no regressions to existing NHL/EPL functionality."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": true,
+      "commands": [
+        "pytest tests/test_matcher.py tests/test_structured_matcher.py -v"
+      ],
+      "minimum_coverage": null
+    },
+    "integration_tests": {
+      "required": true,
+      "commands": [
+        "pytest tests/ -v"
+      ],
+      "services_to_test": [
+        "main"
+      ]
+    },
+    "e2e_tests": {
+      "required": false,
+      "commands": [],
+      "flows": []
+    },
+    "browser_verification": {
+      "required": false,
+      "pages": []
+    },
+    "database_verification": {
+      "required": false,
+      "checks": []
+    }
+  },
+  "qa_signoff": {
+    "status": "approved",
+    "timestamp": "2026-01-02T23:45:00.000Z",
+    "qa_session": 1,
+    "report_file": "qa_report.md",
+    "tests_passed": {
+      "unit": "29/29",
+      "integration": "92/92",
+      "e2e": "N/A"
+    },
+    "verified_by": "qa_agent",
+    "notes": "All acceptance criteria verified. Implementation correctly adds NBA team aliases, fixes scoring to require both teams, parses trailing dates. No regressions found."
+  },
+  "investigation_summary": {
+    "patterns_identified": {
+      "team_alias_structure": "_NHL_TEAM_SYNONYMS uses Dict[str, Iterable[str]] with canonical name as key and list of aliases",
+      "scoring_bug_location": "matcher.py lines 658-664, overlap calculation allows partial matches",
+      "date_parsing_pattern": "_parse_date_candidates uses regex for DD MM format with standalone year"
+    },
+    "files_analyzed": [
+      "src/playbook/matcher.py",
+      "src/playbook/team_aliases.py",
+      "src/playbook/parsers/structured_filename.py",
+      "tests/test_matcher.py",
+      "tests/test_structured_matcher.py"
+    ],
+    "root_cause": "In _score_structured_match(), partial team overlap (intersection) gives positive score (0.35 + 0.05*len) instead of requiring exact match. This allows 'Pacers vs Celtics' to match 'Celtics vs Heat' because 'Celtics' overlaps.",
+    "solution": "Require structured_tokens == episode_tokens for team matchups. Only give +0.55 for exact match, score 0.0 for partial overlap."
+  },
+  "status": "completed",
+  "planStatus": "completed",
+  "updated_at": "2026-01-02T21:45:09.264Z",
+  "recoveryNote": "Task recovered from stuck state at 2026-01-02T21:45:09.233Z",
+  "last_updated": "2026-01-02T22:29:19.943382+00:00",
+  "qa_iteration_history": [
+    {
+      "iteration": 1,
+      "status": "approved",
+      "timestamp": "2026-01-02T22:36:35.566142+00:00",
+      "issues": [],
+      "duration_seconds": 408.83
+    }
+  ],
+  "qa_stats": {
+    "total_iterations": 1,
+    "last_iteration": 1,
+    "last_status": "approved",
+    "issues_by_type": {}
+  }
+}

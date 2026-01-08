@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+from typing import Any
 
 from jsonschema import Draft7Validator
 
 from .pattern_templates import load_builtin_pattern_sets
 
 
-@dataclass(slots=True)
+@dataclass
 class ValidationIssue:
     """Represents a single validation problem."""
 
@@ -19,12 +20,12 @@ class ValidationIssue:
     code: str
 
 
-@dataclass(slots=True)
+@dataclass
 class ValidationReport:
     """Aggregates validation warnings and errors."""
 
-    errors: List[ValidationIssue] = field(default_factory=list)
-    warnings: List[ValidationIssue] = field(default_factory=list)
+    errors: list[ValidationIssue] = field(default_factory=list)
+    warnings: list[ValidationIssue] = field(default_factory=list)
 
     @property
     def is_valid(self) -> bool:
@@ -34,7 +35,7 @@ class ValidationReport:
 _TIME_PATTERN = r"^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$"
 _LINK_MODES = ["hardlink", "copy", "symlink"]
 
-CONFIG_SCHEMA: Dict[str, Any] = {
+CONFIG_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
         "settings": {
@@ -180,7 +181,7 @@ CONFIG_SCHEMA: Dict[str, Any] = {
             "properties": {
                 "mode": {
                     "type": "string",
-                    "enum": ["round", "key", "title", "sequential"],
+                    "enum": ["round", "key", "title", "sequential", "date"],
                 },
                 "group": {"type": ["string", "null"]},
                 "offset": {"type": "integer"},
@@ -188,6 +189,7 @@ CONFIG_SCHEMA: Dict[str, Any] = {
                     "type": "object",
                     "additionalProperties": {"type": "integer"},
                 },
+                "value_template": {"type": ["string", "null"]},
             },
             "additionalProperties": True,
         },
@@ -232,6 +234,7 @@ CONFIG_SCHEMA: Dict[str, Any] = {
                 "id": {"type": "string", "minLength": 1},
                 "name": {"type": "string"},
                 "enabled": {"type": "boolean"},
+                "team_alias_map": {"type": ["string", "null"]},
                 "metadata": {"$ref": "#/definitions/metadata"},
                 "pattern_sets": {
                     "type": "array",
@@ -279,7 +282,7 @@ CONFIG_SCHEMA: Dict[str, Any] = {
 def _format_jsonschema_path(path: Sequence[Any]) -> str:
     if not path:
         return "<root>"
-    tokens: List[str] = []
+    tokens: list[str] = []
     for part in path:
         if isinstance(part, int):
             if tokens:
@@ -291,7 +294,7 @@ def _format_jsonschema_path(path: Sequence[Any]) -> str:
     return ".".join(tokens) if tokens else "<root>"
 
 
-def _parse_time(value: str) -> Optional[str]:
+def _parse_time(value: str) -> str | None:
     try:
         parts = [int(part) for part in value.split(":")]
     except ValueError:
@@ -307,7 +310,7 @@ def _parse_time(value: str) -> Optional[str]:
     return None
 
 
-def _collect_pattern_set_names(data: Dict[str, Any]) -> Iterable[str]:
+def _collect_pattern_set_names(data: dict[str, Any]) -> Iterable[str]:
     builtin = set(load_builtin_pattern_sets().keys())
     user_sets = data.get("pattern_sets") or {}
     if isinstance(user_sets, dict):
@@ -315,7 +318,7 @@ def _collect_pattern_set_names(data: Dict[str, Any]) -> Iterable[str]:
     return builtin
 
 
-def _validate_metadata_block(metadata: Dict[str, Any], path: str, report: ValidationReport) -> None:
+def _validate_metadata_block(metadata: dict[str, Any], path: str, report: ValidationReport) -> None:
     url_value = metadata.get("url")
     if isinstance(url_value, str) and not url_value.strip():
         report.errors.append(
@@ -328,7 +331,7 @@ def _validate_metadata_block(metadata: Dict[str, Any], path: str, report: Valida
         )
 
 
-def validate_config_data(data: Dict[str, Any]) -> ValidationReport:
+def validate_config_data(data: dict[str, Any]) -> ValidationReport:
     report = ValidationReport()
     validator = Draft7Validator(CONFIG_SCHEMA)
 
@@ -346,7 +349,108 @@ def validate_config_data(data: Dict[str, Any]) -> ValidationReport:
     return report
 
 
-def _validate_semantics(data: Dict[str, Any], report: ValidationReport) -> None:
+def get_section_display_name(section: str, config_data: dict[str, Any] | None = None) -> str:
+    """Convert a section path to a human-readable display name.
+
+    Args:
+        section: Section path like "settings", "sports[0]", "pattern_sets"
+        config_data: Optional configuration data for extracting display names
+            (e.g., sport names from sports array).
+
+    Returns:
+        Human-readable display name for the section.
+    """
+    if not section:
+        return "Configuration"
+
+    # Handle indexed sections like "sports[0]"
+    import re
+
+    array_match = re.match(r"^(\w+)\[(\d+)\]$", section)
+    if array_match:
+        base_name = array_match.group(1)
+        index = int(array_match.group(2))
+
+        # For sports, try to get the actual sport name from config_data
+        if base_name == "sports" and config_data:
+            sports = config_data.get("sports", [])
+            if isinstance(sports, list) and index < len(sports):
+                sport = sports[index]
+                if isinstance(sport, dict):
+                    sport_name = sport.get("name") or sport.get("id")
+                    if sport_name:
+                        return str(sport_name)
+
+        # Fallback: return "Sports[0]" style
+        return f"{base_name.replace('_', ' ').title()}[{index}]"
+
+    # Simple section names - convert to title case
+    # Map common section names to display names
+    display_names = {
+        "settings": "Settings",
+        "sports": "Sports",
+        "pattern_sets": "Pattern Sets",
+        "file_watcher": "File Watcher",
+        "kometa_trigger": "Kometa Trigger",
+        "notifications": "Notifications",
+        "destination": "Destination",
+        "metadata": "Metadata",
+        "variants": "Variants",
+        "file_patterns": "File Patterns",
+        "docker": "Docker",
+    }
+
+    if section in display_names:
+        return display_names[section]
+
+    # Default: replace underscores with spaces and title case
+    return section.replace("_", " ").title()
+
+
+def group_validation_issues(
+    issues: list[ValidationIssue],
+) -> dict[str, dict[str, list[ValidationIssue]]]:
+    """Group validation issues by root section and sub-section.
+
+    Args:
+        issues: List of ValidationIssue objects to group.
+
+    Returns:
+        Nested dictionary mapping root_section -> sub_section -> list of issues.
+        Example: {"settings": {"notifications": [issue1, issue2]}}
+    """
+    from collections import defaultdict
+
+    result: dict[str, dict[str, list[ValidationIssue]]] = defaultdict(lambda: defaultdict(list))
+
+    for issue in issues:
+        path = issue.path
+
+        # Handle root-level issues
+        if not path or path == "<root>":
+            result["<root>"]["<root>"].append(issue)
+            continue
+
+        # Parse the path to extract root and sub-section
+        # Paths look like: "settings.notifications.flush_time", "sports[0].metadata.url"
+        parts = path.split(".")
+
+        if not parts:
+            result["<root>"]["<root>"].append(issue)
+            continue
+
+        root_section = parts[0]
+
+        # Determine sub-section (second level, or root if only one level)
+        sub_section = parts[1] if len(parts) >= 2 else root_section
+
+        result[root_section][sub_section].append(issue)
+
+    # Convert defaultdicts to regular dicts for cleaner return type
+    return {root: dict(sub_sections) for root, sub_sections in result.items()}
+
+
+def _validate_semantics(data: dict[str, Any], report: ValidationReport) -> None:
     settings = data.get("settings") or {}
     notifications = settings.get("notifications") or {}
     flush_time = notifications.get("flush_time")
@@ -363,7 +467,7 @@ def _validate_semantics(data: Dict[str, Any], report: ValidationReport) -> None:
             )
 
     sports = data.get("sports") or []
-    seen_ids: Dict[str, int] = {}
+    seen_ids: dict[str, int] = {}
     for index, sport in enumerate(sports):
         if not isinstance(sport, dict):
             continue
@@ -450,5 +554,11 @@ def _validate_semantics(data: Dict[str, Any], report: ValidationReport) -> None:
                 )
 
 
-__all__ = ["ValidationIssue", "ValidationReport", "validate_config_data", "CONFIG_SCHEMA"]
-
+__all__ = [
+    "ValidationIssue",
+    "ValidationReport",
+    "validate_config_data",
+    "CONFIG_SCHEMA",
+    "get_section_display_name",
+    "group_validation_issues",
+]

@@ -1,0 +1,127 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "playbook"
+version = "2.0.0-dev"
+description = "Automated file matching, renaming, and metadata for sports content in Plex"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "GPL-3.0-or-later"}
+authors = [
+    {name = "s0len"}
+]
+keywords = ["sports", "plex", "automation", "metadata", "sonarr", "media-management"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Video",
+]
+
+dependencies = [
+    "PyYAML==6.0.3",
+    "jsonschema==4.23.0",
+    "requests==2.32.5",
+    "python-dateutil==2.9.0.post0",
+    "rich==14.2.0",
+    "tenacity==9.1.2",
+    "rapidfuzz==3.14.3",
+    "watchdog==5.0.1",
+    "kubernetes==29.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+    "mkdocs-material>=9.5,<10",
+    "ruff>=0.8.0",
+    "pre-commit>=3.5.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/s0len/Playbook"
+Documentation = "https://s0len.github.io/Playbook/"
+Repository = "https://github.com/s0len/Playbook"
+Issues = "https://github.com/s0len/Playbook/issues"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+# Exclude directories and temporary files
+exclude = [
+    ".venv",
+    "venv",
+    ".git",
+    "__pycache__",
+    "*.egg-info",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".worktrees",
+    "build",
+    "dist",
+    ".tox",
+    "qa_*.py",  # Temporary QA validation scripts
+    "test_*.py",  # Root-level test files (not in tests/)
+    "verify_*.py",  # Temporary verification scripts
+    "validate_*.py",  # Temporary validation scripts
+    "integration_test*.py",  # Temporary integration test scripts
+    "code_quality_check.py",  # Temporary code quality script
+]
+
+[tool.ruff.lint]
+# Enable rule sets
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # bugbear
+    "UP",   # pyupgrade
+    "C4",   # comprehensions
+    "SIM",  # simplify
+    "TCH",  # type-checking
+]
+
+# Per-file ignores
+[tool.ruff.lint.per-file-ignores]
+# Tests can have assertions, magic values, and less strict rules
+"tests/**/*.py" = [
+    "B011",  # Do not use assert False
+    "SIM300", # Yoda conditions
+    "E402",  # Allow module imports not at top (test fixtures, etc.)
+    "E501",  # Allow long lines in tests (long test strings, etc.)
+]
+# Scripts and root level test files can be more flexible
+"*.py" = ["TCH"]  # Don't enforce TYPE_CHECKING in root scripts
+# Allow long lines in error messages and log strings, and specific style patterns
+"src/playbook/cli.py" = ["SIM105"]
+"src/playbook/command_help.py" = ["E501"]  # Docker command examples in help text
+"src/playbook/config.py" = ["E501"]
+"src/playbook/help_formatter.py" = ["E501"]  # Help message formatting
+"src/playbook/kometa_trigger.py" = ["E501"]
+"src/playbook/logging_utils.py" = ["UP007"]
+"src/playbook/match_handler.py" = ["SIM102"]  # Complex conditional logic
+"src/playbook/matcher.py" = ["E402", "B905", "C413", "SIM102"]  # Delayed imports + style patterns
+"src/playbook/metadata.py" = ["SIM105", "SIM108"]
+"src/playbook/notifications/**/*.py" = ["E501", "SIM105"]  # Notification modules
+"src/playbook/plex_metadata_sync.py" = ["E501"]
+"src/playbook/processor.py" = ["E501", "SIM102", "SIM108"]
+"src/playbook/run_summary.py" = ["E501", "SIM108"]  # Regex patterns and error formatting
+"src/playbook/summary_table.py" = ["E501", "SIM108"]  # Log format strings
+"src/playbook/utils.py" = ["UP031"]
+"src/playbook/watcher.py" = ["SIM102"]
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Use spaces for indentation
+indent-style = "space"
+
+# Format code snippets in docstrings
+docstring-code-format = true

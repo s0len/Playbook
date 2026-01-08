@@ -8,16 +8,19 @@ import os
 import sys
 import traceback
 from pathlib import Path
-from typing import Optional, Tuple
 
 from rich.console import Console
 from rich.logging import RichHandler
 
-from .config import AppConfig, Settings, load_config
+from .banner import build_banner_info, print_startup_banner
+from .command_help import get_command_help
+from .config import AppConfig, load_config
+from .help_formatter import RichHelpFormatter, render_extended_examples
 from .kometa_trigger import build_kometa_trigger
 from .processor import Processor, TraceOptions
 from .utils import load_yaml_file
 from .validation import ValidationIssue, validate_config_data
+from .validation_output import ValidationFormatter
 from .watcher import FileWatcherLoop, WatchdogUnavailableError
 
 LOGGER = logging.getLogger(__name__)
@@ -30,7 +33,31 @@ _TRUE_VALUES = {"1", "true", "yes", "on"}
 _FALSE_VALUES = {"0", "false", "no", "off"}
 
 
-def _parse_env_bool(value: Optional[str]) -> Optional[bool]:
+def _make_help_formatter(command_name: str):
+    """
+    Create a RichHelpFormatter class with command-specific help content.
+
+    Args:
+        command_name: Name of the command to get help content for
+
+    Returns:
+        A formatter class that will render examples, environment variables, and tips
+    """
+    help_content = get_command_help(command_name)
+
+    class CommandHelpFormatter(RichHelpFormatter):
+        def format_help(self) -> str:
+            # Add the command-specific content before formatting
+            # Use brief_examples for --help to keep it concise
+            self.add_examples(help_content.brief_examples)
+            self.add_environment_variables(help_content.env_vars)
+            self.add_tips(help_content.tips)
+            return super().format_help()
+
+    return CommandHelpFormatter
+
+
+def _parse_env_bool(value: str | None) -> bool | None:
     if value is None:
         return None
     lowered = value.strip().lower()
@@ -41,126 +68,219 @@ def _parse_env_bool(value: Optional[str]) -> Optional[bool]:
     return None
 
 
-def _env_bool(name: str) -> Optional[bool]:
+def _env_bool(name: str) -> bool | None:
     return _parse_env_bool(os.getenv(name))
 
 
-def parse_args(argv: Optional[Tuple[str, ...]] = None) -> argparse.Namespace:
+def parse_args(argv: tuple[str, ...] | None = None) -> argparse.Namespace:
+    """
+    Parse command-line arguments using argparse subparsers.
+
+    Supports three subcommands:
+    - run: Main Playbook processing (default)
+    - validate-config: Validate configuration file
+    - kometa-trigger: Manually trigger Kometa
+
+    For backward compatibility, if no subcommand is specified, 'run' is assumed.
+    """
     arguments = list(argv or sys.argv[1:])
-    if arguments:
-        if arguments[0] == "validate-config":
-            return _parse_validate_args(arguments[1:])
-        if arguments[0] == "kometa-trigger":
-            return _parse_trigger_args(arguments[1:])
-    return _parse_run_args(arguments)
+
+    # Create main parser with RichHelpFormatter
+    parser = argparse.ArgumentParser(
+        prog="playbook",
+        description="Playbook - Automated media file organization and metadata management",
+        formatter_class=RichHelpFormatter,
+    )
+
+    # Create subparsers
+    subparsers = parser.add_subparsers(
+        dest="command",
+        help="Available commands",
+    )
+
+    # Add 'run' subcommand
+    _add_run_subparser(subparsers)
+
+    # Add 'validate-config' subcommand
+    _add_validate_config_subparser(subparsers)
+
+    # Add 'kometa-trigger' subcommand
+    _add_kometa_trigger_subparser(subparsers)
+
+    # For backward compatibility: if no arguments or first arg doesn't match a subcommand,
+    # treat it as 'run' command
+    if not arguments or arguments[0] not in ["validate-config", "kometa-trigger"]:
+        # Filter out 'run' if it's the first argument (to handle both cases)
+        if arguments and arguments[0] == "run":
+            arguments = arguments[1:]
+        arguments = ["run"] + arguments
+
+    namespace = parser.parse_args(arguments)
+
+    # Ensure command is set (for backward compatibility)
+    if not hasattr(namespace, "command") or namespace.command is None:
+        namespace.command = "run"
+
+    # Validate run-specific argument conflicts
+    if namespace.command == "run" and getattr(namespace, "watch", False) and getattr(namespace, "no_watch", False):
+        parser.error("--watch and --no-watch cannot be used together")
+
+    return namespace
 
 
-def _parse_run_args(arguments: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Playbook")
-    parser.add_argument(
+def _add_run_subparser(subparsers) -> None:
+    """Add the 'run' subcommand parser."""
+    run_parser = subparsers.add_parser(
+        "run",
+        help="Process media files according to configuration",
+        description="Playbook - Process media files according to configuration",
+        formatter_class=_make_help_formatter("run"),
+    )
+    run_parser.add_argument(
+        "--examples",
+        action="store_true",
+        help="Show comprehensive cookbook-style examples and exit",
+    )
+    run_parser.add_argument(
         "--config",
         type=Path,
         default=Path(os.getenv("CONFIG_PATH", "/config/playbook.yaml")),
         help="Path to the YAML configuration file",
     )
-    parser.add_argument("--dry-run", action="store_true", help="Execute without writing to destination")
-    parser.add_argument("--verbose", action="store_true", help="Enable debug logging on the console")
-    parser.add_argument(
+    run_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Execute without writing to destination",
+    )
+    run_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable debug logging on the console",
+    )
+    run_parser.add_argument(
         "--log-level",
         choices=LOG_LEVEL_CHOICES,
         help="Log level for the persistent log file (default INFO, or DEBUG when --verbose)",
     )
-    parser.add_argument(
+    run_parser.add_argument(
         "--console-level",
         choices=LOG_LEVEL_CHOICES,
         help="Log level for console output (defaults to --log-level)",
     )
-    parser.add_argument(
+    run_parser.add_argument(
         "--log-file",
         type=Path,
         help="Path to the persistent log file (default ./playbook.log or $LOG_FILE)",
     )
-    parser.add_argument(
+    run_parser.add_argument(
         "--clear-processed-cache",
         action="store_true",
         help="Clear the processed-file cache before running",
     )
-    parser.add_argument(
+    run_parser.add_argument(
         "--trace-matches",
         "--explain",
         dest="trace_matches",
         action="store_true",
         help="Capture detailed match traces and store JSON artifacts (default directory: cache_dir/traces)",
     )
-    parser.add_argument(
+    run_parser.add_argument(
         "--trace-output",
         type=Path,
         help="Directory where match trace JSON files are written (implies --trace-matches)",
     )
-    parser.add_argument("--watch", action="store_true", help="Force filesystem watcher mode")
-    parser.add_argument("--no-watch", action="store_true", help="Disable filesystem watcher even if enabled in config")
-    namespace = parser.parse_args(arguments)
-    if namespace.watch and namespace.no_watch:
-        parser.error("--watch and --no-watch cannot be used together")
-    namespace.command = "run"
-    return namespace
+    run_parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Force filesystem watcher mode",
+    )
+    run_parser.add_argument(
+        "--no-watch",
+        action="store_true",
+        help="Disable filesystem watcher even if enabled in config",
+    )
 
 
-def _parse_validate_args(arguments: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Validate Playbook configuration")
-    parser.add_argument(
+def _add_validate_config_subparser(subparsers) -> None:
+    """Add the 'validate-config' subcommand parser."""
+    validate_parser = subparsers.add_parser(
+        "validate-config",
+        help="Validate Playbook configuration",
+        description="Validate Playbook configuration file for errors",
+        formatter_class=_make_help_formatter("validate-config"),
+    )
+    validate_parser.add_argument(
+        "--examples",
+        action="store_true",
+        help="Show comprehensive cookbook-style examples and exit",
+    )
+    validate_parser.add_argument(
         "--config",
         type=Path,
         default=Path(os.getenv("CONFIG_PATH", "/config/playbook.yaml")),
         help="Path to the YAML configuration file",
     )
-    parser.add_argument(
+    validate_parser.add_argument(
         "--diff-sample",
         action="store_true",
         help="Display a unified diff against config/playbook.sample.yaml when available",
     )
-    parser.add_argument(
+    validate_parser.add_argument(
         "--show-trace",
         action="store_true",
         help="Print exception tracebacks when validation fails",
     )
-    namespace = parser.parse_args(arguments)
-    namespace.command = "validate-config"
-    return namespace
+    validate_parser.add_argument(
+        "--no-suggestions",
+        action="store_true",
+        help="Disable fix suggestions in output for cleaner display",
+    )
 
 
-def _parse_trigger_args(arguments: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Trigger Kometa manually via Playbook")
-    parser.add_argument(
+def _add_kometa_trigger_subparser(subparsers) -> None:
+    """Add the 'kometa-trigger' subcommand parser."""
+    trigger_parser = subparsers.add_parser(
+        "kometa-trigger",
+        help="Manually trigger Kometa",
+        description="Trigger Kometa manually via Playbook",
+        formatter_class=_make_help_formatter("kometa-trigger"),
+    )
+    trigger_parser.add_argument(
+        "--examples",
+        action="store_true",
+        help="Show comprehensive cookbook-style examples and exit",
+    )
+    trigger_parser.add_argument(
         "--config",
         type=Path,
         default=Path(os.getenv("CONFIG_PATH", "/config/playbook.yaml")),
         help="Path to the YAML configuration file",
     )
-    parser.add_argument(
+    trigger_parser.add_argument(
         "--mode",
         choices=["docker", "kubernetes"],
         help="Override kometa_trigger.mode for this invocation",
     )
-    parser.add_argument("--verbose", action="store_true", help="Enable debug logging on the console")
-    parser.add_argument(
+    trigger_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable debug logging on the console",
+    )
+    trigger_parser.add_argument(
         "--log-level",
         choices=LOG_LEVEL_CHOICES,
         help="Log level for the persistent log file (default INFO, or DEBUG when --verbose)",
     )
-    parser.add_argument(
+    trigger_parser.add_argument(
         "--console-level",
         choices=LOG_LEVEL_CHOICES,
         help="Log level for console output (defaults to --log-level)",
     )
-    parser.add_argument(
+    trigger_parser.add_argument(
         "--log-file",
         type=Path,
         help="Path to the persistent log file (default ./playbook.log or $LOG_FILE)",
     )
-    namespace = parser.parse_args(arguments)
-    namespace.command = "kometa-trigger"
-    return namespace
 
 
 def _resolve_previous_log_path(log_file: Path) -> Path:
@@ -173,7 +293,7 @@ def _resolve_level(name: str) -> int:
     return getattr(logging, name.upper(), logging.INFO)
 
 
-def configure_logging(log_level_name: str, log_file: Path, console_level_name: Optional[str] = None) -> None:
+def configure_logging(log_level_name: str, log_file: Path, console_level_name: str | None = None) -> None:
     log_level = _resolve_level(log_level_name)
     console_level = _resolve_level(console_level_name or log_level_name)
 
@@ -263,7 +383,6 @@ def apply_runtime_overrides(config: AppConfig, args: argparse.Namespace) -> None
     config.settings.file_watcher.enabled = bool(watch_enabled)
 
 
-
 def _execute_run(args: argparse.Namespace) -> int:
     env_verbose = _env_bool("VERBOSE")
     verbose = args.verbose
@@ -288,8 +407,8 @@ def _execute_run(args: argparse.Namespace) -> int:
     log_level_env = os.getenv("LOG_LEVEL")
     console_level_env = os.getenv("CONSOLE_LEVEL")
 
-    resolved_log_level = (args.log_level or log_level_env or ("DEBUG" if verbose else "INFO"))
-    resolved_console_level: Optional[str]
+    resolved_log_level = args.log_level or log_level_env or ("DEBUG" if verbose else "INFO")
+    resolved_console_level: str | None
     if args.console_level:
         resolved_console_level = args.console_level
     elif console_level_env:
@@ -299,7 +418,8 @@ def _execute_run(args: argparse.Namespace) -> int:
     else:
         resolved_console_level = None
 
-    configure_logging(resolved_log_level.upper(), log_file, resolved_console_level.upper() if resolved_console_level else None)
+    console_level_arg = resolved_console_level.upper() if resolved_console_level else None
+    configure_logging(resolved_log_level.upper(), log_file, console_level_arg)
 
     if not args.config.exists():
         LOGGER.error("Configuration file %s does not exist", args.config)
@@ -332,6 +452,9 @@ def _execute_run(args: argparse.Namespace) -> int:
         if processor.notification_service.enabled:
             LOGGER.info("Notifications disabled for this run because the processed cache was cleared")
         processor.clear_processed_cache()
+
+    banner_info = build_banner_info(config, verbose=verbose, trace_matches=trace_enabled)
+    print_startup_banner(banner_info, CONSOLE)
 
     LOGGER.info("Starting Playbook%s", " (dry-run)" if config.settings.dry_run else "")
 
@@ -390,15 +513,16 @@ def run_kometa_trigger(args: argparse.Namespace) -> int:
         LOGGER.exception("Failed to load configuration: %s", exc)
         return 1
 
+    banner_info = build_banner_info(config, verbose=args.verbose, trace_matches=False)
+    print_startup_banner(banner_info, CONSOLE)
+
     trigger_settings = dataclasses.replace(config.settings.kometa_trigger)
     if args.mode:
         trigger_settings.mode = args.mode
         trigger_settings.enabled = True
 
     if not trigger_settings.enabled:
-        LOGGER.error(
-            "Kometa trigger is disabled in the configuration. Enable it or supply --mode to force a trigger."
-        )
+        LOGGER.error("Kometa trigger is disabled in the configuration. Enable it or supply --mode to force a trigger.")
         return 1
 
     trigger = build_kometa_trigger(trigger_settings)
@@ -431,6 +555,7 @@ def run_validate_config(args: argparse.Namespace) -> int:
             CONSOLE.print(traceback.format_exc(), style="dim")
         return 1
 
+    # Validate configuration
     report = validate_config_data(data)
 
     if report.is_valid:
@@ -448,17 +573,10 @@ def run_validate_config(args: argparse.Namespace) -> int:
             if getattr(args, "show_trace", False):
                 CONSOLE.print(traceback.format_exc(), style="dim")
 
-    if report.errors:
-        CONSOLE.print(f"[bold red]{len(report.errors)} validation error(s) detected:[/bold red]")
-        for issue in report.errors:
-            CONSOLE.print(f"  • [bold]{issue.path}[/bold] — {issue.message} ({issue.code})")
-    else:
-        CONSOLE.print("[bold green]Configuration passed validation.[/bold green]")
-
-    if report.warnings:
-        CONSOLE.print(f"[yellow]{len(report.warnings)} warning(s):[/yellow]")
-        for issue in report.warnings:
-            CONSOLE.print(f"  • [bold]{issue.path}[/bold] — {issue.message} ({issue.code})")
+    # Use ValidationFormatter to display the report
+    show_suggestions = not getattr(args, "no_suggestions", False)
+    formatter = ValidationFormatter(console=CONSOLE, show_suggestions=show_suggestions, config_data=data)
+    formatter.format_report(report)
 
     if getattr(args, "diff_sample", False):
         sample_path = _resolve_sample_config_path()
@@ -472,7 +590,7 @@ def run_validate_config(args: argparse.Namespace) -> int:
     return 0 if report.is_valid else 1
 
 
-def _resolve_sample_config_path() -> Optional[Path]:
+def _resolve_sample_config_path() -> Path | None:
     root = Path(__file__).resolve().parents[2]
     sample_path = root / "config" / "playbook.sample.yaml"
     if sample_path.exists():
@@ -504,7 +622,7 @@ def _print_sample_diff(sample_path: Path, target_path: Path) -> None:
 
     CONSOLE.print("\n[cyan]Unified diff against sample configuration:[/cyan]")
     for line in diff_lines:
-        style: Optional[str]
+        style: str | None
         if line.startswith("---") or line.startswith("+++"):
             style = "bold"
         elif line.startswith("@@"):
@@ -518,8 +636,16 @@ def _print_sample_diff(sample_path: Path, target_path: Path) -> None:
         CONSOLE.print(line, style=style)
 
 
-def main(argv: Optional[Tuple[str, ...]] = None) -> int:
+def main(argv: tuple[str, ...] | None = None) -> int:
     args = parse_args(argv)
+
+    # Handle --examples flag for all commands
+    if getattr(args, "examples", False):
+        command_name = getattr(args, "command", "run")
+        help_content = get_command_help(command_name)
+        render_extended_examples(command_name, help_content.extended_examples, CONSOLE)
+        return 0
+
     if getattr(args, "command", "run") == "validate-config":
         return run_validate_config(args)
     if getattr(args, "command", "run") == "kometa-trigger":

@@ -3,20 +3,20 @@ from __future__ import annotations
 import datetime as dt
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from playbook.config import NotificationSettings
 from playbook.notifications import NotificationEvent, NotificationService
 
 
 class FakeResponse:
-    def __init__(self, status_code: int, payload: Dict[str, Any] | None = None, headers: Dict[str, str] | None = None):
+    def __init__(self, status_code: int, payload: dict[str, Any] | None = None, headers: dict[str, str] | None = None):
         self.status_code = status_code
         self._payload = payload
         self.headers = headers or {}
         self.text = json.dumps(payload) if payload is not None else ""
 
-    def json(self) -> Dict[str, Any]:
+    def json(self) -> dict[str, Any]:
         if self._payload is None:
             raise ValueError("No JSON payload")
         return self._payload
@@ -26,7 +26,7 @@ def _build_event(
     destination: str = "Demo.mkv",
     action: str = "link",
     event_type: str = "new",
-    match_details: Optional[Dict[str, Any]] = None,
+    match_details: dict[str, Any] | None = None,
 ) -> NotificationEvent:
     return NotificationEvent(
         sport_id="demo",
@@ -40,7 +40,7 @@ def _build_event(
         source="source.mkv",
         action=action,
         link_mode="hardlink",
-        timestamp=dt.datetime.now(dt.timezone.utc),
+        timestamp=dt.datetime.now(dt.UTC),
         event_type=event_type,
         match_details=match_details or {},
     )
@@ -62,13 +62,13 @@ def test_notification_service_sends_discord_message(tmp_path, monkeypatch) -> No
         enabled=True,
     )
 
-    calls: List[Dict[str, Any]] = []
+    calls: list[dict[str, Any]] = []
 
     def fake_request(method, url, json=None, timeout=None, headers=None):
         calls.append({"method": method, "url": url, "json": json})
         return FakeResponse(204)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     service.notify(_build_event())
 
@@ -102,13 +102,13 @@ def test_notification_service_mentions_opt_in_roles(tmp_path, monkeypatch) -> No
         enabled=True,
     )
 
-    calls: List[Dict[str, Any]] = []
+    calls: list[dict[str, Any]] = []
 
     def fake_request(method, url, json=None, timeout=None, headers=None):
         calls.append({"method": method, "url": url, "json": json})
         return FakeResponse(204)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     service.notify(_build_event())
 
@@ -133,13 +133,13 @@ def test_notification_service_batches_discord_messages(tmp_path, monkeypatch) ->
         FakeResponse(200, {"id": "message123"}),
         FakeResponse(200, {"id": "message123"}),
     ]
-    calls: List[Dict[str, Any]] = []
+    calls: list[dict[str, Any]] = []
 
     def fake_request(method, url, json=None, timeout=None, headers=None):
         calls.append({"method": method, "url": url, "json": json})
         return responses.pop(0)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     service.notify(_build_event(destination="Demo-1.mkv"))
     service.notify(_build_event(destination="Demo-2.mkv"))
@@ -173,13 +173,13 @@ def test_notification_service_mentions_apply_to_batches(tmp_path, monkeypatch) -
         FakeResponse(200, {"id": "message123"}),
         FakeResponse(200, {"id": "message123"}),
     ]
-    calls: List[Dict[str, Any]] = []
+    calls: list[dict[str, Any]] = []
 
     def fake_request(method, url, json=None, timeout=None, headers=None):
         calls.append({"method": method, "url": url, "json": json})
         return responses.pop(0)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     service.notify(_build_event(destination="Demo-1.mkv"))
     service.notify(_build_event(destination="Demo-2.mkv"))
@@ -205,13 +205,13 @@ def test_notification_service_mentions_handle_variant_ids(tmp_path, monkeypatch)
         enabled=True,
     )
 
-    calls: List[Dict[str, Any]] = []
+    calls: list[dict[str, Any]] = []
 
     def fake_request(method, url, json=None, timeout=None, headers=None):
         calls.append({"method": method, "url": url, "json": json})
         return FakeResponse(204)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     event = _build_event()
     event.sport_id = "premier_league_2025_26"
@@ -235,13 +235,13 @@ def test_notification_service_mentions_support_wildcards(tmp_path, monkeypatch) 
         enabled=True,
     )
 
-    calls: List[Dict[str, Any]] = []
+    calls: list[dict[str, Any]] = []
 
     def fake_request(method, url, json=None, timeout=None, headers=None):
         calls.append({"method": method, "url": url, "json": json})
         return FakeResponse(204)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     event = _build_event()
     event.sport_id = "formula1_2025"
@@ -265,13 +265,13 @@ def test_discord_target_reads_webhook_from_env(tmp_path, monkeypatch) -> None:
         enabled=True,
     )
 
-    calls: List[Dict[str, Any]] = []
+    calls: list[dict[str, Any]] = []
 
     def fake_request(method, url, json=None, timeout=None, headers=None):
         calls.append({"url": url, "json": json})
         return FakeResponse(204)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     service.notify(_build_event())
 
@@ -295,7 +295,7 @@ def test_discord_target_skips_when_env_missing(tmp_path, monkeypatch) -> None:
     def fake_request(method, url, json=None, timeout=None, headers=None):
         raise AssertionError("Request should not be sent when env var is missing")
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     service.notify(_build_event())
 
@@ -324,13 +324,13 @@ def test_discord_targets_support_per_target_mentions(tmp_path, monkeypatch) -> N
         enabled=True,
     )
 
-    calls: List[Dict[str, Any]] = []
+    calls: list[dict[str, Any]] = []
 
     def fake_request(method, url, json=None, timeout=None, headers=None):
         calls.append({"url": url, "json": json})
         return FakeResponse(204)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
 
     service.notify(_build_event())
 
@@ -356,15 +356,15 @@ def test_notification_service_handles_rate_limiting(tmp_path, monkeypatch) -> No
         FakeResponse(429, {"retry_after": 0.3}, headers={"Retry-After": "0.2"}),
         FakeResponse(204),
     ]
-    request_calls: List[str] = []
-    sleep_calls: List[float] = []
+    request_calls: list[str] = []
+    sleep_calls: list[float] = []
 
     def fake_request(method, url, json=None, timeout=None, headers=None):
         request_calls.append(method)
         return responses.pop(0)
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
-    monkeypatch.setattr("playbook.notifications.time.sleep", lambda seconds: sleep_calls.append(seconds))
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.time.sleep", lambda seconds: sleep_calls.append(seconds))
 
     service.notify(_build_event())
 
@@ -388,7 +388,7 @@ def test_notification_service_skips_non_new_events(tmp_path, monkeypatch) -> Non
     def fake_request(method, url, json=None, timeout=None, headers=None):
         raise AssertionError("Request should not be sent")
 
-    monkeypatch.setattr("playbook.notifications.requests.request", fake_request)
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
     service.notify(_build_event(event_type="refresh"))
 
 
@@ -417,7 +417,7 @@ def test_autoscan_target_posts_manual_trigger(tmp_path, monkeypatch) -> None:
         enabled=True,
     )
 
-    calls: List[Dict[str, Any]] = []
+    calls: list[dict[str, Any]] = []
 
     def fake_post(url, params=None, auth=None, timeout=None, verify=None):
         calls.append({"url": url, "params": params, "auth": auth, "timeout": timeout, "verify": verify})
@@ -428,7 +428,7 @@ def test_autoscan_target_posts_manual_trigger(tmp_path, monkeypatch) -> None:
 
         return _Response()
 
-    monkeypatch.setattr("playbook.notifications.requests.post", fake_post)
+    monkeypatch.setattr("playbook.notifications.autoscan.requests.post", fake_post)
 
     destination_file = Path(rewrite_from) / "Show" / "Episode.mkv"
     event = _build_event(
@@ -441,4 +441,3 @@ def test_autoscan_target_posts_manual_trigger(tmp_path, monkeypatch) -> None:
     assert request["url"] == "http://autoscan.test:3030/triggers/manual"
     assert ("dir", "/mnt/unionfs/Show") in request["params"]
     assert request["auth"] is None
-

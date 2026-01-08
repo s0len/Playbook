@@ -17,9 +17,9 @@ def test_load_config_expands_variants_and_merges_patterns(tmp_path) -> None:
         config_path,
         f"""
         settings:
-          source_dir: "{tmp_path / 'source'}"
-          destination_dir: "{tmp_path / 'dest'}"
-          cache_dir: "{tmp_path / 'cache'}"
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
 
         pattern_sets:
           shared:
@@ -76,8 +76,8 @@ def test_file_watcher_settings_defaults_and_overrides(tmp_path) -> None:
         f"""
         settings:
           source_dir: "{source_dir}"
-          destination_dir: "{tmp_path / 'dest'}"
-          cache_dir: "{tmp_path / 'cache'}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
           file_watcher:
             enabled: true
             paths:
@@ -114,9 +114,9 @@ def test_kometa_trigger_settings_round_trip(tmp_path) -> None:
         config_path,
         f"""
         settings:
-          source_dir: "{tmp_path / 'source'}"
-          destination_dir: "{tmp_path / 'dest'}"
-          cache_dir: "{tmp_path / 'cache'}"
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
           kometa_trigger:
             enabled: true
             namespace: custom
@@ -145,9 +145,9 @@ def test_kometa_trigger_docker_settings(tmp_path) -> None:
         config_path,
         f"""
         settings:
-          source_dir: "{tmp_path / 'source'}"
-          destination_dir: "{tmp_path / 'dest'}"
-          cache_dir: "{tmp_path / 'cache'}"
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
           kometa_trigger:
             enabled: true
             mode: docker
@@ -198,9 +198,9 @@ def test_kometa_trigger_docker_exec_settings(tmp_path) -> None:
         config_path,
         f"""
         settings:
-          source_dir: "{tmp_path / 'source'}"
-          destination_dir: "{tmp_path / 'dest'}"
-          cache_dir: "{tmp_path / 'cache'}"
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
           kometa_trigger:
             enabled: true
             mode: docker
@@ -230,9 +230,9 @@ def test_kometa_trigger_exec_command(tmp_path) -> None:
         config_path,
         f"""
         settings:
-          source_dir: "{tmp_path / 'source'}"
-          destination_dir: "{tmp_path / 'dest'}"
-          cache_dir: "{tmp_path / 'cache'}"
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
           kometa_trigger:
             enabled: true
             mode: docker
@@ -260,9 +260,9 @@ def test_kometa_trigger_exec_command_conflict(tmp_path) -> None:
         config_path,
         f"""
         settings:
-          source_dir: "{tmp_path / 'source'}"
-          destination_dir: "{tmp_path / 'dest'}"
-          cache_dir: "{tmp_path / 'cache'}"
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
           kometa_trigger:
             enabled: true
             mode: docker
@@ -288,9 +288,9 @@ def test_notifications_mentions_mapping(tmp_path) -> None:
         config_path,
         f"""
         settings:
-          source_dir: "{tmp_path / 'source'}"
-          destination_dir: "{tmp_path / 'dest'}"
-          cache_dir: "{tmp_path / 'cache'}"
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
           notifications:
             mentions:
               demo: " <@&42> "
@@ -305,4 +305,3 @@ def test_notifications_mentions_mapping(tmp_path) -> None:
 
     config = load_config(config_path)
     assert config.settings.notifications.mentions == {"demo": "<@&42>", "default": "@here"}
-

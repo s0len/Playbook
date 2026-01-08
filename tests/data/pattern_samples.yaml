@@ -215,6 +215,7 @@ samples:
             - title: "Heat at Clippers"
               aliases:
                 - "Miami Heat at LA Clippers"
+                - "Miami Heat vs LA Clippers"
                 - "Heat vs Clippers"
             - title: "Suns at Clippers"
               aliases:
@@ -226,6 +227,23 @@ samples:
                 - "Washington Wizards at Boston Celtics"
                 - "Washington Wizards vs Boston Celtics"
                 - "Wizards vs Celtics"
+        - title: "Week 4"
+          display_number: 4
+          episodes: []
+        - title: "Week 5"
+          display_number: 5
+          episodes: []
+        - title: "Week 6"
+          display_number: 6
+          episodes: []
+        - title: "Week 7"
+          display_number: 7
+          episodes:
+            - title: "76ers at Bucks"
+              aliases:
+                - "Philadelphia 76ers at Milwaukee Bucks"
+                - "Philadelphia 76ers vs Milwaukee Bucks"
+                - "76ers vs Bucks"
     filenames:
       - value: "nba.2025.11.04.phoenix.suns.vs.golden.state.warriors.1080p.web.h264-gametime.mkv"
         expect_episode: "Suns at Warriors"
@@ -237,6 +255,67 @@ samples:
         expect_episode: "Wizards at Celtics"
       - value: "NBA.2025.11.08.Miami.Heat.vs.LA.Clippers.PROPER.1080p.WEB.H264-GAMETiME.mkv"
         expect_episode: "Heat at Clippers"
+      # Space-separated NBA RS format (similar to NHL RS format)
+      - value: "NBA RS 2025 Phoenix Suns vs Golden State Warriors 04 11 720pEN60fps TNT.mkv"
+        expect_episode: "Suns at Warriors"
+      - value: "NBA RS 2025 Miami Heat vs LA Clippers 08 11 720pEN60fps FDSN.mkv"
+        expect_episode: "Heat at Clippers"
+      - value: "NBA RS 2025 Warriors at Bucks 31 10 720pEN60fps NBATV.mkv"
+        expect_episode: "Warriors at Bucks"
+      - value: "NBA RS 2025 Washington Wizards vs Boston Celtics 05 11 1080pEN60fps NBC.mkv"
+        expect_episode: "Wizards at Celtics"
+      - value: "NBA RS 2025 Heat at Spurs 02 11 720pEN60fps FDSN.mkv"
+        expect_episode: "Heat at Spurs"
+      # Issue #74 exact failing NBA filename
+      - value: "NBA RS 2025 Philadelphia 76ers vs Milwaukee Bucks 05 12 720pEN60fps FDSN.mkv"
+        expect_episode: "76ers at Bucks"
+
+  - description: "NHL 2025-26 regular season samples"
+    sport:
+      id: "nhl_regular_season"
+      name: "NHL Regular Season"
+      pattern_sets:
+        - nhl
+    show:
+      key: "nhl_2025_26"
+      title: "NHL 2025-2026"
+      seasons:
+        - title: "NHL Week 3"
+          display_number: 3
+          episodes:
+            - title: "Edmonton Oilers vs New Jersey Devils"
+              originally_available: "2025-10-18"
+        - title: "NHL Week 6"
+          display_number: 6
+          episodes:
+            - title: "New Jersey Devils vs Washington Capitals"
+              originally_available: "2025-11-15"
+        - title: "NHL Week 7"
+          display_number: 7
+          episodes:
+            - title: "New Jersey Devils vs Philadelphia Flyers"
+              originally_available: "2025-11-22"
+        - title: "NHL Week 8"
+          display_number: 8
+          episodes:
+            - title: "New Jersey Devils vs Buffalo Sabres"
+              originally_available: "2025-11-28"
+        - title: "NHL Week 15"
+          display_number: 15
+          episodes:
+            - title: "Columbus Blue Jackets vs New Jersey Devils"
+              originally_available: "2026-01-01"
+    filenames:
+      - value: "NHL RS 2025 New Jersey Devils vs Buffalo Sabres 28 11 720pEN60fps MSG.mkv"
+        expect_episode: "New Jersey Devils vs Buffalo Sabres"
+      - value: "NHL 18-10-2025 RS Edmonton Oilers vs. New Jersey Devils 1080p60_EN_MSGSN.mkv"
+        expect_episode: "Edmonton Oilers vs New Jersey Devils"
+      - value: "NHL RS 2025 New Jersey Devils vs Washington Capitals 15 11 720pEN60fps MonumentalS.mkv"
+        expect_episode: "New Jersey Devils vs Washington Capitals"
+      - value: "NHL 01-01-2026 RS Blue Jackets vs Devils 1080pEN60fps MSG.mkv"
+        expect_episode: "Columbus Blue Jackets vs New Jersey Devils"
+      - value: "NHL-2025-11-22_NJD@PHI.mkv"
+        expect_episode: "New Jersey Devils vs Philadelphia Flyers"
 
   - description: "Formula 1 dot releases without venue segment"
     sport:
@@ -426,6 +505,34 @@ samples:
                 - "Tottenham Hotspur versus Manchester United"
                 - "Tottenham Hotspur Vs Manchester United"
                 - "Tottenham.Hotspur.Vs.Manchester.United"
+        - title: "Matchweek 12"
+          display_number: 12
+          episodes: []
+        - title: "Matchweek 13"
+          display_number: 13
+          episodes: []
+        - title: "Matchweek 14"
+          display_number: 14
+          episodes:
+            - title: "Fulham vs Manchester City"
+              aliases:
+                - "Fulham v Manchester City"
+                - "Fulham versus Manchester City"
+                - "Fulham Vs Manchester City"
+                - "Fulham vs Man City"
+                - "Fulham.Vs.Manchester.City"
+            - title: "Liverpool vs Sunderland"
+              aliases:
+                - "Liverpool v Sunderland"
+                - "Liverpool versus Sunderland"
+                - "Liverpool Vs Sunderland"
+                - "Liverpool.Vs.Sunderland"
+            - title: "Leeds United vs Chelsea"
+              aliases:
+                - "Leeds vs Chelsea"
+                - "Leeds Utd vs Chelsea"
+                - "Leeds United Vs Chelsea"
+                - "Leeds.United.vs.Chelsea"
     filenames:
       - value: "epl.2025.09.20.brighton.and.hove.albion.vs.tottenham.hotspur.1080p.web.h264-nightninjas.mkv"
         expect_episode: "Brighton & Hove Albion vs Tottenham Hotspur"
@@ -437,6 +544,12 @@ samples:
         expect_episode: "Tottenham Hotspur vs Manchester United"
       - value: "EPL.2025.10.Burnley.vs.Arsenal.1080pEN50fps.mkv"
         expect_episode: "Burnley vs Arsenal"
+      - value: "EPL.2025.26.Leeds.vs.Chelsea.1080pEN60fps.mkv"
+        expect_episode: "Leeds United vs Chelsea"
+      - value: "EPL 2025 Fulham vs Manchester City 02 12 720pEN60fps Fubo.mkv"
+        expect_episode: "Fulham vs Manchester City"
+      - value: "EPL 2025 12 03 Liverpool vs Sunderland 2160p50 x264 EN SKY.mkv"
+        expect_episode: "Liverpool vs Sunderland"
 
   - description: "Figure Skating Grand Prix 2025 samples"
     sport:
@@ -498,3 +611,53 @@ samples:
         expect_episode: "Exhibition Gala"
       - value: "Figure Skating Grand Prix Final 2025 Women Free Program 06.12.2025 1080pEN50fps.mkv"
         expect_episode: "Women Free Program"
+
+  - description: "NFL 2025-26 Week-based regular season samples"
+    sport:
+      id: "nfl_week_based"
+      name: "NFL Week-Based Regular Season"
+      pattern_sets:
+        - nfl
+    show:
+      key: "nfl_2025_26"
+      title: "NFL 2025-2026"
+      seasons:
+        - title: "Week 17"
+          display_number: 17
+          episodes:
+            - title: "Philadelphia Eagles at Dallas Cowboys"
+              aliases:
+                - "Philadelphia Eagles vs Dallas Cowboys"
+                - "Eagles at Cowboys"
+                - "Eagles vs Cowboys"
+        - title: "Week 18"
+          display_number: 18
+          episodes:
+            - title: "New Orleans Saints at Atlanta Falcons"
+              aliases:
+                - "New Orleans Saints vs Atlanta Falcons"
+                - "Saints at Falcons"
+                - "Saints vs Falcons"
+            - title: "Dallas Cowboys at New York Giants"
+              aliases:
+                - "Dallas Cowboys vs New York Giants"
+                - "Cowboys at Giants"
+                - "Cowboys vs Giants"
+            - title: "Denver Broncos at Kansas City Chiefs"
+              aliases:
+                - "Denver Broncos vs Kansas City Chiefs"
+                - "Broncos at Chiefs"
+                - "Broncos vs Chiefs"
+    filenames:
+      # Primary failing filenames from Issue #74 (exact filenames)
+      - value: "NFL 2025 2026 Week 18 New Orleans Saints @ Atlanta Falcons 720p 60fps MKV H 264 EN.mkv"
+        expect_episode: "New Orleans Saints at Atlanta Falcons"
+      - value: "NFL 2025 2026 Week 18 Dallas Cowboys @ New York Giants 04 01 1080pEN30fps.mkv"
+        expect_episode: "Dallas Cowboys at New York Giants"
+      # Additional test cases with variations
+      - value: "NFL 2025 2026 Week 18 Denver Broncos vs Kansas City Chiefs 720p 60fps EN.mkv"
+        expect_episode: "Denver Broncos at Kansas City Chiefs"
+      - value: "NFL.2025.2026.Week.17.Philadelphia.Eagles.vs.Dallas.Cowboys.1080p.WEB.H264.mkv"
+        expect_episode: "Philadelphia Eagles at Dallas Cowboys"
+      - value: "NFL 2025 2026 Week 17 Eagles @ Cowboys 720p60fps.mkv"
+        expect_episode: "Philadelphia Eagles at Dallas Cowboys"

@@ -19,22 +19,20 @@ Point Kometa at the same metadata YAML feeds that Playbook uses so Plex shows ca
 libraries:
   Sport:
     metadata_files:
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/formula1/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/formula-e/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/indycar-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/isle-of-man-tt.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/moto2-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/moto3-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/motogp-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/nba/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/nfl/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/premier-league/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/uefa-champions-league/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/ufc/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/womens-uefa-euro.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/wsbk-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/wssp-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/wssp300-2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/formula1/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/formula-e/2025-2026.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/indycar-series/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/isle-of-man-tt.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/moto2/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/moto3/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/motogp/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/nba/2025-2026.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/nfl/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/premier-league/2025-2026.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/uefa-champions-league/2025-2026.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/ufc/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/wsbk-2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/wssp-2025.yaml
 ```
 
 1. List every metadata YAML you expect Playbook to ingest (feeds live under `s0len/meta-manager-config`).
@@ -137,6 +135,8 @@ Sample filter (partial TOML):
 # Premier League (EPL) 1080p releases by NiGHTNiNJAS
 epl.*1080p.*nightninjas
 
+Playbook also swallows the non-dotted drops (`EPL 2025 Fulham vs Manchester City 02 12 …`) and normalizes common nicknames (`Leeds`, `Man City`, etc.) so you can keep a single filter for every encoder variant.
+
 # Formula 1 multi-session weekends by MWR
 (F1|Formula.*1).*\d{4}.Round\d+.*[^.]+\.*?(Drivers.*Press.*Conference|Weekend.*Warm.*Up|FP\d?|Practice|Sprint.Qualifying|Sprint|Qualifying|Pre.Qualifying|Post.Qualifying|Race|Pre.Race|Post.Race|Sprint.Race|Feature.*Race).*1080p.*MWR
 
@@ -154,6 +154,9 @@ motogp.*\d{4}.*round\d.*((fp\d?|practice|sprint|qualifying|q1|q2|race)).*DNU
 
 # NBA 1080p by GAMETiME
 nba.*1080p.*gametime
+
+# NHL RS 60fps feeds
+nhl.*rs.*(720p|1080p).*en60fps
 
 # NFL by NiGHTNiNJAS
 nfl.*nightninjas
@@ -197,10 +200,17 @@ Add an `autoscan` notification target to retrigger Plex/Emby/Jellyfin scans imme
 
 ```--8<-- "snippets/notifications-autoscan.md"```
 
+### ⚠️ Security Warning: SSL/TLS Verification
+
+**IMPORTANT:** The `verify_ssl` setting controls SSL/TLS certificate verification for HTTPS connections to Autoscan. Disabling this verification (`verify_ssl: false`) exposes your system to **man-in-the-middle (MITM) attacks** where an attacker can intercept and modify the communication between Playbook and Autoscan.
+
+- **Production environments:** ALWAYS keep `verify_ssl: true` (the default)
+- **Development/testing only:** `verify_ssl: false` may be used temporarily with self-signed certificates, but you should properly configure certificate trust stores instead
+- **Better alternatives:** Add self-signed certificates to your system's trust store or use a proper CA-signed certificate rather than disabling verification
+
 Guidelines:
 
-- `rewrite` entries translate Playbook’s container paths into whatever Autoscan/Plex can see (add as many mappings as needed).
-- `verify_ssl: false` is handy for lab clusters using self-signed certs (flip it back to `true` in production).
+- `rewrite` entries translate Playbook's container paths into whatever Autoscan/Plex can see (add as many mappings as needed).
 - Combine Autoscan pings with watcher mode for near-instant Plex updates—new files drop, Playbook links them, Autoscan triggers a scan.
 - Want extra resiliency? Keep one Autoscan target per Plex server/library pair so failures are isolated.
 

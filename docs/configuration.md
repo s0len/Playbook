@@ -8,7 +8,7 @@ Every Playbook deployment runs from a single YAML file. Start by copying `config
 |-------|-------------|---------|
 | `source_dir` | Root directory containing downloads to normalize. | `/data/source` |
 | `destination_dir` | Library root where organized folders/files are created. | `/data/destination` |
-| `cache_dir` | Metadata cache directory (`metadata/<sha1>.json`). Safe to delete to force refetch. | `/data/cache` |
+| `cache_dir` | Metadata cache directory (`metadata/<hash>.json`). Safe to delete to force refetch. | `/data/cache` |
 | `dry_run` | When `true`, logs intent but skips filesystem writes. | `false` |
 | `skip_existing` | Leave destination files untouched unless a higher-priority release arrives. | `true` |
 | `link_mode` | Default link behavior: `hardlink`, `copy`, or `symlink`. | `hardlink` |
@@ -104,6 +104,22 @@ Key knobs:
 - `enabled` toggles sports without deleting them.
 - `source_globs` / `source_extensions` are coarse filters before any regex work happens.
 - `link_mode`, `destination.*`, and notification overrides let you specialize behavior per sport.
+
+**Supported file extensions**
+
+By default, Playbook processes files with these extensions: `.mkv`, `.mp4`, `.ts`, `.m4v`, `.avi`. The `.ts` extension supports MPEG Transport Stream files commonly used in TV recordings.
+
+> **Important:** When you set `source_extensions` on a sport, it **replaces** the defaults entirely—it does not merge with them. If you override this field, include all extensions you want to match:
+>
+> ```yaml
+> source_extensions:
+>   - .mkv
+>   - .mp4
+>   - .ts   # Don't forget .ts if you have transport stream files!
+>   - .m4v
+>   - .avi
+> ```
+- `team_alias_map` (optional) points to a built-in alias table (e.g., `premier_league`, `nhl`) used by the structured matcher to normalize shorthand like “Man City” or “NJD”.
 - `pattern_sets` pulls from `src/playbook/pattern_templates.yaml`; you can still inline `file_patterns` for overrides.
 
 **Metadata overrides**
@@ -148,10 +164,12 @@ file_patterns:
 Reference table:
 
 - `regex` must expose the capture groups consumed by selectors/templates.
-- `season_selector` supports `round`, `key`, `title`, and `sequential` modes plus offsets/mappings.
+- `season_selector` supports `round`, `key`, `title`, `sequential`, and `date` modes plus offsets/mappings.
 - `episode_selector` chooses which capture identifies an episode; set `allow_fallback_to_title` when a regex omits the session.
 - `session_aliases` augment metadata aliases with release-specific tokens (case-insensitive).
 - `priority` resolves collisions when multiple patterns match the same file.
+
+`value_template` lets a selector compose a derived lookup key from multiple capture groups (e.g., `{date_year}-{month:0>2}-{day:0>2}` to normalize `10 11` → `2025-11-10`). The `date` selector mode uses the formatted value to locate the season containing an episode with the same `originally_available` date—perfect for leagues scheduled by calendar days rather than round numbers.
 
 **Testing patterns quickly**
 

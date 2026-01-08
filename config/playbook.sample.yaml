@@ -109,6 +109,35 @@ settings:
       #   - On macOS, also mount com.docker.cli (command -v com.docker.cli)
 
   ####################################################################
+  # PLEX METADATA SYNC (OPTIONAL)
+  ####################################################################
+  # Push show/season/episode metadata (titles, sort titles, summaries, dates,
+  # posters, backgrounds) to Plex. Uses remote metadata YAML as the source of truth.
+  #
+  # SYNC TRIGGERS:
+  #   - New files processed (automatically syncs the affected sports)
+  #   - Metadata changed in remote YAML (fingerprint-based detection)
+  #   - First-time sync (sports that have never been synced will auto-sync)
+  #   - Force mode (force: true syncs all sports regardless of state)
+  #
+  # This "first-time sync" feature ensures that existing content in Plex gets
+  # proper metadata even if you enable sync after already having files in place.
+  # Once a sport is synced, it only re-syncs when metadata changes or force=true.
+  plex_metadata_sync:
+    enabled: false                   # Set true to enable; or PLEX_SYNC_ENABLED=true
+    url: ${PLEX_URL:-http://plex:32400}
+    token: ${PLEX_TOKEN:-}
+    library_id: ${PLEX_LIBRARY_ID:-} # Optional: prefer ID for faster lookup
+    library_name: ${PLEX_LIBRARY_NAME:-TV Shows} # Used when library_id is not set
+    timeout: ${PLEX_TIMEOUT:-15}     # HTTP timeout in seconds
+    force: ${PLEX_FORCE:-false}      # Force all updates even if unchanged
+    dry_run: ${PLEX_SYNC_DRY_RUN:-false} # Log only, no Plex writes
+    sports: []                       # Limit to specific sport ids; env PLEX_SPORTS=foo,bar
+    scan_wait: ${PLEX_SCAN_WAIT:-5}  # Seconds to wait after triggering library scan (0 to skip)
+    # Features: automatic library scan trigger, retry with backoff, rate limiting,
+    # field locking, fingerprint-based change detection, first-time sync detection
+
+  ####################################################################
   # DEFAULT DESTINATION TEMPLATES
   ####################################################################
   # These templates are used for every sport unless overridden under that sport's `destination` block.
@@ -129,7 +158,7 @@ settings:
 
 pattern_sets:
   # Built-in pattern templates load automatically from `pattern_templates.yaml`.
-  # Available names: formula1, formula_e, indycar, motogp, moto2, moto3, world_superbike, world_supersport, isle_of_man_tt, football, premier_league, ufc, uefa_champions_league, figure_skating_grand_prix.
+  # Available names: formula1, formula_e, indycar, motogp, moto2, moto3, world_superbike, world_supersport, isle_of_man_tt, football, premier_league, ufc, uefa_champions_league, nba, nhl, figure_skating_grand_prix.
   # Add custom sets below if you need overrides or extra matchers.
   # Example:
   #   my_custom_pack:
@@ -443,6 +472,27 @@ sports:
     pattern_sets:
       - nba
 
+  - id: nhl
+    name: NHL
+    enabled: true
+
+    # Built-in team alias map normalizes abbreviations (e.g., "NJD", "Caps").
+    team_alias_map: nhl
+
+    metadata:
+      url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/nhl/2025-2026.yaml
+      show_key: NHL 2025-2026
+      ttl_hours: 24
+
+    source_globs:
+      - "NHL.*"
+      - "NHL *"
+      - "nhl.*"
+      - "nhl *"
+
+    pattern_sets:
+      - nhl
+
   - id: uefa_champions_league
     name: UEFA Champions League
     enabled: true
@@ -486,6 +536,9 @@ sports:
   - id: premier_league
     name: Premier League
     enabled: true
+
+    # Built-in alias map handles common shorthand (e.g., "Man City", "Spurs").
+    team_alias_map: premier_league
 
     metadata:
       url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/premier-league/2025-2026.yaml

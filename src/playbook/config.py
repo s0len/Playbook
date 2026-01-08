@@ -1,89 +1,103 @@
 from __future__ import annotations
 
-import dataclasses
 import datetime as dt
 import re
 import shlex
+from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any
 
 from .pattern_templates import expand_regex_with_tokens, load_builtin_pattern_sets
-from .utils import load_yaml_file
+from .utils import load_yaml_file, validate_url
 
 
-@dataclass(slots=True)
+@dataclass
 class SeasonSelector:
-    mode: str = "round"  # round | key | title | sequential
-    group: Optional[str] = None
+    mode: str = "round"  # round | key | title | sequential | date
+    group: str | None = None
     offset: int = 0
-    mapping: Dict[str, int] = field(default_factory=dict)
-    aliases: Dict[str, str] = field(default_factory=dict)
+    mapping: dict[str, int] = field(default_factory=dict)
+    aliases: dict[str, str] = field(default_factory=dict)
+    value_template: str | None = None
 
 
-@dataclass(slots=True)
+@dataclass
 class EpisodeSelector:
     group: str = "session"
     allow_fallback_to_title: bool = True
-    default_value: Optional[str] = None
+    default_value: str | None = None
 
 
-@dataclass(slots=True)
+@dataclass
+class PlexSyncSettings:
+    enabled: bool = False
+    url: str | None = None
+    token: str | None = None
+    library_id: str | None = None
+    library_name: str | None = None
+    timeout: float = 15.0
+    force: bool = False
+    dry_run: bool = False
+    sports: list[str] = field(default_factory=list)
+    scan_wait: float = 5.0  # Seconds to wait after triggering library scan
+    lock_poster_fields: bool = False  # Whether to lock poster fields to prevent updates
+
+
+@dataclass
 class PatternConfig:
     regex: str
-    description: Optional[str] = None
+    description: str | None = None
     season_selector: SeasonSelector = field(default_factory=SeasonSelector)
     episode_selector: EpisodeSelector = field(default_factory=EpisodeSelector)
-    session_aliases: Dict[str, List[str]] = field(default_factory=dict)
-    metadata_filters: Dict[str, Any] = field(default_factory=dict)
-    filename_template: Optional[str] = None
-    season_dir_template: Optional[str] = None
-    destination_root_template: Optional[str] = None
+    session_aliases: dict[str, list[str]] = field(default_factory=dict)
+    metadata_filters: dict[str, Any] = field(default_factory=dict)
+    filename_template: str | None = None
+    season_dir_template: str | None = None
+    destination_root_template: str | None = None
     priority: int = 100
 
     def compiled_regex(self) -> re.Pattern[str]:
         return re.compile(self.regex, re.IGNORECASE)
 
 
-@dataclass(slots=True)
+@dataclass
 class MetadataConfig:
     url: str
-    show_key: Optional[str] = None
+    show_key: str | None = None
     ttl_hours: int = 12
-    headers: Dict[str, str] = field(default_factory=dict)
-    season_overrides: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    headers: dict[str, str] = field(default_factory=dict)
+    season_overrides: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
-@dataclass(slots=True)
+@dataclass
 class DestinationTemplates:
     root_template: str = "{show_title}"
     season_dir_template: str = "{season_number:02d} {season_title}"
-    episode_template: str = (
-        "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
-    )
+    episode_template: str = "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
 
 
-@dataclass(slots=True)
+@dataclass
 class NotificationSettings:
     batch_daily: bool = False
     flush_time: dt.time = field(default_factory=lambda: dt.time(hour=0, minute=0))
-    targets: List[Dict[str, Any]] = field(default_factory=list)
-    throttle: Dict[str, int] = field(default_factory=dict)
-    mentions: Dict[str, str] = field(default_factory=dict)
+    targets: list[dict[str, Any]] = field(default_factory=list)
+    throttle: dict[str, int] = field(default_factory=dict)
+    mentions: dict[str, str] = field(default_factory=dict)
 
 
-@dataclass(slots=True)
+@dataclass
 class WatcherSettings:
     enabled: bool = False
-    paths: List[str] = field(default_factory=list)
-    include: List[str] = field(default_factory=list)
-    ignore: List[str] = field(default_factory=list)
+    paths: list[str] = field(default_factory=list)
+    include: list[str] = field(default_factory=list)
+    ignore: list[str] = field(default_factory=list)
     debounce_seconds: float = 5.0
     reconcile_interval: int = 900
 
 
-@dataclass(slots=True)
+@dataclass
 class KometaTriggerSettings:
     enabled: bool = False
     mode: str = "kubernetes"  # kubernetes | docker
@@ -92,37 +106,36 @@ class KometaTriggerSettings:
     job_name_prefix: str = "kometa-sport-triggered-by-playbook"
     docker_binary: str = "docker"
     docker_image: str = "kometateam/kometa"
-    docker_config_path: Optional[str] = None
+    docker_config_path: str | None = None
     docker_config_container_path: str = "/config"
     docker_volume_mode: str = "rw"
-    docker_libraries: Optional[str] = None
-    docker_extra_args: List[str] = field(default_factory=list)
-    docker_env: Dict[str, str] = field(default_factory=dict)
+    docker_libraries: str | None = None
+    docker_extra_args: list[str] = field(default_factory=list)
+    docker_env: dict[str, str] = field(default_factory=dict)
     docker_remove_container: bool = True
     docker_interactive: bool = False
-    docker_container_name: Optional[str] = None
+    docker_container_name: str | None = None
     docker_exec_python: str = "python3"
     docker_exec_script: str = "/app/kometa/kometa.py"
-    docker_exec_command: Optional[List[str]] = None
+    docker_exec_command: list[str] | None = None
 
 
-@dataclass(slots=True)
+@dataclass
 class SportConfig:
     id: str
     name: str
     enabled: bool = True
     metadata: MetadataConfig = field(default_factory=lambda: MetadataConfig(url=""))
-    patterns: List[PatternConfig] = field(default_factory=list)
+    patterns: list[PatternConfig] = field(default_factory=list)
+    team_alias_map: str | None = None
     destination: DestinationTemplates = field(default_factory=DestinationTemplates)
-    source_globs: List[str] = field(default_factory=list)
-    source_extensions: List[str] = field(
-        default_factory=lambda: [".mkv", ".mp4", ".ts", ".m4v", ".avi"]
-    )
+    source_globs: list[str] = field(default_factory=list)
+    source_extensions: list[str] = field(default_factory=lambda: [".mkv", ".mp4", ".ts", ".m4v", ".avi"])
     link_mode: str = "hardlink"
     allow_unmatched: bool = False
 
 
-@dataclass(slots=True)
+@dataclass
 class Settings:
     source_dir: Path
     destination_dir: Path
@@ -134,26 +147,28 @@ class Settings:
     notifications: NotificationSettings = field(default_factory=NotificationSettings)
     file_watcher: WatcherSettings = field(default_factory=WatcherSettings)
     kometa_trigger: KometaTriggerSettings = field(default_factory=KometaTriggerSettings)
+    plex_sync: PlexSyncSettings = field(default_factory=PlexSyncSettings)
 
 
-@dataclass(slots=True)
+@dataclass
 class AppConfig:
     settings: Settings
-    sports: List[SportConfig]
+    sports: list[SportConfig]
 
 
-def _build_season_selector(data: Dict[str, Any]) -> SeasonSelector:
+def _build_season_selector(data: dict[str, Any]) -> SeasonSelector:
     selector = SeasonSelector(
         mode=data.get("mode", "round"),
         group=data.get("group"),
         offset=int(data.get("offset", 0)),
         mapping={str(k): int(v) for k, v in data.get("mapping", {}).items()},
         aliases={str(k): str(v) for k, v in data.get("aliases", {}).items()},
+        value_template=str(data["value_template"]).strip() if data.get("value_template") else None,
     )
     return selector
 
 
-def _build_episode_selector(data: Dict[str, Any]) -> EpisodeSelector:
+def _build_episode_selector(data: dict[str, Any]) -> EpisodeSelector:
     return EpisodeSelector(
         group=data.get("group", "session"),
         allow_fallback_to_title=bool(data.get("allow_fallback_to_title", True)),
@@ -161,7 +176,7 @@ def _build_episode_selector(data: Dict[str, Any]) -> EpisodeSelector:
     )
 
 
-def _build_pattern_config(data: Dict[str, Any]) -> PatternConfig:
+def _build_pattern_config(data: dict[str, Any]) -> PatternConfig:
     raw_regex = str(data["regex"])
     pattern = PatternConfig(
         regex=expand_regex_with_tokens(raw_regex),
@@ -178,7 +193,7 @@ def _build_pattern_config(data: Dict[str, Any]) -> PatternConfig:
     return pattern
 
 
-def _build_metadata_config(data: Dict[str, Any]) -> MetadataConfig:
+def _build_metadata_config(data: dict[str, Any]) -> MetadataConfig:
     return MetadataConfig(
         url=data["url"],
         show_key=data.get("show_key"),
@@ -188,7 +203,7 @@ def _build_metadata_config(data: Dict[str, Any]) -> MetadataConfig:
     )
 
 
-def _build_destination_templates(data: Optional[Dict[str, Any]], defaults: DestinationTemplates) -> DestinationTemplates:
+def _build_destination_templates(data: dict[str, Any] | None, defaults: DestinationTemplates) -> DestinationTemplates:
     if not data:
         return defaults
 
@@ -200,26 +215,22 @@ def _build_destination_templates(data: Optional[Dict[str, Any]], defaults: Desti
 
 
 def _build_sport_config(
-    data: Dict[str, Any],
+    data: dict[str, Any],
     defaults: DestinationTemplates,
     global_link_mode: str,
-    pattern_sets: Dict[str, List[Dict[str, Any]]],
+    pattern_sets: dict[str, list[dict[str, Any]]],
 ) -> SportConfig:
     metadata = _build_metadata_config(data["metadata"])
     destination = _build_destination_templates(data.get("destination"), defaults)
-    pattern_definitions: List[Dict[str, Any]] = []
+    pattern_definitions: list[dict[str, Any]] = []
 
     pattern_set_refs = data.get("pattern_sets", []) or []
     if not isinstance(pattern_set_refs, list):
-        raise ValueError(
-            f"Sport '{data.get('id')}' must declare 'pattern_sets' as a list when provided"
-        )
+        raise ValueError(f"Sport '{data.get('id')}' must declare 'pattern_sets' as a list when provided")
 
     for set_name in pattern_set_refs:
         if not isinstance(set_name, str):
-            raise ValueError(
-                f"Sport '{data.get('id')}' pattern set names must be strings, got '{set_name}'"
-            )
+            raise ValueError(f"Sport '{data.get('id')}' pattern set names must be strings, got '{set_name}'")
         if set_name not in pattern_sets:
             raise ValueError(f"Unknown pattern set '{set_name}' referenced by sport '{data.get('id')}'")
         pattern_definitions.extend(deepcopy(pattern_sets[set_name]))
@@ -227,9 +238,7 @@ def _build_sport_config(
     custom_patterns = data.get("file_patterns", []) or []
     pattern_definitions.extend(deepcopy(custom_patterns))
 
-    patterns = sorted((
-        _build_pattern_config(pattern) for pattern in pattern_definitions
-    ), key=lambda cfg: cfg.priority)
+    patterns = sorted((_build_pattern_config(pattern) for pattern in pattern_definitions), key=lambda cfg: cfg.priority)
 
     return SportConfig(
         id=data["id"],
@@ -237,6 +246,7 @@ def _build_sport_config(
         enabled=bool(data.get("enabled", True)),
         metadata=metadata,
         patterns=patterns,
+        team_alias_map=data.get("team_alias_map"),
         destination=destination,
         source_globs=list(data.get("source_globs", [])),
         source_extensions=list(data.get("source_extensions", [".mkv", ".mp4", ".ts", ".m4v", ".avi"])),
@@ -245,7 +255,7 @@ def _build_sport_config(
     )
 
 
-def _deep_update(target: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, Any]:
+def _deep_update(target: dict[str, Any], updates: dict[str, Any]) -> dict[str, Any]:
     for key, value in updates.items():
         if isinstance(value, dict):
             existing = target.get(key)
@@ -260,13 +270,13 @@ def _deep_update(target: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, A
     return target
 
 
-def _expand_sport_variants(sport_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-    variants: List[Dict[str, Any]] = sport_data.get("variants", [])
+def _expand_sport_variants(sport_data: dict[str, Any]) -> list[dict[str, Any]]:
+    variants: list[dict[str, Any]] = sport_data.get("variants", [])
     if not variants:
         return [sport_data]
 
     base = {key: deepcopy(value) for key, value in sport_data.items() if key != "variants"}
-    expanded: List[Dict[str, Any]] = []
+    expanded: list[dict[str, Any]] = []
 
     base_id = base.get("id")
     if not base_id:
@@ -334,14 +344,14 @@ def _parse_time_of_day(value: Any, *, field_name: str) -> dt.time:
     return dt.time(hour=hour, minute=minute, second=second)
 
 
-def _ensure_string_list(value: Any, *, field_name: str) -> List[str]:
+def _ensure_string_list(value: Any, *, field_name: str) -> list[str]:
     if value is None:
         return []
     if isinstance(value, str):
         value = [value]
     if not isinstance(value, list):
         raise ValueError(f"'{field_name}' must be provided as a list of strings")
-    result: List[str] = []
+    result: list[str] = []
     for index, entry in enumerate(value):
         if not isinstance(entry, str):
             raise ValueError(f"'{field_name}[{index}]' must be a string")
@@ -351,7 +361,7 @@ def _ensure_string_list(value: Any, *, field_name: str) -> List[str]:
     return result
 
 
-def _build_watcher_settings(data: Dict[str, Any]) -> WatcherSettings:
+def _build_watcher_settings(data: dict[str, Any]) -> WatcherSettings:
     if not data:
         return WatcherSettings()
     if not isinstance(data, dict):
@@ -381,7 +391,55 @@ def _build_watcher_settings(data: Dict[str, Any]) -> WatcherSettings:
     )
 
 
-def _build_kometa_trigger_settings(data: Dict[str, Any]) -> KometaTriggerSettings:
+def _build_plex_sync_settings(data: dict[str, Any]) -> PlexSyncSettings:
+    if not data:
+        return PlexSyncSettings()
+    if not isinstance(data, dict):
+        raise ValueError("'plex_metadata_sync' must be provided as a mapping when specified")
+
+    timeout_raw = data.get("timeout", 15.0)
+    try:
+        timeout = float(timeout_raw)
+    except (TypeError, ValueError) as exc:  # noqa: PERF203
+        raise ValueError("'plex_metadata_sync.timeout' must be a number") from exc
+
+    sports = _ensure_string_list(data.get("sports"), field_name="plex_metadata_sync.sports")
+
+    def _clean_str(value: Any) -> str | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text or None
+
+    url = _clean_str(data.get("url"))
+    enabled = bool(data.get("enabled", False))
+
+    # Validate URL format if provided and enabled
+    if url and enabled and not validate_url(url):
+        raise ValueError(f"'plex_metadata_sync.url' must be a valid http/https URL, got: {url}")
+
+    scan_wait_raw = data.get("scan_wait", 5.0)
+    try:
+        scan_wait = float(scan_wait_raw)
+    except (TypeError, ValueError):
+        scan_wait = 5.0
+
+    return PlexSyncSettings(
+        enabled=enabled,
+        url=url,
+        token=_clean_str(data.get("token")),
+        library_id=_clean_str(data.get("library_id")),
+        library_name=_clean_str(data.get("library_name")),
+        timeout=timeout,
+        force=bool(data.get("force", False)),
+        dry_run=bool(data.get("dry_run", False)),
+        sports=sports,
+        scan_wait=scan_wait,
+        lock_poster_fields=bool(data.get("lock_poster_fields", False)),
+    )
+
+
+def _build_kometa_trigger_settings(data: dict[str, Any]) -> KometaTriggerSettings:
     if not data:
         return KometaTriggerSettings()
     if not isinstance(data, dict):
@@ -419,7 +477,7 @@ def _build_kometa_trigger_settings(data: Dict[str, Any]) -> KometaTriggerSetting
     docker_env_raw = docker_raw.get("env", {}) or {}
     if not isinstance(docker_env_raw, dict):
         raise ValueError("'kometa_trigger.docker.env' must be provided as a mapping when specified")
-    docker_env: Dict[str, str] = {}
+    docker_env: dict[str, str] = {}
     for key, value in docker_env_raw.items():
         docker_env[str(key)] = "" if value is None else str(value)
 
@@ -431,7 +489,7 @@ def _build_kometa_trigger_settings(data: Dict[str, Any]) -> KometaTriggerSetting
     exec_python = str(docker_raw.get("exec_python", "python3")).strip() or "python3"
     exec_script = str(docker_raw.get("exec_script", "/app/kometa/kometa.py")).strip() or "/app/kometa/kometa.py"
     exec_command_raw = docker_raw.get("exec_command")
-    docker_exec_command: Optional[List[str]]
+    docker_exec_command: list[str] | None
     if exec_command_raw is None:
         docker_exec_command = None
     else:
@@ -469,10 +527,12 @@ def _build_kometa_trigger_settings(data: Dict[str, Any]) -> KometaTriggerSetting
     )
 
 
-def _build_settings(data: Dict[str, Any]) -> Settings:
+def _build_settings(data: dict[str, Any]) -> Settings:
     destination_defaults = DestinationTemplates(
         root_template=data.get("destination", {}).get("root_template", "{show_title}"),
-        season_dir_template=data.get("destination", {}).get("season_dir_template", "{season_number:02d} {season_title}"),
+        season_dir_template=data.get("destination", {}).get(
+            "season_dir_template", "{season_number:02d} {season_title}"
+        ),
         episode_template=data.get("destination", {}).get(
             "episode_template",
             "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}",
@@ -500,21 +560,21 @@ def _build_settings(data: Dict[str, Any]) -> Settings:
     targets_raw = notifications_raw.get("targets", []) or []
     if not isinstance(targets_raw, list):
         raise ValueError("'notifications.targets' must be provided as a list when specified")
-    targets: List[Dict[str, Any]] = []
+    targets: list[dict[str, Any]] = []
     for entry in targets_raw:
         if not isinstance(entry, dict):
             raise ValueError("Each entry in 'notifications.targets' must be a mapping")
         target_type = entry.get("type")
         if not isinstance(target_type, str):
             raise ValueError("Notification target entries must include a string 'type'")
-        normalized_entry: Dict[str, Any] = {str(k): v for k, v in entry.items()}
+        normalized_entry: dict[str, Any] = {str(k): v for k, v in entry.items()}
         normalized_entry["type"] = target_type.strip().lower()
         targets.append(normalized_entry)
 
     throttle_raw = notifications_raw.get("throttle", {}) or {}
     if not isinstance(throttle_raw, dict):
         raise ValueError("'notifications.throttle' must be provided as a mapping when specified")
-    throttle: Dict[str, int] = {}
+    throttle: dict[str, int] = {}
     for key, value in throttle_raw.items():
         try:
             throttle[str(key)] = int(value)
@@ -524,7 +584,7 @@ def _build_settings(data: Dict[str, Any]) -> Settings:
     mentions_raw = notifications_raw.get("mentions", {}) or {}
     if not isinstance(mentions_raw, dict):
         raise ValueError("'notifications.mentions' must be provided as a mapping when specified")
-    mentions: Dict[str, str] = {}
+    mentions: dict[str, str] = {}
     for key, value in mentions_raw.items():
         if value is None:
             continue
@@ -549,6 +609,7 @@ def _build_settings(data: Dict[str, Any]) -> Settings:
     cache_dir = Path(data.get("cache_dir", "/data/cache")).expanduser()
     watcher_settings = _build_watcher_settings(data.get("file_watcher", {}) or {})
     kometa_trigger = _build_kometa_trigger_settings(data.get("kometa_trigger", {}) or {})
+    plex_sync = _build_plex_sync_settings(data.get("plex_metadata_sync", {}) or {})
 
     return Settings(
         source_dir=source_dir,
@@ -561,15 +622,14 @@ def _build_settings(data: Dict[str, Any]) -> Settings:
         notifications=notifications,
         file_watcher=watcher_settings,
         kometa_trigger=kometa_trigger,
+        plex_sync=plex_sync,
     )
 
 
 def load_config(path: Path) -> AppConfig:
     data = load_yaml_file(path)
 
-    builtin_pattern_sets = {
-        name: deepcopy(patterns) for name, patterns in load_builtin_pattern_sets().items()
-    }
+    builtin_pattern_sets = {name: deepcopy(patterns) for name, patterns in load_builtin_pattern_sets().items()}
     user_pattern_sets = data.get("pattern_sets", {}) or {}
     if not isinstance(user_pattern_sets, dict):
         raise ValueError("'pattern_sets' must be defined as a mapping of name -> list of patterns")
@@ -579,16 +639,14 @@ def load_config(path: Path) -> AppConfig:
             builtin_pattern_sets[name] = []
             continue
         if not isinstance(patterns, list):
-            raise ValueError(
-                f"Pattern set '{name}' must be a list of pattern definitions"
-            )
+            raise ValueError(f"Pattern set '{name}' must be a list of pattern definitions")
         builtin_pattern_sets[name] = deepcopy(patterns)
 
     settings = _build_settings(data.get("settings", {}))
     defaults = settings.default_destination
-    sports_raw: Iterable[Dict[str, Any]] = data.get("sports", [])
+    sports_raw: Iterable[dict[str, Any]] = data.get("sports", [])
 
-    expanded_sports: List[Dict[str, Any]] = []
+    expanded_sports: list[dict[str, Any]] = []
     for sport_data in sports_raw:
         for variant_data in _expand_sport_variants(sport_data):
             expanded_sports.append(variant_data)

@@ -8,6 +8,7 @@ on:
     paths:
       - 'docs/**'
       - 'mkdocs.yml'
+      - 'requirements-dev.lock'
       - 'requirements-dev.txt'
       - 'README.md'
       - '.github/workflows/docs.yml'
@@ -15,6 +16,7 @@ on:
     paths:
       - 'docs/**'
       - 'mkdocs.yml'
+      - 'requirements-dev.lock'
       - 'requirements-dev.txt'
       - 'README.md'
       - '.github/workflows/docs.yml'
@@ -29,7 +31,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+        run: pip install --require-hashes -r requirements-dev.lock
       - name: Build docs
         run: mkdocs build --strict
 
@@ -47,7 +49,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+        run: pip install --require-hashes -r requirements-dev.lock
       - name: Deploy to GitHub Pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,36 @@
+version: 2
+updates:
+  # Python dependencies in pip
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "python"
+      - "security"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "@solen"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "security"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "@solen"
+    commit-message:
+      prefix: "ci"

@@ -3,18 +3,82 @@ name: Build and Push Docker Image to GitHub Packages
 on:
   push:
     branches:
-      - develop  
+      - develop
     tags:
-      - 'v*.*.*'  
+      - 'v*.*.*'
   workflow_dispatch:
 
 # Add this permissions block
 permissions:
   contents: write
   packages: write
+  security-events: write
 
 jobs:
+  # Security scan must pass before building and pushing
+  python-dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Scan requirements.txt for vulnerabilities
+        run: pip-audit -r requirements.txt --desc
+
+      - name: Scan requirements-dev.txt for vulnerabilities
+        run: pip-audit -r requirements-dev.txt --desc
+
+  # Note: Docker image scan reports vulnerabilities for visibility but does not
+  # block builds. Base image vulnerabilities (Debian bookworm) are third-party
+  # issues outside our control. Python dependency vulnerabilities are caught by
+  # pip-audit in python-dependency-scan which DOES block on issues.
+  #
+  # See .trivyignore.yaml for documented CVE exceptions.
+  docker-image-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image for scanning
+        run: docker build -t playbook:scan .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'playbook:scan'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'HIGH,CRITICAL'
+          # Report only mode: base image CVEs are third-party issues
+          # Python deps are validated by pip-audit which DOES block
+          exit-code: '0'
+          trivyignores: '.trivyignore'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run Trivy scanner for detailed output
+        uses: aquasecurity/trivy-action@0.28.0
+        if: always()
+        with:
+          image-ref: 'playbook:scan'
+          format: 'table'
+          severity: 'HIGH,CRITICAL'
+
   build-and-push:
+    needs: [python-dependency-scan, docker-image-scan]
     runs-on: ubuntu-latest
 
     steps:

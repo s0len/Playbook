@@ -1,0 +1,86 @@
+# Trivy Ignore File for Playbook Docker Image
+#
+# This file documents CVEs in the base Docker image that have been reviewed
+# and determined to not impact the Playbook CLI application.
+#
+# POLICY: All entries must include a justification explaining why the CVE
+# does not apply to this application. Entries should be reviewed periodically
+# and removed when the base image includes a fix.
+#
+# Base Image: python:3.12-slim-bookworm
+# Last Reviewed: 2026-01-07
+#
+# Reference: https://aquasecurity.github.io/trivy/latest/docs/configuration/filtering/
+
+vulnerabilities:
+  # ============================================================================
+  # libpam vulnerabilities - Not applicable to containerized CLI application
+  # ============================================================================
+
+  - id: CVE-2025-6020
+    statement: >
+      libpam directory traversal vulnerability. This CVE affects PAM module
+      loading which is not used by the Playbook CLI. The application runs
+      in a container with no user authentication via PAM.
+
+  - id: CVE-2024-10041
+    statement: >
+      libpam password hash reading vulnerability. Not applicable - Playbook
+      is a CLI tool that doesn't use PAM for authentication. The container
+      has no local users requiring PAM authentication.
+
+  - id: CVE-2024-22365
+    statement: >
+      PAM user namespace blocking vulnerability. Not applicable - the container
+      runs as a single-purpose CLI tool without interactive login capabilities.
+
+  # ============================================================================
+  # Cryptographic library vulnerabilities - Context-dependent risk
+  # ============================================================================
+
+  - id: CVE-2024-2236
+    statement: >
+      libgcrypt Marvin Attack vulnerability. This is a timing side-channel
+      attack that requires specific conditions (RSA key usage, network access
+      to measure timing). Playbook doesn't perform RSA operations and is not
+      a network-facing service.
+
+  # ============================================================================
+  # libxml2 vulnerabilities - May be fixed in base image
+  # ============================================================================
+
+  - id: CVE-2025-49794
+    statement: >
+      libxml2 vulnerability. Trivy may report this as unfixed due to version
+      detection issues with Debian bookworm. The Debian security tracker shows
+      this as fixed in current bookworm packages. Re-evaluate when base image
+      is updated.
+
+  # ============================================================================
+  # Other base OS vulnerabilities
+  # ============================================================================
+
+  - id: CVE-2024-25062
+    statement: >
+      libxml2 use-after-free. Low exploitability in context - Playbook only
+      parses trusted YAML/JSON configuration, not arbitrary XML input.
+
+  - id: CVE-2023-45853
+    statement: >
+      zlib heap buffer overflow. Only exploitable when parsing malicious
+      compressed data. Playbook doesn't process user-provided compressed
+      streams.
+
+  # ============================================================================
+  # gnupg2 vulnerabilities
+  # ============================================================================
+
+  - id: CVE-2025-68973
+    statement: >
+      gnupg2 out-of-bounds write in armor filter. Only exploitable when
+      processing malicious GPG armored input. Playbook is a CLI tool for
+      media management and doesn't process GPG armored data from
+      untrusted sources.
+
+# Note: These exceptions are for the base Docker image only.
+# Python dependency vulnerabilities are scanned separately via pip-audit.

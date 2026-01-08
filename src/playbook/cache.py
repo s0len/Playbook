@@ -5,7 +5,6 @@ import logging
 import threading
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Dict, Optional
 
 from .metadata import MetadataChangeResult
 from .utils import ensure_directory
@@ -13,13 +12,13 @@ from .utils import ensure_directory
 LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(slots=True)
+@dataclass
 class MetadataHttpEntry:
-    etag: Optional[str] = None
-    last_modified: Optional[str] = None
-    status_code: Optional[int] = None
+    etag: str | None = None
+    last_modified: str | None = None
+    status_code: int | None = None
 
-    def to_dict(self) -> Dict[str, Optional[str]]:
+    def to_dict(self) -> dict[str, str | None]:
         return {
             "etag": self.etag,
             "last_modified": self.last_modified,
@@ -34,7 +33,7 @@ class MetadataHttpCache:
         self.cache_dir = cache_dir
         self.filename = filename
         self.path = self.cache_dir / "state" / self.filename
-        self._entries: Dict[str, MetadataHttpEntry] = {}
+        self._entries: dict[str, MetadataHttpEntry] = {}
         self._dirty = False
         self._lock = threading.Lock()
         self._load()
@@ -54,7 +53,7 @@ class MetadataHttpCache:
             LOGGER.warning("Ignoring malformed metadata HTTP cache %s", self.path)
             return
 
-        entries: Dict[str, MetadataHttpEntry] = {}
+        entries: dict[str, MetadataHttpEntry] = {}
         for url, data in payload.items():
             if not isinstance(url, str) or not isinstance(data, dict):
                 continue
@@ -65,7 +64,7 @@ class MetadataHttpCache:
             )
         self._entries = entries
 
-    def get(self, url: str) -> Optional[MetadataHttpEntry]:
+    def get(self, url: str) -> MetadataHttpEntry | None:
         with self._lock:
             entry = self._entries.get(url)
             if entry is None:
@@ -76,9 +75,9 @@ class MetadataHttpCache:
         self,
         url: str,
         *,
-        etag: Optional[str],
-        last_modified: Optional[str],
-        status_code: Optional[int],
+        etag: str | None,
+        last_modified: str | None,
+        status_code: int | None,
     ) -> None:
         with self._lock:
             entry = self._entries.get(url)
@@ -118,23 +117,23 @@ class MetadataHttpCache:
                 LOGGER.error("Failed to write metadata HTTP cache %s: %s", self.path, exc)
 
 
-@dataclass(slots=True)
+@dataclass
 class CachedFileRecord:
     mtime_ns: int
     size: int
-    checksum: Optional[str] = None
-    destination: Optional[str] = None
-    sport_id: Optional[str] = None
-    season_key: Optional[str] = None
-    episode_key: Optional[str] = None
+    checksum: str | None = None
+    destination: str | None = None
+    sport_id: str | None = None
+    season_key: str | None = None
+    episode_key: str | None = None
 
 
-@dataclass(slots=True)
+@dataclass
 class ProcessedFileCache:
     cache_dir: Path
     cache_filename: str = "processed-files.json"
     cache_path: Path = field(init=False)
-    _records: Dict[str, CachedFileRecord] = field(default_factory=dict, init=False)
+    _records: dict[str, CachedFileRecord] = field(default_factory=dict, init=False)
     _dirty: bool = field(default=False, init=False)
 
     def __post_init__(self) -> None:
@@ -152,7 +151,7 @@ class ProcessedFileCache:
             LOGGER.warning("Failed to load processed cache %s: %s", self.cache_path, exc)
             return
 
-        records: Dict[str, CachedFileRecord] = {}
+        records: dict[str, CachedFileRecord] = {}
         for key, value in payload.items():
             try:
                 records[key] = CachedFileRecord(
@@ -168,8 +167,8 @@ class ProcessedFileCache:
                 LOGGER.debug("Skipping malformed cache entry for %s", key)
         self._records = records
 
-    def _serialize(self) -> Dict[str, Dict[str, object]]:
-        payload: Dict[str, Dict[str, object]] = {}
+    def _serialize(self) -> dict[str, dict[str, object]]:
+        payload: dict[str, dict[str, object]] = {}
         for key, record in self._records.items():
             payload[key] = {
                 "mtime_ns": record.mtime_ns,
@@ -194,7 +193,7 @@ class ProcessedFileCache:
         except Exception as exc:  # noqa: BLE001
             LOGGER.error("Failed to write processed cache %s: %s", self.cache_path, exc)
 
-    def snapshot(self) -> Dict[str, CachedFileRecord]:
+    def snapshot(self) -> dict[str, CachedFileRecord]:
         return {
             key: CachedFileRecord(
                 mtime_ns=record.mtime_ns,
@@ -209,6 +208,25 @@ class ProcessedFileCache:
         }
 
     def prune_missing_sources(self) -> None:
+        """Remove all cache entries for source files that no longer exist on disk.
+
+        This method performs an explicit, synchronous cleanup of stale cache entries.
+        It checks every cached source file for existence and removes entries for
+        missing files. This can be slow with large caches (thousands of filesystem
+        checks).
+
+        **When to use:**
+        - Explicit maintenance operations or cleanup commands
+        - Manual cache housekeeping when needed
+
+        **Not recommended for:**
+        - Regular operation or startup - lazy pruning in is_processed() handles
+          cleanup automatically as files are accessed, avoiding blocking I/O
+
+        Note: Lazy pruning happens automatically in is_processed() when files are
+        accessed, so calling this method is typically unnecessary during normal
+        operation.
+        """
         removed = False
         for key in list(self._records.keys()):
             if not Path(key).exists():
@@ -225,6 +243,9 @@ class ProcessedFileCache:
         try:
             stat = source_path.stat()
         except FileNotFoundError:
+            # Lazy cleanup: remove stale entry for missing source file
+            del self._records[str(source_path)]
+            self._dirty = True
             return False
 
         if stat.st_mtime_ns != record.mtime_ns or stat.st_size != record.size:
@@ -240,12 +261,12 @@ class ProcessedFileCache:
     def mark_processed(
         self,
         source_path: Path,
-        destination_path: Optional[Path] = None,
+        destination_path: Path | None = None,
         *,
-        sport_id: Optional[str] = None,
-        season_key: Optional[str] = None,
-        episode_key: Optional[str] = None,
-        checksum: Optional[str] = None,
+        sport_id: str | None = None,
+        season_key: str | None = None,
+        episode_key: str | None = None,
+        checksum: str | None = None,
     ) -> None:
         try:
             stat = source_path.stat()
@@ -272,12 +293,12 @@ class ProcessedFileCache:
 
     def remove_by_metadata_changes(
         self,
-        changes: Dict[str, MetadataChangeResult],
-    ) -> Dict[str, CachedFileRecord]:
+        changes: dict[str, MetadataChangeResult],
+    ) -> dict[str, CachedFileRecord]:
         if not changes:
             return {}
 
-        removed: Dict[str, CachedFileRecord] = {}
+        removed: dict[str, CachedFileRecord] = {}
 
         for source, record in list(self._records.items()):
             sport_id = record.sport_id
@@ -317,7 +338,6 @@ class ProcessedFileCache:
 
         return removed
 
-    def get_checksum(self, source_path: Path) -> Optional[str]:
+    def get_checksum(self, source_path: Path) -> str | None:
         record = self._records.get(str(source_path))
         return record.checksum if record else None
-

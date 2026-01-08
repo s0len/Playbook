@@ -23,7 +23,7 @@ Custom scrapers pull sports schedules from various sources (SportsDB, official A
 
 ### 2. **Smart File Matching** (like Sonarr)
 
-Playbook scans your downloads, parses filenames using regex patterns (built-in packs for F1, MotoGP, UFC, NFL, NBA, etc.), matches them against the YAML database, and automatically renames/moves them to your Plex library with perfect naming.
+Playbook scans your downloads, parses filenames using regex patterns (built-in packs for F1, MotoGP, UFC, NFL, NBA, NHL, etc.), matches them against the YAML database, and automatically renames/moves them to your Plex library with perfect naming.
 
 ### 3. **Rich Metadata** (via Kometa)
 
@@ -98,6 +98,7 @@ docker run --rm -it \
   - [Roadmap](#roadmap)
   - [License](#license)
   - [Support](#support)
+  - [Sample NHL Regular Season Filenames](#sample-nhl-regular-season-filenames)
   - [Sample Figure Skating Grand Prix Filenames](#sample-figure-skating-grand-prix-filenames)
 
 ## Quickstart
@@ -267,7 +268,7 @@ Start with `config/playbook.sample.yaml`. The schema mirrors `playbook.config` d
 |-------|-------------|---------|
 | `source_dir` | Root directory containing downloads to normalize. | `/data/source` |
 | `destination_dir` | Library root where organized folders/files are created. | `/data/destination` |
-| `cache_dir` | Metadata cache directory (`metadata/<sha1>.json`). Safe to delete to force refetch. | `/data/cache` |
+| `cache_dir` | Metadata cache directory (`metadata/<hash>.json`). Safe to delete to force refetch. | `/data/cache` |
 | `dry_run` | When `true`, logs intent but skips filesystem writes. | `false` |
 | `skip_existing` | Leave destination files untouched unless a higher-priority release arrives. | `true` |
 | `link_mode` | Default link behavior: `hardlink`, `copy`, or `symlink`. | `hardlink` |
@@ -333,7 +334,7 @@ notifications:
         - from: ${DESTINATION_DIR:-/data/destination}
           to: /mnt/unionfs/Media         # Rewrite Playbook’s path to what Autoscan/Plex can see
       timeout: 10                        # Seconds before the request is considered failed (default 10)
-      verify_ssl: true                   # Set false for self-signed endpoints (not recommended)
+      verify_ssl: true                   # ⚠️ SECURITY WARNING: Setting false disables SSL/TLS verification and exposes you to MITM attacks - only for development with self-signed certs
 ```
 
 Every successful `new`/`changed` event sends the parent directory of the destination file as a `dir` query parameter. Add more rewrite entries if Autoscan lives inside a container with different mount points.
@@ -455,6 +456,33 @@ Each variant inherits the base config, tweaks fields from the variant block, and
 
 Environment variables always win over config defaults, and CLI flags win over environment variables.
 
+#### Getting Help
+
+Playbook features **rich, color-formatted help** with practical examples for every command. Use `--help` for quick reference or `--examples` for a comprehensive cookbook-style guide:
+
+```bash
+# Main help with all available commands
+playbook --help
+
+# Command-specific help with brief examples
+playbook run --help
+playbook validate-config --help
+playbook kometa-trigger --help
+
+# Extended examples and usage patterns
+playbook run --examples
+playbook validate-config --examples
+playbook kometa-trigger --examples
+```
+
+The help output includes:
+- **Usage examples** – Real-world commands you can copy-paste
+- **Environment variables** – Alternative ways to configure options
+- **Tips & best practices** – Common workflows and gotchas
+- **Docker variants** – How to run the same command in containers
+
+All help content is formatted with colors and icons for easy scanning. On non-interactive terminals (CI/CD, redirected output), Playbook automatically falls back to plain text.
+
 ### Config Validation
 
 Preflight your YAML before running the processor:
@@ -509,22 +537,22 @@ Add something like this to your Kometa `config.yml` (library name can be whateve
 libraries:
   Sport:
     metadata_files:
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/formula1/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/formula-e/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/indycar-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/isle-of-man-tt.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/moto2-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/moto3-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/motogp-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/nba/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/nfl/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/premier-league/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/uefa-champions-league/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/ufc/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/womens-uefa-euro.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/wsbk-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/wssp-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/main/metadata/wssp300-2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/formula1/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/formula-e/2025-2026.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/indycar-series/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/isle-of-man-tt.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/moto2/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/moto3/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/motogp/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/nba/2025-2026.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/nfl/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/premier-league/2025-2026.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/uefa-champions-league/2025-2026.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/ufc/2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/womens-uefa-euro.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/wsbk-2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/wssp-2025.yaml
+      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/wssp300-2025.yaml
 ```
 
 ### Triggering Kometa After Ingests
@@ -663,6 +691,9 @@ motogp.*\d{4}.*round\d.*((fp\d?|practice|sprint|qualifying|q1|q2|race)).*DNU
 # NBA 1080p by GAMETiME
 nba.*1080p.*gametime
 
+# NHL RS 60fps feeds
+nhl.*rs.*(720p|1080p).*en60fps
+
 # NFL by NiGHTNiNJAS
 nfl.*nightninjas
 
@@ -731,7 +762,7 @@ pip install -r requirements.txt
 
 ## Roadmap
 
-- Additional pattern packs (MotoGP, IndyCar, NBA, NFL) with ready-to-use regex + alias tables.
+- Additional pattern packs (MotoGP, IndyCar, NBA, NFL, NHL) with ready-to-use regex + alias tables.
 - Optional webhook/websocket triggers to react to new downloads instantly.
 - Strategy plugins for bespoke numbering or archive workflows.
 - Web UI to inspect matches, stats, and activity history.
@@ -744,6 +775,15 @@ Distributed under the [GNU GPLv3](LICENSE).
 ## Support
 
 Questions, feature ideas, or metadata feed requests? [Open an issue](https://github.com/s0len/playbook/issues) or start a discussion. For bespoke integrations, reach out via the issue tracker and we can coordinate.
+
+## Sample NHL Regular Season Filenames
+
+Bundle the `nhl` pattern set with the [NHL 2025-2026 metadata feed](https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/nhl/2025-2026.yaml) to normalize releases such as:
+
+- `NHL RS 2025 New Jersey Devils vs Buffalo Sabres 28 11 720pEN60fps MSG.mkv`
+- `NHL 18-10-2025 RS Edmonton Oilers vs New Jersey Devils 1080p60_EN_MSGSN.mkv`
+- `NHL RS 2025 New Jersey Devils vs Washington Capitals 15 11 720pEN60fps MonumentalS.mkv`
+- `NHL.2025.RS.Blue.Jackets.vs.Devils.1080pEN60fps.mkv`
 
 ## Sample Figure Skating Grand Prix Filenames
 

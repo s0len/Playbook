@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import errno
+import functools
 import hashlib
 import os
 import re
@@ -8,19 +9,42 @@ import shutil
 import string
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any
+from urllib.parse import urlparse
 
 import yaml
 
-
 NORMALIZE_PATTERN = re.compile(r"[^a-z0-9]+")
 
+# Boolean true/false string values
+_TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+_FALSE_VALUES = frozenset({"0", "false", "no", "off"})
 
+
+@functools.lru_cache(maxsize=2048)
 def normalize_token(value: str) -> str:
     """Return a normalized token suitable for fuzzy comparisons."""
     lowered = value.lower()
     stripped = NORMALIZE_PATTERN.sub("", lowered)
     return stripped
+
+
+def clear_normalize_cache() -> None:
+    """Clear the normalize_token LRU cache.
+
+    Useful for testing to ensure deterministic behavior and for memory
+    management in long-running processes.
+    """
+    normalize_token.cache_clear()
+
+
+def get_normalize_cache_info() -> functools._CacheInfo:
+    """Return cache statistics for the normalize_token LRU cache.
+
+    Returns a named tuple with fields: hits, misses, maxsize, currsize.
+    Useful for debugging and performance monitoring.
+    """
+    return normalize_token.cache_info()
 
 
 def slugify(value: str, separator: str = "-") -> str:
@@ -64,25 +88,26 @@ def expand_env(value: Any) -> Any:
     return value
 
 
-def load_yaml_file(path: Path) -> Dict[str, Any]:
+def load_yaml_file(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
         data = yaml.safe_load(handle) or {}
     return expand_env(data)
 
 
-def dump_yaml_file(path: Path, data: Dict[str, Any]) -> None:
+def dump_yaml_file(path: Path, data: dict[str, Any]) -> None:
     ensure_directory(path.parent)
     with path.open("w", encoding="utf-8") as handle:
         yaml.safe_dump(data, handle, sort_keys=False, allow_unicode=True)
 
 
-def sha1_of_text(text: str) -> str:
-    return hashlib.sha1(text.encode("utf-8")).hexdigest()
+def hash_text(text: str) -> str:
+    """Compute SHA-256 digest of the given text."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def sha1_of_file(path: Path, chunk_size: int = 65536) -> str:
-    """Compute SHA-1 digest of the given file."""
-    digest = hashlib.sha1()
+def hash_file(path: Path, chunk_size: int = 65536) -> str:
+    """Compute SHA-256 digest of the given file."""
+    digest = hashlib.sha256()
     try:
         with path.open("rb") as handle:
             while True:
@@ -98,7 +123,7 @@ def sha1_of_file(path: Path, chunk_size: int = 65536) -> str:
 @dataclass
 class LinkResult:
     created: bool
-    reason: Optional[str] = None
+    reason: str | None = None
 
 
 def link_file(source: Path, destination: Path, mode: str = "hardlink") -> LinkResult:
@@ -128,3 +153,54 @@ def link_file(source: Path, destination: Path, mode: str = "hardlink") -> LinkRe
         return LinkResult(created=False, reason=str(exc))
 
     return LinkResult(created=True)
+
+
+def parse_env_bool(value: str | None) -> bool | None:
+    """Parse a boolean from an environment variable string.
+
+    Returns None if value is None or not a recognized boolean string.
+    """
+    if value is None:
+        return None
+    lowered = value.strip().lower()
+    if lowered in _TRUE_VALUES:
+        return True
+    if lowered in _FALSE_VALUES:
+        return False
+    return None
+
+
+def env_bool(name: str) -> bool | None:
+    """Get a boolean from an environment variable.
+
+    Returns None if not set or not a recognized boolean string.
+    """
+    return parse_env_bool(os.getenv(name))
+
+
+def env_list(name: str, separator: str = ",") -> list[str] | None:
+    """Get a list of strings from an environment variable.
+
+    Returns None if not set, empty list if set but empty.
+    """
+    raw = os.getenv(name)
+    if raw is None:
+        return None
+    parts = [part.strip() for part in raw.split(separator) if part.strip()]
+    return parts
+
+
+def validate_url(url: str | None) -> bool:
+    """Validate that URL is a valid http/https URL."""
+    if not url:
+        return False
+    try:
+        parsed = urlparse(url)
+        return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+    except Exception:  # noqa: BLE001 - defensive
+        return False
+
+
+# Backwards-compatible aliases for renamed functions
+sha1_of_file = hash_file
+sha1_of_text = hash_text

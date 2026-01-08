@@ -12,6 +12,6 @@ notifications:
         - from: /data/destination
           to: /Volumes/Media
       timeout: 10
-      verify_ssl: true
+      verify_ssl: true                   # ⚠️ SECURITY WARNING: Setting false disables SSL/TLS verification and exposes you to MITM attacks - only for development with self-signed certs
 ```
 
