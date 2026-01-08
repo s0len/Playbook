@@ -421,9 +421,7 @@ def group_validation_issues(
     """
     from collections import defaultdict
 
-    result: dict[str, dict[str, list[ValidationIssue]]] = defaultdict(
-        lambda: defaultdict(list)
-    )
+    result: dict[str, dict[str, list[ValidationIssue]]] = defaultdict(lambda: defaultdict(list))
 
     for issue in issues:
         path = issue.path
@@ -449,9 +447,7 @@ def group_validation_issues(
         result[root_section][sub_section].append(issue)
 
     # Convert defaultdicts to regular dicts for cleaner return type
-    return {
-        root: dict(sub_sections) for root, sub_sections in result.items()
-    }
+    return {root: dict(sub_sections) for root, sub_sections in result.items()}
 
 
 def _validate_semantics(data: dict[str, Any], report: ValidationReport) -> None:
