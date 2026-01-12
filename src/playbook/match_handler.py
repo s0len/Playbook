@@ -106,7 +106,7 @@ def alias_candidates(match: SportFileMatch) -> list[str]:
 
     candidates.extend(match.episode.aliases)
 
-    session_aliases = match.pattern.config.session_aliases
+    session_aliases = match.pattern.session_aliases
     if canonical in session_aliases:
         candidates.extend(session_aliases[canonical])
     else:

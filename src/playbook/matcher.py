@@ -402,8 +402,12 @@ def _select_episode(
     trace_lookup_records: list[dict[str, str]] = []
     seen_tokens: set[str] = set()
 
-    def add_lookup(label: str, value: str | None) -> None:
+    def add_lookup(label: str, value: str | list[str] | None) -> None:
         if not value:
+            return
+        if isinstance(value, list):
+            for item in value:
+                add_lookup(label, item)
             return
 
         variants: list[str] = []
