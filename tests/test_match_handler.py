@@ -109,7 +109,8 @@ class TestAliasCandidates:
         episode.aliases = []
 
         pattern = Mock()
-        pattern.session_aliases = {}
+        pattern.config = Mock()
+        pattern.config.session_aliases = {}
 
         match = Mock()
         match.episode = episode
@@ -125,7 +126,8 @@ class TestAliasCandidates:
         episode.aliases = ["QF", "Quarterfinal"]
 
         pattern = Mock()
-        pattern.session_aliases = {}
+        pattern.config = Mock()
+        pattern.config.session_aliases = {}
 
         match = Mock()
         match.episode = episode
@@ -141,7 +143,8 @@ class TestAliasCandidates:
         episode.aliases = []
 
         pattern = Mock()
-        pattern.session_aliases = {
+        pattern.config = Mock()
+        pattern.config.session_aliases = {
             "Quarter Final": ["QF 1", "QF 2"]
         }
 
@@ -159,7 +162,8 @@ class TestAliasCandidates:
         episode.aliases = []
 
         pattern = Mock()
-        pattern.session_aliases = {
+        pattern.config = Mock()
+        pattern.config.session_aliases = {
             "Quarter Final": ["QF 1", "QF 2"]  # Different formatting
         }
 
@@ -179,7 +183,8 @@ class TestAliasCandidates:
         episode.aliases = ["QF", "Quarter Final", "QF"]  # Duplicates
 
         pattern = Mock()
-        pattern.session_aliases = {
+        pattern.config = Mock()
+        pattern.config.session_aliases = {
             "Quarter Final": ["QF"]  # Another duplicate
         }
 
@@ -198,7 +203,8 @@ class TestAliasCandidates:
         episode.aliases = ["", "QF", None, "Quarterfinal"]
 
         pattern = Mock()
-        pattern.session_aliases = {}
+        pattern.config = Mock()
+        pattern.config.session_aliases = {}
 
         match = Mock()
         match.episode = episode
@@ -216,7 +222,8 @@ class TestAliasCandidates:
         episode.aliases = ["QF"]
 
         pattern = Mock()
-        pattern.session_aliases = {}
+        pattern.config = Mock()
+        pattern.config.session_aliases = {}
 
         match = Mock()
         match.episode = episode
@@ -478,7 +485,8 @@ class TestShouldOverwriteExisting:
         episode.aliases = []
 
         pattern = Mock()
-        pattern.session_aliases = {}
+        pattern.config = Mock()
+        pattern.config.session_aliases = {}
 
         match = Mock()
         match.source_path = source_path
@@ -498,7 +506,8 @@ class TestShouldOverwriteExisting:
         episode.aliases = []
 
         pattern = Mock()
-        pattern.session_aliases = {}
+        pattern.config = Mock()
+        pattern.config.session_aliases = {}
 
         match = Mock()
         match.source_path = source_path
@@ -519,7 +528,8 @@ class TestShouldOverwriteExisting:
         episode.aliases = []
 
         pattern = Mock()
-        pattern.session_aliases = {}
+        pattern.config = Mock()
+        pattern.config.session_aliases = {}
 
         match = Mock()
         match.source_path = source_path
@@ -540,7 +550,8 @@ class TestShouldOverwriteExisting:
         episode.aliases = ["QF"]  # Less specific
 
         pattern = Mock()
-        pattern.session_aliases = {}
+        pattern.config = Mock()
+        pattern.config.session_aliases = {}
 
         match = Mock()
         match.source_path = source_path
@@ -563,7 +574,8 @@ class TestShouldOverwriteExisting:
         episode.aliases = []
 
         pattern = Mock()
-        pattern.session_aliases = {}
+        pattern.config = Mock()
+        pattern.config.session_aliases = {}
 
         match = Mock()
         match.source_path = source_path

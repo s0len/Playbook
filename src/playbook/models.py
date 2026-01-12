@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .config import PatternConfig, SportConfig
+    from .config import SportConfig
+    from .matcher import PatternRuntime
 
 
 @dataclass
@@ -49,7 +50,7 @@ class SportFileMatch:
     show: Show
     season: Season
     episode: Episode
-    pattern: PatternConfig
+    pattern: PatternRuntime
     context: dict[str, Any]
     sport: SportConfig
 
