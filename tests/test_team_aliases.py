@@ -204,6 +204,34 @@ class TestGetTeamAliasMap:
         assert result["gunners"] == "Arsenal"
         assert result["ars"] == "Arsenal"
 
+    def test_get_uefa_champions_league_team_aliases(self):
+        """Test that 'uefa_champions_league' returns UEFA CL team alias map."""
+        result = get_team_alias_map("uefa_champions_league")
+
+        # Should return a non-empty dict
+        assert isinstance(result, dict)
+        assert len(result) > 0
+
+        # Verify some known UEFA CL teams and aliases
+        # MC abbreviation should resolve to Manchester City
+        assert result["mc"] == "Manchester City"
+        assert result["manchestercity"] == "Manchester City"
+        assert result["mancity"] == "Manchester City"
+
+        # Borussia should resolve to Borussia Dortmund (first defined wins)
+        assert result["borussia"] == "Borussia Dortmund"
+        assert result["dortmund"] == "Borussia Dortmund"
+        assert result["bvb"] == "Borussia Dortmund"
+
+        # PSG aliases
+        assert result["psg"] == "Paris Saint-Germain"
+        assert result["paris"] == "Paris Saint-Germain"
+
+        # Monaco aliases
+        assert result["monaco"] == "Monaco"
+        assert result["asmonaco"] == "Monaco"
+        assert result["asm"] == "Monaco"
+
     def test_get_team_alias_map_with_none(self):
         """Test that None returns empty dict."""
         result = get_team_alias_map(None)
@@ -526,3 +554,158 @@ class TestTeamAliasResolution:
         assert epl_map["spurs"] == "Tottenham Hotspur"
         assert epl_map["blues"] == "Chelsea"
         assert epl_map["reds"] == "Liverpool"
+
+    # UEFA Champions League Team Alias Resolution Tests
+
+    def test_uefa_manchester_city_alias_resolution(self):
+        """Test that various Manchester City aliases resolve correctly for UEFA CL."""
+        uefa_map = get_team_alias_map("uefa_champions_league")
+
+        # Test short abbreviation (key use case from spec)
+        assert uefa_map["mc"] == "Manchester City"
+
+        # Test nickname aliases
+        assert uefa_map["mancity"] == "Manchester City"
+        assert uefa_map["city"] == "Manchester City"
+
+        # Test abbreviated codes
+        assert uefa_map["mcfc"] == "Manchester City"
+        assert uefa_map["mci"] == "Manchester City"
+
+        # Test full canonical name
+        assert uefa_map["manchestercity"] == "Manchester City"
+
+    def test_uefa_borussia_dortmund_alias_resolution(self):
+        """Test that various Borussia Dortmund aliases resolve correctly."""
+        uefa_map = get_team_alias_map("uefa_champions_league")
+
+        # Test common short names (key use case from spec - "Borussia")
+        assert uefa_map["borussia"] == "Borussia Dortmund"
+        assert uefa_map["dortmund"] == "Borussia Dortmund"
+
+        # Test abbreviated code (BVB)
+        assert uefa_map["bvb"] == "Borussia Dortmund"
+        assert uefa_map["bor"] == "Borussia Dortmund"
+        assert uefa_map["dor"] == "Borussia Dortmund"
+
+        # Test full canonical name
+        assert uefa_map["borussiadortmund"] == "Borussia Dortmund"
+
+    def test_uefa_monaco_alias_resolution(self):
+        """Test that Monaco aliases resolve correctly for UEFA CL."""
+        uefa_map = get_team_alias_map("uefa_champions_league")
+
+        # Test canonical and short names
+        assert uefa_map["monaco"] == "Monaco"
+        assert uefa_map["asmonaco"] == "Monaco"
+
+        # Test abbreviated code
+        assert uefa_map["asm"] == "Monaco"
+        assert uefa_map["mon"] == "Monaco"
+
+    def test_uefa_psg_alias_resolution(self):
+        """Test that Paris Saint-Germain aliases resolve correctly."""
+        uefa_map = get_team_alias_map("uefa_champions_league")
+
+        # Test common abbreviation
+        assert uefa_map["psg"] == "Paris Saint-Germain"
+
+        # Test city name
+        assert uefa_map["paris"] == "Paris Saint-Germain"
+
+        # Test variations
+        assert uefa_map["parissg"] == "Paris Saint-Germain"
+
+        # Test full canonical name
+        assert uefa_map["parissaintgermain"] == "Paris Saint-Germain"
+
+    def test_uefa_spanish_clubs_alias_resolution(self):
+        """Test that Spanish club aliases resolve correctly."""
+        uefa_map = get_team_alias_map("uefa_champions_league")
+
+        # Real Madrid
+        assert uefa_map["realmadrid"] == "Real Madrid"
+        assert uefa_map["real"] == "Real Madrid"
+        assert uefa_map["rm"] == "Real Madrid"
+        assert uefa_map["rma"] == "Real Madrid"
+        assert uefa_map["madrid"] == "Real Madrid"
+
+        # Barcelona
+        assert uefa_map["barcelona"] == "Barcelona"
+        assert uefa_map["barca"] == "Barcelona"
+        assert uefa_map["fcb"] == "Barcelona"  # First FCB defined (Bayern also has FCB)
+
+        # Atlético Madrid
+        assert uefa_map["atleticomadrid"] == "Atlético Madrid"
+        assert uefa_map["atletico"] == "Atlético Madrid"
+        assert uefa_map["atleti"] == "Atlético Madrid"
+        assert uefa_map["atm"] == "Atlético Madrid"
+
+    def test_uefa_italian_clubs_alias_resolution(self):
+        """Test that Italian club aliases resolve correctly."""
+        uefa_map = get_team_alias_map("uefa_champions_league")
+
+        # Inter Milan
+        assert uefa_map["intermilan"] == "Inter Milan"
+        assert uefa_map["inter"] == "Inter Milan"
+        assert uefa_map["internazionale"] == "Inter Milan"
+        assert uefa_map["int"] == "Inter Milan"
+
+        # Juventus
+        assert uefa_map["juventus"] == "Juventus"
+        assert uefa_map["juve"] == "Juventus"
+        assert uefa_map["juv"] == "Juventus"
+
+        # AC Milan
+        assert uefa_map["acmilan"] == "AC Milan"
+        assert uefa_map["milan"] == "AC Milan"
+        assert uefa_map["acm"] == "AC Milan"
+
+    def test_uefa_german_clubs_alias_resolution(self):
+        """Test that German club aliases resolve correctly."""
+        uefa_map = get_team_alias_map("uefa_champions_league")
+
+        # Bayern Munich
+        assert uefa_map["bayernmunich"] == "Bayern Munich"
+        assert uefa_map["bayern"] == "Bayern Munich"
+        # Note: "Bayern München" normalizes to "bayernmnchen" (umlaut stripped)
+        # but the ASCII alias "Bayern Munchen" normalizes to "bayernmunchen"
+        assert uefa_map["bayernmunchen"] == "Bayern Munich"
+        assert uefa_map["bay"] == "Bayern Munich"
+
+        # RB Leipzig
+        assert uefa_map["rbleipzig"] == "RB Leipzig"
+        assert uefa_map["leipzig"] == "RB Leipzig"
+        assert uefa_map["rbl"] == "RB Leipzig"
+
+        # Bayer Leverkusen
+        assert uefa_map["bayerleverkusen"] == "Bayer Leverkusen"
+        assert uefa_map["leverkusen"] == "Bayer Leverkusen"
+        assert uefa_map["lev"] == "Bayer Leverkusen"
+
+    def test_uefa_abbreviated_codes(self):
+        """Test that UEFA abbreviated codes resolve correctly."""
+        uefa_map = get_team_alias_map("uefa_champions_league")
+
+        # Test various common UEFA team codes
+        assert uefa_map["psg"] == "Paris Saint-Germain"
+        assert uefa_map["bvb"] == "Borussia Dortmund"
+        assert uefa_map["asm"] == "Monaco"
+        assert uefa_map["juv"] == "Juventus"
+        assert uefa_map["int"] == "Inter Milan"
+        assert uefa_map["ben"] == "Benfica"
+        assert uefa_map["aja"] == "Ajax"
+        assert uefa_map["cel"] == "Celtic"
+
+    def test_uefa_mcfc_vs_mc_disambiguation(self):
+        """Test that MC and MCFC both resolve to Manchester City in UEFA context."""
+        uefa_map = get_team_alias_map("uefa_champions_league")
+
+        # Both should resolve to Manchester City
+        assert uefa_map["mc"] == "Manchester City"
+        assert uefa_map["mcfc"] == "Manchester City"
+        assert uefa_map["mci"] == "Manchester City"
+
+        # Verify MC is specifically for Man City, not Monaco
+        # (Monaco uses ASM, MON)
+        assert uefa_map["mc"] != "Monaco"
