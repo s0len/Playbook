@@ -2310,3 +2310,305 @@ class TestNBAIntegrationDateAndTeams:
         assert result1["episode"].index != result2["episode"].index
         assert result1["episode"].index == 1  # Nuggets vs Clippers
         assert result2["episode"].index == 2  # Clippers vs Lakers
+
+
+# ========================== UEFA Champions League Integration Tests ==========================
+
+
+class TestUEFAChampionsLeagueIntegration:
+    """Integration tests for UEFA Champions League file resolution.
+
+    These tests verify that abbreviated team names (MC, Borussia, PSG, etc.)
+    resolve correctly to their full canonical names using the UEFA team alias
+    system. This addresses the issue where files like:
+        UEFA.Champions.League.2025.MC.vs.Borussia.1080pEN50fps.mkv
+    failed to resolve because 'MC' and 'Borussia' couldn't match episode titles.
+    """
+
+    def build_uefa_sport_config(self) -> SportConfig:
+        """Build UEFA Champions League sport config with team matching pattern."""
+        pattern = PatternConfig(
+            regex=(
+                r"(?i)^UEFA[\s._-]+Champions[\s._-]+League[\s._-]+"
+                r"(?P<date_year>\d{4})[\s._-]+"
+                r"(?P<session>(?P<home>[A-Za-z ]+)[\s._-]+vs[\s._-]+(?P<away>[A-Za-z ]+))"
+                r"[\s._-]*.*\.mkv$"
+            ),
+            season_selector=SeasonSelector(mode="key", value_template="{date_year}"),
+            episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
+            priority=10,
+        )
+        return SportConfig(
+            id="uefa_champions_league",
+            name="UEFA Champions League",
+            metadata=MetadataConfig(url="https://example.com"),
+            patterns=[pattern],
+            destination=DestinationTemplates(),
+            team_alias_map="uefa_champions_league",
+        )
+
+    def build_uefa_show_with_matches(self) -> Show:
+        """Build UEFA CL show with typical group stage matches."""
+        # Match 1: Manchester City vs Borussia Dortmund (the file from the spec)
+        match1 = Episode(
+            title="Manchester City vs Borussia Dortmund",
+            summary=None,
+            originally_available=dt.date(2025, 10, 22),
+            index=1,
+        )
+        # Match 2: Paris Saint-Germain vs Bayern Munich
+        match2 = Episode(
+            title="Paris Saint-Germain vs Bayern Munich",
+            summary=None,
+            originally_available=dt.date(2025, 10, 23),
+            index=2,
+        )
+        # Match 3: Real Madrid vs Inter Milan
+        match3 = Episode(
+            title="Real Madrid vs Inter Milan",
+            summary=None,
+            originally_available=dt.date(2025, 10, 24),
+            index=3,
+        )
+        # Match 4: Atlético Madrid vs Union Saint-Gilloise
+        match4 = Episode(
+            title="Atlético Madrid vs Union Saint-Gilloise",
+            summary=None,
+            originally_available=dt.date(2025, 10, 25),
+            index=4,
+        )
+
+        season = Season(
+            key="2025",
+            title="2025 Group Stage",
+            summary=None,
+            index=1,
+            episodes=[match1, match2, match3, match4],
+            display_number=1,
+        )
+
+        return Show(
+            key="uefa_champions_league",
+            title="UEFA Champions League",
+            summary=None,
+            seasons=[season],
+        )
+
+    def test_uefa_integration_mc_vs_borussia_resolves(self) -> None:
+        """Integration test: MC vs Borussia resolves to Manchester City vs Borussia Dortmund.
+
+        This is the primary test case from the spec where abbreviated team names
+        in the filename need to resolve to canonical episode titles.
+        """
+        sport = self.build_uefa_sport_config()
+        show = self.build_uefa_show_with_matches()
+        patterns = compile_patterns(sport)
+
+        # Test with the exact filename pattern from the spec
+        result = match_file_to_episode(
+            "UEFA.Champions.League.2025.MC.vs.Borussia.1080pEN50fps.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, (
+            "Should match UEFA Champions League file with abbreviated team names (MC, Borussia)"
+        )
+        assert result["episode"].title == "Manchester City vs Borussia Dortmund", (
+            f"Expected 'Manchester City vs Borussia Dortmund', got '{result['episode'].title}'"
+        )
+
+    def test_uefa_integration_psg_vs_bayern_resolves(self) -> None:
+        """Integration test: PSG vs Bayern resolves to Paris Saint-Germain vs Bayern Munich."""
+        sport = self.build_uefa_sport_config()
+        show = self.build_uefa_show_with_matches()
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "UEFA.Champions.League.2025.PSG.vs.Bayern.1080p.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, (
+            "Should match UEFA Champions League file with PSG and Bayern abbreviations"
+        )
+        assert result["episode"].title == "Paris Saint-Germain vs Bayern Munich"
+
+    def test_uefa_integration_real_vs_inter_resolves(self) -> None:
+        """Integration test: Real vs Inter resolves to Real Madrid vs Inter Milan."""
+        sport = self.build_uefa_sport_config()
+        show = self.build_uefa_show_with_matches()
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "UEFA.Champions.League.2025.Real.vs.Inter.720p.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, (
+            "Should match UEFA Champions League file with Real and Inter abbreviations"
+        )
+        assert result["episode"].title == "Real Madrid vs Inter Milan"
+
+    def test_uefa_integration_german_club_abbreviation_resolves(self) -> None:
+        """Integration test: BVB vs BAY resolves to Borussia Dortmund vs Bayern Munich.
+
+        Uses standard German club abbreviations BVB and BAY which are registered aliases.
+        """
+        sport = self.build_uefa_sport_config()
+        # Add a BVB vs Bayern match for testing
+        match = Episode(
+            title="Borussia Dortmund vs Bayern Munich",
+            summary=None,
+            originally_available=dt.date(2025, 11, 5),
+            index=5,
+        )
+        show = self.build_uefa_show_with_matches()
+        show.seasons[0].episodes.append(match)
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "UEFA.Champions.League.2025.BVB.vs.BAY.1080p.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, (
+            "Should match UEFA Champions League file with BVB and BAY abbreviations"
+        )
+        assert result["episode"].title == "Borussia Dortmund vs Bayern Munich"
+
+    def test_uefa_integration_full_team_names_still_work(self) -> None:
+        """Integration test: Full team names should still match correctly."""
+        sport = self.build_uefa_sport_config()
+        show = self.build_uefa_show_with_matches()
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "UEFA.Champions.League.2025.Manchester City.vs.Borussia Dortmund.1080p.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, "Should match with full team names"
+        assert result["episode"].title == "Manchester City vs Borussia Dortmund"
+
+    def test_uefa_integration_mixed_abbreviation_formats(self) -> None:
+        """Integration test: Various abbreviation formats resolve correctly.
+
+        Tests that different filename separators and case variations work.
+        """
+        sport = self.build_uefa_sport_config()
+        show = self.build_uefa_show_with_matches()
+        patterns = compile_patterns(sport)
+
+        # Test with underscore separators and different case
+        result = match_file_to_episode(
+            "UEFA_Champions_League_2025_mc_vs_borussia_720p.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, (
+            "Should match with underscore separators and lowercase abbreviations"
+        )
+        assert result["episode"].title == "Manchester City vs Borussia Dortmund"
+
+
+def test_uefa_integration_alias_resolution() -> None:
+    """Standalone integration test for UEFA alias resolution.
+
+    This is a comprehensive test verifying the full alias resolution chain:
+    filename -> pattern match -> team alias lookup -> episode match.
+    """
+    # Create pattern matching UEFA CL filename format
+    pattern = PatternConfig(
+        regex=(
+            r"(?i)^UEFA[\s._-]+Champions[\s._-]+League[\s._-]+"
+            r"(?P<date_year>\d{4})[\s._-]+"
+            r"(?P<session>(?P<home>[A-Za-z]+)[\s._-]+vs[\s._-]+(?P<away>[A-Za-z]+))"
+            r".*\.mkv$"
+        ),
+        season_selector=SeasonSelector(mode="key", value_template="{date_year}"),
+        episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
+        priority=10,
+    )
+
+    sport = SportConfig(
+        id="uefa_champions_league",
+        name="UEFA Champions League",
+        metadata=MetadataConfig(url="https://example.com"),
+        patterns=[pattern],
+        destination=DestinationTemplates(),
+        team_alias_map="uefa_champions_league",
+    )
+
+    # Create season with the episode
+    season = Season(
+        key="2025",
+        title="2025",
+        summary=None,
+        index=1,
+        episodes=[
+            Episode(
+                title="Manchester City vs Borussia Dortmund",
+                summary=None,
+                originally_available=dt.date(2025, 10, 22),
+                index=1,
+            ),
+        ],
+        display_number=1,
+    )
+
+    show = Show(
+        key="uefa_champions_league",
+        title="UEFA Champions League",
+        summary=None,
+        seasons=[season],
+    )
+
+    patterns = compile_patterns(sport)
+
+    # Test the EXACT problematic filename from the spec
+    filename = "UEFA.Champions.League.2025.MC.vs.Borussia.1080pEN50fps.mkv"
+
+    trace: dict[str, object] = {}
+    result = match_file_to_episode(
+        filename,
+        sport,
+        show,
+        patterns,
+        trace=trace,
+    )
+
+    # Verify the match succeeded
+    assert result is not None, (
+        f"Failed to match UEFA file: {filename}\n"
+        f"Trace: {trace}"
+    )
+
+    # Verify correct episode matched
+    assert result["season"].key == "2025"
+    assert result["episode"].title == "Manchester City vs Borussia Dortmund"
+
+    # Verify no warnings were generated
+    diagnostics: list[tuple[str, str]] = []
+    result_with_diag = match_file_to_episode(
+        filename,
+        sport,
+        show,
+        patterns,
+        diagnostics=diagnostics,
+    )
+    assert result_with_diag is not None
+    assert len([d for d in diagnostics if d[0] == "warning"]) == 0, (
+        f"Unexpected warnings: {diagnostics}"
+    )
