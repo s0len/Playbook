@@ -16,6 +16,7 @@ from playbook.matcher import (
     _dates_within_proximity,
     _location_matches_title,
     _parse_date_from_groups,
+    _parse_date_string,
     _score_structured_match,
     compile_patterns,
     match_file_to_episode,
@@ -1095,3 +1096,425 @@ def test_nhl_integration_github_issue_86() -> None:
     # The match may come from either the structured matcher or the pattern-based matcher
     # Both are valid matching mechanisms
     assert result["pattern"] is not None, "Should return a matched pattern"
+
+
+# ========================== Partial Date Parsing Tests ==========================
+
+
+class TestParseDateStringPartialDates:
+    """Tests for parsing partial dates (DD MM format without year)."""
+
+    def test_parse_partial_date_space_separator(self) -> None:
+        """Parse '16 11' with reference year 2025."""
+        result = _parse_date_string("16 11", reference_year=2025)
+        assert result == dt.date(2025, 11, 16)
+
+    def test_parse_partial_date_dash_separator(self) -> None:
+        """Parse '16-11' with reference year 2025."""
+        result = _parse_date_string("16-11", reference_year=2025)
+        assert result == dt.date(2025, 11, 16)
+
+    def test_parse_partial_date_dot_separator(self) -> None:
+        """Parse '16.11' with reference year 2025."""
+        result = _parse_date_string("16.11", reference_year=2025)
+        assert result == dt.date(2025, 11, 16)
+
+    def test_parse_partial_date_slash_separator(self) -> None:
+        """Parse '16/11' with reference year 2025."""
+        result = _parse_date_string("16/11", reference_year=2025)
+        assert result == dt.date(2025, 11, 16)
+
+    def test_parse_partial_date_without_reference_year_returns_none(self) -> None:
+        """Partial date without reference year should return None."""
+        result = _parse_date_string("16 11")
+        assert result is None
+
+    def test_parse_partial_date_invalid_day(self) -> None:
+        """Invalid day (32) should return None."""
+        result = _parse_date_string("32 11", reference_year=2025)
+        assert result is None
+
+    def test_parse_partial_date_invalid_month(self) -> None:
+        """Invalid month (13) should return None."""
+        result = _parse_date_string("16 13", reference_year=2025)
+        assert result is None
+
+    def test_parse_full_date_ignores_reference_year(self) -> None:
+        """Full date should use its own year, not reference year."""
+        result = _parse_date_string("16 11 2024", reference_year=2025)
+        assert result == dt.date(2024, 11, 16)
+
+
+# ========================== Figure Skating Date Resolution Tests ==========================
+
+
+class TestFigureSkatingDateResolution:
+    """Tests for Figure Skating Grand Prix date-based episode resolution.
+
+    Figure Skating Grand Prix files typically have patterns like:
+    'Figure.Skating.GP.2025.16.11.Ice.Dancing.Rhythm.Dance.mkv'
+
+    where '16 11' is the event date (November 16) that needs to resolve
+    to the correct Grand Prix event by date proximity.
+    """
+
+    def build_figure_skating_show(self) -> tuple[Show, Season]:
+        """Build a Figure Skating show with Grand Prix events on specific dates."""
+        # ISU Grand Prix events for the 2025 season
+        skate_america = Episode(
+            title="Skate America",
+            summary=None,
+            originally_available=dt.date(2025, 10, 18),  # October 18-20
+            index=1,
+        )
+        skate_canada = Episode(
+            title="Skate Canada International",
+            summary=None,
+            originally_available=dt.date(2025, 10, 25),  # October 25-27
+            index=2,
+        )
+        grand_prix_france = Episode(
+            title="Grand Prix de France",
+            summary=None,
+            originally_available=dt.date(2025, 11, 1),  # November 1-3
+            index=3,
+        )
+        nhk_trophy = Episode(
+            title="NHK Trophy",
+            summary=None,
+            originally_available=dt.date(2025, 11, 8),  # November 8-10
+            index=4,
+        )
+        rostelecom_cup = Episode(
+            title="Rostelecom Cup",
+            summary=None,
+            originally_available=dt.date(2025, 11, 15),  # November 15-17
+            index=5,
+        )
+        grand_prix_final = Episode(
+            title="Grand Prix Final",
+            summary=None,
+            originally_available=dt.date(2025, 12, 5),  # December 5-8
+            index=6,
+        )
+
+        season = Season(
+            key="2025",
+            title="2025 Grand Prix",
+            summary=None,
+            index=1,
+            episodes=[
+                skate_america,
+                skate_canada,
+                grand_prix_france,
+                nhk_trophy,
+                rostelecom_cup,
+                grand_prix_final,
+            ],
+            display_number=1,
+        )
+
+        show = Show(
+            key="figure_skating_gp",
+            title="ISU Grand Prix of Figure Skating",
+            summary=None,
+            seasons=[season],
+        )
+
+        return show, season
+
+    def build_figure_skating_sport(self) -> SportConfig:
+        """Build Figure Skating sport config with event_date pattern."""
+        # Pattern captures event_date as DD MM (partial date) and year separately
+        pattern = PatternConfig(
+            regex=(
+                r"(?i)^Figure\.Skating\.GP\.(?P<year>\d{4})\.(?P<event_date>\d{1,2}[\s._-]\d{1,2})\."
+                r"(?P<session>Ice[\s._-]+Dancing|Pairs|Ladies|Men|Exhibition).*\.mkv$"
+            ),
+            season_selector=SeasonSelector(mode="key", group="year"),
+            episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
+            priority=10,
+        )
+        return SportConfig(
+            id="figure_skating_gp",
+            name="ISU Grand Prix of Figure Skating",
+            metadata=MetadataConfig(url="https://example.com"),
+            patterns=[pattern],
+            destination=DestinationTemplates(),
+        )
+
+    def test_date_resolution_november_16_matches_rostelecom_cup(self) -> None:
+        """Event date '16 11' (Nov 16) should resolve to Rostelecom Cup (Nov 15-17)."""
+        show, season = self.build_figure_skating_show()
+        sport = self.build_figure_skating_sport()
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "Figure.Skating.GP.2025.16.11.Ice.Dancing.Rhythm.Dance.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, "Should resolve Figure Skating file with date fallback"
+        assert result["season"] is season
+        assert result["episode"].title == "Rostelecom Cup"
+        assert result["episode"].originally_available == dt.date(2025, 11, 15)
+
+    def test_date_resolution_october_18_matches_skate_america(self) -> None:
+        """Event date '18 10' (Oct 18) should resolve to Skate America (Oct 18-20)."""
+        show, season = self.build_figure_skating_show()
+        sport = self.build_figure_skating_sport()
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "Figure.Skating.GP.2025.18.10.Ladies.Short.Program.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, "Should resolve Figure Skating file with date fallback"
+        assert result["episode"].title == "Skate America"
+
+    def test_date_resolution_november_9_matches_nhk_trophy(self) -> None:
+        """Event date '09 11' (Nov 9) should resolve to NHK Trophy (Nov 8-10)."""
+        show, season = self.build_figure_skating_show()
+        sport = self.build_figure_skating_sport()
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "Figure.Skating.GP.2025.09.11.Men.Free.Skate.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, "Should resolve Figure Skating file with date fallback"
+        assert result["episode"].title == "NHK Trophy"
+
+    def test_date_resolution_with_dash_separator(self) -> None:
+        """Event date with dash separator should also work."""
+        show, season = self.build_figure_skating_show()
+
+        # Modify pattern to accept dash separator
+        pattern = PatternConfig(
+            regex=(
+                r"(?i)^Figure\.Skating\.GP\.(?P<year>\d{4})\.(?P<event_date>\d{1,2}-\d{1,2})\."
+                r"(?P<session>Ice[\s._-]+Dancing|Pairs|Ladies|Men|Exhibition).*\.mkv$"
+            ),
+            season_selector=SeasonSelector(mode="key", group="year"),
+            episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
+            priority=10,
+        )
+        sport = SportConfig(
+            id="figure_skating_gp",
+            name="ISU Grand Prix of Figure Skating",
+            metadata=MetadataConfig(url="https://example.com"),
+            patterns=[pattern],
+            destination=DestinationTemplates(),
+        )
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "Figure.Skating.GP.2025.15-11.Pairs.Short.Program.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, "Should resolve Figure Skating file with dash-separated date"
+        assert result["episode"].title == "Rostelecom Cup"
+
+    def test_date_resolution_no_match_outside_proximity(self) -> None:
+        """Event date far from any episode should not match."""
+        show, season = self.build_figure_skating_show()
+        sport = self.build_figure_skating_sport()
+        patterns = compile_patterns(sport)
+
+        # March 15 is far from any GP event
+        result = match_file_to_episode(
+            "Figure.Skating.GP.2025.15.03.Ice.Dancing.Free.Dance.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        # Should not match because March 15 is far from any event
+        assert result is None, "Should not resolve when date is far from any episode"
+
+
+class TestDateBasedEpisodeResolutionFallback:
+    """Tests for the date-based episode resolution fallback mechanism.
+
+    This tests the scenario where session name lookup fails but we have
+    a parsed date (from _parse_date_from_groups) that can be used to
+    find episodes by date proximity.
+    """
+
+    def test_date_fallback_uses_parsed_date_from_groups(self) -> None:
+        """When session lookup fails, fallback to date from parsed groups."""
+        # Create a pattern that parses date components
+        pattern = PatternConfig(
+            regex=(
+                r"(?i)^(?P<sport>Figure\.Skating)\.GP\.(?P<year>\d{4})\."
+                r"(?P<day>\d{2})\.(?P<month>\d{2})\.(?P<session>[A-Za-z]+).*\.mkv$"
+            ),
+            season_selector=SeasonSelector(mode="key", group="year"),
+            episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
+            priority=10,
+        )
+        sport = SportConfig(
+            id="figure_skating_gp",
+            name="ISU Grand Prix of Figure Skating",
+            metadata=MetadataConfig(url="https://example.com"),
+            patterns=[pattern],
+            destination=DestinationTemplates(),
+        )
+
+        # Create episode on November 16
+        episode = Episode(
+            title="Rostelecom Cup",
+            summary=None,
+            originally_available=dt.date(2025, 11, 16),
+            index=1,
+        )
+        season = Season(
+            key="2025",
+            title="2025 Grand Prix",
+            summary=None,
+            index=1,
+            episodes=[episode],
+            display_number=1,
+        )
+        show = Show(
+            key="figure_skating_gp",
+            title="ISU Grand Prix of Figure Skating",
+            summary=None,
+            seasons=[season],
+        )
+
+        patterns = compile_patterns(sport)
+
+        # File has session=Exhibition which won't match "Rostelecom Cup"
+        # But date (16 11) matches episode date
+        result = match_file_to_episode(
+            "Figure.Skating.GP.2025.16.11.Exhibition.720p.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, "Should resolve via date fallback"
+        assert result["episode"].title == "Rostelecom Cup"
+
+    def test_date_fallback_selects_closest_episode(self) -> None:
+        """Date fallback should select episode with closest date."""
+        pattern = PatternConfig(
+            regex=(
+                r"(?i)^(?P<sport>GP)\.(?P<year>\d{4})\.(?P<day>\d{2})\.(?P<month>\d{2})\."
+                r"(?P<session>[A-Za-z]+).*\.mkv$"
+            ),
+            season_selector=SeasonSelector(mode="key", group="year"),
+            episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
+            priority=10,
+        )
+        sport = SportConfig(
+            id="gp",
+            name="Grand Prix",
+            metadata=MetadataConfig(url="https://example.com"),
+            patterns=[pattern],
+            destination=DestinationTemplates(),
+        )
+
+        # Two episodes close together
+        episode1 = Episode(
+            title="Event A",
+            summary=None,
+            originally_available=dt.date(2025, 11, 14),  # Nov 14
+            index=1,
+        )
+        episode2 = Episode(
+            title="Event B",
+            summary=None,
+            originally_available=dt.date(2025, 11, 17),  # Nov 17
+            index=2,
+        )
+        season = Season(
+            key="2025",
+            title="2025",
+            summary=None,
+            index=1,
+            episodes=[episode1, episode2],
+            display_number=1,
+        )
+        show = Show(key="gp", title="Grand Prix", summary=None, seasons=[season])
+
+        patterns = compile_patterns(sport)
+
+        # File date Nov 15 - closer to Nov 14 (1 day) than Nov 17 (2 days)
+        result = match_file_to_episode(
+            "GP.2025.15.11.Warmup.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None
+        assert result["episode"].title == "Event A", "Should select closest episode by date"
+
+    def test_date_fallback_respects_2_day_tolerance(self) -> None:
+        """Date fallback should only match episodes within 2-day tolerance."""
+        pattern = PatternConfig(
+            regex=(
+                r"(?i)^(?P<sport>GP)\.(?P<year>\d{4})\.(?P<day>\d{2})\.(?P<month>\d{2})\."
+                r"(?P<session>[A-Za-z]+).*\.mkv$"
+            ),
+            season_selector=SeasonSelector(mode="key", group="year"),
+            episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
+            priority=10,
+        )
+        sport = SportConfig(
+            id="gp",
+            name="Grand Prix",
+            metadata=MetadataConfig(url="https://example.com"),
+            patterns=[pattern],
+            destination=DestinationTemplates(),
+        )
+
+        # Episode on Nov 10
+        episode = Episode(
+            title="Event",
+            summary=None,
+            originally_available=dt.date(2025, 11, 10),
+            index=1,
+        )
+        season = Season(
+            key="2025",
+            title="2025",
+            summary=None,
+            index=1,
+            episodes=[episode],
+            display_number=1,
+        )
+        show = Show(key="gp", title="Grand Prix", summary=None, seasons=[season])
+
+        patterns = compile_patterns(sport)
+
+        # File date Nov 12 - 2 days away (within tolerance)
+        result_within = match_file_to_episode(
+            "GP.2025.12.11.Warmup.mkv",
+            sport,
+            show,
+            patterns,
+        )
+        assert result_within is not None, "2 days difference should be within tolerance"
+
+        # File date Nov 15 - 5 days away (outside tolerance)
+        result_outside = match_file_to_episode(
+            "GP.2025.15.11.Warmup.mkv",
+            sport,
+            show,
+            patterns,
+        )
+        assert result_outside is None, "5 days difference should be outside tolerance"
