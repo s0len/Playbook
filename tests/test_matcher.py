@@ -12,11 +12,14 @@ from playbook.config import (
     SportConfig,
 )
 from playbook.matcher import (
+    _build_session_lookup,
     _build_team_alias_lookup,
     _dates_within_proximity,
+    _DEFAULT_GENERIC_SESSION_ALIASES,
     _location_matches_title,
     _parse_date_from_groups,
     _parse_date_string,
+    _resolve_session_lookup,
     _score_structured_match,
     compile_patterns,
     match_file_to_episode,
@@ -1518,3 +1521,479 @@ class TestDateBasedEpisodeResolutionFallback:
             patterns,
         )
         assert result_outside is None, "5 days difference should be outside tolerance"
+
+
+# ========================== Generic Session Matching Tests ==========================
+
+
+class TestDefaultGenericSessionAliases:
+    """Tests for _DEFAULT_GENERIC_SESSION_ALIASES configuration."""
+
+    def test_race_aliases_exist(self) -> None:
+        """Verify Race has common alias variations."""
+        assert "Race" in _DEFAULT_GENERIC_SESSION_ALIASES
+        aliases = _DEFAULT_GENERIC_SESSION_ALIASES["Race"]
+        # Should include Main Race, Feature Race variations
+        assert "Race" in aliases
+        assert "Main Race" in aliases
+        assert "Feature Race" in aliases
+
+    def test_practice_aliases_exist(self) -> None:
+        """Verify Practice has common alias variations."""
+        assert "Practice" in _DEFAULT_GENERIC_SESSION_ALIASES
+        aliases = _DEFAULT_GENERIC_SESSION_ALIASES["Practice"]
+        # Should include Free Practice variations
+        assert "Practice" in aliases
+        assert "Free Practice" in aliases
+
+    def test_qualifying_aliases_exist(self) -> None:
+        """Verify Qualifying has common alias variations."""
+        assert "Qualifying" in _DEFAULT_GENERIC_SESSION_ALIASES
+        aliases = _DEFAULT_GENERIC_SESSION_ALIASES["Qualifying"]
+        # Should include Quali variations
+        assert "Qualifying" in aliases
+        assert "Quali" in aliases
+
+    def test_sprint_aliases_exist(self) -> None:
+        """Verify Sprint has common alias variations."""
+        assert "Sprint" in _DEFAULT_GENERIC_SESSION_ALIASES
+        aliases = _DEFAULT_GENERIC_SESSION_ALIASES["Sprint"]
+        # Should include Sprint Race variations
+        assert "Sprint" in aliases
+        assert "Sprint Race" in aliases
+
+
+class TestBuildSessionLookupGenericAliases:
+    """Tests for _build_session_lookup with generic session aliases."""
+
+    def build_empty_season(self) -> Season:
+        """Build a season with minimal episodes (no session aliases in titles)."""
+        episode = Episode(
+            title="Grand Prix",
+            summary=None,
+            originally_available=dt.date(2025, 3, 23),
+            index=1,
+        )
+        return Season(
+            key="2025",
+            title="2025 Season",
+            summary=None,
+            index=1,
+            episodes=[episode],
+            display_number=1,
+        )
+
+    def test_generic_race_alias_added_to_lookup(self) -> None:
+        """Generic 'race' alias should be added to session lookup."""
+        pattern = PatternConfig(
+            regex=r"(?i)^.*\.(?P<session>Race|Practice).*\.mkv$",
+            priority=10,
+        )
+        season = self.build_empty_season()
+
+        lookup = _build_session_lookup(pattern, season)
+
+        # Verify 'race' is in the lookup
+        from playbook.utils import normalize_token
+
+        assert lookup.get_direct(normalize_token("Race")) == "Race"
+        assert lookup.get_direct(normalize_token("race")) == "Race"
+
+    def test_generic_practice_alias_added_to_lookup(self) -> None:
+        """Generic 'practice' alias should be added to session lookup."""
+        pattern = PatternConfig(
+            regex=r"(?i)^.*\.(?P<session>Race|Practice).*\.mkv$",
+            priority=10,
+        )
+        season = self.build_empty_season()
+
+        lookup = _build_session_lookup(pattern, season)
+
+        from playbook.utils import normalize_token
+
+        assert lookup.get_direct(normalize_token("Practice")) == "Practice"
+        assert lookup.get_direct(normalize_token("Free Practice")) == "Practice"
+
+    def test_generic_qualifying_alias_added_to_lookup(self) -> None:
+        """Generic 'qualifying' alias should be added to session lookup."""
+        pattern = PatternConfig(
+            regex=r"(?i)^.*\.(?P<session>Qualifying|Quali).*\.mkv$",
+            priority=10,
+        )
+        season = self.build_empty_season()
+
+        lookup = _build_session_lookup(pattern, season)
+
+        from playbook.utils import normalize_token
+
+        assert lookup.get_direct(normalize_token("Qualifying")) == "Qualifying"
+        assert lookup.get_direct(normalize_token("Quali")) == "Qualifying"
+
+    def test_pattern_specific_aliases_take_precedence(self) -> None:
+        """Pattern-specific session_aliases should override generic defaults."""
+        pattern = PatternConfig(
+            regex=r"(?i)^.*\.(?P<session>Race|Practice).*\.mkv$",
+            priority=10,
+            session_aliases={
+                "Grand Prix Race": ["Race", "Main Race"],
+            },
+        )
+        season = self.build_empty_season()
+
+        lookup = _build_session_lookup(pattern, season)
+
+        from playbook.utils import normalize_token
+
+        # Pattern-specific alias should resolve to "Grand Prix Race"
+        assert lookup.get_direct(normalize_token("Race")) == "Grand Prix Race"
+        assert lookup.get_direct(normalize_token("Main Race")) == "Grand Prix Race"
+
+
+class TestResolveSessionLookupFuzzy:
+    """Tests for _resolve_session_lookup fuzzy matching behavior."""
+
+    def test_exact_match_returns_immediately(self) -> None:
+        """Exact match should return without fuzzy matching."""
+        from playbook.session_index import SessionLookupIndex
+        from playbook.utils import normalize_token
+
+        lookup = SessionLookupIndex()
+        lookup.add(normalize_token("Race"), "Race")
+        lookup.add(normalize_token("Practice"), "Practice")
+
+        result = _resolve_session_lookup(lookup, normalize_token("Race"))
+        assert result == "Race"
+
+    def test_fuzzy_match_with_typo(self) -> None:
+        """Fuzzy matching should handle minor typos (Damerau-Levenshtein distance <= 1)."""
+        from playbook.session_index import SessionLookupIndex
+        from playbook.utils import normalize_token
+
+        lookup = SessionLookupIndex()
+        lookup.add(normalize_token("Qualifying"), "Qualifying")
+
+        # "qualifyng" is "qualifying" with one character missing
+        result = _resolve_session_lookup(lookup, normalize_token("qualifyng"))
+        assert result == "Qualifying"
+
+    def test_short_tokens_skip_fuzzy_matching(self) -> None:
+        """Tokens shorter than 4 characters should not fuzzy match."""
+        from playbook.session_index import SessionLookupIndex
+        from playbook.utils import normalize_token
+
+        lookup = SessionLookupIndex()
+        lookup.add(normalize_token("Race"), "Race")
+
+        # "rac" is too short for fuzzy matching
+        result = _resolve_session_lookup(lookup, "rac")
+        assert result is None
+
+    def test_no_match_for_completely_different_token(self) -> None:
+        """Completely different tokens should not match."""
+        from playbook.session_index import SessionLookupIndex
+        from playbook.utils import normalize_token
+
+        lookup = SessionLookupIndex()
+        lookup.add(normalize_token("Qualifying"), "Qualifying")
+
+        # "freeswimming" is completely different from "qualifying"
+        result = _resolve_session_lookup(lookup, normalize_token("freeswimming"))
+        assert result is None
+
+
+class TestGenericSessionFileMatching:
+    """Integration tests for file matching with generic session terms.
+
+    Tests end-to-end file matching where generic session names like "Race",
+    "Practice", and "Qualifying" should resolve to episodes via the round-based
+    fallback mechanism.
+    """
+
+    def build_indycar_sport(self) -> SportConfig:
+        """Build IndyCar sport config with round-based fallback."""
+        pattern = PatternConfig(
+            regex=r"(?i)^IndyCar\.Series\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<location>[^.]+)\.(?P<session>Race|Practice|Qualifying)\..*\.mkv$",
+            season_selector=SeasonSelector(mode="round", group="round"),
+            episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
+            priority=10,
+        )
+        return SportConfig(
+            id="indycar",
+            name="IndyCar Series",
+            metadata=MetadataConfig(url="https://example.com"),
+            patterns=[pattern],
+            destination=DestinationTemplates(),
+        )
+
+    def build_indycar_show(self) -> tuple[Show, Season]:
+        """Build IndyCar show with realistic episodes."""
+        episode = Episode(
+            title="Snap-on Milwaukee Mile 250",
+            summary=None,
+            originally_available=dt.date(2025, 8, 17),
+            index=16,
+        )
+
+        season = Season(
+            key="2025",
+            title="2025 Season",
+            summary=None,
+            index=1,
+            episodes=[episode],
+            display_number=1,
+            round_number=16,
+        )
+
+        show = Show(key="indycar", title="NTT IndyCar Series", summary=None, seasons=[season])
+        return show, season
+
+    def test_generic_race_session_resolves_via_round_fallback(self) -> None:
+        """Generic 'Race' session should resolve to episode via round-based fallback."""
+        sport = self.build_indycar_sport()
+        show, season = self.build_indycar_show()
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "IndyCar.Series.2025.Round16.Milwaukee.Race.STAN.WEB-DL.1080p.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, "Generic 'Race' session should resolve via round fallback"
+        assert result["season"] is season
+        assert result["episode"].title == "Snap-on Milwaukee Mile 250"
+
+    def test_generic_practice_session_resolves_via_round_fallback(self) -> None:
+        """Generic 'Practice' session should resolve to episode via round-based fallback."""
+        sport = self.build_indycar_sport()
+        show, season = self.build_indycar_show()
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "IndyCar.Series.2025.Round16.Milwaukee.Practice.STAN.WEB-DL.1080p.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, "Generic 'Practice' session should resolve via round fallback"
+        assert result["episode"].title == "Snap-on Milwaukee Mile 250"
+
+    def test_generic_qualifying_session_resolves_via_round_fallback(self) -> None:
+        """Generic 'Qualifying' session should resolve to episode via round-based fallback."""
+        sport = self.build_indycar_sport()
+        show, season = self.build_indycar_show()
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "IndyCar.Series.2025.Round16.Milwaukee.Qualifying.STAN.WEB-DL.1080p.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, "Generic 'Qualifying' session should resolve via round fallback"
+        assert result["episode"].title == "Snap-on Milwaukee Mile 250"
+
+    def test_fuzzy_location_matching_with_generic_session(self) -> None:
+        """Location fuzzy matching should work with generic session terms.
+
+        This tests the complete flow:
+        1. Pattern extracts location='Milwaukee' and session='Race'
+        2. 'Race' doesn't match episode title 'Snap-on Milwaukee Mile 250'
+        3. Round-based fallback finds episode with matching round number
+        4. Location fuzzy matching confirms 'Milwaukee' is in episode title
+        """
+        sport = self.build_indycar_sport()
+        show, season = self.build_indycar_show()
+        patterns = compile_patterns(sport)
+
+        trace: dict[str, object] = {}
+        result = match_file_to_episode(
+            "IndyCar.Series.2025.Round16.Milwaukee.Race.STAN.WEB-DL.1080p.mkv",
+            sport,
+            show,
+            patterns,
+            trace=trace,
+        )
+
+        assert result is not None
+        assert result["episode"].title == "Snap-on Milwaukee Mile 250"
+        # Verify the trace shows a successful match
+        assert trace.get("status") == "matched"
+
+
+def test_generic_session_aliases_are_configured() -> None:
+    """Verify generic session aliases are configured in _DEFAULT_GENERIC_SESSION_ALIASES."""
+    # This is a simple sanity test to verify the generic session configuration exists
+    assert "Race" in _DEFAULT_GENERIC_SESSION_ALIASES
+    assert "Practice" in _DEFAULT_GENERIC_SESSION_ALIASES
+    assert "Qualifying" in _DEFAULT_GENERIC_SESSION_ALIASES
+    assert "Sprint" in _DEFAULT_GENERIC_SESSION_ALIASES
+
+    # Verify each has at least one alias
+    for canonical, aliases in _DEFAULT_GENERIC_SESSION_ALIASES.items():
+        assert len(aliases) >= 1, f"{canonical} should have at least one alias"
+
+
+def test_generic_session_lookup_resolves_common_terms() -> None:
+    """Test that generic session lookup correctly resolves common motorsport terms."""
+    from playbook.session_index import SessionLookupIndex
+    from playbook.utils import normalize_token
+
+    # Build a lookup index with generic session aliases
+    pattern = PatternConfig(
+        regex=r"(?i)^.*\.(?P<session>.+)\.mkv$",
+        priority=10,
+    )
+
+    episode = Episode(
+        title="Grand Prix",
+        summary=None,
+        originally_available=dt.date(2025, 1, 1),
+        index=1,
+    )
+    season = Season(
+        key="2025",
+        title="2025 Season",
+        summary=None,
+        index=1,
+        episodes=[episode],
+        display_number=1,
+    )
+
+    lookup = _build_session_lookup(pattern, season)
+
+    # Test that common session terms resolve correctly
+    assert lookup.get_direct(normalize_token("Race")) == "Race"
+    assert lookup.get_direct(normalize_token("Practice")) == "Practice"
+    assert lookup.get_direct(normalize_token("Qualifying")) == "Qualifying"
+    assert lookup.get_direct(normalize_token("Sprint")) == "Sprint"
+
+
+class TestGenericSessionAliasNormalization:
+    """Tests for session alias normalization handling various input formats."""
+
+    def test_mainrace_normalized_to_race(self) -> None:
+        """'mainrace' (no space) should normalize to match 'Main Race' alias."""
+        pattern = PatternConfig(
+            regex=r"(?i)^.*\.(?P<session>.+)\.mkv$",
+            priority=10,
+        )
+
+        episode = Episode(
+            title="Grand Prix",
+            summary=None,
+            originally_available=dt.date(2025, 1, 1),
+            index=1,
+        )
+        season = Season(
+            key="2025",
+            title="2025 Season",
+            summary=None,
+            index=1,
+            episodes=[episode],
+            display_number=1,
+        )
+
+        lookup = _build_session_lookup(pattern, season)
+
+        from playbook.utils import normalize_token
+
+        # Both "mainrace" and "Main Race" should normalize to the same key
+        mainrace_normalized = normalize_token("mainrace")
+        main_race_normalized = normalize_token("Main Race")
+
+        # They should be equivalent after normalization
+        assert mainrace_normalized == main_race_normalized
+
+        # And should resolve to "Race" canonical name
+        assert lookup.get_direct(mainrace_normalized) == "Race"
+
+    def test_featurerace_normalized_to_race(self) -> None:
+        """'featurerace' should normalize to match 'Feature Race' alias."""
+        pattern = PatternConfig(
+            regex=r"(?i)^.*\.(?P<session>.+)\.mkv$",
+            priority=10,
+        )
+
+        episode = Episode(
+            title="Grand Prix",
+            summary=None,
+            originally_available=dt.date(2025, 1, 1),
+            index=1,
+        )
+        season = Season(
+            key="2025",
+            title="2025 Season",
+            summary=None,
+            index=1,
+            episodes=[episode],
+            display_number=1,
+        )
+
+        lookup = _build_session_lookup(pattern, season)
+
+        from playbook.utils import normalize_token
+
+        featurerace_normalized = normalize_token("featurerace")
+        assert lookup.get_direct(featurerace_normalized) == "Race"
+
+    def test_freepractice_normalized_to_practice(self) -> None:
+        """'freepractice' should normalize to match 'Free Practice' alias."""
+        pattern = PatternConfig(
+            regex=r"(?i)^.*\.(?P<session>.+)\.mkv$",
+            priority=10,
+        )
+
+        episode = Episode(
+            title="Grand Prix",
+            summary=None,
+            originally_available=dt.date(2025, 1, 1),
+            index=1,
+        )
+        season = Season(
+            key="2025",
+            title="2025 Season",
+            summary=None,
+            index=1,
+            episodes=[episode],
+            display_number=1,
+        )
+
+        lookup = _build_session_lookup(pattern, season)
+
+        from playbook.utils import normalize_token
+
+        freepractice_normalized = normalize_token("freepractice")
+        assert lookup.get_direct(freepractice_normalized) == "Practice"
+
+    def test_sprintrace_normalized_to_sprint(self) -> None:
+        """'sprintrace' should normalize to match 'Sprint Race' alias."""
+        pattern = PatternConfig(
+            regex=r"(?i)^.*\.(?P<session>.+)\.mkv$",
+            priority=10,
+        )
+
+        episode = Episode(
+            title="Grand Prix",
+            summary=None,
+            originally_available=dt.date(2025, 1, 1),
+            index=1,
+        )
+        season = Season(
+            key="2025",
+            title="2025 Season",
+            summary=None,
+            index=1,
+            episodes=[episode],
+            display_number=1,
+        )
+
+        lookup = _build_session_lookup(pattern, season)
+
+        from playbook.utils import normalize_token
+
+        sprintrace_normalized = normalize_token("sprintrace")
+        assert lookup.get_direct(sprintrace_normalized) == "Sprint"
