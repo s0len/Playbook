@@ -229,16 +229,46 @@ _DATE_FORMATS = (
     "%d %m %Y",
 )
 
+# Partial date formats (DD MM without year) - European format
+_PARTIAL_DATE_FORMATS = (
+    "%d %m",
+    "%d-%m",
+    "%d.%m",
+    "%d/%m",
+)
 
-def _parse_date_string(value: str) -> dt.date | None:
+
+def _parse_date_string(value: str, reference_year: int | None = None) -> dt.date | None:
+    """Parse a date string into a date object.
+
+    Args:
+        value: The date string to parse (e.g., "16 11 2025" or "16 11")
+        reference_year: Optional year to use for partial dates (DD MM format).
+                        If not provided and the date string lacks a year, parsing will fail.
+
+    Returns:
+        A date object if parsing succeeds, None otherwise.
+    """
     stripped = value.strip()
     if not stripped:
         return None
+
+    # Try full date formats first
     for fmt in _DATE_FORMATS:
         try:
             return dt.datetime.strptime(stripped, fmt).date()
         except ValueError:
             continue
+
+    # Try partial date formats (DD MM without year) if reference_year is provided
+    if reference_year is not None:
+        for fmt in _PARTIAL_DATE_FORMATS:
+            try:
+                parsed = dt.datetime.strptime(stripped, fmt)
+                return dt.date(reference_year, parsed.month, parsed.day)
+            except ValueError:
+                continue
+
     return None
 
 
