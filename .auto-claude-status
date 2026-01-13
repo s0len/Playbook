@@ -3,23 +3,23 @@
   "spec": "036-after-running-the-latest-i-notice-there-are-still-",
   "state": "building",
   "subtasks": {
-    "completed": 11,
+    "completed": 15,
     "total": 17,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "NBA Team Name Resolution Fix",
+    "current": "Integration Testing",
     "id": null,
-    "total": 2
+    "total": 4
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 12,
+    "number": 16,
     "started_at": "2026-01-13T11:33:27.016918"
   },
-  "last_update": "2026-01-13T12:12:41.580898"
+  "last_update": "2026-01-13T12:28:13.123717"
 }
