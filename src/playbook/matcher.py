@@ -698,6 +698,45 @@ def _select_episode(
         except ValueError:
             pass  # Round value wasn't a valid integer
 
+    # Date-based episode resolution fallback
+    # When session name lookup fails but we have date information (e.g., Figure Skating "16 11"),
+    # fallback to finding episode by date proximity
+    fallback_date = parsed_date
+    if fallback_date is None:
+        # Try to parse event_date group if available (partial date like "16 11")
+        event_date_value = match_groups.get("event_date")
+        if event_date_value:
+            # Get reference year from match groups
+            reference_year_str = match_groups.get("year") or match_groups.get("date_year")
+            reference_year = int(reference_year_str) if reference_year_str else None
+            fallback_date = _parse_date_string(event_date_value, reference_year=reference_year)
+
+    if fallback_date is not None:
+        # Find episodes with dates within proximity of the fallback date
+        date_candidates: list[tuple[Episode, int]] = []
+        for episode in season.episodes:
+            if episode.originally_available is not None:
+                if _dates_within_proximity(fallback_date, episode.originally_available, tolerance_days=2):
+                    delta = abs((fallback_date - episode.originally_available).days)
+                    date_candidates.append((episode, delta))
+
+        if date_candidates:
+            # Sort by closest date match and return the best
+            date_candidates.sort(key=lambda item: item[1])
+            best_episode, best_delta = date_candidates[0]
+            if trace is not None:
+                trace["match"] = {
+                    "label": "date_fallback",
+                    "value": fallback_date.isoformat(),
+                    "normalized": fallback_date.isoformat(),
+                    "token": normalize_token(best_episode.title),
+                    "episode_title": best_episode.title,
+                    "matched_via_date_fallback": True,
+                    "date_delta_days": best_delta,
+                }
+                trace["lookup_attempts"] = trace_lookup_records
+            return best_episode
+
     if attempted_variants:
         match_groups["_attempted_session_tokens"] = attempted_variants
     if trace is not None:
