@@ -2612,3 +2612,342 @@ def test_uefa_integration_alias_resolution() -> None:
     assert len([d for d in diagnostics if d[0] == "warning"]) == 0, (
         f"Unexpected warnings: {diagnostics}"
     )
+
+
+# ========================== Figure Skating Integration Tests ==========================
+
+
+class TestFigureSkatingIntegration:
+    """Integration tests for Figure Skating Grand Prix date-based file resolution.
+
+    These tests verify end-to-end matching for Figure Skating files where:
+    - Filename contains a partial date (DD MM format, e.g., "16 11" for Nov 16)
+    - Session names (Ice Dancing, Pairs, etc.) don't directly match episode titles
+    - Date-based fallback resolves the file to the correct Grand Prix event
+
+    This addresses the issue where files like:
+        Figure.Skating.GP.2025.16.11.Ice.Dancing.Rhythm.Dance.mkv
+    failed to resolve because session "Ice Dancing" couldn't match "Rostelecom Cup".
+    """
+
+    def build_figure_skating_integration_sport(self) -> SportConfig:
+        """Build Figure Skating sport config for integration testing."""
+        pattern = PatternConfig(
+            regex=(
+                r"(?i)^Figure[\s._-]+Skating[\s._-]+GP[\s._-]+"
+                r"(?P<year>\d{4})[\s._-]+"
+                r"(?P<event_date>\d{1,2}[\s._-]\d{1,2})[\s._-]+"
+                r"(?P<session>Ice[\s._-]*Dancing|Pairs|Ladies|Men|Exhibition)"
+                r".*\.mkv$"
+            ),
+            season_selector=SeasonSelector(mode="key", group="year"),
+            episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
+            priority=10,
+        )
+        return SportConfig(
+            id="figure_skating_gp",
+            name="ISU Grand Prix of Figure Skating",
+            metadata=MetadataConfig(url="https://example.com"),
+            patterns=[pattern],
+            destination=DestinationTemplates(),
+        )
+
+    def build_figure_skating_integration_show(self) -> Show:
+        """Build Figure Skating show with full Grand Prix season for integration tests."""
+        skate_america = Episode(
+            title="Skate America",
+            summary=None,
+            originally_available=dt.date(2025, 10, 18),  # October 18-20
+            index=1,
+        )
+        skate_canada = Episode(
+            title="Skate Canada International",
+            summary=None,
+            originally_available=dt.date(2025, 10, 25),  # October 25-27
+            index=2,
+        )
+        grand_prix_france = Episode(
+            title="Grand Prix de France",
+            summary=None,
+            originally_available=dt.date(2025, 11, 1),  # November 1-3
+            index=3,
+        )
+        nhk_trophy = Episode(
+            title="NHK Trophy",
+            summary=None,
+            originally_available=dt.date(2025, 11, 8),  # November 8-10
+            index=4,
+        )
+        rostelecom_cup = Episode(
+            title="Rostelecom Cup",
+            summary=None,
+            originally_available=dt.date(2025, 11, 15),  # November 15-17
+            index=5,
+        )
+        grand_prix_final = Episode(
+            title="Grand Prix Final",
+            summary=None,
+            originally_available=dt.date(2025, 12, 5),  # December 5-8
+            index=6,
+        )
+
+        season = Season(
+            key="2025",
+            title="2025 Grand Prix",
+            summary=None,
+            index=1,
+            episodes=[
+                skate_america,
+                skate_canada,
+                grand_prix_france,
+                nhk_trophy,
+                rostelecom_cup,
+                grand_prix_final,
+            ],
+            display_number=1,
+        )
+
+        return Show(
+            key="figure_skating_gp",
+            title="ISU Grand Prix of Figure Skating",
+            summary=None,
+            seasons=[season],
+        )
+
+    def test_figure_skating_integration_november_16_resolves_to_rostelecom(self) -> None:
+        """Integration test: File with Nov 16 date resolves to Rostelecom Cup.
+
+        This is the primary integration test case from the spec where:
+        - 'Ice Dancing' session doesn't match any episode title
+        - Date '16 11' (Nov 16) is within 2 days of Rostelecom Cup (Nov 15)
+        - Date-based fallback finds the correct episode
+        """
+        sport = self.build_figure_skating_integration_sport()
+        show = self.build_figure_skating_integration_show()
+        patterns = compile_patterns(sport)
+
+        # Test with the exact filename pattern from the spec
+        trace: dict[str, object] = {}
+        result = match_file_to_episode(
+            "Figure.Skating.GP.2025.16.11.Ice.Dancing.Rhythm.Dance.mkv",
+            sport,
+            show,
+            patterns,
+            trace=trace,
+        )
+
+        assert result is not None, (
+            f"Should match Figure Skating file with date-based fallback\n"
+            f"Trace: {trace}"
+        )
+        assert result["episode"].title == "Rostelecom Cup", (
+            f"Expected 'Rostelecom Cup', got '{result['episode'].title}'"
+        )
+        assert result["season"].key == "2025"
+
+    def test_figure_skating_integration_october_18_resolves_to_skate_america(self) -> None:
+        """Integration test: File with Oct 18 date resolves to Skate America."""
+        sport = self.build_figure_skating_integration_sport()
+        show = self.build_figure_skating_integration_show()
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "Figure.Skating.GP.2025.18.10.Pairs.Short.Program.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, (
+            "Should match Figure Skating file with Skate America date"
+        )
+        assert result["episode"].title == "Skate America"
+
+    def test_figure_skating_integration_no_warnings_on_successful_match(self) -> None:
+        """Integration test: Successful date-based match generates no warnings."""
+        sport = self.build_figure_skating_integration_sport()
+        show = self.build_figure_skating_integration_show()
+        patterns = compile_patterns(sport)
+
+        diagnostics: list[tuple[str, str]] = []
+        result = match_file_to_episode(
+            "Figure.Skating.GP.2025.16.11.Ice.Dancing.Free.Dance.mkv",
+            sport,
+            show,
+            patterns,
+            diagnostics=diagnostics,
+        )
+
+        assert result is not None
+        warnings = [d for d in diagnostics if d[0] == "warning"]
+        assert len(warnings) == 0, (
+            f"Unexpected warnings for successful date-based match: {warnings}"
+        )
+
+    def test_figure_skating_integration_multiple_events_selects_closest(self) -> None:
+        """Integration test: When date is between events, closest event is selected."""
+        sport = self.build_figure_skating_integration_sport()
+        show = self.build_figure_skating_integration_show()
+        patterns = compile_patterns(sport)
+
+        # Nov 9 is 1 day after NHK Trophy (Nov 8) and 6 days before Rostelecom (Nov 15)
+        # Should select NHK Trophy as it's closest
+        result = match_file_to_episode(
+            "Figure.Skating.GP.2025.09.11.Men.Short.Program.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None
+        assert result["episode"].title == "NHK Trophy", (
+            f"Nov 9 should resolve to NHK Trophy (Nov 8), got '{result['episode'].title}'"
+        )
+
+    def test_figure_skating_integration_grand_prix_final_december(self) -> None:
+        """Integration test: December date resolves to Grand Prix Final."""
+        sport = self.build_figure_skating_integration_sport()
+        show = self.build_figure_skating_integration_show()
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "Figure.Skating.GP.2025.06.12.Exhibition.Gala.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None
+        assert result["episode"].title == "Grand Prix Final", (
+            f"Dec 6 should resolve to Grand Prix Final (Dec 5), got '{result['episode'].title}'"
+        )
+
+    def test_figure_skating_integration_underscore_separator(self) -> None:
+        """Integration test: Underscore separators in filename work correctly."""
+        sport = self.build_figure_skating_integration_sport()
+        show = self.build_figure_skating_integration_show()
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "Figure_Skating_GP_2025_15_11_Ladies_Free_Skate.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, (
+            "Should match Figure Skating file with underscore separators"
+        )
+        assert result["episode"].title == "Rostelecom Cup"
+
+
+def test_figure_skating_integration_full_resolution_chain() -> None:
+    """Standalone integration test for Figure Skating date-based resolution.
+
+    This is a comprehensive test verifying the full resolution chain:
+    filename -> pattern match -> date parsing -> date fallback -> episode match.
+
+    Specifically tests the scenario where:
+    1. Pattern matches and extracts event_date='16 11' and session='Ice Dancing'
+    2. Session 'Ice Dancing' doesn't match any episode title
+    3. Date fallback kicks in, parsing '16 11' as November 16
+    4. Episode with closest date (Rostelecom Cup, Nov 15) is selected
+    """
+    # Create pattern matching Figure Skating filename format
+    pattern = PatternConfig(
+        regex=(
+            r"(?i)^Figure[\s._-]+Skating[\s._-]+GP[\s._-]+"
+            r"(?P<year>\d{4})[\s._-]+"
+            r"(?P<event_date>\d{1,2}[\s._-]\d{1,2})[\s._-]+"
+            r"(?P<session>Ice[\s._-]*Dancing|Pairs|Ladies|Men)"
+            r".*\.mkv$"
+        ),
+        season_selector=SeasonSelector(mode="key", group="year"),
+        episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
+        priority=10,
+    )
+
+    sport = SportConfig(
+        id="figure_skating_gp",
+        name="ISU Grand Prix of Figure Skating",
+        metadata=MetadataConfig(url="https://example.com"),
+        patterns=[pattern],
+        destination=DestinationTemplates(),
+    )
+
+    # Create season with multiple episodes on different dates
+    season = Season(
+        key="2025",
+        title="2025 Grand Prix",
+        summary=None,
+        index=1,
+        episodes=[
+            Episode(
+                title="Skate America",
+                summary=None,
+                originally_available=dt.date(2025, 10, 18),
+                index=1,
+            ),
+            Episode(
+                title="NHK Trophy",
+                summary=None,
+                originally_available=dt.date(2025, 11, 8),
+                index=2,
+            ),
+            Episode(
+                title="Rostelecom Cup",
+                summary=None,
+                originally_available=dt.date(2025, 11, 15),
+                index=3,
+            ),
+        ],
+        display_number=1,
+    )
+
+    show = Show(
+        key="figure_skating_gp",
+        title="ISU Grand Prix of Figure Skating",
+        summary=None,
+        seasons=[season],
+    )
+
+    patterns = compile_patterns(sport)
+
+    # Test the EXACT problematic filename pattern from the spec
+    filename = "Figure.Skating.GP.2025.16.11.Ice.Dancing.Rhythm.Dance.mkv"
+
+    trace: dict[str, object] = {}
+    result = match_file_to_episode(
+        filename,
+        sport,
+        show,
+        patterns,
+        trace=trace,
+    )
+
+    # Verify the match succeeded
+    assert result is not None, (
+        f"Failed to match Figure Skating file: {filename}\n"
+        f"Trace: {trace}"
+    )
+
+    # Verify correct episode matched
+    assert result["season"].key == "2025"
+    assert result["episode"].title == "Rostelecom Cup", (
+        f"Expected 'Rostelecom Cup' for date 16 11 (Nov 16), got '{result['episode'].title}'"
+    )
+
+    # Verify no warnings were generated
+    diagnostics: list[tuple[str, str]] = []
+    result_with_diag = match_file_to_episode(
+        filename,
+        sport,
+        show,
+        patterns,
+        diagnostics=diagnostics,
+    )
+    assert result_with_diag is not None
+    warnings = [d for d in diagnostics if d[0] == "warning"]
+    assert len(warnings) == 0, (
+        f"Unexpected warnings for date-based match: {warnings}"
+    )
