@@ -169,6 +169,53 @@ _NOISE_TOKENS = (
     "verum",
 )
 
+# Default generic session aliases for common motorsport session terms.
+# These are used as fallback mappings when patterns don't define specific aliases.
+# Maps canonical session name -> list of common variations/spellings.
+_DEFAULT_GENERIC_SESSION_ALIASES: dict[str, list[str]] = {
+    "Race": [
+        "Race",
+        "Main Race",
+        "Main.Race",
+        "Feature Race",
+        "Feature.Race",
+        "Main Event",
+        "Main.Event",
+        "Feature Event",
+        "Feature.Event",
+        "Grand Prix",
+        "GP",
+    ],
+    "Practice": [
+        "Practice",
+        "Practice Session",
+        "Practice.Session",
+        "Free Practice",
+        "Free.Practice",
+        "FP",
+        "Warmup",
+        "Warm-up",
+        "Warm Up",
+    ],
+    "Qualifying": [
+        "Qualifying",
+        "Quali",
+        "Qualification",
+        "Qualifying Session",
+        "Qualifying.Session",
+        "Q",
+        "Q Session",
+    ],
+    "Sprint": [
+        "Sprint",
+        "Sprint Race",
+        "Sprint.Race",
+        "Sprint Qualifying",
+        "Sprint.Qualifying",
+        "SQ",
+    ],
+}
+
 
 @dataclass
 class PatternRuntime:
@@ -194,6 +241,25 @@ def _build_session_lookup(pattern: PatternConfig, season: Season) -> SessionLook
             normalized_alias = normalize_token(alias)
             if index.get_direct(normalized_alias) is None:
                 index.add(normalized_alias, canonical)
+
+    # Add default generic session aliases for common motorsport terms.
+    # These aliases normalize various spellings/formats to canonical session names.
+    # The canonical names can then be used by pattern-specific session_aliases.
+    # Only add if not already defined by the pattern's session_aliases.
+    for canonical, aliases in _DEFAULT_GENERIC_SESSION_ALIASES.items():
+        normalized_canonical = normalize_token(canonical)
+        # Skip if the pattern already defines this canonical name
+        if normalized_canonical and index.get_direct(normalized_canonical) is not None:
+            continue
+        # Add the canonical name itself
+        if normalized_canonical:
+            index.add(normalized_canonical, canonical)
+        # Add all aliases pointing to the canonical name
+        for alias in aliases:
+            normalized_alias = normalize_token(alias)
+            if normalized_alias and index.get_direct(normalized_alias) is None:
+                index.add(normalized_alias, canonical)
+
     return index
 
 
