@@ -1997,3 +1997,316 @@ class TestGenericSessionAliasNormalization:
 
         sprintrace_normalized = normalize_token("sprintrace")
         assert lookup.get_direct(sprintrace_normalized) == "Sprint"
+
+
+# ========================== NBA Dot-Separated Format Tests ==========================
+
+
+class TestNBADotSeparatedFormat:
+    """Tests for NBA team name resolution with dot-separated filename formats.
+
+    NBA files often have patterns like:
+    - NBA.RS.2024.Denver.Nuggets.vs.LA.Clippers.22.12.mkv
+    - NBA.Regular.Season.2024.12.22.denver.nuggets.vs.la.clippers.mkv
+
+    These tests verify that team names with dots/spaces are properly normalized
+    and resolved through the alias system.
+    """
+
+    def test_laclippers_alias_resolves(self) -> None:
+        """Verify 'laclippers' (dot-removed format) resolves to Los Angeles Clippers."""
+        alias_map = get_team_alias_map("nba")
+
+        # 'laclippers' should resolve to full team name
+        assert alias_map.get("laclippers") == "Los Angeles Clippers", (
+            "'laclippers' should resolve to 'Los Angeles Clippers'"
+        )
+
+    def test_la_alias_resolves(self) -> None:
+        """Verify 'la' alias resolves to Los Angeles Clippers."""
+        alias_map = get_team_alias_map("nba")
+
+        # 'la' should resolve to Clippers (as added in subtask-5-1)
+        assert alias_map.get("la") == "Los Angeles Clippers", (
+            "'la' should resolve to 'Los Angeles Clippers'"
+        )
+
+    def test_denvernuggets_normalized_resolves(self) -> None:
+        """Verify 'denvernuggets' (dot-removed format) resolves correctly."""
+        alias_map = get_team_alias_map("nba")
+
+        # 'denvernuggets' should resolve via city+nickname combination
+        assert alias_map.get("denvernuggets") == "Denver Nuggets", (
+            "'denvernuggets' should resolve to 'Denver Nuggets'"
+        )
+
+    def test_dot_separated_team_names_normalize_correctly(self) -> None:
+        """Verify that dot-separated team names normalize to resolve correctly.
+
+        When filenames have 'Denver.Nuggets', the normalize_token function
+        strips dots, producing 'denvernuggets' which should then resolve.
+        """
+        from playbook.utils import normalize_token
+
+        alias_map = get_team_alias_map("nba")
+
+        # Simulate what happens with dot-separated input
+        denver_nuggets_normalized = normalize_token("Denver.Nuggets")
+        la_clippers_normalized = normalize_token("LA.Clippers")
+
+        # Normalized tokens should be alphanumeric only
+        assert denver_nuggets_normalized == "denvernuggets"
+        assert la_clippers_normalized == "laclippers"
+
+        # And should resolve to correct teams
+        assert alias_map.get(denver_nuggets_normalized) == "Denver Nuggets"
+        assert alias_map.get(la_clippers_normalized) == "Los Angeles Clippers"
+
+    def test_nba_file_matching_with_dot_separated_teams(self) -> None:
+        """Integration test for NBA file matching with dot-separated team names.
+
+        This tests the full flow:
+        1. Filename has 'Denver.Nuggets.vs.LA.Clippers' format
+        2. Pattern extracts team names
+        3. Team aliases resolve to canonical names
+        4. Correct episode is matched by date + teams
+        """
+        # Create NBA pattern that extracts teams
+        pattern = PatternConfig(
+            regex=(
+                r"(?i)^NBA[\s._-]+RS[\s._-]+(?P<date_year>\d{4})[\s._-]+"
+                r"(?P<session>(?P<away>[A-Za-z.]+[\s._-]+[A-Za-z.]+)[\s._-]+vs[\s._-]+"
+                r"(?P<home>[A-Za-z.]+[\s._-]+[A-Za-z.]+))[\s._-]+"
+                r"(?P<day>\d{2})[\s._-]+(?P<month>\d{2}).*\.mkv$"
+            ),
+            season_selector=SeasonSelector(
+                mode="date", value_template="{date_year}-{month:0>2}-{day:0>2}"
+            ),
+            episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
+            priority=10,
+        )
+
+        sport = SportConfig(
+            id="nba",
+            name="NBA",
+            metadata=MetadataConfig(url="https://example.com"),
+            patterns=[pattern],
+            destination=DestinationTemplates(),
+        )
+
+        # Create NBA show with the expected game
+        episode = Episode(
+            title="Denver Nuggets vs Los Angeles Clippers",
+            summary=None,
+            originally_available=dt.date(2024, 12, 22),
+            index=1,
+        )
+
+        season = Season(
+            key="week10",
+            title="Week 10",
+            summary=None,
+            index=10,
+            episodes=[episode],
+            display_number=10,
+        )
+
+        show = Show(key="nba", title="NBA", summary=None, seasons=[season])
+
+        patterns = compile_patterns(sport)
+
+        # Test with dot-separated filename
+        result = match_file_to_episode(
+            "NBA.RS.2024.Denver.Nuggets.vs.LA.Clippers.22.12.720p.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, "Should match NBA file with dot-separated team names"
+        assert result["episode"].title == "Denver Nuggets vs Los Angeles Clippers"
+        assert result["episode"].originally_available == dt.date(2024, 12, 22)
+
+    def test_nba_structured_match_with_dot_separated_teams(self) -> None:
+        """Test structured matching for NBA with dot-separated team names.
+
+        This tests the _score_structured_match function specifically with
+        team names that come from dot-separated filenames.
+        """
+        # Create episode for Denver Nuggets vs LA Clippers
+        episode = Episode(
+            title="Denver Nuggets vs Los Angeles Clippers",
+            summary=None,
+            originally_available=dt.date(2024, 12, 22),
+            index=1,
+        )
+
+        season = Season(
+            key="week10",
+            title="Week 10",
+            summary=None,
+            index=10,
+            episodes=[episode],
+        )
+
+        show = Show(key="nba", title="NBA", summary=None, seasons=[season])
+
+        # Build alias lookup
+        alias_lookup = _build_team_alias_lookup(show, {})
+
+        # Create structured name as if parsed from "NBA.RS.2024.Denver.Nuggets.vs.LA.Clippers.22.12.mkv"
+        structured = StructuredName(
+            raw="NBA RS 2024 Denver Nuggets vs LA Clippers 22 12",
+            date=dt.date(2024, 12, 22),
+            teams=["Denver Nuggets", "LA Clippers"],  # As parsed (before full alias resolution)
+        )
+
+        # Score should be positive - teams should match via aliases
+        score = _score_structured_match(structured, season, episode, alias_lookup)
+
+        assert score > 0, (
+            f"Expected positive score for Denver Nuggets vs LA Clippers match, got {score}. "
+            "LA Clippers should resolve to Los Angeles Clippers via alias."
+        )
+
+    def test_all_la_team_aliases_present(self) -> None:
+        """Verify LA team aliases are comprehensive for both Lakers and Clippers."""
+        alias_map = get_team_alias_map("nba")
+
+        # Lakers aliases
+        assert alias_map.get("lakers") == "Los Angeles Lakers"
+        assert alias_map.get("lal") == "Los Angeles Lakers"
+        assert alias_map.get("losangeleslakers") == "Los Angeles Lakers"
+
+        # Clippers aliases (including new ones from subtask-5-1)
+        assert alias_map.get("clippers") == "Los Angeles Clippers"
+        assert alias_map.get("lac") == "Los Angeles Clippers"
+        assert alias_map.get("losangelesclippers") == "Los Angeles Clippers"
+        assert alias_map.get("laclippers") == "Los Angeles Clippers"
+
+
+class TestNBAIntegrationDateAndTeams:
+    """Integration tests for NBA matching with both date and team resolution.
+
+    These tests verify the complete flow for NBA Regular Season files where:
+    1. Date is used for season selection
+    2. Team names (potentially dot-separated) are used for episode matching
+    3. Aliases resolve abbreviated/normalized team names to canonical forms
+    """
+
+    def build_nba_sport_config(self) -> SportConfig:
+        """Build NBA sport config with realistic pattern."""
+        pattern = PatternConfig(
+            regex=(
+                r"(?i)^NBA[\s._-]+(?:RS|Regular[\s._-]+Season)[\s._-]+"
+                r"(?P<date_year>\d{4})[\s._-]+(?P<month>\d{2})[\s._-]+(?P<day>\d{2})[\s._-]+"
+                r"(?P<session>(?P<away>[A-Za-z ]+)[\s._-]+vs[\s._-]+(?P<home>[A-Za-z ]+)).*\.mkv$"
+            ),
+            season_selector=SeasonSelector(
+                mode="date", value_template="{date_year}-{month:0>2}-{day:0>2}"
+            ),
+            episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
+            priority=10,
+        )
+        return SportConfig(
+            id="nba",
+            name="NBA",
+            metadata=MetadataConfig(url="https://example.com"),
+            patterns=[pattern],
+            destination=DestinationTemplates(),
+        )
+
+    def build_nba_show_with_clippers_games(self) -> Show:
+        """Build NBA show with LA Clippers games."""
+        # Game 1: Nuggets vs Clippers (Dec 22)
+        game1 = Episode(
+            title="Denver Nuggets vs Los Angeles Clippers",
+            summary=None,
+            originally_available=dt.date(2024, 12, 22),
+            index=1,
+        )
+        # Game 2: Clippers vs Lakers (Dec 25)
+        game2 = Episode(
+            title="Los Angeles Clippers vs Los Angeles Lakers",
+            summary=None,
+            originally_available=dt.date(2024, 12, 25),
+            index=2,
+        )
+
+        season = Season(
+            key="2024-2025",
+            title="2024-2025 Season",
+            summary=None,
+            index=1,
+            episodes=[game1, game2],
+            display_number=1,
+        )
+
+        return Show(key="nba", title="NBA", summary=None, seasons=[season])
+
+    def test_nba_nuggets_vs_clippers_matches_correctly(self) -> None:
+        """Verify Denver Nuggets vs LA Clippers file matches correct episode."""
+        sport = self.build_nba_sport_config()
+        show = self.build_nba_show_with_clippers_games()
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "NBA RS 2024 12 22 Denver Nuggets vs LA Clippers 720p.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, "Should match Nuggets vs Clippers file"
+        assert result["episode"].title == "Denver Nuggets vs Los Angeles Clippers"
+        assert result["episode"].originally_available == dt.date(2024, 12, 22)
+
+    def test_nba_clippers_vs_lakers_matches_correctly(self) -> None:
+        """Verify LA Clippers vs LA Lakers file matches correct episode."""
+        sport = self.build_nba_sport_config()
+        show = self.build_nba_show_with_clippers_games()
+        patterns = compile_patterns(sport)
+
+        result = match_file_to_episode(
+            "NBA RS 2024 12 25 LA Clippers vs LA Lakers 720p.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result is not None, "Should match Clippers vs Lakers file"
+        assert result["episode"].title == "Los Angeles Clippers vs Los Angeles Lakers"
+        assert result["episode"].originally_available == dt.date(2024, 12, 25)
+
+    def test_nba_team_disambiguation_by_date(self) -> None:
+        """Verify that date helps disambiguate when team names could match multiple games.
+
+        LA Clippers appear in both games, but date should select the correct one.
+        """
+        sport = self.build_nba_sport_config()
+        show = self.build_nba_show_with_clippers_games()
+        patterns = compile_patterns(sport)
+
+        # Dec 22 file should match game 1 (Nuggets vs Clippers)
+        result1 = match_file_to_episode(
+            "NBA RS 2024 12 22 Denver Nuggets vs LA Clippers 720p.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        # Dec 25 file should match game 2 (Clippers vs Lakers)
+        result2 = match_file_to_episode(
+            "NBA RS 2024 12 25 LA Clippers vs LA Lakers 720p.mkv",
+            sport,
+            show,
+            patterns,
+        )
+
+        assert result1 is not None
+        assert result2 is not None
+
+        # Should be different episodes despite both having Clippers
+        assert result1["episode"].index != result2["episode"].index
+        assert result1["episode"].index == 1  # Nuggets vs Clippers
+        assert result2["episode"].index == 2  # Clippers vs Lakers
