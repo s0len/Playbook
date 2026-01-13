@@ -105,7 +105,7 @@ _NBA_TEAM_SYNONYMS: dict[str, Iterable[str]] = {
     "Golden State Warriors": ["Warriors", "Golden State", "GSW", "Dubs"],
     "Houston Rockets": ["Rockets", "Houston", "HOU"],
     "Indiana Pacers": ["Pacers", "Indiana", "IND"],
-    "Los Angeles Clippers": ["Clippers", "LA Clippers", "LAC"],
+    "Los Angeles Clippers": ["Clippers", "LA Clippers", "LAC", "LA", "LAClippers"],
     "Los Angeles Lakers": ["Lakers", "LA Lakers", "LAL"],
     "Memphis Grizzlies": ["Grizzlies", "Memphis", "MEM", "Grizz"],
     "Miami Heat": ["Heat", "Miami", "MIA"],
