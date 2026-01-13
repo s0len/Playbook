@@ -375,7 +375,8 @@ def _select_episode(
             return None
 
     def _strip_noise(normalized: str) -> str:
-        result = normalized
+        # Collapse multiple consecutive whitespace to single space
+        result = re.sub(r"\s+", " ", normalized).strip()
         for token in _NOISE_TOKENS:
             if token and token in result:
                 result = result.replace(token, "")
