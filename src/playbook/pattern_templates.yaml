@@ -3386,6 +3386,8 @@ pattern_sets:
       episode_selector:
         group: matchup
         allow_fallback_to_title: true
+      metadata_filters:
+        team_alias_map: uefa_champions_league
       session_aliases: &uefa_cl_aliases
         AS Monaco vs Galatasaray:
         - AS Monaco v Galatasaray
@@ -5505,6 +5507,8 @@ pattern_sets:
       episode_selector:
         group: matchup
         allow_fallback_to_title: true
+      metadata_filters:
+        team_alias_map: uefa_champions_league
       session_aliases: *uefa_cl_aliases
 
   # ------------------------------------------------------------------
@@ -5735,6 +5739,18 @@ pattern_sets:
           '15 11 2025': 5
           '15-11-2025': 5
           '15.11.2025': 5
+          '16 11': 5
+          '16-11': 5
+          '16.11': 5
+          '16 11 2025': 5
+          '16-11-2025': 5
+          '16.11.2025': 5
+          '17 11': 5
+          '17-11': 5
+          '17.11': 5
+          '17 11 2025': 5
+          '17-11-2025': 5
+          '17.11.2025': 5
           '21 11': 6
           '21-11': 6
           '21.11': 6
