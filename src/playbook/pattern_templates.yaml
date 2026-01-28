@@ -5511,6 +5511,32 @@ pattern_sets:
         team_alias_map: uefa_champions_league
       session_aliases: *uefa_cl_aliases
 
+    - description: UEFA Champions League round-based dot releases
+      # Example: UEFA.Champions.League.2026.R7.Chelsea.vs.Pafos.FC.1080pEN50fps.mkv
+      regex: >-
+        (?i)^UEFA[._\s-]*Champions[._\s-]*League[._\s-]*(?P<season_year>\d{4})[._\s-]+R(?P<round>\d{1,2})[._\s-]+(?P<matchup>(?P<away>[A-Za-z&''À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&''À-ÖØ-öø-ÿ]+){0,4})[._\s-]+(?:vs?|VS?|V)[._\s-]+(?P<home>[A-Za-z&''À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&''À-ÖØ-öø-ÿ]+){0,4}))(?=[._\s-]+(?:\d{3,4}p|1080|720|2160|4K|HDR|HEVC|H264|H265|x264|x265|WEB|Blu|HDTV|AMZN|STAN|PROPER|REPACK|MULTI|EN|ENG|AAC|DDP|Atmos|Rip|Pack)(?:[A-Za-z0-9]+)?|\.(?:mkv|mp4|ts|m4v|avi)$)
+      season_selector:
+        mode: round
+        group: round
+      episode_selector:
+        group: matchup
+        allow_fallback_to_title: true
+      metadata_filters:
+        team_alias_map: uefa_champions_league
+
+    - description: UEFA Champions League round-based spaced releases
+      # Example: UEFA Champions League 2026 R7 Chelsea vs Pafos FC 1080pEN50fps.mkv
+      regex: >-
+        (?i)^UEFA\s+Champions\s+League\s+(?P<season_year>\d{4})\s+R(?P<round>\d{1,2})\s+(?P<matchup>(?P<away>[A-Za-z&''À-ÖØ-öø-ÿ]+(?:\s+[A-Za-z&''À-ÖØ-öø-ÿ]+){0,3})\s+(?:vs?|VS?|V|versus)\s+(?P<home>[A-Za-z&''À-ÖØ-öø-ÿ]+(?:\s+[A-Za-z&''À-ÖØ-öø-ÿ]+){0,3}))(?:\s+.+)?\.(?P<extension>mkv|mp4|ts|m4v|avi)$
+      season_selector:
+        mode: round
+        group: round
+      episode_selector:
+        group: matchup
+        allow_fallback_to_title: true
+      metadata_filters:
+        team_alias_map: uefa_champions_league
+
   # ------------------------------------------------------------------
   # Premier League releases
   # ------------------------------------------------------------------
