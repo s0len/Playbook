@@ -25,7 +25,7 @@ classifiers = [
 
 dependencies = [
     "PyYAML==6.0.3",
-    "jsonschema==4.23.0",
+    "jsonschema==4.26.0",
     "requests==2.32.5",
     "python-dateutil==2.9.0.post0",
     "rich==14.2.0",
