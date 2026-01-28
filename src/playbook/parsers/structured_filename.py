@@ -136,9 +136,7 @@ def _is_noise_word(word: str) -> bool:
     if re.search(r"\d{4}-\d{2}-\d{2}", word):
         return True
     # Competition prefix with date (e.g., "NHL-2025-11-22")
-    if re.match(r"[A-Za-z]+-\d{4}", word):
-        return True
-    return False
+    return bool(re.match(r"[A-Za-z]+-\d{4}", word))
 
 
 def _trim_noise(segment: str) -> str:
