@@ -6,7 +6,6 @@ import logging
 from playbook.config import (
     DestinationTemplates,
     EpisodeSelector,
-    MetadataConfig,
     PatternConfig,
     SeasonSelector,
     SportConfig,
@@ -63,7 +62,7 @@ def build_sport(patterns: list[PatternConfig]) -> SportConfig:
     return SportConfig(
         id="f1",
         name="Formula 1",
-        metadata=MetadataConfig(url="https://example.com"),
+        show_slug="formula-1",
         patterns=patterns,
         destination=DestinationTemplates(),
     )
@@ -535,7 +534,7 @@ class TestMatchFileWithDateProximity:
         return SportConfig(
             id="nhl",
             name="NHL",
-            metadata=MetadataConfig(url="https://example.com"),
+            show_slug="test-sport",
             patterns=[pattern],
             destination=DestinationTemplates(),
         )
@@ -625,7 +624,7 @@ def test_session_to_episode_resolution() -> None:
     sport = SportConfig(
         id="indycar",
         name="IndyCar Series",
-        metadata=MetadataConfig(url="https://example.com"),
+        show_slug="test-sport",
         patterns=[pattern],
         destination=DestinationTemplates(),
     )
@@ -713,7 +712,7 @@ def test_indycar_pattern_matching() -> None:
     sport = SportConfig(
         id="indycar",
         name="IndyCar Series",
-        metadata=MetadataConfig(url="https://example.com"),
+        show_slug="test-sport",
         patterns=[pattern],
         destination=DestinationTemplates(),
     )
@@ -920,7 +919,7 @@ def test_nhl_date_season_resolution() -> None:
     sport = SportConfig(
         id="nhl",
         name="NHL",
-        metadata=MetadataConfig(url="https://example.com"),
+        show_slug="test-sport",
         patterns=[pattern],
         destination=DestinationTemplates(),
     )
@@ -1054,7 +1053,7 @@ def test_nhl_integration_github_issue_86() -> None:
     sport = SportConfig(
         id="nhl",
         name="NHL",
-        metadata=MetadataConfig(url="https://example.com"),
+        show_slug="test-sport",
         patterns=[pattern],
         destination=DestinationTemplates(),
     )
@@ -1241,7 +1240,7 @@ class TestFigureSkatingDateResolution:
         return SportConfig(
             id="figure_skating_gp",
             name="ISU Grand Prix of Figure Skating",
-            metadata=MetadataConfig(url="https://example.com"),
+            show_slug="test-sport",
             patterns=[pattern],
             destination=DestinationTemplates(),
         )
@@ -1313,7 +1312,7 @@ class TestFigureSkatingDateResolution:
         sport = SportConfig(
             id="figure_skating_gp",
             name="ISU Grand Prix of Figure Skating",
-            metadata=MetadataConfig(url="https://example.com"),
+            show_slug="test-sport",
             patterns=[pattern],
             destination=DestinationTemplates(),
         )
@@ -1370,7 +1369,7 @@ class TestDateBasedEpisodeResolutionFallback:
         sport = SportConfig(
             id="figure_skating_gp",
             name="ISU Grand Prix of Figure Skating",
-            metadata=MetadataConfig(url="https://example.com"),
+            show_slug="test-sport",
             patterns=[pattern],
             destination=DestinationTemplates(),
         )
@@ -1425,7 +1424,7 @@ class TestDateBasedEpisodeResolutionFallback:
         sport = SportConfig(
             id="gp",
             name="Grand Prix",
-            metadata=MetadataConfig(url="https://example.com"),
+            show_slug="test-sport",
             patterns=[pattern],
             destination=DestinationTemplates(),
         )
@@ -1480,7 +1479,7 @@ class TestDateBasedEpisodeResolutionFallback:
         sport = SportConfig(
             id="gp",
             name="Grand Prix",
-            metadata=MetadataConfig(url="https://example.com"),
+            show_slug="test-sport",
             patterns=[pattern],
             destination=DestinationTemplates(),
         )
@@ -1720,7 +1719,7 @@ class TestGenericSessionFileMatching:
         return SportConfig(
             id="indycar",
             name="IndyCar Series",
-            metadata=MetadataConfig(url="https://example.com"),
+            show_slug="test-sport",
             patterns=[pattern],
             destination=DestinationTemplates(),
         )
@@ -2089,7 +2088,7 @@ class TestNBADotSeparatedFormat:
         sport = SportConfig(
             id="nba",
             name="NBA",
-            metadata=MetadataConfig(url="https://example.com"),
+            show_slug="test-sport",
             patterns=[pattern],
             destination=DestinationTemplates(),
         )
@@ -2211,7 +2210,7 @@ class TestNBAIntegrationDateAndTeams:
         return SportConfig(
             id="nba",
             name="NBA",
-            metadata=MetadataConfig(url="https://example.com"),
+            show_slug="test-sport",
             patterns=[pattern],
             destination=DestinationTemplates(),
         )
@@ -2341,7 +2340,7 @@ class TestUEFAChampionsLeagueIntegration:
         return SportConfig(
             id="uefa_champions_league",
             name="UEFA Champions League",
-            metadata=MetadataConfig(url="https://example.com"),
+            show_slug="test-sport",
             patterns=[pattern],
             destination=DestinationTemplates(),
             team_alias_map="uefa_champions_league",
@@ -2545,7 +2544,7 @@ def test_uefa_integration_alias_resolution() -> None:
     sport = SportConfig(
         id="uefa_champions_league",
         name="UEFA Champions League",
-        metadata=MetadataConfig(url="https://example.com"),
+        show_slug="test-sport",
         patterns=[pattern],
         destination=DestinationTemplates(),
         team_alias_map="uefa_champions_league",
@@ -2647,7 +2646,7 @@ class TestFigureSkatingIntegration:
         return SportConfig(
             id="figure_skating_gp",
             name="ISU Grand Prix of Figure Skating",
-            metadata=MetadataConfig(url="https://example.com"),
+            show_slug="test-sport",
             patterns=[pattern],
             destination=DestinationTemplates(),
         )
@@ -2870,7 +2869,7 @@ def test_figure_skating_integration_full_resolution_chain() -> None:
     sport = SportConfig(
         id="figure_skating_gp",
         name="ISU Grand Prix of Figure Skating",
-        metadata=MetadataConfig(url="https://example.com"),
+        show_slug="test-sport",
         patterns=[pattern],
         destination=DestinationTemplates(),
     )

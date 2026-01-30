@@ -8,7 +8,7 @@ from typing import Any
 
 from rich.progress import Progress
 
-from .cache import CachedFileRecord, MetadataHttpCache, ProcessedFileCache
+from .cache import CachedFileRecord, ProcessedFileCache
 from .config import AppConfig
 from .destination_builder import build_destination, build_match_context, format_relative_destination
 from .file_discovery import gather_source_files, matches_globs, should_suppress_sample_ignored
@@ -52,7 +52,6 @@ class Processor:
             ensure_directory(self.config.settings.cache_dir)
         self.processed_cache = ProcessedFileCache(self.config.settings.cache_dir)
         self.metadata_fingerprints = MetadataFingerprintStore(self.config.settings.cache_dir)
-        self.metadata_http_cache = MetadataHttpCache(self.config.settings.cache_dir)
         self.trace_options = trace_options or TraceOptions()
         settings = self.config.settings
         self.notification_service = NotificationService(
@@ -96,7 +95,6 @@ class Processor:
         result = load_sports(
             sports=self.config.sports,
             settings=self.config.settings,
-            metadata_http_cache=self.metadata_http_cache,
             metadata_fingerprints=self.metadata_fingerprints,
         )
 
@@ -234,7 +232,6 @@ class Processor:
             self._log_run_recap(stats, duration)
             return stats
         finally:
-            self.metadata_http_cache.save()
             if not self.config.settings.dry_run:
                 self.processed_cache.save()
                 self.metadata_fingerprints.save()

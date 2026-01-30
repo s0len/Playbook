@@ -158,24 +158,6 @@ CONFIG_SCHEMA: dict[str, Any] = {
     "required": ["sports"],
     "additionalProperties": True,
     "definitions": {
-        "metadata": {
-            "type": "object",
-            "properties": {
-                "url": {"type": "string", "minLength": 1},
-                "show_key": {"type": ["string", "null"]},
-                "ttl_hours": {"type": "integer", "minimum": 1},
-                "headers": {
-                    "type": "object",
-                    "additionalProperties": {"type": "string"},
-                },
-                "season_overrides": {
-                    "type": "object",
-                    "additionalProperties": {"type": "object"},
-                },
-            },
-            "required": ["url"],
-            "additionalProperties": True,
-        },
         "season_selector": {
             "type": "object",
             "properties": {
@@ -234,8 +216,7 @@ CONFIG_SCHEMA: dict[str, Any] = {
                 "id": {"type": "string", "minLength": 1},
                 "name": {"type": "string"},
                 "enabled": {"type": "boolean"},
-                "team_alias_map": {"type": ["string", "null"]},
-                "metadata": {"$ref": "#/definitions/metadata"},
+                "show_slug": {"type": "string", "minLength": 1},
                 "pattern_sets": {
                     "type": "array",
                     "items": {"type": "string", "minLength": 1},
@@ -248,6 +229,10 @@ CONFIG_SCHEMA: dict[str, Any] = {
                 "source_extensions": {"type": "array", "items": {"type": "string"}},
                 "link_mode": {"type": "string", "enum": _LINK_MODES},
                 "allow_unmatched": {"type": "boolean"},
+                "season_overrides": {
+                    "type": "object",
+                    "additionalProperties": {"type": "object"},
+                },
                 "destination": {
                     "type": "object",
                     "properties": {
@@ -266,7 +251,7 @@ CONFIG_SCHEMA: dict[str, Any] = {
                             "id_suffix": {"type": "string"},
                             "year": {"type": ["integer", "string"]},
                             "name": {"type": "string"},
-                            "metadata": {"$ref": "#/definitions/metadata"},
+                            "show_slug": {"type": "string", "minLength": 1},
                         },
                         "additionalProperties": True,
                     },
@@ -316,19 +301,6 @@ def _collect_pattern_set_names(data: dict[str, Any]) -> Iterable[str]:
     if isinstance(user_sets, dict):
         return builtin | set(user_sets.keys())
     return builtin
-
-
-def _validate_metadata_block(metadata: dict[str, Any], path: str, report: ValidationReport) -> None:
-    url_value = metadata.get("url")
-    if isinstance(url_value, str) and not url_value.strip():
-        report.errors.append(
-            ValidationIssue(
-                severity="error",
-                path=path + ".url",
-                message="Metadata URL must not be blank",
-                code="metadata-url",
-            )
-        )
 
 
 def validate_config_data(data: dict[str, Any]) -> ValidationReport:
@@ -484,27 +456,25 @@ def _validate_semantics(data: dict[str, Any], report: ValidationReport) -> None:
                 )
             else:
                 seen_ids[sport_id] = index
-        metadata = sport.get("metadata")
+        show_slug = sport.get("show_slug")
         variants = sport.get("variants") or []
 
-        if isinstance(metadata, dict):
-            _validate_metadata_block(metadata, f"sports[{index}].metadata", report)
-        elif metadata is None and not variants:
+        if not show_slug and not variants:
             report.errors.append(
                 ValidationIssue(
                     severity="error",
-                    path=f"sports[{index}].metadata",
-                    message="Sport must define metadata or variants with metadata",
-                    code="metadata-missing",
+                    path=f"sports[{index}].show_slug",
+                    message="Sport must define show_slug or variants with show_slug",
+                    code="show-slug-missing",
                 )
             )
-        elif metadata is not None and not isinstance(metadata, dict):
+        elif show_slug and isinstance(show_slug, str) and not show_slug.strip():
             report.errors.append(
                 ValidationIssue(
                     severity="error",
-                    path=f"sports[{index}].metadata",
-                    message="Metadata must be a mapping when provided",
-                    code="metadata-structure",
+                    path=f"sports[{index}].show_slug",
+                    message="show_slug must not be blank",
+                    code="show-slug-blank",
                 )
             )
 
@@ -520,22 +490,25 @@ def _validate_semantics(data: dict[str, Any], report: ValidationReport) -> None:
                         )
                     )
                     continue
-                variant_metadata = variant.get("metadata")
-                if not isinstance(variant_metadata, dict):
+                variant_show_slug = variant.get("show_slug")
+                if not variant_show_slug:
                     report.errors.append(
                         ValidationIssue(
                             severity="error",
-                            path=f"sports[{index}].variants[{variant_index}].metadata",
-                            message="Variant must provide a metadata block",
-                            code="metadata-missing",
+                            path=f"sports[{index}].variants[{variant_index}].show_slug",
+                            message="Variant must provide a show_slug",
+                            code="show-slug-missing",
                         )
                     )
-                    continue
-                _validate_metadata_block(
-                    variant_metadata,
-                    f"sports[{index}].variants[{variant_index}].metadata",
-                    report,
-                )
+                elif isinstance(variant_show_slug, str) and not variant_show_slug.strip():
+                    report.errors.append(
+                        ValidationIssue(
+                            severity="error",
+                            path=f"sports[{index}].variants[{variant_index}].show_slug",
+                            message="show_slug must not be blank",
+                            code="show-slug-blank",
+                        )
+                    )
 
     known_sets = _collect_pattern_set_names(data)
     for index, sport in enumerate(sports):

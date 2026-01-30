@@ -1,35 +1,27 @@
+"""Metadata fingerprinting and change tracking.
+
+This module handles tracking metadata fingerprints to detect changes,
+enabling efficient cache invalidation when show/season/episode data updates.
+"""
+
 from __future__ import annotations
 
 import datetime as dt
 import json
 import logging
-import re
 import threading
-import time
-from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-import requests
-import yaml
-
-from .config import MetadataConfig, Settings
 from .models import Episode, Season, Show
 from .utils import ensure_directory, hash_text
 
-if TYPE_CHECKING:
-    from .cache import MetadataHttpCache
-else:  # pragma: no cover - runtime typing fallback
-    MetadataHttpCache = Any  # type: ignore[assignment]
-
 LOGGER = logging.getLogger(__name__)
-
-MAX_FETCH_RETRIES = 3
 
 
 class MetadataFetchStatistics:
-    """Thread-safe accumulator for metadata cache metrics."""
+    """Thread-safe accumulator for metadata fetch metrics."""
 
     def __init__(self) -> None:
         self.cache_hits = 0
@@ -90,6 +82,7 @@ class MetadataFetchStatistics:
 
 
 def _json_default(obj: Any) -> Any:
+    """JSON encoder for datetime and date objects."""
     if isinstance(obj, dt.datetime):
         return obj.isoformat(timespec="seconds")
     if isinstance(obj, dt.date):
@@ -97,12 +90,8 @@ def _json_default(obj: Any) -> Any:
     raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
 
-def _cache_path(cache_dir: Path, url: str) -> Path:
-    digest = hash_text(url)
-    return cache_dir / "metadata" / f"{digest}.json"
-
-
 def _season_identifier(season: Season) -> str:
+    """Generate a stable identifier for a season."""
     key = getattr(season, "key", None)
     if key:
         return str(key)
@@ -112,6 +101,7 @@ def _season_identifier(season: Season) -> str:
 
 
 def _episode_identifier(episode: Episode) -> str:
+    """Generate a stable identifier for an episode."""
     metadata = episode.metadata or {}
     for field in ("id", "guid", "episode_id", "uuid"):
         value = metadata.get(field)
@@ -125,6 +115,7 @@ def _episode_identifier(episode: Episode) -> str:
 
 
 def _clean_season_metadata(metadata: Any) -> Any:
+    """Remove nested episode data from season metadata for hashing."""
     if not isinstance(metadata, dict):
         return metadata
     cleaned = dict(metadata)
@@ -133,66 +124,20 @@ def _clean_season_metadata(metadata: Any) -> Any:
 
 
 def _clean_episode_metadata(metadata: Any) -> Any:
+    """Clean episode metadata for hashing."""
     if not isinstance(metadata, dict):
         return metadata
     return dict(metadata)
 
 
-def _parse_content(text: str) -> Any:
-    """Parse content as JSON first, falling back to YAML if needed."""
-    try:
-        result = json.loads(text)
-        LOGGER.debug("Parsed content using JSON")
-        return result
-    except json.JSONDecodeError:
-        LOGGER.debug("JSON parsing failed, falling back to YAML")
-        return yaml.safe_load(text)
-
-
-def _load_cached_metadata(cache_file: Path, ttl_hours: int, *, allow_expired: bool = False) -> dict[str, Any] | None:
-    if not cache_file.exists():
-        return None
-
-    try:
-        with cache_file.open("r", encoding="utf-8") as handle:
-            payload = json.load(handle)
-    except Exception:  # noqa: BLE001
-        LOGGER.warning("Failed to load cache file %s", cache_file)
-        return None
-
-    fetched_at_raw = payload.get("fetched_at")
-    if not fetched_at_raw:
-        return None
-
-    try:
-        fetched_at = dt.datetime.fromisoformat(fetched_at_raw)
-    except (TypeError, ValueError):
-        LOGGER.warning("Invalid fetched_at value in cache file %s", cache_file)
-        return None
-
-    if fetched_at.tzinfo is None:
-        # Backwards compatibility with caches written prior to UTC-aware timestamps.
-        fetched_at = fetched_at.replace(tzinfo=dt.UTC)
-
-    age = dt.datetime.now(dt.UTC) - fetched_at
-    if age > dt.timedelta(hours=ttl_hours) and not allow_expired:
-        return None
-
-    return payload.get("content")
-
-
-def _store_cache(cache_file: Path, content: dict[str, Any]) -> None:
-    ensure_directory(cache_file.parent)
-    payload = {
-        "fetched_at": dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),
-        "content": content,
-    }
-    with cache_file.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, ensure_ascii=False, indent=2, default=_json_default)
-
-
 @dataclass
 class ShowFingerprint:
+    """Fingerprint representing the state of show metadata.
+
+    Used to detect changes in metadata content and track which
+    seasons/episodes have been modified.
+    """
+
     digest: str
     season_hashes: dict[str, str]
     episode_hashes: dict[str, dict[str, str]]
@@ -220,7 +165,6 @@ class ShowFingerprint:
             if not isinstance(mapping, dict):
                 continue
             episode_hashes[str(season_key)] = {str(ep_key): str(ep_hash) for ep_key, ep_hash in mapping.items()}
-        # Read content_hash if present, otherwise None for backward compatibility
         content_hash_raw = payload.get("content_hash")
         content_hash = str(content_hash_raw) if content_hash_raw is not None else None
         return cls(digest=digest, season_hashes=season_hashes, episode_hashes=episode_hashes, content_hash=content_hash)
@@ -228,6 +172,12 @@ class ShowFingerprint:
 
 @dataclass
 class MetadataChangeResult:
+    """Result of comparing metadata fingerprints.
+
+    Indicates whether metadata changed and provides details about
+    which seasons/episodes were affected.
+    """
+
     updated: bool
     changed_seasons: set[str]
     changed_episodes: dict[str, set[str]]
@@ -235,7 +185,11 @@ class MetadataChangeResult:
 
 
 class MetadataFingerprintStore:
-    """Tracks a lightweight hash of each sport's metadata to detect updates."""
+    """Persistent store for tracking metadata fingerprints.
+
+    Tracks a lightweight hash of each sport's metadata to detect updates
+    and enable efficient cache invalidation.
+    """
 
     def __init__(self, cache_dir: Path, filename: str = "metadata-digests.json") -> None:
         self.cache_dir = cache_dir
@@ -279,6 +233,7 @@ class MetadataFingerprintStore:
         return self._fingerprints.get(key)
 
     def update(self, key: str, fingerprint: ShowFingerprint) -> MetadataChangeResult:
+        """Update fingerprint and return change result."""
         existing = self._fingerprints.get(key)
         if existing is None:
             self._fingerprints[key] = fingerprint
@@ -374,19 +329,17 @@ class MetadataFingerprintStore:
             LOGGER.error("Failed to write metadata fingerprint cache %s: %s", self.path, exc)
 
 
-def _compute_content_hash(show: Show, metadata_cfg: MetadataConfig) -> str:
-    """Compute a quick hash from show metadata and configuration.
+def _compute_content_hash(show: Show, show_slug: str) -> str:
+    """Compute a quick hash from show metadata and slug.
 
-    This hash captures all inputs that affect the fingerprint:
+    This hash captures the inputs that affect the fingerprint:
+    - show_slug (identifier for the show)
     - show.metadata (raw metadata content)
-    - metadata_cfg.show_key (which show in the catalog)
-    - metadata_cfg.season_overrides (season configuration overrides)
 
-    Returns a deterministic SHA1 hash string that changes when any of these inputs change.
+    Returns a deterministic SHA1 hash string.
     """
     content_payload = {
-        "show_key": metadata_cfg.show_key,
-        "season_overrides": metadata_cfg.season_overrides,
+        "show_slug": show_slug,
         "metadata": show.metadata,
     }
     serialized = json.dumps(
@@ -399,14 +352,33 @@ def _compute_content_hash(show: Show, metadata_cfg: MetadataConfig) -> str:
     return hash_text(serialized)
 
 
-def compute_show_fingerprint(show: Show, metadata_cfg: MetadataConfig) -> ShowFingerprint:
-    """Compute a hash representing the effective metadata for a sport."""
+def compute_show_fingerprint(
+    show: Show,
+    show_slug: str,
+    cached_fingerprint: ShowFingerprint | None = None,
+) -> ShowFingerprint:
+    """Compute a fingerprint representing the effective metadata for a show.
 
-    content_hash = _compute_content_hash(show, metadata_cfg)
+    If a cached fingerprint is provided and its content_hash matches,
+    returns the cached version to avoid recomputation.
 
+    Args:
+        show: The show to fingerprint
+        show_slug: The show's API slug identifier
+        cached_fingerprint: Optional previously cached fingerprint
+
+    Returns:
+        ShowFingerprint representing the current state
+    """
+    content_hash = _compute_content_hash(show, show_slug)
+
+    # Fast path: return cached fingerprint if content hasn't changed
+    if cached_fingerprint is not None and cached_fingerprint.content_hash == content_hash:
+        return cached_fingerprint
+
+    # Compute full fingerprint
     fingerprint_payload = {
-        "show_key": metadata_cfg.show_key,
-        "season_overrides": metadata_cfg.season_overrides,
+        "show_slug": show_slug,
         "metadata": show.metadata,
     }
     serialized = json.dumps(
@@ -420,6 +392,7 @@ def compute_show_fingerprint(show: Show, metadata_cfg: MetadataConfig) -> ShowFi
 
     season_hashes: dict[str, str] = {}
     episode_hashes: dict[str, dict[str, str]] = {}
+
     for season in show.seasons:
         season_key = _season_identifier(season)
         season_payload = {
@@ -440,6 +413,7 @@ def compute_show_fingerprint(show: Show, metadata_cfg: MetadataConfig) -> ShowFi
             default=_json_default,
         )
         season_hashes[season_key] = hash_text(season_serialized)
+
         episode_hash_map: dict[str, str] = {}
         for episode in season.episodes:
             episode_payload = {
@@ -465,357 +439,8 @@ def compute_show_fingerprint(show: Show, metadata_cfg: MetadataConfig) -> ShowFi
         episode_hashes[season_key] = episode_hash_map
 
     return ShowFingerprint(
-        digest=digest, season_hashes=season_hashes, episode_hashes=episode_hashes, content_hash=content_hash
+        digest=digest,
+        season_hashes=season_hashes,
+        episode_hashes=episode_hashes,
+        content_hash=content_hash,
     )
-
-
-def compute_show_fingerprint_cached(
-    show: Show, metadata_cfg: MetadataConfig, cached_fingerprint: ShowFingerprint | None = None
-) -> ShowFingerprint:
-    """Compute show fingerprint with caching optimization.
-
-    If the cached fingerprint's content_hash matches the current content hash,
-    return the cached fingerprint without recomputing season/episode hashes.
-    Otherwise, compute the full fingerprint.
-
-    Args:
-        show: The show to fingerprint
-        metadata_cfg: Metadata configuration
-        cached_fingerprint: Optional previously cached fingerprint
-
-    Returns:
-        ShowFingerprint with content_hash populated
-    """
-    current_content_hash = _compute_content_hash(show, metadata_cfg)
-
-    if cached_fingerprint is not None and cached_fingerprint.content_hash == current_content_hash:
-        return cached_fingerprint
-
-    fingerprint = compute_show_fingerprint(show, metadata_cfg)
-    return ShowFingerprint(
-        digest=fingerprint.digest,
-        season_hashes=fingerprint.season_hashes,
-        episode_hashes=fingerprint.episode_hashes,
-        content_hash=current_content_hash,
-    )
-
-
-class MetadataFetchError(RuntimeError):
-    """Raised when metadata cannot be retrieved from remote or cache."""
-
-
-def fetch_metadata(
-    metadata: MetadataConfig,
-    settings: Settings,
-    *,
-    http_cache: MetadataHttpCache | None = None,
-    stats: MetadataFetchStatistics | None = None,
-) -> dict[str, Any]:
-    cache_file = _cache_path(settings.cache_dir, metadata.url)
-    cached = _load_cached_metadata(cache_file, metadata.ttl_hours)
-    if cached is not None:
-        LOGGER.debug("Using cached metadata for %s", metadata.url)
-        if stats:
-            stats.record_cache_hit()
-        return cached
-
-    if stats:
-        stats.record_cache_miss()
-
-    stale = _load_cached_metadata(cache_file, metadata.ttl_hours, allow_expired=True)
-    LOGGER.debug("Fetching metadata from %s", metadata.url)
-    headers = dict(metadata.headers or {})
-
-    if http_cache:
-        cached_entry = http_cache.get(metadata.url)
-        if cached_entry:
-            if cached_entry.etag and "If-None-Match" not in headers:
-                headers["If-None-Match"] = cached_entry.etag
-            if cached_entry.last_modified and "If-Modified-Since" not in headers:
-                headers["If-Modified-Since"] = cached_entry.last_modified
-
-    response = None
-    last_exception: requests.RequestException | None = None
-    backoff = 1.0
-
-    for attempt in range(MAX_FETCH_RETRIES):
-        try:
-            response = requests.get(metadata.url, headers=headers or None, timeout=30)
-            if stats:
-                stats.record_network_request()
-            break
-        except requests.RequestException as exc:  # noqa: BLE001
-            last_exception = exc
-            if attempt >= MAX_FETCH_RETRIES - 1:
-                response = None
-                break
-            LOGGER.debug(
-                "Metadata fetch attempt %s failed for %s: %s (retrying)",
-                attempt + 1,
-                metadata.url,
-                exc,
-            )
-            time.sleep(backoff)
-            backoff = min(backoff * 2, 8.0)
-
-    if response is None:
-        if stale is not None:
-            if stats:
-                stats.record_stale_used()
-            LOGGER.debug("Using stale cached metadata for %s", metadata.url)
-            return stale
-        if stats:
-            stats.record_failure()
-        raise MetadataFetchError(f"Unable to fetch metadata from {metadata.url}") from last_exception
-
-    status_code = response.status_code
-
-    if http_cache:
-        http_cache.update(
-            metadata.url,
-            etag=response.headers.get("ETag"),
-            last_modified=response.headers.get("Last-Modified"),
-            status_code=status_code,
-        )
-
-    if status_code == 304:
-        if stats:
-            stats.record_not_modified()
-        if stale is not None:
-            LOGGER.debug("Metadata not modified for %s", metadata.url)
-            return stale
-        LOGGER.warning(
-            "Received 304 Not Modified for %s without cached copy; retrying without conditional headers",
-            metadata.url,
-        )
-        if http_cache:
-            http_cache.invalidate(metadata.url)
-        retry_headers = dict(metadata.headers or {})
-        try:
-            response = requests.get(metadata.url, headers=retry_headers or None, timeout=30)
-            if stats:
-                stats.record_network_request()
-        except requests.RequestException as exc:  # noqa: BLE001
-            if stats:
-                stats.record_failure()
-            raise MetadataFetchError(f"Unable to refetch metadata from {metadata.url} after 304 Not Modified") from exc
-        status_code = response.status_code
-        if http_cache:
-            http_cache.update(
-                metadata.url,
-                etag=response.headers.get("ETag"),
-                last_modified=response.headers.get("Last-Modified"),
-                status_code=status_code,
-            )
-
-    try:
-        response.raise_for_status()
-    except requests.RequestException as exc:  # noqa: BLE001
-        LOGGER.warning("Failed to fetch metadata from %s: %s", metadata.url, exc)
-        if stale is not None:
-            if stats:
-                stats.record_stale_used()
-            LOGGER.debug("Using stale cached metadata for %s", metadata.url)
-            return stale
-        if stats:
-            stats.record_failure()
-        raise MetadataFetchError(f"Unable to fetch metadata from {metadata.url}") from exc
-
-    content = _parse_content(response.text)
-    if not isinstance(content, dict):
-        raise ValueError(f"Unexpected metadata structure at {metadata.url}")
-
-    if settings.dry_run:
-        LOGGER.debug("Dry-run: caching metadata for %s", metadata.url)
-    _store_cache(cache_file, content)
-    return content
-
-
-def _season_round_from_sort_title(sort_title: str | None) -> int | None:
-    if not sort_title:
-        return None
-    parts = sort_title.split("_", 1)
-    if not parts:
-        return None
-    try:
-        return int(parts[0])
-    except ValueError:
-        return None
-
-
-def _season_round_from_title(title: str) -> int | None:
-    # Attempt to parse leading digits
-    for chunk in title.split():
-        if chunk.isdigit():
-            return int(chunk)
-        if chunk.strip("#").isdigit():
-            return int(chunk.strip("#"))
-    return None
-
-
-def _parse_originally_available(value: str | None) -> dt.date | None:
-    if not value:
-        return None
-    if isinstance(value, dt.datetime):
-        return value.date()
-    if isinstance(value, dt.date):
-        return value
-    try:
-        return dt.date.fromisoformat(str(value).split(" ")[0])
-    except ValueError:
-        return None
-
-
-def _season_sort_value(key: Any) -> tuple[int, str]:
-    key_str = str(key)
-    try:
-        return (0, f"{int(key_str):04d}")
-    except ValueError:
-        numeric_prefix = re.match(r"^(\d+)", key_str)
-        if numeric_prefix:
-            return (0, f"{int(numeric_prefix.group(1)):04d}-{key_str}")
-        return (1, key_str)
-
-
-class MetadataNormalizer:
-    """Normalize remote YAML into structured objects.
-
-    Preserves original title casing from metadata to maintain acronyms
-    (e.g., "NTT IndyCar Series" keeps "NTT" in uppercase).
-    """
-
-    def __init__(self, metadata_cfg: MetadataConfig) -> None:
-        self.metadata_cfg = metadata_cfg
-
-    def load_show(self, raw: dict[str, Any]) -> Show:
-        catalog: dict[str, Any] = raw.get("metadata") or raw
-        if not isinstance(catalog, dict):
-            raise ValueError("Metadata file must contain a mapping under 'metadata'")
-
-        if self.metadata_cfg.show_key:
-            key = self.metadata_cfg.show_key
-            show_raw = catalog.get(key)
-            if not show_raw:
-                raise KeyError(f"Show key '{key}' not found in metadata")
-        else:
-            if len(catalog) != 1:
-                raise ValueError("Multiple shows found; specify 'show_key' in config")
-            key, show_raw = next(iter(catalog.items()))
-
-        # Preserve title exactly as provided in metadata to maintain acronym casing
-        # (e.g., "NTT IndyCar Series" not "Ntt Indycar Series")
-        title = show_raw.get("title", key)
-        summary = show_raw.get("summary")
-        seasons_raw = show_raw.get("seasons", {})
-
-        seasons = self._parse_seasons(seasons_raw)
-        show = Show(key=key, title=title, summary=summary, seasons=seasons, metadata=show_raw)
-        return show
-
-    def _parse_seasons(self, seasons_raw: Any) -> list[Season]:
-        if isinstance(seasons_raw, dict):
-            season_items: Iterable[tuple[str, Any]] = seasons_raw.items()
-        elif isinstance(seasons_raw, list):
-            season_items = enumerate(seasons_raw)
-        else:
-            raise ValueError("Unexpected season data structure")
-
-        season_list = sorted(season_items, key=lambda item: _season_sort_value(item[0]))
-        seasons: list[Season] = []
-        for index, (key, season_raw) in enumerate(season_list):
-            if isinstance(season_raw, (list, tuple)):
-                # Some metadata might supply list of episodes directly.
-                season_dict = {"episodes": season_raw}
-            else:
-                season_dict = season_raw or {}
-
-            title = season_dict.get("title", str(key))
-            summary = season_dict.get("summary")
-            sort_title = season_dict.get("sort_title") or season_dict.get("slug")
-            episodes_raw = season_dict.get("episodes", [])
-
-            episodes = self._parse_episodes(episodes_raw)
-            title_round = _season_round_from_title(title)
-
-            season = Season(
-                key=str(key),
-                title=title,
-                summary=summary,
-                index=index + 1,
-                episodes=episodes,
-                sort_title=sort_title,
-                metadata=season_dict,
-            )
-
-            round_override = self.metadata_cfg.season_overrides.get(title, {}).get("round")
-            display_override = self.metadata_cfg.season_overrides.get(title, {}).get("season_number")
-
-            derived_round = (
-                _season_round_from_sort_title(sort_title) or self._season_number_from_key(str(key)) or title_round
-            )
-            if derived_round is None:
-                derived_round = index + 1
-
-            season.round_number = int(round_override) if round_override is not None else derived_round
-            season.display_number = int(display_override) if display_override is not None else season.round_number
-            if season.display_number is None:
-                season.display_number = index + 1
-
-            seasons.append(season)
-
-        return seasons
-
-    @staticmethod
-    def _season_number_from_key(key: str) -> int | None:
-        try:
-            return int(key)
-        except ValueError:
-            return None
-
-    def _parse_episodes(self, episodes_raw: Any) -> list[Episode]:
-        if isinstance(episodes_raw, dict):
-            episodes_items = sorted(episodes_raw.items(), key=lambda item: _season_sort_value(item[0]))
-        else:
-            episodes_items = list(enumerate(episodes_raw))
-
-        episodes: list[Episode] = []
-        for index, (episode_key, episode_raw) in enumerate(episodes_items):
-            episode_dict = episode_raw or {}
-            title = episode_dict.get("title") or episode_dict.get("name") or f"Episode {index + 1}"
-            summary = episode_dict.get("summary")
-            originally_available = _parse_originally_available(episode_dict.get("originally_available"))
-
-            # display_number: prefer explicit field, fall back to dict key (e.g., "5" from episodes.5.title)
-            display_number = episode_dict.get("episode_number")
-            if display_number is None and episode_key is not None:
-                try:
-                    display_number = int(episode_key)
-                except (TypeError, ValueError):
-                    pass
-
-            aliases = episode_dict.get("aliases", [])
-            if isinstance(aliases, str):
-                aliases = [aliases]
-            episode = Episode(
-                title=title,
-                summary=summary,
-                originally_available=originally_available,
-                index=index + 1,
-                metadata=episode_dict,
-                display_number=int(display_number) if display_number is not None else None,
-                aliases=list(aliases),
-            )
-            episodes.append(episode)
-        return episodes
-
-
-def load_show(
-    settings: Settings,
-    metadata_cfg: MetadataConfig,
-    *,
-    http_cache: MetadataHttpCache | None = None,
-    stats: MetadataFetchStatistics | None = None,
-) -> Show:
-    raw = fetch_metadata(metadata_cfg, settings, http_cache=http_cache, stats=stats)
-    normalizer = MetadataNormalizer(metadata_cfg)
-    return normalizer.load_show(raw)

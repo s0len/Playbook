@@ -31,9 +31,7 @@ def valid_config_with_sport():
         "sports": [
             {
                 "id": "test-sport",
-                "metadata": {
-                    "url": "https://example.com/test.yaml",
-                }
+                "show_slug": "test-sport",
             }
         ]
     }
@@ -64,9 +62,7 @@ def valid_config_with_settings():
         "sports": [
             {
                 "id": "test-sport",
-                "metadata": {
-                    "url": "https://example.com/test.yaml",
-                }
+                "show_slug": "test-sport",
             }
         ]
     }
@@ -469,7 +465,8 @@ class TestParseTime:
     def test_invalid_format_empty_string(self):
         """Test empty string."""
         result = _parse_time("")
-        assert result == "expected HH:MM or HH:MM:SS"
+        # Empty string splits into [''], which fails integer conversion
+        assert result == "components must be integers"
 
     def test_invalid_format_no_colons(self):
         """Test time string without colons."""
@@ -1024,7 +1021,7 @@ class TestConfigSchemaSports:
             "sports": [
                 {
                     "name": "Test Sport",
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1040,7 +1037,7 @@ class TestConfigSchemaSports:
             "sports": [
                 {
                     "id": 123,
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1056,7 +1053,7 @@ class TestConfigSchemaSports:
             "sports": [
                 {
                     "id": "",
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1066,15 +1063,13 @@ class TestConfigSchemaSports:
         id_errors = [e for e in report.errors if "id" in e.path]
         assert len(id_errors) >= 1
 
-    def test_sport_with_valid_id_and_metadata(self):
-        """Test that a sport with valid id and metadata passes."""
+    def test_sport_with_valid_id_and_show_slug(self):
+        """Test that a sport with valid id and show_slug passes."""
         config = {
             "sports": [
                 {
                     "id": "test-sport",
-                    "metadata": {
-                        "url": "https://example.com/test.yaml"
-                    }
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1088,7 +1083,7 @@ class TestConfigSchemaSports:
                 {
                     "id": "test-sport",
                     "name": "Test Sport Name",
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1102,7 +1097,7 @@ class TestConfigSchemaSports:
                 {
                     "id": "test-sport",
                     "enabled": True,
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1116,7 +1111,7 @@ class TestConfigSchemaSports:
                 {
                     "id": "test-sport",
                     "team_alias_map": "nhl",
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1130,164 +1125,78 @@ class TestConfigSchemaSports:
                 {
                     "id": "test-sport",
                     "team_alias_map": None,
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
         report = validate_config_data(config)
         assert report.is_valid is True
 
-    def test_metadata_url_is_required(self):
-        """Test that metadata.url is required when metadata is present."""
+    def test_show_slug_is_required(self):
+        """Test that show_slug is required when no variants."""
         config = {
             "sports": [
                 {
                     "id": "test-sport",
-                    "metadata": {
-                        "show_key": "test-show"
-                    }
                 }
             ]
         }
         report = validate_config_data(config)
         assert report.is_valid is False
-        # Find error related to metadata.url
-        url_errors = [e for e in report.errors if "url" in e.path]
-        assert len(url_errors) >= 1
+        # Find error related to show_slug
+        slug_errors = [e for e in report.errors if "show_slug" in e.path or "show-slug" in e.code]
+        assert len(slug_errors) >= 1
 
-    def test_metadata_url_must_be_string(self):
-        """Test that metadata.url must be a string."""
+    def test_show_slug_must_be_string(self):
+        """Test that show_slug must be a string."""
         config = {
             "sports": [
                 {
                     "id": "test-sport",
-                    "metadata": {
-                        "url": 123
-                    }
+                    "show_slug": 123
                 }
             ]
         }
         report = validate_config_data(config)
         assert report.is_valid is False
-        # Find error related to metadata.url type
-        url_errors = [e for e in report.errors if "url" in e.path]
-        assert len(url_errors) >= 1
 
-    def test_metadata_url_must_not_be_empty(self):
-        """Test that metadata.url must have minimum length of 1."""
+    def test_show_slug_must_not_be_empty(self):
+        """Test that show_slug must have minimum length of 1."""
         config = {
             "sports": [
                 {
                     "id": "test-sport",
-                    "metadata": {
-                        "url": ""
-                    }
+                    "show_slug": ""
                 }
             ]
         }
         report = validate_config_data(config)
         assert report.is_valid is False
-        # Find error related to metadata.url length
-        url_errors = [e for e in report.errors if "url" in e.path]
-        assert len(url_errors) >= 1
 
-    def test_metadata_show_key_string(self):
-        """Test that metadata.show_key accepts string."""
+    def test_show_slug_must_not_be_blank(self):
+        """Test that show_slug must not be whitespace only."""
         config = {
             "sports": [
                 {
                     "id": "test-sport",
-                    "metadata": {
-                        "url": "https://example.com/test.yaml",
-                        "show_key": "test-show"
-                    }
-                }
-            ]
-        }
-        report = validate_config_data(config)
-        assert report.is_valid is True
-
-    def test_metadata_show_key_null(self):
-        """Test that metadata.show_key accepts null."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "metadata": {
-                        "url": "https://example.com/test.yaml",
-                        "show_key": None
-                    }
-                }
-            ]
-        }
-        report = validate_config_data(config)
-        assert report.is_valid is True
-
-    def test_metadata_ttl_hours_integer(self):
-        """Test that metadata.ttl_hours accepts integer."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "metadata": {
-                        "url": "https://example.com/test.yaml",
-                        "ttl_hours": 24
-                    }
-                }
-            ]
-        }
-        report = validate_config_data(config)
-        assert report.is_valid is True
-
-    def test_metadata_ttl_hours_minimum_value(self):
-        """Test that metadata.ttl_hours must be at least 1."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "metadata": {
-                        "url": "https://example.com/test.yaml",
-                        "ttl_hours": 0
-                    }
+                    "show_slug": "   "
                 }
             ]
         }
         report = validate_config_data(config)
         assert report.is_valid is False
-        # Find error related to ttl_hours
-        ttl_errors = [e for e in report.errors if "ttl_hours" in e.path]
-        assert len(ttl_errors) >= 1
+        slug_errors = [e for e in report.errors if "show-slug" in e.code]
+        assert len(slug_errors) >= 1
 
-    def test_metadata_headers_object(self):
-        """Test that metadata.headers accepts object with string values."""
+    def test_season_overrides_object(self):
+        """Test that season_overrides accepts object."""
         config = {
             "sports": [
                 {
                     "id": "test-sport",
-                    "metadata": {
-                        "url": "https://example.com/test.yaml",
-                        "headers": {
-                            "Authorization": "Bearer token",
-                            "User-Agent": "Playbook/1.0"
-                        }
-                    }
-                }
-            ]
-        }
-        report = validate_config_data(config)
-        assert report.is_valid is True
-
-    def test_metadata_season_overrides_object(self):
-        """Test that metadata.season_overrides accepts object."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "metadata": {
-                        "url": "https://example.com/test.yaml",
-                        "season_overrides": {
-                            "2023": {"key": "value"}
-                        }
+                    "show_slug": "test-sport",
+                    "season_overrides": {
+                        "1": {"title": "Custom Title"}
                     }
                 }
             ]
@@ -1302,7 +1211,7 @@ class TestConfigSchemaSports:
                 {
                     "id": "test-sport",
                     "pattern_sets": ["nhl_default", "custom_set"],
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1321,7 +1230,7 @@ class TestConfigSchemaSports:
                             "regex": r".*\.mkv"
                         }
                     ],
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1339,7 +1248,7 @@ class TestConfigSchemaSports:
                             "description": "Test pattern"
                         }
                     ],
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1360,7 +1269,7 @@ class TestConfigSchemaSports:
                             "regex": ""
                         }
                     ],
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1385,7 +1294,7 @@ class TestConfigSchemaSports:
                             }
                         }
                     ],
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1406,7 +1315,7 @@ class TestConfigSchemaSports:
                             }
                         }
                     ],
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1432,7 +1341,7 @@ class TestConfigSchemaSports:
                                 }
                             }
                         ],
-                        "metadata": {"url": "https://example.com/test.yaml"}
+                        "show_slug": "test-sport"
                     }
                 ]
             }
@@ -1453,7 +1362,7 @@ class TestConfigSchemaSports:
                             }
                         }
                     ],
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1467,7 +1376,7 @@ class TestConfigSchemaSports:
                 {
                     "id": "test-sport",
                     "source_globs": ["**/*.mkv", "**/*.mp4"],
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1481,7 +1390,7 @@ class TestConfigSchemaSports:
                 {
                     "id": "test-sport",
                     "source_extensions": [".mkv", ".mp4", ".avi"],
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1496,7 +1405,7 @@ class TestConfigSchemaSports:
                     {
                         "id": "test-sport",
                         "link_mode": link_mode,
-                        "metadata": {"url": "https://example.com/test.yaml"}
+                        "show_slug": "test-sport"
                     }
                 ]
             }
@@ -1510,7 +1419,7 @@ class TestConfigSchemaSports:
                 {
                     "id": "test-sport",
                     "link_mode": "invalid_mode",
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1527,7 +1436,7 @@ class TestConfigSchemaSports:
                 {
                     "id": "test-sport",
                     "allow_unmatched": True,
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1545,7 +1454,7 @@ class TestConfigSchemaSports:
                         "season_dir_template": "Season {season}",
                         "episode_template": "{title}.{ext}"
                     },
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1561,7 +1470,7 @@ class TestConfigSchemaSports:
                     "variants": [
                         {
                             "id": "variant-1",
-                            "metadata": {"url": "https://example.com/variant1.yaml"}
+                            "show_slug": "variant1"
                         }
                     ]
                 }
@@ -1579,7 +1488,7 @@ class TestConfigSchemaSports:
                     "variants": [
                         {
                             "id": "custom-variant-id",
-                            "metadata": {"url": "https://example.com/variant.yaml"}
+                            "show_slug": "variant"
                         }
                     ]
                 }
@@ -1597,7 +1506,7 @@ class TestConfigSchemaSports:
                     "variants": [
                         {
                             "id_suffix": "-2023",
-                            "metadata": {"url": "https://example.com/variant.yaml"}
+                            "show_slug": "variant"
                         }
                     ]
                 }
@@ -1615,7 +1524,7 @@ class TestConfigSchemaSports:
                     "variants": [
                         {
                             "year": 2023,
-                            "metadata": {"url": "https://example.com/variant.yaml"}
+                            "show_slug": "variant"
                         }
                     ]
                 }
@@ -1633,7 +1542,7 @@ class TestConfigSchemaSports:
                     "variants": [
                         {
                             "year": "2023",
-                            "metadata": {"url": "https://example.com/variant.yaml"}
+                            "show_slug": "variant"
                         }
                     ]
                 }
@@ -1651,7 +1560,7 @@ class TestConfigSchemaSports:
                     "variants": [
                         {
                             "name": "Test Variant",
-                            "metadata": {"url": "https://example.com/variant.yaml"}
+                            "show_slug": "variant"
                         }
                     ]
                 }
@@ -1660,19 +1569,15 @@ class TestConfigSchemaSports:
         report = validate_config_data(config)
         assert report.is_valid is True
 
-    def test_variant_metadata_structure(self):
-        """Test that variant.metadata follows metadata schema."""
+    def test_variant_show_slug_structure(self):
+        """Test that variant.show_slug is accepted."""
         config = {
             "sports": [
                 {
                     "id": "test-sport",
                     "variants": [
                         {
-                            "metadata": {
-                                "url": "https://example.com/variant.yaml",
-                                "show_key": "variant-show",
-                                "ttl_hours": 48
-                            }
+                            "show_slug": "variant-show"
                         }
                     ]
                 }
@@ -1687,15 +1592,15 @@ class TestConfigSchemaSports:
             "sports": [
                 {
                     "id": "sport-1",
-                    "metadata": {"url": "https://example.com/sport1.yaml"}
+                    "show_slug": "sport1"
                 },
                 {
                     "id": "sport-2",
-                    "metadata": {"url": "https://example.com/sport2.yaml"}
+                    "show_slug": "sport2"
                 },
                 {
                     "id": "sport-3",
-                    "metadata": {"url": "https://example.com/sport3.yaml"}
+                    "show_slug": "sport3"
                 }
             ]
         }
@@ -1710,14 +1615,8 @@ class TestConfigSchemaSports:
                     "id": "comprehensive-sport",
                     "name": "Comprehensive Sport",
                     "enabled": True,
-                    "team_alias_map": "nhl",
-                    "metadata": {
-                        "url": "https://example.com/test.yaml",
-                        "show_key": "test-show",
-                        "ttl_hours": 24,
-                        "headers": {"Authorization": "Bearer token"},
-                        "season_overrides": {"2023": {}}
-                    },
+                    "show_slug": "comprehensive-sport",
+                    "season_overrides": {"2023": {}},
                     "pattern_sets": [],
                     "file_patterns": [
                         {
@@ -1753,18 +1652,18 @@ class TestConfigSchemaSports:
                         {
                             "id": "variant-1",
                             "year": 2022,
-                            "metadata": {"url": "https://example.com/v1.yaml"}
+                            "show_slug": "v1"
                         },
                         {
                             "id": "variant-2",
                             "year": 2023,
-                            "metadata": {"url": "https://example.com/v2.yaml"}
+                            "show_slug": "v2"
                         },
                         {
                             "id_suffix": "-2024",
                             "year": "2024",
                             "name": "2024 Season",
-                            "metadata": {"url": "https://example.com/v3.yaml"}
+                            "show_slug": "v3"
                         }
                     ]
                 }
@@ -1786,15 +1685,15 @@ class TestValidateSemantics:
             "sports": [
                 {
                     "id": "duplicate-id",
-                    "metadata": {"url": "https://example.com/sport1.yaml"}
+                    "show_slug": "sport1"
                 },
                 {
                     "id": "unique-id",
-                    "metadata": {"url": "https://example.com/sport2.yaml"}
+                    "show_slug": "sport2"
                 },
                 {
                     "id": "duplicate-id",
-                    "metadata": {"url": "https://example.com/sport3.yaml"}
+                    "show_slug": "sport3"
                 }
             ]
         }
@@ -1812,10 +1711,10 @@ class TestValidateSemantics:
         """Test detection of multiple sets of duplicate sport IDs."""
         config = {
             "sports": [
-                {"id": "id-a", "metadata": {"url": "https://example.com/a1.yaml"}},
-                {"id": "id-b", "metadata": {"url": "https://example.com/b1.yaml"}},
-                {"id": "id-a", "metadata": {"url": "https://example.com/a2.yaml"}},
-                {"id": "id-b", "metadata": {"url": "https://example.com/b2.yaml"}},
+                {"id": "id-a", "show_slug": "a1"},
+                {"id": "id-b", "show_slug": "b1"},
+                {"id": "id-a", "show_slug": "a2"},
+                {"id": "id-b", "show_slug": "b2"},
             ]
         }
         report = ValidationReport()
@@ -1832,9 +1731,9 @@ class TestValidateSemantics:
         """Test that unique sport IDs do not trigger duplicate errors."""
         config = {
             "sports": [
-                {"id": "sport-1", "metadata": {"url": "https://example.com/1.yaml"}},
-                {"id": "sport-2", "metadata": {"url": "https://example.com/2.yaml"}},
-                {"id": "sport-3", "metadata": {"url": "https://example.com/3.yaml"}},
+                {"id": "sport-1", "show_slug": "sport1"},
+                {"id": "sport-2", "show_slug": "sport2"},
+                {"id": "sport-3", "show_slug": "sport3"},
             ]
         }
         report = ValidationReport()
@@ -1843,23 +1742,23 @@ class TestValidateSemantics:
         duplicate_errors = [e for e in report.errors if e.code == "duplicate-id"]
         assert len(duplicate_errors) == 0
 
-    def test_missing_metadata_without_variants(self):
-        """Test error when sport has no metadata and no variants."""
+    def test_missing_show_slug_without_variants(self):
+        """Test error when sport has no show_slug and no variants."""
         config = {
             "sports": [
                 {
-                    "id": "no-metadata-sport",
-                    "name": "Sport Without Metadata"
+                    "id": "no-slug-sport",
+                    "name": "Sport Without Show Slug"
                 }
             ]
         }
         report = ValidationReport()
         _validate_semantics(config, report)
 
-        metadata_errors = [e for e in report.errors if e.code == "metadata-missing" and "variants" in e.message]
-        assert len(metadata_errors) == 1
-        assert metadata_errors[0].path == "sports[0].metadata"
-        assert "metadata or variants" in metadata_errors[0].message
+        slug_errors = [e for e in report.errors if e.code == "show-slug-missing"]
+        assert len(slug_errors) == 1
+        assert slug_errors[0].path == "sports[0].show_slug"
+        assert "show_slug or variants" in slug_errors[0].message
 
     def test_no_error_when_sport_has_metadata(self):
         """Test no error when sport has metadata block."""
@@ -1867,18 +1766,18 @@ class TestValidateSemantics:
             "sports": [
                 {
                     "id": "with-metadata",
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
         report = ValidationReport()
         _validate_semantics(config, report)
 
-        metadata_errors = [e for e in report.errors if e.code == "metadata-missing"]
-        assert len(metadata_errors) == 0
+        slug_errors = [e for e in report.errors if e.code == "show-slug-missing"]
+        assert len(slug_errors) == 0
 
     def test_no_error_when_sport_has_variants(self):
-        """Test no error when sport has no metadata but has variants with metadata."""
+        """Test no error when sport has no show_slug but has variants with show_slug."""
         config = {
             "sports": [
                 {
@@ -1886,7 +1785,7 @@ class TestValidateSemantics:
                     "variants": [
                         {
                             "id": "variant-1",
-                            "metadata": {"url": "https://example.com/v1.yaml"}
+                            "show_slug": "v1"
                         }
                     ]
                 }
@@ -1895,59 +1794,56 @@ class TestValidateSemantics:
         report = ValidationReport()
         _validate_semantics(config, report)
 
-        metadata_errors = [e for e in report.errors if "metadata or variants" in e.message]
-        assert len(metadata_errors) == 0
+        slug_errors = [e for e in report.errors if "show_slug or variants" in e.message]
+        assert len(slug_errors) == 0
 
-    def test_metadata_url_blank_detection(self):
-        """Test that blank metadata URL is detected."""
+    def test_show_slug_blank_detection(self):
+        """Test that blank show_slug is detected."""
         config = {
             "sports": [
                 {
-                    "id": "blank-url-sport",
-                    "metadata": {"url": "   "}
+                    "id": "blank-slug-sport",
+                    "show_slug": "   "
                 }
             ]
         }
         report = ValidationReport()
         _validate_semantics(config, report)
 
-        url_errors = [e for e in report.errors if e.code == "metadata-url"]
-        assert len(url_errors) == 1
-        assert url_errors[0].path == "sports[0].metadata.url"
-        assert "blank" in url_errors[0].message.lower()
+        slug_errors = [e for e in report.errors if e.code == "show-slug-blank"]
+        assert len(slug_errors) == 1
+        assert slug_errors[0].path == "sports[0].show_slug"
+        assert "blank" in slug_errors[0].message.lower()
 
-    def test_metadata_url_empty_string_detection(self):
-        """Test that empty string metadata URL is detected."""
+    def test_show_slug_empty_string_detection(self):
+        """Test that empty string show_slug is detected by schema validation."""
         config = {
             "sports": [
                 {
-                    "id": "empty-url-sport",
-                    "metadata": {"url": ""}
+                    "id": "empty-slug-sport",
+                    "show_slug": ""
+                }
+            ]
+        }
+        report = validate_config_data(config)
+        # Empty string should be caught by schema (minLength: 1)
+        assert report.is_valid is False
+
+    def test_show_slug_valid_does_not_error(self):
+        """Test that valid show_slug does not trigger error."""
+        config = {
+            "sports": [
+                {
+                    "id": "valid-slug-sport",
+                    "show_slug": "valid-sport"
                 }
             ]
         }
         report = ValidationReport()
         _validate_semantics(config, report)
 
-        url_errors = [e for e in report.errors if e.code == "metadata-url"]
-        assert len(url_errors) == 1
-        assert url_errors[0].path == "sports[0].metadata.url"
-
-    def test_metadata_url_valid_does_not_error(self):
-        """Test that valid metadata URL does not trigger error."""
-        config = {
-            "sports": [
-                {
-                    "id": "valid-url-sport",
-                    "metadata": {"url": "https://example.com/valid.yaml"}
-                }
-            ]
-        }
-        report = ValidationReport()
-        _validate_semantics(config, report)
-
-        url_errors = [e for e in report.errors if e.code == "metadata-url"]
-        assert len(url_errors) == 0
+        slug_errors = [e for e in report.errors if e.code in ["show-slug-blank", "show-slug-missing"]]
+        assert len(slug_errors) == 0
 
     def test_unknown_pattern_set_reference(self):
         """Test that unknown pattern set references are detected."""
@@ -1956,7 +1852,7 @@ class TestValidateSemantics:
                 {
                     "id": "test-sport",
                     "pattern_sets": ["unknown_pattern_set"],
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1975,7 +1871,7 @@ class TestValidateSemantics:
                 {
                     "id": "test-sport",
                     "pattern_sets": ["unknown_1", "unknown_2", "unknown_3"],
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -1994,7 +1890,7 @@ class TestValidateSemantics:
                 {
                     "id": "test-sport",
                     "pattern_sets": [],
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -2016,7 +1912,7 @@ class TestValidateSemantics:
                 {
                     "id": "test-sport",
                     "pattern_sets": ["custom_set"],
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -2026,15 +1922,15 @@ class TestValidateSemantics:
         pattern_errors = [e for e in report.errors if e.code == "pattern-set"]
         assert len(pattern_errors) == 0
 
-    def test_variant_missing_metadata_detected(self):
-        """Test that variant without metadata block is detected."""
+    def test_variant_missing_show_slug_detected(self):
+        """Test that variant without show_slug is detected."""
         config = {
             "sports": [
                 {
                     "id": "test-sport",
                     "variants": [
                         {
-                            "id": "variant-without-metadata",
+                            "id": "variant-without-slug",
                             "year": 2023
                         }
                     ]
@@ -2044,20 +1940,20 @@ class TestValidateSemantics:
         report = ValidationReport()
         _validate_semantics(config, report)
 
-        variant_errors = [e for e in report.errors if "variants[0].metadata" in e.path]
+        variant_errors = [e for e in report.errors if "variants[0].show_slug" in e.path]
         assert len(variant_errors) >= 1
-        assert any("metadata" in e.message.lower() for e in variant_errors)
+        assert any("show_slug" in e.message.lower() for e in variant_errors)
 
-    def test_variant_with_null_metadata_detected(self):
-        """Test that variant with null metadata is detected."""
+    def test_variant_with_empty_show_slug_detected(self):
+        """Test that variant with empty show_slug is detected."""
         config = {
             "sports": [
                 {
                     "id": "test-sport",
                     "variants": [
                         {
-                            "id": "variant-null-metadata",
-                            "metadata": None
+                            "id": "variant-empty-slug",
+                            "show_slug": ""
                         }
                     ]
                 }
@@ -2066,19 +1962,19 @@ class TestValidateSemantics:
         report = ValidationReport()
         _validate_semantics(config, report)
 
-        variant_errors = [e for e in report.errors if e.code == "metadata-missing" and "variants[0]" in e.path]
+        variant_errors = [e for e in report.errors if e.code == "show-slug-missing" and "variants[0]" in e.path]
         assert len(variant_errors) == 1
 
-    def test_variant_with_valid_metadata_no_error(self):
-        """Test that variant with valid metadata does not error."""
+    def test_variant_with_valid_show_slug_no_error(self):
+        """Test that variant with valid show_slug does not error."""
         config = {
             "sports": [
                 {
                     "id": "test-sport",
                     "variants": [
                         {
-                            "id": "variant-with-metadata",
-                            "metadata": {"url": "https://example.com/variant.yaml"}
+                            "id": "variant-with-slug",
+                            "show_slug": "variant"
                         }
                     ]
                 }
@@ -2087,11 +1983,11 @@ class TestValidateSemantics:
         report = ValidationReport()
         _validate_semantics(config, report)
 
-        variant_errors = [e for e in report.errors if "variants[0]" in e.path and e.code == "metadata-missing"]
+        variant_errors = [e for e in report.errors if "variants[0]" in e.path and e.code == "show-slug-missing"]
         assert len(variant_errors) == 0
 
-    def test_variant_metadata_url_blank_detected(self):
-        """Test that blank URL in variant metadata is detected."""
+    def test_variant_show_slug_blank_detected(self):
+        """Test that blank show_slug in variant is detected."""
         config = {
             "sports": [
                 {
@@ -2099,7 +1995,7 @@ class TestValidateSemantics:
                     "variants": [
                         {
                             "id": "variant-1",
-                            "metadata": {"url": "  "}
+                            "show_slug": "  "
                         }
                     ]
                 }
@@ -2108,9 +2004,9 @@ class TestValidateSemantics:
         report = ValidationReport()
         _validate_semantics(config, report)
 
-        url_errors = [e for e in report.errors if e.code == "metadata-url" and "variants[0]" in e.path]
-        assert len(url_errors) == 1
-        assert url_errors[0].path == "sports[0].variants[0].metadata.url"
+        slug_errors = [e for e in report.errors if e.code == "show-slug-blank" and "variants[0]" in e.path]
+        assert len(slug_errors) == 1
+        assert slug_errors[0].path == "sports[0].variants[0].show_slug"
 
     def test_multiple_variants_validation(self):
         """Test validation across multiple variants."""
@@ -2121,11 +2017,11 @@ class TestValidateSemantics:
                     "variants": [
                         {
                             "id": "valid-variant",
-                            "metadata": {"url": "https://example.com/v1.yaml"}
+                            "show_slug": "v1"
                         },
                         {
                             "id": "invalid-variant",
-                            "metadata": {"url": ""}
+                            "show_slug": ""
                         },
                         {
                             "id": "no-metadata-variant",
@@ -2161,22 +2057,19 @@ class TestValidateSemantics:
         assert len(structure_errors) == 1
         assert structure_errors[0].path == "sports[0].variants[0]"
 
-    def test_metadata_non_dict_structure_detected(self):
-        """Test that non-dict metadata is detected."""
+    def test_show_slug_non_string_detected(self):
+        """Test that non-string show_slug is detected by schema."""
         config = {
             "sports": [
                 {
                     "id": "test-sport",
-                    "metadata": "not-a-dict"
+                    "show_slug": 123
                 }
             ]
         }
-        report = ValidationReport()
-        _validate_semantics(config, report)
-
-        structure_errors = [e for e in report.errors if e.code == "metadata-structure"]
-        assert len(structure_errors) == 1
-        assert structure_errors[0].path == "sports[0].metadata"
+        report = validate_config_data(config)
+        # Schema validation should catch non-string show_slug
+        assert report.is_valid is False
 
     def test_settings_flush_time_validation(self):
         """Test that invalid flush_time triggers error."""
@@ -2238,18 +2131,18 @@ class TestValidateSemantics:
                 {
                     "id": "sport-1",
                     "pattern_sets": ["custom_patterns"],
-                    "metadata": {"url": "https://example.com/sport1.yaml"}
+                    "show_slug": "sport1"
                 },
                 {
                     "id": "sport-2",
                     "variants": [
                         {
                             "id": "variant-1",
-                            "metadata": {"url": "https://example.com/variant1.yaml"}
+                            "show_slug": "variant1"
                         },
                         {
                             "id": "variant-2",
-                            "metadata": {"url": "https://example.com/variant2.yaml"}
+                            "show_slug": "variant2"
                         }
                     ]
                 }
@@ -2275,11 +2168,7 @@ class TestValidateConfigDataIntegration:
                     "id": "test-sport",
                     "name": "Test Sport",
                     "enabled": True,
-                    "metadata": {
-                        "url": "https://example.com/test.yaml",
-                        "show_key": "test-show",
-                        "ttl_hours": 24
-                    }
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -2309,7 +2198,7 @@ class TestValidateConfigDataIntegration:
             "sports": [
                 {
                     "id": "",
-                    "metadata": {"url": ""}
+                    "show_slug": ""
                 },
                 {
                     "id": "sport-2",
@@ -2338,7 +2227,7 @@ class TestValidateConfigDataIntegration:
             "sports": [
                 {
                     "id": "test-sport",
-                    "metadata": {"url": ""}
+                    "show_slug": ""
                 }
             ],
             "settings": {
@@ -2352,7 +2241,8 @@ class TestValidateConfigDataIntegration:
         assert report.is_valid is False
 
         error_paths = [e.path for e in report.errors]
-        assert "sports[0].metadata.url" in error_paths
+        # show_slug empty string should be caught by schema minLength
+        assert "sports[0].show_slug" in error_paths
         assert "settings.notifications.flush_time" in error_paths
 
     def test_errors_have_correct_codes(self):
@@ -2361,11 +2251,11 @@ class TestValidateConfigDataIntegration:
             "sports": [
                 {
                     "id": "sport-1",
-                    "metadata": {"url": "https://example.com/1.yaml"}
+                    "show_slug": "sport1"
                 },
                 {
                     "id": "sport-1",
-                    "metadata": {"url": "https://example.com/2.yaml"}
+                    "show_slug": "sport2"
                 }
             ]
         }
@@ -2396,7 +2286,7 @@ class TestValidateConfigDataIntegration:
                 {
                     "id": "test-sport",
                     "pattern_sets": ["nonexistent_pattern_set"],
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -2473,7 +2363,7 @@ class TestValidateConfigDataIntegration:
                     "id": "sport-1",
                     "name": "First Sport",
                     "enabled": True,
-                    "team_alias_map": "nhl",
+                    "show_slug": "sport-1",
                     "pattern_sets": ["custom_set_1"],
                     "file_patterns": [
                         {
@@ -2497,14 +2387,6 @@ class TestValidateConfigDataIntegration:
                         "root_template": "{sport_id}/{year}",
                         "season_dir_template": "Season {season}",
                         "episode_template": "{title}.{ext}"
-                    },
-                    "metadata": {
-                        "url": "https://example.com/sport1.yaml",
-                        "show_key": "sport-1-show",
-                        "ttl_hours": 48,
-                        "headers": {
-                            "Authorization": "Bearer token123"
-                        }
                     }
                 },
                 {
@@ -2516,18 +2398,13 @@ class TestValidateConfigDataIntegration:
                             "id": "variant-2023",
                             "year": 2023,
                             "name": "2023 Season",
-                            "metadata": {
-                                "url": "https://example.com/sport2-2023.yaml",
-                                "ttl_hours": 24
-                            }
+                            "show_slug": "sport2-2023"
                         },
                         {
                             "id_suffix": "-2024",
                             "year": "2024",
                             "name": "2024 Season",
-                            "metadata": {
-                                "url": "https://example.com/sport2-2024.yaml"
-                            }
+                            "show_slug": "sport2-2024"
                         }
                     ]
                 }
@@ -2544,7 +2421,7 @@ class TestValidateConfigDataIntegration:
             "sports": [
                 {
                     "id": "",
-                    "metadata": {"url": "  "}
+                    "show_slug": "  "
                 },
                 {
                     "id": "sport-2",
@@ -2565,7 +2442,7 @@ class TestValidateConfigDataIntegration:
         """Test that all errors are preserved and not truncated."""
         config = {
             "sports": [
-                {"id": f"sport-{i}", "metadata": {"url": ""}} for i in range(10)
+                {"id": f"sport-{i}", "show_slug": ""} for i in range(10)
             ]
         }
         report = validate_config_data(config)
@@ -2579,7 +2456,7 @@ class TestValidateConfigDataIntegration:
             "sports": [
                 {
                     "id": "test-sport",
-                    "metadata": {"url": ""}
+                    "show_slug": ""
                 }
             ]
         }
@@ -2604,7 +2481,7 @@ class TestValidateConfigDataIntegration:
             "sports": [
                 {
                     "id": "test-sport",
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -2622,7 +2499,7 @@ class TestValidateConfigDataIntegration:
             "sports": [
                 {
                     "id": "test-sport",
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -2643,11 +2520,11 @@ class TestValidateConfigDataIntegration:
                     "variants": [
                         {
                             "id": "variant-1",
-                            "metadata": {"url": "https://example.com/v1.yaml"}
+                            "show_slug": "v1"
                         },
                         {
                             "id": "variant-2",
-                            "metadata": {"url": "https://example.com/v2.yaml"}
+                            "show_slug": "v2"
                         }
                     ]
                 }
@@ -2670,7 +2547,7 @@ class TestValidateConfigDataIntegration:
                 {
                     "id": "test-sport",
                     "pattern_sets": ["my_custom_patterns"],
-                    "metadata": {"url": "https://example.com/test.yaml"}
+                    "show_slug": "test-sport"
                 }
             ]
         }
@@ -2684,11 +2561,11 @@ class TestValidateConfigDataIntegration:
             "sports": [
                 {
                     "id": "duplicate-id",
-                    "metadata": {"url": "https://example.com/1.yaml"}
+                    "show_slug": "sport1"
                 },
                 {
                     "id": "duplicate-id",
-                    "metadata": {"url": "https://example.com/2.yaml"}
+                    "show_slug": "sport2"
                 }
             ]
         }

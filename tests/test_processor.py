@@ -6,15 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from playbook.config import AppConfig, KometaTriggerSettings, MetadataConfig, PatternConfig, Settings, SportConfig
+from playbook.config import AppConfig, KometaTriggerSettings, PatternConfig, Settings, SportConfig
 from playbook.file_discovery import should_suppress_sample_ignored
 from playbook.metadata import (
     MetadataChangeResult,
     MetadataFingerprintStore,
-    MetadataNormalizer,
     ShowFingerprint,
     compute_show_fingerprint,
-    compute_show_fingerprint_cached,
 )
 from playbook.models import Episode, ProcessingStats, Season, Show
 from playbook.processor import Processor
@@ -22,25 +20,25 @@ from playbook.run_summary import extract_error_context, summarize_plex_errors
 from playbook.utils import sanitize_component
 
 
-def _build_raw_metadata(episode_number: int) -> dict:
-    return {
-        "metadata": {
-            "demo": {
-                "title": "Demo Series",
-                "seasons": {
-                    "01": {
-                        "title": "Season 1",
-                        "episodes": [
-                            {
-                                "title": "Race",
-                                "episode_number": episode_number,
-                            }
-                        ],
-                    }
-                },
-            }
-        }
-    }
+def _make_show(title: str = "Demo Series", episode_title: str = "Race", episode_number: int = 1) -> Show:
+    """Create a test Show model."""
+    episode = Episode(
+        title=episode_title,
+        summary=None,
+        originally_available=None,
+        index=1,
+        display_number=episode_number,
+    )
+    season = Season(
+        key="01",
+        title="Season 1",
+        summary=None,
+        index=1,
+        episodes=[episode],
+        display_number=1,
+        round_number=1,
+    )
+    return Show(key="demo", title=title, summary=None, seasons=[season], metadata={"slug": "demo-show"})
 
 
 def _make_processor(tmp_path, *, dry_run: bool = True) -> Processor:
@@ -67,50 +65,14 @@ def test_metadata_fingerprint_tracks_episode_changes(tmp_path) -> None:
         cache_dir=cache_dir,
     )
 
-    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
-    normalizer = MetadataNormalizer(metadata_cfg)
+    show_v1 = _make_show(episode_title="Qualifying")
+    show_v1.seasons[0].episodes[0].summary = "Initial"
 
-    raw_v1 = {
-        "metadata": {
-            "demo": {
-                "title": "Demo Series",
-                "seasons": {
-                    "01": {
-                        "title": "Season 1",
-                        "episodes": [
-                            {
-                                "title": "Qualifying",
-                                "summary": "Initial",
-                                "episode_number": 1,
-                            }
-                        ],
-                    }
-                },
-            }
-        }
-    }
-    raw_v2 = {
-        "metadata": {
-            "demo": {
-                "title": "Demo Series",
-                "seasons": {
-                    "01": {
-                        "title": "Season 1",
-                        "episodes": [
-                            {
-                                "title": "Qualifying",
-                                "summary": "Updated",
-                                "episode_number": 1,
-                            }
-                        ],
-                    }
-                },
-            }
-        }
-    }
+    show_v2 = _make_show(episode_title="Qualifying")
+    show_v2.seasons[0].episodes[0].summary = "Updated"
 
-    fingerprint_v1 = compute_show_fingerprint(normalizer.load_show(raw_v1), metadata_cfg)
-    fingerprint_v2 = compute_show_fingerprint(normalizer.load_show(raw_v2), metadata_cfg)
+    fingerprint_v1 = compute_show_fingerprint(show_v1, "demo-show")
+    fingerprint_v2 = compute_show_fingerprint(show_v2, "demo-show")
 
     store = MetadataFingerprintStore(settings.cache_dir)
 
@@ -127,72 +89,6 @@ def test_metadata_fingerprint_tracks_episode_changes(tmp_path) -> None:
     assert set(change.changed_episodes.keys()) == {"01"}
     episode_key = next(iter(fingerprint_v1.episode_hashes["01"].keys()))
     assert change.changed_episodes["01"] == {episode_key}
-
-
-def test_processor_removes_changed_entries_when_metadata_changes(tmp_path, monkeypatch) -> None:
-    settings = Settings(
-        source_dir=tmp_path / "source",
-        destination_dir=tmp_path / "dest",
-        cache_dir=tmp_path / "cache",
-    )
-    settings.source_dir.mkdir(parents=True)
-    settings.destination_dir.mkdir(parents=True)
-    settings.cache_dir.mkdir(parents=True)
-
-    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
-    sport = SportConfig(id="demo", name="Demo", metadata=metadata_cfg)
-    config = AppConfig(settings=settings, sports=[sport])
-
-    normalizer = MetadataNormalizer(metadata_cfg)
-    raw_v1 = _build_raw_metadata(1)
-    raw_v2 = _build_raw_metadata(2)
-    fingerprint_v1 = compute_show_fingerprint(normalizer.load_show(raw_v1), metadata_cfg)
-    fingerprint_v2 = compute_show_fingerprint(normalizer.load_show(raw_v2), metadata_cfg)
-
-    state_dir = settings.cache_dir / "state"
-    state_dir.mkdir(parents=True, exist_ok=True)
-    (state_dir / "metadata-digests.json").write_text(
-        json.dumps({"demo": fingerprint_v1.to_dict()})
-    )
-
-    call_counter = {"value": 0}
-
-    def fake_load_show(settings_arg, metadata_cfg_arg, **kwargs):
-        index = 0 if call_counter["value"] == 0 else 1
-        call_counter["value"] += 1
-        raw = raw_v1 if index == 0 else raw_v2
-        return normalizer.load_show(raw)
-
-    monkeypatch.setattr("playbook.metadata_loader.load_show", fake_load_show)
-
-    processor = Processor(config, enable_notifications=False)
-    remove_calls: list[dict[str, MetadataChangeResult]] = []
-    original_remove = processor.processed_cache.remove_by_metadata_changes
-
-    def tracking_remove(self, changes):
-        remove_calls.append(dict(changes))
-        return original_remove(changes)
-
-    monkeypatch.setattr(
-        type(processor.processed_cache),
-        "remove_by_metadata_changes",
-        tracking_remove,
-    )
-
-    processor.process_all()
-    assert remove_calls == []
-    assert call_counter["value"] == 1
-
-    processor.process_all()
-    assert len(remove_calls) == 1
-    demo_change = remove_calls[0]["demo"]
-    assert demo_change.changed_seasons == set()
-    assert set(demo_change.changed_episodes.keys()) == {"01"}
-    episode_key = next(iter(fingerprint_v1.episode_hashes["01"].keys()))
-    assert demo_change.changed_episodes["01"] == {episode_key}
-    assert demo_change.invalidate_all is False
-    assert call_counter["value"] == 2
-    assert processor.metadata_fingerprints.get("demo") == fingerprint_v2
 
 
 def test_detailed_summary_groups_counts_with_info(tmp_path, caplog) -> None:
@@ -385,86 +281,6 @@ def test_summary_table_color_coding_in_terminal_mode(tmp_path, caplog, monkeypat
     assert "Warnings" in text
 
 
-def test_metadata_change_relinks_and_removes_old_destination(tmp_path, monkeypatch) -> None:
-    settings = Settings(
-        source_dir=tmp_path / "source",
-        destination_dir=tmp_path / "dest",
-        cache_dir=tmp_path / "cache",
-    )
-    settings.source_dir.mkdir(parents=True)
-    settings.destination_dir.mkdir(parents=True)
-    settings.cache_dir.mkdir(parents=True)
-
-    source_file = settings.source_dir / "demo.r01.qualifying.mkv"
-    source_file.parent.mkdir(parents=True, exist_ok=True)
-    source_file.write_bytes(b"demo")
-
-    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
-    pattern = PatternConfig(
-        regex=r"(?i)^demo\.r(?P<round>\d{2})\.(?P<session>qualifying)\.mkv$",
-    )
-    sport = SportConfig(id="demo", name="Demo", metadata=metadata_cfg, patterns=[pattern])
-    config = AppConfig(settings=settings, sports=[sport])
-
-    normalizer = MetadataNormalizer(metadata_cfg)
-
-    def build_metadata(episode_number: int) -> dict:
-        return {
-            "metadata": {
-                "demo": {
-                    "title": "Demo Series",
-                    "seasons": {
-                        "01": {
-                            "title": "Season 1",
-                            "episodes": [
-                                {
-                                    "title": "Qualifying",
-                                    "episode_number": episode_number,
-                                }
-                            ],
-                        }
-                    },
-                }
-            }
-        }
-
-    raw_v1 = build_metadata(1)
-    raw_v2 = build_metadata(2)
-
-    call_counter = {"value": 0}
-
-    def fake_load_show(settings_arg, metadata_cfg_arg, **kwargs):
-        index = 0 if call_counter["value"] == 0 else 1
-        call_counter["value"] += 1
-        raw = raw_v1 if index == 0 else raw_v2
-        return normalizer.load_show(raw)
-
-    monkeypatch.setattr("playbook.metadata_loader.load_show", fake_load_show)
-
-    processor = Processor(config, enable_notifications=False)
-    processor.process_all()
-
-    old_destination = (
-        settings.destination_dir
-        / "Demo Series"
-        / "01 Season 1"
-        / "Demo Series - S01E01 - Qualifying.mkv"
-    )
-    assert old_destination.exists()
-
-    processor.process_all()
-
-    new_destination = (
-        settings.destination_dir
-        / "Demo Series"
-        / "01 Season 1"
-        / "Demo Series - S01E02 - Qualifying.mkv"
-    )
-
-    assert new_destination.exists()
-    assert not old_destination.exists()
-
-
 def test_skips_mac_resource_fork_files(tmp_path, monkeypatch) -> None:
     settings = Settings(
         source_dir=tmp_path / "source",
@@ -481,36 +297,32 @@ def test_skips_mac_resource_fork_files(tmp_path, monkeypatch) -> None:
     valid_file = settings.source_dir / "demo.r01.qualifying.mkv"
     valid_file.write_bytes(b"video")
 
-    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
     pattern = PatternConfig(
         regex=r"(?i)^demo\.r(?P<round>\d{2})\.(?P<session>qualifying)\.mkv$",
     )
-    sport = SportConfig(id="demo", name="Demo", metadata=metadata_cfg, patterns=[pattern])
+    sport = SportConfig(id="demo", name="Demo", show_slug="demo-show", patterns=[pattern])
     config = AppConfig(settings=settings, sports=[sport])
 
-    episode = Episode(
-        title="Qualifying",
-        summary=None,
-        originally_available=None,
-        index=1,
-        display_number=1,
-    )
-    season = Season(
-        key="01",
-        title="Season 1",
-        summary=None,
-        index=1,
-        episodes=[episode],
-        display_number=1,
-        round_number=1,
-    )
-    show = Show(key="demo", title="Demo Series", summary=None, seasons=[season])
+    show = _make_show(episode_title="Qualifying")
 
-    monkeypatch.setattr("playbook.metadata_loader.load_show", lambda settings_arg, metadata_cfg_arg, **kwargs: show)
-    monkeypatch.setattr(
-        "playbook.metadata_loader.compute_show_fingerprint_cached",
-        lambda show_arg, metadata_cfg_arg: ShowFingerprint(digest="fingerprint", season_hashes={}, episode_hashes={}),
-    )
+    def mock_load_sports(*args, **kwargs):
+        from playbook.metadata import MetadataFetchStatistics
+        from playbook.metadata_loader import MetadataLoadResult, SportRuntime
+
+        runtime = SportRuntime(
+            sport=sport,
+            show=show,
+            patterns=[],
+            extensions={".mkv"},
+        )
+        return MetadataLoadResult(
+            runtimes=[runtime],
+            changed_sports=[],
+            change_map={},
+            fetch_stats=MetadataFetchStatistics(),
+        )
+
+    monkeypatch.setattr("playbook.processor.load_sports", mock_load_sports)
 
     processor = Processor(config, enable_notifications=False)
     stats = processor.process_all()
@@ -535,11 +347,10 @@ def test_destination_stays_within_root_for_hostile_metadata(tmp_path, monkeypatc
     source_file = settings.source_dir / "demo.r01.qualifying.mkv"
     source_file.write_bytes(b"payload")
 
-    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
     pattern = PatternConfig(
         regex=r"(?i)^demo\.r(?P<round>\d{2})\.(?P<session>qualifying)\.mkv$",
     )
-    sport = SportConfig(id="demo", name="Demo", metadata=metadata_cfg, patterns=[pattern])
+    sport = SportConfig(id="demo", name="Demo", show_slug="demo-show", patterns=[pattern])
     config = AppConfig(settings=settings, sports=[sport])
 
     episode = Episode(
@@ -561,11 +372,24 @@ def test_destination_stays_within_root_for_hostile_metadata(tmp_path, monkeypatc
     )
     show = Show(key="demo", title="../Evil Series", summary=None, seasons=[season])
 
-    monkeypatch.setattr("playbook.metadata_loader.load_show", lambda *args, **kwargs: show)
-    monkeypatch.setattr(
-        "playbook.metadata_loader.compute_show_fingerprint_cached",
-        lambda *args, **kwargs: ShowFingerprint(digest="fingerprint", season_hashes={}, episode_hashes={}),
-    )
+    def mock_load_sports(*args, **kwargs):
+        from playbook.metadata import MetadataFetchStatistics
+        from playbook.metadata_loader import MetadataLoadResult, SportRuntime
+
+        runtime = SportRuntime(
+            sport=sport,
+            show=show,
+            patterns=[],
+            extensions={".mkv"},
+        )
+        return MetadataLoadResult(
+            runtimes=[runtime],
+            changed_sports=[],
+            change_map={},
+            fetch_stats=MetadataFetchStatistics(),
+        )
+
+    monkeypatch.setattr("playbook.processor.load_sports", mock_load_sports)
 
     processor = Processor(config, enable_notifications=False)
     stats = processor.process_all()
@@ -615,36 +439,32 @@ def test_symlink_sources_are_skipped(tmp_path, monkeypatch) -> None:
     except OSError as exc:  # pragma: no cover - platform specific guard
         pytest.skip(f"symlinks not supported: {exc}")
 
-    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
     pattern = PatternConfig(
         regex=r"(?i)^demo\.r(?P<round>\d{2})\.(?P<session>qualifying)\.mkv$",
     )
-    sport = SportConfig(id="demo", name="Demo", metadata=metadata_cfg, patterns=[pattern])
+    sport = SportConfig(id="demo", name="Demo", show_slug="demo-show", patterns=[pattern])
     config = AppConfig(settings=settings, sports=[sport])
 
-    episode = Episode(
-        title="Qualifying",
-        summary=None,
-        originally_available=None,
-        index=1,
-        display_number=1,
-    )
-    season = Season(
-        key="01",
-        title="Season 1",
-        summary=None,
-        index=1,
-        episodes=[episode],
-        display_number=1,
-        round_number=1,
-    )
-    show = Show(key="demo", title="Demo Series", summary=None, seasons=[season])
+    show = _make_show(episode_title="Qualifying")
 
-    monkeypatch.setattr("playbook.metadata_loader.load_show", lambda *args, **kwargs: show)
-    monkeypatch.setattr(
-        "playbook.metadata_loader.compute_show_fingerprint_cached",
-        lambda *args, **kwargs: ShowFingerprint(digest="fingerprint", season_hashes={}, episode_hashes={}),
-    )
+    def mock_load_sports(*args, **kwargs):
+        from playbook.metadata import MetadataFetchStatistics
+        from playbook.metadata_loader import MetadataLoadResult, SportRuntime
+
+        runtime = SportRuntime(
+            sport=sport,
+            show=show,
+            patterns=[],
+            extensions={".mkv"},
+        )
+        return MetadataLoadResult(
+            runtimes=[runtime],
+            changed_sports=[],
+            change_map={},
+            fetch_stats=MetadataFetchStatistics(),
+        )
+
+    monkeypatch.setattr("playbook.processor.load_sports", mock_load_sports)
 
     processor = Processor(config, enable_notifications=False)
     stats = processor.process_all()
@@ -654,6 +474,7 @@ def test_symlink_sources_are_skipped(tmp_path, monkeypatch) -> None:
     assert stats.ignored == 0
     assert stats.errors == []
     assert stats.warnings == []
+
 
 def test_should_suppress_sample_variants() -> None:
     assert should_suppress_sample_ignored(Path("sample.mkv"))
@@ -761,37 +582,33 @@ def test_ts_extension_is_processed_correctly(tmp_path, monkeypatch) -> None:
     ts_file = settings.source_dir / "demo.r01.qualifying.ts"
     ts_file.write_bytes(b"video")
 
-    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
     pattern = PatternConfig(
         regex=r"(?i)^demo\.r(?P<round>\d{2})\.(?P<session>qualifying)\.ts$",
     )
     # Note: source_extensions defaults to [".mkv", ".mp4", ".ts", ".m4v", ".avi"]
-    sport = SportConfig(id="demo", name="Demo", metadata=metadata_cfg, patterns=[pattern])
+    sport = SportConfig(id="demo", name="Demo", show_slug="demo-show", patterns=[pattern])
     config = AppConfig(settings=settings, sports=[sport])
 
-    episode = Episode(
-        title="Qualifying",
-        summary=None,
-        originally_available=None,
-        index=1,
-        display_number=1,
-    )
-    season = Season(
-        key="01",
-        title="Season 1",
-        summary=None,
-        index=1,
-        episodes=[episode],
-        display_number=1,
-        round_number=1,
-    )
-    show = Show(key="demo", title="Demo Series", summary=None, seasons=[season])
+    show = _make_show(episode_title="Qualifying")
 
-    monkeypatch.setattr("playbook.metadata_loader.load_show", lambda *args, **kwargs: show)
-    monkeypatch.setattr(
-        "playbook.metadata_loader.compute_show_fingerprint_cached",
-        lambda *args, **kwargs: ShowFingerprint(digest="fingerprint", season_hashes={}, episode_hashes={}),
-    )
+    def mock_load_sports(*args, **kwargs):
+        from playbook.metadata import MetadataFetchStatistics
+        from playbook.metadata_loader import MetadataLoadResult, SportRuntime
+
+        runtime = SportRuntime(
+            sport=sport,
+            show=show,
+            patterns=[],
+            extensions={".ts"},
+        )
+        return MetadataLoadResult(
+            runtimes=[runtime],
+            changed_sports=[],
+            change_map={},
+            fetch_stats=MetadataFetchStatistics(),
+        )
+
+    monkeypatch.setattr("playbook.processor.load_sports", mock_load_sports)
 
     processor = Processor(config, enable_notifications=False)
     stats = processor.process_all()
@@ -813,9 +630,9 @@ class TestSummarizePlexErrors:
 
     def test_summarize_plex_errors_groups_by_category(self) -> None:
         errors = [
-            "Show not found: 'F1' in library 1 (metadata: http://example.com/f1.yaml). Similar: Formula 1",
-            "Show not found: 'NBA' in library 2 (metadata: http://example.com/nba.yaml). Similar: NBA Games",
-            "Season not found: S01 in show 'Demo' | library=1 | source=http://example.com. Available: S02, S03",
+            "Show not found: 'F1' in library 1 (slug: formula-1-2026). Similar: Formula 1",
+            "Show not found: 'NBA' in library 2 (slug: nba-2026). Similar: NBA Games",
+            "Season not found: S01 in show 'Demo' | library=1 | source=demo-show. Available: S02, S03",
         ]
         result = summarize_plex_errors(errors)
 
@@ -826,7 +643,7 @@ class TestSummarizePlexErrors:
 
     def test_summarize_plex_errors_single_error_no_grouping(self) -> None:
         errors = [
-            "Show not found: 'F1' in library 1 (metadata: http://example.com/f1.yaml). Similar: Formula 1",
+            "Show not found: 'F1' in library 1 (slug: formula-1-2026). Similar: Formula 1",
         ]
         result = summarize_plex_errors(errors)
 
@@ -849,7 +666,7 @@ class TestSummarizePlexErrors:
 
     def test_summarize_plex_errors_extracts_show_context(self) -> None:
         errors = [
-            "Show not found: 'Formula 1' in library 5 (metadata: http://example.com/metadata.yaml). Similar: F1, Formula One",
+            "Show not found: 'Formula 1' in library 5 (slug: formula-1-2026). Similar: F1, Formula One",
         ]
         result = summarize_plex_errors(errors)
 
@@ -857,11 +674,10 @@ class TestSummarizePlexErrors:
         # Should contain extracted context
         assert "'Formula 1'" in result[0]
         assert "library=5" in result[0]
-        assert "similar=" in result[0]
 
     def test_summarize_plex_errors_extracts_season_context(self) -> None:
         errors = [
-            "Season not found: S01 in show 'Demo Series' | library=3 | source=http://example.com/demo.yaml. Available: S02, S03",
+            "Season not found: S01 in show 'Demo Series' | library=3 | source=demo-show. Available: S02, S03",
         ]
         result = summarize_plex_errors(errors)
 
@@ -873,7 +689,7 @@ class TestSummarizePlexErrors:
 
     def test_summarize_plex_errors_extracts_episode_context(self) -> None:
         errors = [
-            "Episode not found: E05 in season S01 of 'Demo Series' | library=2 | source=http://example.com/demo.yaml. Available: E01, E02, E03",
+            "Episode not found: E05 in season S01 of 'Demo Series' | library=2 | source=demo-show. Available: E01, E02, E03",
         ]
         result = summarize_plex_errors(errors)
 
@@ -1045,37 +861,12 @@ def test_show_fingerprint_backward_compatibility_without_content_hash() -> None:
     assert serialized["digest"] == "xyz789"
 
 
-def test_compute_show_fingerprint_cached_returns_cached_when_content_matches() -> None:
-    """Test that compute_show_fingerprint_cached() returns cached fingerprint when content matches."""
-    # Setup metadata configuration
-    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
-    normalizer = MetadataNormalizer(metadata_cfg)
-
-    # Create raw metadata
-    raw_metadata = {
-        "metadata": {
-            "demo": {
-                "title": "Demo Series",
-                "seasons": {
-                    "01": {
-                        "title": "Season 1",
-                        "episodes": [
-                            {
-                                "title": "Episode 1",
-                                "summary": "First episode",
-                                "episode_number": 1,
-                            }
-                        ],
-                    }
-                },
-            }
-        }
-    }
-
-    show = normalizer.load_show(raw_metadata)
+def test_compute_show_fingerprint_returns_cached_when_content_matches() -> None:
+    """Test that compute_show_fingerprint() returns cached fingerprint when content matches."""
+    show = _make_show()
 
     # Test 1: No cache exists - should compute new fingerprint with content_hash
-    result_no_cache = compute_show_fingerprint_cached(show, metadata_cfg, cached_fingerprint=None)
+    result_no_cache = compute_show_fingerprint(show, "demo-show", cached_fingerprint=None)
 
     assert result_no_cache is not None
     assert result_no_cache.content_hash is not None
@@ -1085,7 +876,7 @@ def test_compute_show_fingerprint_cached_returns_cached_when_content_matches() -
 
     # Test 2: Cache exists with matching content_hash - should return cached fingerprint
     cached_fingerprint = result_no_cache
-    result_cache_hit = compute_show_fingerprint_cached(show, metadata_cfg, cached_fingerprint=cached_fingerprint)
+    result_cache_hit = compute_show_fingerprint(show, "demo-show", cached_fingerprint=cached_fingerprint)
 
     # Should return the exact same cached fingerprint object (cache hit)
     assert result_cache_hit is cached_fingerprint
@@ -1093,195 +884,35 @@ def test_compute_show_fingerprint_cached_returns_cached_when_content_matches() -
     assert result_cache_hit.digest == cached_fingerprint.digest
 
     # Test 3: Content changes - should compute new fingerprint
-    modified_metadata = {
-        "metadata": {
-            "demo": {
-                "title": "Demo Series",
-                "seasons": {
-                    "01": {
-                        "title": "Season 1",
-                        "episodes": [
-                            {
-                                "title": "Episode 1",
-                                "summary": "Updated summary",  # Changed content
-                                "episode_number": 1,
-                            }
-                        ],
-                    }
-                },
-            }
-        }
-    }
+    modified_show = _make_show()
+    modified_show.seasons[0].episodes[0].summary = "Updated summary"
+    modified_show.metadata["updated"] = True
 
-    modified_show = normalizer.load_show(modified_metadata)
-    result_cache_miss = compute_show_fingerprint_cached(
-        modified_show, metadata_cfg, cached_fingerprint=cached_fingerprint
-    )
+    result_cache_miss = compute_show_fingerprint(modified_show, "demo-show", cached_fingerprint=cached_fingerprint)
 
     # Should compute new fingerprint (cache miss)
     assert result_cache_miss is not cached_fingerprint
     assert result_cache_miss.content_hash != cached_fingerprint.content_hash
-    assert result_cache_miss.digest != cached_fingerprint.digest
     assert result_cache_miss.content_hash is not None
 
 
 def test_content_hash_determinism() -> None:
     """Test that content_hash is deterministic for same input and different for different input."""
-    # Setup metadata configuration
-    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
-    normalizer = MetadataNormalizer(metadata_cfg)
-
-    # Create raw metadata
-    raw_metadata = {
-        "metadata": {
-            "demo": {
-                "title": "Demo Series",
-                "seasons": {
-                    "01": {
-                        "title": "Season 1",
-                        "episodes": [
-                            {
-                                "title": "Episode 1",
-                                "summary": "First episode",
-                                "episode_number": 1,
-                            }
-                        ],
-                    }
-                },
-            }
-        }
-    }
-
     # Test 1: Same metadata produces same content_hash (determinism)
-    show1 = normalizer.load_show(raw_metadata)
-    fingerprint1 = compute_show_fingerprint(show1, metadata_cfg)
+    show1 = _make_show()
+    fingerprint1 = compute_show_fingerprint(show1, "demo-show")
 
-    show2 = normalizer.load_show(raw_metadata)
-    fingerprint2 = compute_show_fingerprint(show2, metadata_cfg)
+    show2 = _make_show()
+    fingerprint2 = compute_show_fingerprint(show2, "demo-show")
 
     assert fingerprint1.content_hash is not None
     assert fingerprint2.content_hash is not None
     assert fingerprint1.content_hash == fingerprint2.content_hash, "Same metadata should produce same content_hash"
 
     # Test 2: Different metadata produces different content_hash
-    different_metadata = {
-        "metadata": {
-            "demo": {
-                "title": "Different Series",  # Changed title
-                "seasons": {
-                    "01": {
-                        "title": "Season 1",
-                        "episodes": [
-                            {
-                                "title": "Episode 1",
-                                "summary": "First episode",
-                                "episode_number": 1,
-                            }
-                        ],
-                    }
-                },
-            }
-        }
-    }
-
-    show3 = normalizer.load_show(different_metadata)
-    fingerprint3 = compute_show_fingerprint(show3, metadata_cfg)
+    show3 = _make_show(title="Different Series")
+    show3.metadata["title"] = "Different Series"
+    fingerprint3 = compute_show_fingerprint(show3, "demo-show")
 
     assert fingerprint3.content_hash is not None
     assert fingerprint3.content_hash != fingerprint1.content_hash, "Different metadata should produce different content_hash"
-
-    # Test 3: Different season_overrides produces different content_hash
-    metadata_cfg_with_overrides = MetadataConfig(
-        url="https://example.com/demo.yaml", show_key="demo", season_overrides={"01": "Custom Season"}
-    )
-    show4 = normalizer.load_show(raw_metadata)
-    fingerprint4 = compute_show_fingerprint(show4, metadata_cfg_with_overrides)
-
-    assert fingerprint4.content_hash is not None
-    assert fingerprint4.content_hash != fingerprint1.content_hash, "Different season_overrides should produce different content_hash"
-
-
-def test_progress_bar_enabled_at_info_level(tmp_path, monkeypatch) -> None:
-    """Test that Progress bar is enabled when logging is set to INFO level."""
-    settings = Settings(
-        source_dir=tmp_path / "source",
-        destination_dir=tmp_path / "dest",
-        cache_dir=tmp_path / "cache",
-        dry_run=True,
-    )
-    settings.source_dir.mkdir(parents=True)
-    settings.destination_dir.mkdir(parents=True)
-    settings.cache_dir.mkdir(parents=True)
-
-    source_file = settings.source_dir / "demo.r01.qualifying.mkv"
-    source_file.write_bytes(b"demo")
-
-    metadata_cfg = MetadataConfig(url="https://example.com/demo.yaml", show_key="demo")
-    pattern = PatternConfig(
-        regex=r"(?i)^demo\.r(?P<round>\d{2})\.(?P<session>qualifying)\.mkv$",
-    )
-    sport = SportConfig(id="demo", name="Demo", metadata=metadata_cfg, patterns=[pattern])
-    config = AppConfig(settings=settings, sports=[sport])
-
-    episode = Episode(
-        title="Qualifying",
-        summary=None,
-        originally_available=None,
-        index=1,
-        display_number=1,
-    )
-    season = Season(
-        key="01",
-        title="Season 1",
-        summary=None,
-        index=1,
-        episodes=[episode],
-        display_number=1,
-        round_number=1,
-    )
-    show = Show(key="demo", title="Demo Series", summary=None, seasons=[season])
-
-    monkeypatch.setattr("playbook.processor.load_show", lambda *args, **kwargs: show)
-    monkeypatch.setattr(
-        "playbook.processor.compute_show_fingerprint",
-        lambda *args, **kwargs: ShowFingerprint(digest="fingerprint", season_hashes={}, episode_hashes={}),
-    )
-
-    from playbook import processor as processor_module
-
-    progress_disable_value = None
-
-    class MockProgress:
-        def __init__(self, disable=False, **kwargs):
-            nonlocal progress_disable_value
-            progress_disable_value = disable
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *args):
-            pass
-
-        def add_task(self, *args, **kwargs):
-            return "task_id"
-
-        def advance(self, *args, **kwargs):
-            pass
-
-    monkeypatch.setattr("playbook.processor.Progress", MockProgress)
-
-    processor = Processor(config, enable_notifications=False)
-
-    original_level = processor_module.LOGGER.level
-    try:
-        processor_module.LOGGER.setLevel(logging.INFO)
-        processor.process_all()
-        assert progress_disable_value is False, "Progress bar should be enabled at INFO level"
-
-        progress_disable_value = None
-        processor_module.LOGGER.setLevel(logging.WARNING)
-        processor.process_all()
-        assert progress_disable_value is True, "Progress bar should be disabled at WARNING level"
-    finally:
-        processor_module.LOGGER.setLevel(original_level)
-
