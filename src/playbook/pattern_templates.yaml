@@ -31,6 +31,20 @@ pattern_sets:
       episode_selector:
         group: session        # Normalize the session name via aliases below.
       session_aliases: &formula1_session_aliases
+        # Pre-season testing episodes
+        Technical Regulations:
+          - Technical.Regulations
+          - Tech.Regulations
+        Shakedown Day One:
+          - Shakedown.Day.One
+          - Shakedown.Day.1
+        Shakedown Day Two:
+          - Shakedown.Day.Two
+          - Shakedown.Day.2
+        Shakedown Day Three:
+          - Shakedown.Day.Three
+          - Shakedown.Day.3
+        # Regular race weekend episodes
         Drivers Press Conference:
           - Drivers.Press.Conference
           - Press.Conference
