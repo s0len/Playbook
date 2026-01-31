@@ -120,7 +120,7 @@ The format roughly follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
   ```yaml
   settings:
     tvsportsdb:
-      base_url: "https://thetvsportsdb.uniflix.vip/api/v1"
+      base_url: "https://thetvsportsdb-api.uniflix.vip/api/v1"
       ttl_hours: 12
       timeout: 30
   ```

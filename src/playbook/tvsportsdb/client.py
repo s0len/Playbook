@@ -52,7 +52,7 @@ class TVSportsDBClient:
         """Initialize the client.
 
         Args:
-            base_url: Base URL for the API (e.g., "https://thetvsportsdb.uniflix.vip/api/v1")
+            base_url: Base URL for the API (e.g., "https://thetvsportsdb-api.uniflix.vip/api/v1")
             cache_dir: Directory for caching responses
             ttl_hours: Cache time-to-live in hours
             timeout: HTTP request timeout in seconds

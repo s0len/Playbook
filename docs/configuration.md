@@ -80,14 +80,14 @@ Playbook fetches show/season/episode metadata from TheTVSportsDB REST API. Confi
 ```yaml
 settings:
   tvsportsdb:
-    base_url: "https://thetvsportsdb.uniflix.vip/api/v1"
+    base_url: "https://thetvsportsdb-api.uniflix.vip/api/v1"
     ttl_hours: 12    # Cache API responses for 12 hours
     timeout: 30      # HTTP request timeout in seconds
 ```
 
 | Field | Description | Default |
 |-------|-------------|---------|
-| `base_url` | TheTVSportsDB API endpoint | `https://thetvsportsdb.uniflix.vip/api/v1` |
+| `base_url` | TheTVSportsDB API endpoint | `https://thetvsportsdb-api.uniflix.vip/api/v1` |
 | `ttl_hours` | How long to cache API responses before refreshing | `12` |
 | `timeout` | HTTP request timeout in seconds | `30` |
 

@@ -34,7 +34,7 @@ class EpisodeSelector:
 class TVSportsDBConfig:
     """Configuration for TheTVSportsDB API."""
 
-    base_url: str = "https://thetvsportsdb.uniflix.vip/api/v1"
+    base_url: str = "https://thetvsportsdb-api.uniflix.vip/api/v1"
     ttl_hours: int = 12
     timeout: float = 30.0
 
