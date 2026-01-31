@@ -32,15 +32,6 @@ settings:
   link_mode: hardlink     # Global default for linking: hardlink | copy | symlink.
 
   ####################################################################
-  # THETVSPORTSDB API CONFIGURATION
-  ####################################################################
-  # Metadata is fetched from TheTVSportsDB REST API. Configure cache
-  # and timeout settings here.
-  tvsportsdb:
-    ttl_hours: 12         # How long to cache API responses before refreshing.
-    timeout: 30           # HTTP request timeout in seconds.
-
-  ####################################################################
   # LOGGING
   ####################################################################
   # Logs now default to a human-friendly block layout with blank lines between sections.

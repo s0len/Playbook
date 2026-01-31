@@ -116,13 +116,7 @@ The format roughly follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - Variants now require `show_slug` instead of `metadata.url`.
 
 ### Added
-- **TheTVSportsDB API integration** - Metadata is now fetched from TheTVSportsDB REST API instead of static YAML files. Configure cache settings under `settings.tvsportsdb`:
-  ```yaml
-  settings:
-    tvsportsdb:
-      ttl_hours: 12   # Cache responses for 12 hours
-      timeout: 30     # HTTP timeout in seconds
-  ```
+- **TheTVSportsDB API integration** - Metadata is now fetched from TheTVSportsDB REST API instead of static YAML files. Works out of the box with sensible defaults (12h cache TTL, 30s timeout). Optionally tune via `settings.tvsportsdb.ttl_hours` and `settings.tvsportsdb.timeout`.
 - New `tvsportsdb` package (`src/playbook/tvsportsdb/`) with HTTP client, Pydantic response models, adapter layer, and TTL-based file caching.
 - **Plex Metadata Sync** now fetches metadata directly from TheTVSportsDB API and pushes titles, summaries, posters, and backgrounds to Plex automatically.
 - NHL regular-season filename patterns, metadata wiring, and docs/sample config updates powered by the new `nhl` pattern set and metadata feed.
