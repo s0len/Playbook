@@ -169,7 +169,6 @@ def load_sports(
     # Initialize API client
     effective_cache_dir = cache_dir if cache_dir is not None else settings.cache_dir
     client = TVSportsDBClient(
-        base_url=settings.tvsportsdb.base_url,
         cache_dir=effective_cache_dir,
         ttl_hours=settings.tvsportsdb.ttl_hours,
         timeout=settings.tvsportsdb.timeout,
@@ -184,7 +183,8 @@ def load_sports(
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_map = {}
             for sport in enabled_sports:
-                LOGGER.debug(render_fields_block("Loading Metadata", {"Sport": sport.name, "Slug": sport.show_slug}, pad_top=True))
+                fields = {"Sport": sport.name, "Slug": sport.show_slug}
+                LOGGER.debug(render_fields_block("Loading Metadata", fields, pad_top=True))
                 future = executor.submit(
                     _load_show_from_api,
                     client,

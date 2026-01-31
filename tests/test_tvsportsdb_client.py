@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock, patch
 
 import httpx
@@ -28,7 +27,6 @@ def mock_httpx_client():
 def client(tmp_path, mock_httpx_client):
     """Create a TVSportsDBClient with mocked HTTP client."""
     return TVSportsDBClient(
-        base_url="https://api.example.com/v1",
         cache_dir=tmp_path,
         ttl_hours=12,
         timeout=30.0,
@@ -107,7 +105,6 @@ class TestTVSportsDBClient:
         """Test that cached show doesn't make HTTP request."""
         # First, save data to cache manually
         client = TVSportsDBClient(
-            base_url="https://api.example.com/v1",
             cache_dir=tmp_path,
             ttl_hours=12,
         )
@@ -255,7 +252,6 @@ class TestTVSportsDBClient:
     def test_invalidate_cache_specific_show(self, tmp_path) -> None:
         """Test invalidating a specific show's cache."""
         client = TVSportsDBClient(
-            base_url="https://api.example.com/v1",
             cache_dir=tmp_path,
             ttl_hours=12,
         )
@@ -271,7 +267,6 @@ class TestTVSportsDBClient:
     def test_invalidate_cache_all(self, tmp_path) -> None:
         """Test invalidating all cached data."""
         client = TVSportsDBClient(
-            base_url="https://api.example.com/v1",
             cache_dir=tmp_path,
             ttl_hours=12,
         )
@@ -290,7 +285,6 @@ class TestTVSportsDBClient:
     def test_context_manager(self, tmp_path, mock_httpx_client) -> None:
         """Test client works as context manager."""
         with TVSportsDBClient(
-            base_url="https://api.example.com/v1",
             cache_dir=tmp_path,
             ttl_hours=12,
         ) as client:
@@ -298,15 +292,16 @@ class TestTVSportsDBClient:
 
         mock_httpx_client.close.assert_called_once()
 
-    def test_base_url_trailing_slash_stripped(self, tmp_path) -> None:
-        """Test that trailing slash is stripped from base URL."""
+    def test_uses_hardcoded_api_url(self, tmp_path) -> None:
+        """Test that client uses the hardcoded API URL."""
+        from playbook.tvsportsdb.client import API_BASE_URL
+
         with patch("playbook.tvsportsdb.client.httpx.Client"):
             client = TVSportsDBClient(
-                base_url="https://api.example.com/v1/",
                 cache_dir=tmp_path,
                 ttl_hours=12,
             )
-            assert client.base_url == "https://api.example.com/v1"
+            assert client.base_url == API_BASE_URL
 
 
 class TestRetryLogic:

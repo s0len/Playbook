@@ -75,19 +75,17 @@ The watcher keeps Playbook alive and reacts to filesystem events instead of rely
 
 ## 2. TheTVSportsDB API Configuration
 
-Playbook fetches show/season/episode metadata from TheTVSportsDB REST API. Configure the connection under `settings.tvsportsdb`:
+Playbook fetches show/season/episode metadata from TheTVSportsDB REST API. Configure cache and timeout settings under `settings.tvsportsdb`:
 
 ```yaml
 settings:
   tvsportsdb:
-    base_url: "https://thetvsportsdb-api.uniflix.vip/api/v1"
     ttl_hours: 12    # Cache API responses for 12 hours
     timeout: 30      # HTTP request timeout in seconds
 ```
 
 | Field | Description | Default |
 |-------|-------------|---------|
-| `base_url` | TheTVSportsDB API endpoint | `https://thetvsportsdb-api.uniflix.vip/api/v1` |
 | `ttl_hours` | How long to cache API responses before refreshing | `12` |
 | `timeout` | HTTP request timeout in seconds | `30` |
 

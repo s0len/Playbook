@@ -116,13 +116,12 @@ The format roughly follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - Variants now require `show_slug` instead of `metadata.url`.
 
 ### Added
-- **TheTVSportsDB API integration** - Metadata is now fetched from a REST API instead of static YAML files. Configure the API endpoint under `settings.tvsportsdb`:
+- **TheTVSportsDB API integration** - Metadata is now fetched from TheTVSportsDB REST API instead of static YAML files. Configure cache settings under `settings.tvsportsdb`:
   ```yaml
   settings:
     tvsportsdb:
-      base_url: "https://thetvsportsdb-api.uniflix.vip/api/v1"
-      ttl_hours: 12
-      timeout: 30
+      ttl_hours: 12   # Cache responses for 12 hours
+      timeout: 30     # HTTP timeout in seconds
   ```
 - New `tvsportsdb` package (`src/playbook/tvsportsdb/`) with HTTP client, Pydantic response models, adapter layer, and TTL-based file caching.
 - **Plex Metadata Sync** now fetches metadata directly from TheTVSportsDB API and pushes titles, summaries, posters, and backgrounds to Plex automatically.

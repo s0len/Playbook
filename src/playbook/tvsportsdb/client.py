@@ -23,6 +23,9 @@ if TYPE_CHECKING:
 
 LOGGER = logging.getLogger(__name__)
 
+# TheTVSportsDB API endpoint (hardcoded - not configurable)
+API_BASE_URL = "https://thetvsportsdb-api.uniflix.vip/api/v1"
+
 MAX_RETRIES = 3
 RETRY_BACKOFF = 1.0
 
@@ -44,7 +47,6 @@ class TVSportsDBClient:
 
     def __init__(
         self,
-        base_url: str,
         cache_dir: Path,
         ttl_hours: int = 12,
         timeout: float = 30.0,
@@ -52,12 +54,11 @@ class TVSportsDBClient:
         """Initialize the client.
 
         Args:
-            base_url: Base URL for the API (e.g., "https://thetvsportsdb-api.uniflix.vip/api/v1")
             cache_dir: Directory for caching responses
             ttl_hours: Cache time-to-live in hours
             timeout: HTTP request timeout in seconds
         """
-        self.base_url = base_url.rstrip("/")
+        self.base_url = API_BASE_URL
         self.cache = TVSportsDBCache(cache_dir / "tvsportsdb", ttl_hours)
         self._client = httpx.Client(timeout=timeout)
         self._owns_client = True

@@ -34,10 +34,9 @@ settings:
   ####################################################################
   # THETVSPORTSDB API CONFIGURATION
   ####################################################################
-  # Metadata is fetched from TheTVSportsDB REST API. Configure the
-  # connection settings here.
+  # Metadata is fetched from TheTVSportsDB REST API. Configure cache
+  # and timeout settings here.
   tvsportsdb:
-    base_url: "https://thetvsportsdb-api.uniflix.vip/api/v1"
     ttl_hours: 12         # How long to cache API responses before refreshing.
     timeout: 30           # HTTP request timeout in seconds.
 

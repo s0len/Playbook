@@ -39,8 +39,6 @@ from .metadata import (
     compute_show_fingerprint,
 )
 from .models import Episode, Season, Show
-from .tvsportsdb import TVSportsDBAdapter, TVSportsDBClient
-from .tvsportsdb.client import TVSportsDBError, TVSportsDBNotFoundError
 from .plex_client import (
     PLEX_TYPE_EPISODE,
     PLEX_TYPE_SEASON,
@@ -50,6 +48,8 @@ from .plex_client import (
     PlexSyncStats,
 )
 from .plex_sync_state import PlexSyncStateStore
+from .tvsportsdb import TVSportsDBAdapter, TVSportsDBClient
+from .tvsportsdb.client import TVSportsDBError, TVSportsDBNotFoundError
 from .utils import env_bool, env_list
 
 LOGGER = logging.getLogger(__name__)
@@ -533,7 +533,6 @@ class PlexMetadataSync:
         """Lazily create the TVSportsDB client."""
         if self._tvsportsdb_client is None:
             self._tvsportsdb_client = TVSportsDBClient(
-                base_url=self.config.settings.tvsportsdb.base_url,
                 cache_dir=self.config.settings.cache_dir,
                 ttl_hours=self.config.settings.tvsportsdb.ttl_hours,
                 timeout=self.config.settings.tvsportsdb.timeout,
