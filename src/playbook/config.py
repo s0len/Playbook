@@ -34,6 +34,7 @@ class EpisodeSelector:
 class TVSportsDBConfig:
     """Configuration for TheTVSportsDB API cache and timeout settings."""
 
+    base_url: str = "http://localhost:8000"
     ttl_hours: int = 12
     timeout: float = 30.0
 
