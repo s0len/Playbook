@@ -1,7 +1,7 @@
-"""Plex metadata sync - push metadata from remote YAML to Plex.
+"""Plex metadata sync - push metadata from TheTVSportsDB API to Plex.
 
 This module syncs show/season/episode metadata (titles, sort titles, summaries,
-dates, posters, backgrounds) from the remote metadata YAML files to Plex.
+dates, posters, backgrounds) from the TheTVSportsDB API to Plex.
 
 Shows and seasons are updated on first run or when metadata changes.
 Episodes are updated when their content changes (fingerprint-based detection).
@@ -36,8 +36,7 @@ from .metadata import (
     MetadataChangeResult,
     MetadataFingerprintStore,
     ShowFingerprint,
-    compute_show_fingerprint_cached,
-    load_show,
+    compute_show_fingerprint,
 )
 from .models import Episode, Season, Show
 from .plex_client import (
@@ -49,6 +48,8 @@ from .plex_client import (
     PlexSyncStats,
 )
 from .plex_sync_state import PlexSyncStateStore
+from .tvsportsdb import TVSportsDBAdapter, TVSportsDBClient
+from .tvsportsdb.client import TVSportsDBError, TVSportsDBNotFoundError
 from .utils import env_bool, env_list
 
 LOGGER = logging.getLogger(__name__)
@@ -524,6 +525,58 @@ class PlexMetadataSync:
         self._library_id_resolved: str | None = None
         self._fingerprint_store: MetadataFingerprintStore | None = None
         self._sync_state_store: PlexSyncStateStore | None = None
+        self._tvsportsdb_client: TVSportsDBClient | None = None
+        self._tvsportsdb_adapter: TVSportsDBAdapter | None = None
+
+    @property
+    def tvsportsdb_client(self) -> TVSportsDBClient:
+        """Lazily create the TVSportsDB client."""
+        if self._tvsportsdb_client is None:
+            self._tvsportsdb_client = TVSportsDBClient(
+                cache_dir=self.config.settings.cache_dir,
+                ttl_hours=self.config.settings.tvsportsdb.ttl_hours,
+                timeout=self.config.settings.tvsportsdb.timeout,
+            )
+        return self._tvsportsdb_client
+
+    @property
+    def tvsportsdb_adapter(self) -> TVSportsDBAdapter:
+        """Lazily create the TVSportsDB adapter."""
+        if self._tvsportsdb_adapter is None:
+            self._tvsportsdb_adapter = TVSportsDBAdapter()
+        return self._tvsportsdb_adapter
+
+    def _load_show(self, sport: SportConfig) -> Show | None:
+        """Load show metadata from TheTVSportsDB API.
+
+        Args:
+            sport: Sport configuration with show_slug
+
+        Returns:
+            Show model if successful, None otherwise
+        """
+        try:
+            response = self.tvsportsdb_client.get_show(sport.show_slug, include_episodes=True)
+            show = self.tvsportsdb_adapter.to_show(response)
+
+            # Apply season overrides from sport config
+            if sport.season_overrides:
+                for season in show.seasons:
+                    override = sport.season_overrides.get(season.title, {})
+                    if not override:
+                        continue
+                    if "round" in override:
+                        season.round_number = int(override["round"])
+                    if "season_number" in override:
+                        season.display_number = int(override["season_number"])
+
+            return show
+        except TVSportsDBNotFoundError:
+            LOGGER.warning("Show not found in TheTVSportsDB: %s", sport.show_slug)
+            return None
+        except TVSportsDBError as exc:
+            LOGGER.error("Failed to fetch show from TheTVSportsDB: %s - %s", sport.show_slug, exc)
+            return None
 
     @property
     def client(self) -> PlexClient:
@@ -584,9 +637,11 @@ class PlexMetadataSync:
         for sport in sports:
             # Load show to compute fingerprint
             try:
-                show = load_show(self.config.settings, sport.metadata)
+                show = self._load_show(sport)
+                if show is None:
+                    continue
                 cached_fingerprint = self.fingerprint_store.get(sport.id)
-                fingerprint = compute_show_fingerprint_cached(show, sport.metadata, cached_fingerprint)
+                fingerprint = compute_show_fingerprint(show, sport.show_slug, cached_fingerprint)
             except Exception as exc:  # noqa: BLE001
                 LOGGER.debug("Failed to load metadata for %s: %s", sport.id, exc)
                 continue
@@ -646,12 +701,12 @@ class PlexMetadataSync:
             except PlexApiError as exc:
                 LOGGER.error("Plex API error for sport %s: %s", sport.id, exc)
                 stats.errors.append(
-                    f"Sport sync failed: {sport.id} | library={library_id} | source={sport.metadata.url}: {exc}"
+                    f"Sport sync failed: {sport.id} | library={library_id} | source={sport.show_slug}: {exc}"
                 )
             except Exception as exc:  # noqa: BLE001
                 LOGGER.exception("Unexpected error syncing %s: %s", sport.id, exc)
                 stats.errors.append(
-                    f"Sport sync failed: {sport.id} | library={library_id} | source={sport.metadata.url}: {exc}"
+                    f"Sport sync failed: {sport.id} | library={library_id} | source={sport.show_slug}: {exc}"
                 )
 
         self.fingerprint_store.save()
@@ -708,12 +763,15 @@ class PlexMetadataSync:
         """Sync a single sport to Plex."""
         LOGGER.debug("Syncing sport: %s (%s)", sport.id, sport.name)
 
-        # Load metadata from remote YAML
-        show = load_show(self.config.settings, sport.metadata)
+        # Load metadata from TheTVSportsDB API
+        show = self._load_show(sport)
+        if show is None:
+            stats.errors.append(f"Failed to load metadata for sport: {sport.id} ({sport.show_slug})")
+            return
 
         # Compute and compare fingerprint
         previous_fingerprint = self.fingerprint_store.get(sport.id)
-        fingerprint = compute_show_fingerprint_cached(show, sport.metadata, previous_fingerprint)
+        fingerprint = compute_show_fingerprint(show, sport.show_slug, previous_fingerprint)
         change = self.fingerprint_store.update(sport.id, fingerprint)
 
         # Check against sync state (tracks actual Plex syncs, not just fingerprints)
@@ -735,13 +793,13 @@ class PlexMetadataSync:
         stats.api_calls += 1
 
         if search_result.result is None:
-            # Build enhanced log message with library context, metadata URL, and close matches
+            # Build enhanced log message with library context and close matches
             builder = LogBlockBuilder("Show Not Found In Plex", pad_top=True)
             builder.add_fields(
                 {
                     "Show Title": show.title,
                     "Library ID": library_id,
-                    "Metadata URL": sport.metadata.url,
+                    "API Slug": sport.show_slug,
                 }
             )
             if search_result.close_matches:
@@ -755,7 +813,7 @@ class PlexMetadataSync:
             if search_result.close_matches:
                 close_matches_str = f" Similar: {', '.join(search_result.close_matches[:3])}"
             stats.errors.append(
-                f"Show not found: '{show.title}' in library {library_id} (metadata: {sport.metadata.url}).{close_matches_str}"
+                f"Show not found: '{show.title}' in library {library_id} (slug: {sport.show_slug}).{close_matches_str}"
             )
             return
 
@@ -764,11 +822,12 @@ class PlexMetadataSync:
         if not show_rating:
             LOGGER.error("Show ratingKey missing for '%s'", show.title)
             stats.errors.append(
-                f"Missing ratingKey: '{show.title}' | library={library_id} | source={sport.metadata.url}"
+                f"Missing ratingKey: '{show.title}' | library={library_id} | source={sport.show_slug}"
             )
             return
 
-        base_url = sport.metadata.url
+        # Base URL for asset resolution (use API base URL)
+        base_url = self.config.settings.tvsportsdb.base_url
 
         # Track stats before sync
         shows_before = stats.shows_updated

@@ -1,8 +1,9 @@
 """Parallel metadata loading and fingerprint tracking.
 
-This module handles loading sport configurations and show metadata in parallel,
-tracking metadata fingerprints to detect changes, and building SportRuntime
-objects that contain the compiled pattern matchers for each sport.
+This module handles loading sport configurations and show metadata in parallel
+from the TheTVSportsDB API, tracking metadata fingerprints to detect changes,
+and building SportRuntime objects that contain the compiled pattern matchers
+for each sport.
 """
 
 from __future__ import annotations
@@ -10,22 +11,22 @@ from __future__ import annotations
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .logging_utils import render_fields_block
 from .matcher import compile_patterns
 from .metadata import (
     MetadataChangeResult,
-    MetadataFetchError,
     MetadataFetchStatistics,
     MetadataFingerprintStore,
-    compute_show_fingerprint_cached,
-    load_show,
+    compute_show_fingerprint,
 )
+from .tvsportsdb import TVSportsDBAdapter, TVSportsDBClient
+from .tvsportsdb.client import TVSportsDBError, TVSportsDBNotFoundError
 
 if TYPE_CHECKING:
-    from .cache import MetadataHttpCache
-    from .config import AppSettings, SportConfig
+    from .config import Settings, SportConfig
     from .matcher import PatternRuntime
     from .models import Show
 
@@ -60,11 +61,66 @@ class MetadataLoadResult:
     fetch_stats: MetadataFetchStatistics
 
 
+def _load_show_from_api(
+    client: TVSportsDBClient,
+    adapter: TVSportsDBAdapter,
+    sport: SportConfig,
+    stats: MetadataFetchStatistics,
+) -> Show | None:
+    """Load show metadata from TheTVSportsDB API.
+
+    Args:
+        client: API client instance
+        adapter: Response adapter
+        sport: Sport configuration with show_slug
+        stats: Statistics tracker
+
+    Returns:
+        Show model if successful, None otherwise
+    """
+    try:
+        response = client.get_show(sport.show_slug, include_episodes=True)
+        stats.record_network_request()
+        show = adapter.to_show(response)
+
+        # Apply season overrides from sport config
+        if sport.season_overrides:
+            _apply_season_overrides(show, sport.season_overrides)
+
+        return show
+    except TVSportsDBNotFoundError:
+        LOGGER.warning("Show not found in TheTVSportsDB: %s", sport.show_slug)
+        stats.record_failure()
+        return None
+    except TVSportsDBError as exc:
+        LOGGER.error("Failed to fetch show from TheTVSportsDB: %s - %s", sport.show_slug, exc)
+        stats.record_failure()
+        return None
+
+
+def _apply_season_overrides(show: Show, overrides: dict) -> None:
+    """Apply season overrides from sport config to show model.
+
+    Args:
+        show: Show model to modify
+        overrides: Dict mapping season title to override dict
+    """
+    for season in show.seasons:
+        override = overrides.get(season.title, {})
+        if not override:
+            continue
+
+        if "round" in override:
+            season.round_number = int(override["round"])
+        if "season_number" in override:
+            season.display_number = int(override["season_number"])
+
+
 def load_sports(
     sports: list[SportConfig],
-    settings: AppSettings,
-    metadata_http_cache: MetadataHttpCache,
+    settings: Settings,
     metadata_fingerprints: MetadataFingerprintStore,
+    cache_dir: Path | None = None,
 ) -> MetadataLoadResult:
     """Load sports metadata in parallel with fingerprint tracking.
 
@@ -75,9 +131,9 @@ def load_sports(
 
     Args:
         sports: List of sport configurations to load
-        settings: Application settings (used for metadata fetching)
-        metadata_http_cache: HTTP cache for metadata requests
+        settings: Application settings (includes TVSportsDB config)
         metadata_fingerprints: Store for tracking metadata fingerprints
+        cache_dir: Optional cache directory override (defaults to settings.cache_dir)
 
     Returns:
         MetadataLoadResult containing:
@@ -110,54 +166,57 @@ def load_sports(
             fetch_stats=fetch_stats,
         )
 
+    # Initialize API client
+    effective_cache_dir = cache_dir if cache_dir is not None else settings.cache_dir
+    client = TVSportsDBClient(
+        cache_dir=effective_cache_dir,
+        ttl_hours=settings.tvsportsdb.ttl_hours,
+        timeout=settings.tvsportsdb.timeout,
+    )
+    adapter = TVSportsDBAdapter()
+
     # Load metadata in parallel
     shows: dict[str, Show] = {}
     max_workers = min(8, max(1, len(enabled_sports)))
 
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_map = {}
-        for sport in enabled_sports:
-            LOGGER.debug(render_fields_block("Loading Metadata", {"Sport": sport.name}, pad_top=True))
-            future = executor.submit(
-                load_show,
-                settings,
-                sport.metadata,
-                http_cache=metadata_http_cache,
-                stats=fetch_stats,
-            )
-            future_map[future] = sport
+    try:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_map = {}
+            for sport in enabled_sports:
+                fields = {"Sport": sport.name, "Slug": sport.show_slug}
+                LOGGER.debug(render_fields_block("Loading Metadata", fields, pad_top=True))
+                future = executor.submit(
+                    _load_show_from_api,
+                    client,
+                    adapter,
+                    sport,
+                    fetch_stats,
+                )
+                future_map[future] = sport
 
-        for future in as_completed(future_map):
-            sport = future_map[future]
-            try:
-                show = future.result()
-            except MetadataFetchError as exc:
-                LOGGER.error(
-                    render_fields_block(
-                        "Failed To Fetch Metadata",
-                        {
-                            "Sport": sport.id,
-                            "Name": sport.name,
-                            "Error": exc,
-                        },
-                        pad_top=True,
+            for future in as_completed(future_map):
+                sport = future_map[future]
+                try:
+                    show = future.result()
+                except Exception as exc:  # pragma: no cover - defensive
+                    LOGGER.error(
+                        render_fields_block(
+                            "Failed To Load Metadata",
+                            {
+                                "Sport": sport.id,
+                                "Name": sport.name,
+                                "Slug": sport.show_slug,
+                                "Error": exc,
+                            },
+                            pad_top=True,
+                        )
                     )
-                )
-                continue
-            except Exception as exc:  # pragma: no cover - defensive
-                LOGGER.error(
-                    render_fields_block(
-                        "Failed To Load Metadata",
-                        {
-                            "Sport": sport.id,
-                            "Name": sport.name,
-                            "Error": exc,
-                        },
-                        pad_top=True,
-                    )
-                )
-                continue
-            shows[sport.id] = show
+                    continue
+
+                if show is not None:
+                    shows[sport.id] = show
+    finally:
+        client.close()
 
     # Build runtimes and track fingerprint changes
     for sport in enabled_sports:
@@ -170,7 +229,7 @@ def load_sports(
         # Compute and track metadata fingerprint
         try:
             cached_fingerprint = metadata_fingerprints.get(sport.id)
-            fingerprint = compute_show_fingerprint_cached(show, sport.metadata, cached_fingerprint)
+            fingerprint = compute_show_fingerprint(show, sport.show_slug, cached_fingerprint)
         except Exception as exc:  # pragma: no cover - defensive, should not happen
             LOGGER.warning(
                 render_fields_block(
@@ -190,18 +249,14 @@ def load_sports(
 
         runtimes.append(SportRuntime(sport=sport, show=show, patterns=patterns, extensions=extensions))
 
-    # Log metadata cache statistics
+    # Log metadata fetch statistics
     if fetch_stats.has_activity():
         snapshot = fetch_stats.snapshot()
         LOGGER.info(
             render_fields_block(
-                "Metadata Cache",
+                "Metadata API",
                 {
-                    "Hits": snapshot["cache_hits"],
-                    "Misses": snapshot["cache_misses"],
-                    "Refreshed": snapshot["network_requests"],
-                    "Not Modified": snapshot["not_modified"],
-                    "Stale": snapshot["stale_used"],
+                    "Requests": snapshot["network_requests"],
                     "Failures": snapshot["failures"],
                 },
                 pad_top=False,

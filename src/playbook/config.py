@@ -31,6 +31,15 @@ class EpisodeSelector:
 
 
 @dataclass
+class TVSportsDBConfig:
+    """Configuration for TheTVSportsDB API cache and timeout settings."""
+
+    base_url: str = "http://localhost:8000"
+    ttl_hours: int = 12
+    timeout: float = 30.0
+
+
+@dataclass
 class PlexSyncSettings:
     enabled: bool = False
     url: str | None = None
@@ -124,8 +133,9 @@ class KometaTriggerSettings:
 class SportConfig:
     id: str
     name: str
+    show_slug: str  # Required: TheTVSportsDB show slug (e.g., "formula-1-2026")
     enabled: bool = True
-    metadata: MetadataConfig = field(default_factory=lambda: MetadataConfig(url=""))
+    metadata: MetadataConfig | None = None  # Deprecated: kept for backwards compatibility during transition
     patterns: list[PatternConfig] = field(default_factory=list)
     team_alias_map: str | None = None
     destination: DestinationTemplates = field(default_factory=DestinationTemplates)
@@ -133,6 +143,7 @@ class SportConfig:
     source_extensions: list[str] = field(default_factory=lambda: [".mkv", ".mp4", ".ts", ".m4v", ".avi"])
     link_mode: str = "hardlink"
     allow_unmatched: bool = False
+    season_overrides: dict[str, dict[str, Any]] = field(default_factory=dict)  # Moved from MetadataConfig
 
 
 @dataclass
@@ -148,6 +159,7 @@ class Settings:
     file_watcher: WatcherSettings = field(default_factory=WatcherSettings)
     kometa_trigger: KometaTriggerSettings = field(default_factory=KometaTriggerSettings)
     plex_sync: PlexSyncSettings = field(default_factory=PlexSyncSettings)
+    tvsportsdb: TVSportsDBConfig = field(default_factory=TVSportsDBConfig)
 
 
 @dataclass
@@ -220,7 +232,16 @@ def _build_sport_config(
     global_link_mode: str,
     pattern_sets: dict[str, list[dict[str, Any]]],
 ) -> SportConfig:
-    metadata = _build_metadata_config(data["metadata"])
+    # Handle show_slug - required for API-based metadata
+    show_slug = data.get("show_slug")
+    if not show_slug:
+        raise ValueError(f"Sport '{data.get('id')}' is missing required 'show_slug' field")
+
+    # Build legacy metadata config if present (for backwards compatibility during transition)
+    metadata: MetadataConfig | None = None
+    if "metadata" in data:
+        metadata = _build_metadata_config(data["metadata"])
+
     destination = _build_destination_templates(data.get("destination"), defaults)
     pattern_definitions: list[dict[str, Any]] = []
 
@@ -240,9 +261,17 @@ def _build_sport_config(
 
     patterns = sorted((_build_pattern_config(pattern) for pattern in pattern_definitions), key=lambda cfg: cfg.priority)
 
+    # Season overrides can come from the sport config directly or from legacy metadata config
+    season_overrides: dict[str, dict[str, Any]] = {}
+    if metadata and metadata.season_overrides:
+        season_overrides = metadata.season_overrides
+    if "season_overrides" in data:
+        season_overrides = data["season_overrides"]
+
     return SportConfig(
         id=data["id"],
         name=data.get("name", data["id"]),
+        show_slug=str(show_slug),
         enabled=bool(data.get("enabled", True)),
         metadata=metadata,
         patterns=patterns,
@@ -252,6 +281,7 @@ def _build_sport_config(
         source_extensions=list(data.get("source_extensions", [".mkv", ".mp4", ".ts", ".m4v", ".avi"])),
         link_mode=str(data.get("link_mode", global_link_mode)),
         allow_unmatched=bool(data.get("allow_unmatched", False)),
+        season_overrides=season_overrides,
     )
 
 
@@ -527,6 +557,34 @@ def _build_kometa_trigger_settings(data: dict[str, Any]) -> KometaTriggerSetting
     )
 
 
+def _build_tvsportsdb_config(data: dict[str, Any]) -> TVSportsDBConfig:
+    """Build TVSportsDB API configuration."""
+    if not data:
+        return TVSportsDBConfig()
+    if not isinstance(data, dict):
+        raise ValueError("'tvsportsdb' must be provided as a mapping when specified")
+
+    base_url = str(data.get("base_url", TVSportsDBConfig.base_url)).strip()
+    if not base_url:
+        base_url = TVSportsDBConfig.base_url
+
+    try:
+        ttl_hours = int(data.get("ttl_hours", 12))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("'tvsportsdb.ttl_hours' must be an integer") from exc
+
+    try:
+        timeout = float(data.get("timeout", 30.0))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("'tvsportsdb.timeout' must be a number") from exc
+
+    return TVSportsDBConfig(
+        base_url=base_url,
+        ttl_hours=ttl_hours,
+        timeout=timeout,
+    )
+
+
 def _build_settings(data: dict[str, Any]) -> Settings:
     destination_defaults = DestinationTemplates(
         root_template=data.get("destination", {}).get("root_template", "{show_title}"),
@@ -610,6 +668,7 @@ def _build_settings(data: dict[str, Any]) -> Settings:
     watcher_settings = _build_watcher_settings(data.get("file_watcher", {}) or {})
     kometa_trigger = _build_kometa_trigger_settings(data.get("kometa_trigger", {}) or {})
     plex_sync = _build_plex_sync_settings(data.get("plex_metadata_sync", {}) or {})
+    tvsportsdb = _build_tvsportsdb_config(data.get("tvsportsdb", {}) or {})
 
     return Settings(
         source_dir=source_dir,
@@ -623,6 +682,7 @@ def _build_settings(data: dict[str, Any]) -> Settings:
         file_watcher=watcher_settings,
         kometa_trigger=kometa_trigger,
         plex_sync=plex_sync,
+        tvsportsdb=tvsportsdb,
     )
 
 
@@ -653,8 +713,6 @@ def load_config(path: Path) -> AppConfig:
 
     sports = []
     for sport_data in expanded_sports:
-        if "metadata" not in sport_data:
-            raise ValueError(f"Sport '{sport_data.get('id')}' is missing required 'metadata' section")
         sports.append(_build_sport_config(sport_data, defaults, settings.link_mode, builtin_pattern_sets))
 
     return AppConfig(settings=settings, sports=sports)

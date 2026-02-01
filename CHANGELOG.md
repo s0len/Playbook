@@ -99,7 +99,26 @@ The format roughly follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ## [Unreleased]
 
+### ⚠️ Breaking Changes
+- **Metadata source migrated from YAML to TheTVSportsDB REST API.** Sport configurations now use `show_slug` instead of the previous `metadata.url` / `metadata.show_key` approach. Update your config files:
+  ```yaml
+  # OLD (no longer supported)
+  - id: formula1_2025
+    metadata:
+      url: https://example.com/formula1/2025.yaml
+      show_key: Formula1 2025
+
+  # NEW
+  - id: formula1_2025
+    show_slug: "formula-1-2025"
+  ```
+- The `metadata` block on sport entries is removed. Use `show_slug` to reference shows in TheTVSportsDB.
+- Variants now require `show_slug` instead of `metadata.url`.
+
 ### Added
+- **TheTVSportsDB API integration** - Metadata is now fetched from TheTVSportsDB REST API instead of static YAML files. Works out of the box with sensible defaults (12h cache TTL, 30s timeout). Optionally tune via `settings.tvsportsdb.ttl_hours` and `settings.tvsportsdb.timeout`.
+- New `tvsportsdb` package (`src/playbook/tvsportsdb/`) with HTTP client, Pydantic response models, adapter layer, and TTL-based file caching.
+- **Plex Metadata Sync** now fetches metadata directly from TheTVSportsDB API and pushes titles, summaries, posters, and backgrounds to Plex automatically.
 - NHL regular-season filename patterns, metadata wiring, and docs/sample config updates powered by the new `nhl` pattern set and metadata feed.
 - `SeasonSelector` now supports a `date` mode plus `value_template`, enabling calendar-date lookups that select the season containing a matching `originally_available` entry.
 - Team alias mapping utilities (with an NHL map) allow matchup strings such as "Blue Jackets vs Devils" to resolve to the canonical metadata titles.
@@ -107,6 +126,7 @@ The format roughly follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Changed
 - Pattern sample tests understand `originally_available` timestamps so date-driven selectors can be exercised in CI.
+- Validation schema updated: `show_slug` is now validated instead of `metadata.url`.
 ## [1.4.0] - 2025-12-04
 
 ### Added

@@ -29,8 +29,7 @@ def test_load_config_expands_variants_and_merges_patterns(tmp_path) -> None:
         sports:
           - id: formula1
             name: Formula 1
-            metadata:
-              url: https://example.com/default.yaml
+            show_slug: formula-1
             pattern_sets:
               - shared
             file_patterns:
@@ -38,12 +37,10 @@ def test_load_config_expands_variants_and_merges_patterns(tmp_path) -> None:
                 priority: 10
             variants:
               - year: 2024
-                metadata:
-                  ttl_hours: 1
+                show_slug: formula-1-2024
               - id_suffix: pro
                 name: Formula 1 Pro
-                metadata:
-                  url: https://example.com/pro.yaml
+                show_slug: formula-1-pro
         """,
     )
 
@@ -58,11 +55,10 @@ def test_load_config_expands_variants_and_merges_patterns(tmp_path) -> None:
     first, second = config.sports
 
     assert first.name == "Formula 1"
-    assert first.metadata.url == "https://example.com/default.yaml"
-    assert first.metadata.ttl_hours == 1
+    assert first.show_slug == "formula-1-2024"
 
     assert second.name == "Formula 1 Pro"
-    assert second.metadata.url == "https://example.com/pro.yaml"
+    assert second.show_slug == "formula-1-pro"
 
     first_patterns = [pattern.regex for pattern in first.patterns]
     assert first_patterns == ["custom", "(?P<round>\\d+)[._-](?P<session>[A-Za-z0-9]+)"]
@@ -92,8 +88,7 @@ def test_file_watcher_settings_defaults_and_overrides(tmp_path) -> None:
 
         sports:
           - id: demo
-            metadata:
-              url: https://example.com/demo.yaml
+            show_slug: demo
         """,
     )
 
@@ -125,8 +120,7 @@ def test_kometa_trigger_settings_round_trip(tmp_path) -> None:
 
         sports:
           - id: demo
-            metadata:
-              url: https://example.com/demo.yaml
+            show_slug: demo
         """,
     )
 
@@ -168,8 +162,7 @@ def test_kometa_trigger_docker_settings(tmp_path) -> None:
 
         sports:
           - id: demo
-            metadata:
-              url: https://example.com/demo.yaml
+            show_slug: demo
         """,
     )
 
@@ -211,8 +204,7 @@ def test_kometa_trigger_docker_exec_settings(tmp_path) -> None:
 
         sports:
           - id: demo
-            metadata:
-              url: https://example.com/demo.yaml
+            show_slug: demo
         """,
     )
 
@@ -243,8 +235,7 @@ def test_kometa_trigger_exec_command(tmp_path) -> None:
 
         sports:
           - id: demo
-            metadata:
-              url: https://example.com/demo.yaml
+            show_slug: demo
         """,
     )
 
@@ -273,8 +264,7 @@ def test_kometa_trigger_exec_command_conflict(tmp_path) -> None:
 
         sports:
           - id: demo
-            metadata:
-              url: https://example.com/demo.yaml
+            show_slug: demo
         """,
     )
 
@@ -298,8 +288,7 @@ def test_notifications_mentions_mapping(tmp_path) -> None:
 
         sports:
           - id: demo
-            metadata:
-              url: https://example.com/demo.yaml
+            show_slug: demo
         """,
     )
 

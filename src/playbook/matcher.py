@@ -169,6 +169,53 @@ _NOISE_TOKENS = (
     "verum",
 )
 
+# Default generic session aliases for common motorsport session terms.
+# These are used as fallback mappings when patterns don't define specific aliases.
+# Maps canonical session name -> list of common variations/spellings.
+_DEFAULT_GENERIC_SESSION_ALIASES: dict[str, list[str]] = {
+    "Race": [
+        "Race",
+        "Main Race",
+        "Main.Race",
+        "Feature Race",
+        "Feature.Race",
+        "Main Event",
+        "Main.Event",
+        "Feature Event",
+        "Feature.Event",
+        "Grand Prix",
+        "GP",
+    ],
+    "Practice": [
+        "Practice",
+        "Practice Session",
+        "Practice.Session",
+        "Free Practice",
+        "Free.Practice",
+        "FP",
+        "Warmup",
+        "Warm-up",
+        "Warm Up",
+    ],
+    "Qualifying": [
+        "Qualifying",
+        "Quali",
+        "Qualification",
+        "Qualifying Session",
+        "Qualifying.Session",
+        "Q",
+        "Q Session",
+    ],
+    "Sprint": [
+        "Sprint",
+        "Sprint Race",
+        "Sprint.Race",
+        "Sprint Qualifying",
+        "Sprint.Qualifying",
+        "SQ",
+    ],
+}
+
 
 @dataclass
 class PatternRuntime:
@@ -194,6 +241,25 @@ def _build_session_lookup(pattern: PatternConfig, season: Season) -> SessionLook
             normalized_alias = normalize_token(alias)
             if index.get_direct(normalized_alias) is None:
                 index.add(normalized_alias, canonical)
+
+    # Add default generic session aliases for common motorsport terms.
+    # These aliases normalize various spellings/formats to canonical session names.
+    # The canonical names can then be used by pattern-specific session_aliases.
+    # Only add if not already defined by the pattern's session_aliases.
+    for canonical, aliases in _DEFAULT_GENERIC_SESSION_ALIASES.items():
+        normalized_canonical = normalize_token(canonical)
+        # Skip if the pattern already defines this canonical name
+        if normalized_canonical and index.get_direct(normalized_canonical) is not None:
+            continue
+        # Add the canonical name itself
+        if normalized_canonical:
+            index.add(normalized_canonical, canonical)
+        # Add all aliases pointing to the canonical name
+        for alias in aliases:
+            normalized_alias = normalize_token(alias)
+            if normalized_alias and index.get_direct(normalized_alias) is None:
+                index.add(normalized_alias, canonical)
+
     return index
 
 
@@ -229,16 +295,46 @@ _DATE_FORMATS = (
     "%d %m %Y",
 )
 
+# Partial date formats (DD MM without year) - European format
+_PARTIAL_DATE_FORMATS = (
+    "%d %m",
+    "%d-%m",
+    "%d.%m",
+    "%d/%m",
+)
 
-def _parse_date_string(value: str) -> dt.date | None:
+
+def _parse_date_string(value: str, reference_year: int | None = None) -> dt.date | None:
+    """Parse a date string into a date object.
+
+    Args:
+        value: The date string to parse (e.g., "16 11 2025" or "16 11")
+        reference_year: Optional year to use for partial dates (DD MM format).
+                        If not provided and the date string lacks a year, parsing will fail.
+
+    Returns:
+        A date object if parsing succeeds, None otherwise.
+    """
     stripped = value.strip()
     if not stripped:
         return None
+
+    # Try full date formats first
     for fmt in _DATE_FORMATS:
         try:
             return dt.datetime.strptime(stripped, fmt).date()
         except ValueError:
             continue
+
+    # Try partial date formats (DD MM without year) if reference_year is provided
+    if reference_year is not None:
+        for fmt in _PARTIAL_DATE_FORMATS:
+            try:
+                parsed = dt.datetime.strptime(stripped, fmt)
+                return dt.date(reference_year, parsed.month, parsed.day)
+            except ValueError:
+                continue
+
     return None
 
 
@@ -375,7 +471,8 @@ def _select_episode(
             return None
 
     def _strip_noise(normalized: str) -> str:
-        result = normalized
+        # Collapse multiple consecutive whitespace to single space
+        result = re.sub(r"\s+", " ", normalized).strip()
         for token in _NOISE_TOKENS:
             if token and token in result:
                 result = result.replace(token, "")
@@ -402,8 +499,12 @@ def _select_episode(
     trace_lookup_records: list[dict[str, str]] = []
     seen_tokens: set[str] = set()
 
-    def add_lookup(label: str, value: str | None) -> None:
+    def add_lookup(label: str, value: str | list[str] | None) -> None:
         if not value:
+            return
+        if isinstance(value, list):
+            for item in value:
+                add_lookup(label, item)
             return
 
         variants: list[str] = []
@@ -469,8 +570,10 @@ def _select_episode(
     # Strip noise from team names (resolution, fps, providers, etc.)
     if away_value:
         away_value = _strip_team_noise(away_value)
+        match_groups["away"] = away_value
     if home_value:
         home_value = _strip_team_noise(home_value)
+        match_groups["home"] = home_value
 
     team_alias_map_name = pattern_config.metadata_filters.get("team_alias_map")
     alias_lookup = get_team_alias_map(team_alias_map_name) if team_alias_map_name else {}
@@ -660,6 +763,45 @@ def _select_episode(
                 return episode
         except ValueError:
             pass  # Round value wasn't a valid integer
+
+    # Date-based episode resolution fallback
+    # When session name lookup fails but we have date information (e.g., Figure Skating "16 11"),
+    # fallback to finding episode by date proximity
+    fallback_date = parsed_date
+    if fallback_date is None:
+        # Try to parse event_date group if available (partial date like "16 11")
+        event_date_value = match_groups.get("event_date")
+        if event_date_value:
+            # Get reference year from match groups
+            reference_year_str = match_groups.get("year") or match_groups.get("date_year")
+            reference_year = int(reference_year_str) if reference_year_str else None
+            fallback_date = _parse_date_string(event_date_value, reference_year=reference_year)
+
+    if fallback_date is not None:
+        # Find episodes with dates within proximity of the fallback date
+        date_candidates: list[tuple[Episode, int]] = []
+        for episode in season.episodes:
+            if episode.originally_available is not None:
+                if _dates_within_proximity(fallback_date, episode.originally_available, tolerance_days=2):
+                    delta = abs((fallback_date - episode.originally_available).days)
+                    date_candidates.append((episode, delta))
+
+        if date_candidates:
+            # Sort by closest date match and return the best
+            date_candidates.sort(key=lambda item: item[1])
+            best_episode, best_delta = date_candidates[0]
+            if trace is not None:
+                trace["match"] = {
+                    "label": "date_fallback",
+                    "value": fallback_date.isoformat(),
+                    "normalized": fallback_date.isoformat(),
+                    "token": normalize_token(best_episode.title),
+                    "episode_title": best_episode.title,
+                    "matched_via_date_fallback": True,
+                    "date_delta_days": best_delta,
+                }
+                trace["lookup_attempts"] = trace_lookup_records
+            return best_episode
 
     if attempted_variants:
         match_groups["_attempted_session_tokens"] = attempted_variants

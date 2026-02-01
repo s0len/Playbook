@@ -73,22 +73,33 @@ The watcher keeps Playbook alive and reacts to filesystem events instead of rely
 - `reconcile_interval` performs a full scan every _N_ seconds even if the platform drops events.
 - Override `WATCH_MODE=true|false` (or use `--watch` / `--no-watch`) to force the CLI into the desired mode regardless of the config.
 
-## 2. Sport Entries
+## 2. TheTVSportsDB API Configuration
 
-Each sport describes metadata, detection filters, and pattern packs:
+Playbook fetches show/season/episode metadata from TheTVSportsDB REST API. The defaults work for most users, but you can optionally tune cache and timeout settings under `settings.tvsportsdb`:
+
+```yaml
+settings:
+  tvsportsdb:
+    ttl_hours: 6     # Cache API responses for 6 hours (default: 12)
+    timeout: 60      # HTTP request timeout in seconds (default: 30)
+```
+
+| Field | Description | Default |
+|-------|-------------|---------|
+| `ttl_hours` | How long to cache API responses before refreshing | `12` |
+| `timeout` | HTTP request timeout in seconds | `30` |
+
+This section is optional—omit it entirely to use defaults.
+
+## 3. Sport Entries
+
+Each sport links to a show in TheTVSportsDB via `show_slug` and defines detection filters and pattern packs:
 
 ```yaml
 - id: formula1_2025
   name: Formula 1 2025
   enabled: true
-  metadata:
-    url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/formula1/2025.yaml
-    show_key: Formula1 2025
-    ttl_hours: 12
-    season_overrides:
-      Pre-Season Testing:
-        season_number: 0
-        round: 0
+  show_slug: "formula-1-2025"    # TheTVSportsDB show slug (REQUIRED)
   source_globs:
     - "Formula.1.*"
   source_extensions:
@@ -97,10 +108,15 @@ Each sport describes metadata, detection filters, and pattern packs:
   allow_unmatched: false
   pattern_sets:
     - formula1
+  season_overrides:
+    Pre-Season Testing:
+      season_number: 0
+      round: 0
 ```
 
 Key knobs:
 
+- `show_slug` (required) references the show in TheTVSportsDB. Find available slugs at the API endpoint or TheTVSportsDB web interface.
 - `enabled` toggles sports without deleting them.
 - `source_globs` / `source_extensions` are coarse filters before any regex work happens.
 - `link_mode`, `destination.*`, and notification overrides let you specialize behavior per sport.
@@ -119,14 +135,14 @@ By default, Playbook processes files with these extensions: `.mkv`, `.mp4`, `.ts
 >   - .m4v
 >   - .avi
 > ```
-- `team_alias_map` (optional) points to a built-in alias table (e.g., `premier_league`, `nhl`) used by the structured matcher to normalize shorthand like “Man City” or “NJD”.
+- `team_alias_map` (optional) points to a built-in alias table (e.g., `premier_league`, `nhl`) used by the structured matcher to normalize shorthand like "Man City" or "NJD".
 - `pattern_sets` pulls from `src/playbook/pattern_templates.yaml`; you can still inline `file_patterns` for overrides.
 
 **Metadata overrides**
 
-- `season_overrides` lets you force numbers/titles for special events (exhibitions, pre-season testing, etc.).
-- `metadata.ttl_hours` controls how aggressively Playbook refreshes remote YAML feeds; lower it for rapidly changing leagues.
-- `allow_unmatched: true` is useful when onboarding a new sport—you’ll still see matches in the log but without warnings.
+- `season_overrides` lets you force numbers/titles for special events (exhibitions, pre-season testing, etc.). Define these at the sport level.
+- `tvsportsdb.ttl_hours` controls how aggressively Playbook refreshes API responses; lower it for rapidly changing leagues.
+- `allow_unmatched: true` is useful when onboarding a new sport—you'll still see matches in the log but without warnings.
 
 ### Pattern Sets & Reuse
 
@@ -138,9 +154,9 @@ rg --context 3 "pattern_sets" src/playbook/pattern_templates.yaml
 
 - Reference a bundle via `pattern_sets: ["formula1", "motoGP"]`.
 - Layer sport-specific overrides by combining `pattern_sets` with inline `file_patterns`.
-- Keep experimental tweaks local until they’re stable, then upstream them by editing `pattern_templates.yaml`.
+- Keep experimental tweaks local until they're stable, then upstream them by editing `pattern_templates.yaml`.
 
-## 3. Pattern Matching
+## 4. Pattern Matching
 
 Inline patterns support full regex/group control:
 
@@ -177,14 +193,14 @@ Reference table:
 2. Run `pytest tests/test_pattern_samples.py` to confirm they map to the expected metadata.
 3. Use `python -m playbook.cli --config playbook.yaml --dry-run --verbose` with `--clear-processed-cache` to reprocess the same files repeatedly during tuning.
 
-## 4. Destination Templating
+## 5. Destination Templating
 
 Templates receive a rich context assembled from metadata + regex captures:
 
 | Key | Meaning |
 |-----|---------|
 | `sport_id`, `sport_name` | Sport metadata from the config. |
-| `show_title`, `show_key` | Raw and display titles from the metadata feed. |
+| `show_title`, `show_slug` | Display title and API slug from TheTVSportsDB. |
 | `season_title`, `season_number`, `season_round`, `season_year` | Season context with overrides applied. |
 | `episode_title`, `episode_number`, `episode_summary`, `episode_originally_available` | Episode metadata pulled from the feed. |
 | `location`, `session`, `round`, … | Any capture group from the regex. |
@@ -199,25 +215,27 @@ Tips:
 - The renderer automatically normalizes whitespace and strips forbidden path characters—keep templates readable and let Playbook worry about sanitization.
 - Override `destination.season_folder_template` to group rounds (e.g., `{season_round:02} {season_title}` for touring series).
 
-## 5. Variants & Reuse
+## 6. Variants & Reuse
 
 Reuse a base sport definition across seasons or release groups:
 
 ```yaml
 - id: indycar
   name: IndyCar
-  metadata:
-    url: https://example.com/indycar/base.yaml
+  pattern_sets:
+    - indycar
+  source_globs:
+    - "IndyCar.*"
   variants:
     - year: 2024
-      metadata:
-        url: https://example.com/indycar-2024.yaml
+      show_slug: "ntt-indycar-series-2024"
     - year: 2025
-      metadata:
-        url: https://example.com/indycar-2025.yaml
+      show_slug: "ntt-indycar-series-2025"
+    - year: 2026
+      show_slug: "ntt-indycar-series-2026"
 ```
 
-Each variant inherits fields from the parent, tweaks whatever is listed inside the variant block, and gets an auto-generated `id`/`name` when not explicitly set. Use variants when only the metadata URL or alias table changes year-to-year.
+Each variant inherits fields from the parent, tweaks whatever is listed inside the variant block, and gets an auto-generated `id`/`name` when not explicitly set. Use variants when only the `show_slug` or alias table changes year-to-year.
 
 ## Validation Workflow
 

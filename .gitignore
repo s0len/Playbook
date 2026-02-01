@@ -32,3 +32,6 @@ site/
 !.auto-claude/.env.example
 .worktrees
 .vscode/
+
+# Auto Claude data directory
+.auto-claude/

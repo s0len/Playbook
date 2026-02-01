@@ -24,6 +24,18 @@ def test_normalize_token_removes_non_alphanumerics() -> None:
     assert normalize_token("FP1 Warm-Up!") == "fp1warmup"
 
 
+def test_normalize_token_handles_whitespace_normalization() -> None:
+    """Verify that normalize_token properly handles double and multiple spaces."""
+    # Double spaces should be removed just like single spaces
+    assert normalize_token("Test  String") == "teststring"
+    # Multiple spaces should all be collapsed and removed
+    assert normalize_token("Multiple   Spaces") == "multiplespaces"
+    # Mixed whitespace (tabs, spaces) should all be removed
+    assert normalize_token("Tabs\tAnd  Spaces") == "tabsandspaces"
+    # Leading/trailing whitespace should be removed
+    assert normalize_token("  Padded  ") == "padded"
+
+
 def test_slugify_handles_punctuation_and_case() -> None:
     assert slugify("Grand Prix #1") == "grand-prix-1"
 

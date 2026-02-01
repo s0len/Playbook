@@ -387,7 +387,7 @@ class TestExtractTeamsFromText:
         assert "Miami Heat" in teams
 
 
-from playbook.config import DestinationTemplates, MetadataConfig, SportConfig
+from playbook.config import DestinationTemplates, SportConfig
 from playbook.matcher import match_file_to_episode
 
 
@@ -395,7 +395,7 @@ def _sport(sport_id: str, *, alias_map: str | None = None) -> SportConfig:
     return SportConfig(
         id=sport_id,
         name=sport_id,
-        metadata=MetadataConfig(url="https://example.com"),
+        show_slug=sport_id,
         patterns=[],
         team_alias_map=alias_map,
         destination=DestinationTemplates(),

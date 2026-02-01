@@ -18,7 +18,7 @@ def test_sample_configuration_passes_validation() -> None:
     assert report.errors == []
 
 
-def test_validation_flags_invalid_flush_time_and_metadata_url() -> None:
+def test_validation_flags_invalid_flush_time_and_show_slug() -> None:
     config = {
         "settings": {
             "notifications": {
@@ -28,9 +28,7 @@ def test_validation_flags_invalid_flush_time_and_metadata_url() -> None:
         "sports": [
             {
                 "id": "test",
-                "metadata": {
-                    "url": "",
-                },
+                "show_slug": "  ",  # blank show_slug should be an error
             }
         ],
     }
@@ -38,7 +36,7 @@ def test_validation_flags_invalid_flush_time_and_metadata_url() -> None:
     report = validate_config_data(config)
     codes = {issue.code for issue in report.errors}
     assert "flush-time" in codes
-    assert "metadata-url" in codes
+    assert "show-slug-blank" in codes
 
 
 def test_validation_rejects_invalid_watcher_block() -> None:
@@ -51,7 +49,7 @@ def test_validation_rejects_invalid_watcher_block() -> None:
             }
         },
         "sports": [
-            {"id": "demo", "metadata": {"url": "https://example.com/demo.yaml"}},
+            {"id": "demo", "show_slug": "demo"},
         ],
     }
 

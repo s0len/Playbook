@@ -11,7 +11,6 @@ import yaml
 
 from playbook.config import (
     DestinationTemplates,
-    MetadataConfig,
     SportConfig,
     _build_pattern_config,
 )
@@ -110,8 +109,8 @@ def _build_sport(data: dict[str, object]) -> SportConfig:
     return SportConfig(
         id=str(data.get("id")),
         name=str(data.get("name", data.get("id"))),
+        show_slug=str(data.get("show_slug", data.get("id", "test-show"))),
         enabled=True,
-        metadata=MetadataConfig(url=str(data.get("metadata_url", "https://example.com"))),
         patterns=patterns,
         destination=DestinationTemplates(),
         source_globs=list(data.get("source_globs", [])),

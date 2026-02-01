@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "032-1-4-2-develop-run-issues",
+  "spec": "036-after-running-the-latest-i-notice-there-are-still-",
   "state": "building",
   "subtasks": {
-    "completed": 7,
-    "total": 11,
+    "completed": 15,
+    "total": 17,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Fix Team Name Extraction",
+    "current": "Integration Testing",
     "id": null,
-    "total": 2
+    "total": 4
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 2,
-    "started_at": "2026-01-08T14:21:07.390721"
+    "number": 16,
+    "started_at": "2026-01-13T11:33:27.016918"
   },
-  "last_update": "2026-01-08T14:23:50.809221"
+  "last_update": "2026-01-13T12:28:13.123717"
 }

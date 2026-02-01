@@ -8,7 +8,7 @@ Every deployment needs three things:
 
 1. **A config file** (`playbook.yaml`) defining which sports to process and how to match them
 2. **Three directories**: source (downloads), destination (Plex library), and cache (metadata storage)
-3. **Network access** to remote metadata URLs (SportsDB, GitHub-hosted YAML files, etc.)
+3. **Network access** to TheTVSportsDB API (metadata source for show/season/episode information)
 
 All deployment methods use the same config schema and produce identical folder layouts in your Plex library.
 
@@ -310,7 +310,7 @@ Look for:
 - **Matched files**: Confirm the pattern matched expected downloads
 - **Destination paths**: Verify the Plex folder structure looks correct
 - **Skipped files**: Understand why some files weren't processed
-- **Metadata downloads**: Check that remote YAML files loaded successfully
+- **API responses**: Check that TheTVSportsDB metadata loaded successfully
 
 ### 3. Review Logs
 

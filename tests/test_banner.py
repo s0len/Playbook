@@ -28,8 +28,7 @@ def build_minimal_config(tmp_path: Path) -> AppConfig:
 
         sports:
           - id: test_sport
-            metadata:
-              url: https://example.com/test.yaml
+            show_slug: test-sport
         """,
     )
     return load_config(config_path)
@@ -100,8 +99,7 @@ def test_build_banner_info_with_dry_run(tmp_path) -> None:
 
         sports:
           - id: test_sport
-            metadata:
-              url: https://example.com/test.yaml
+            show_slug: test-sport
         """,
     )
     config = load_config(config_path)
@@ -126,8 +124,7 @@ def test_build_banner_info_with_watch_mode(tmp_path) -> None:
 
         sports:
           - id: test_sport
-            metadata:
-              url: https://example.com/test.yaml
+            show_slug: test-sport
         """,
     )
     config = load_config(config_path)
@@ -161,16 +158,13 @@ def test_build_banner_info_counts_enabled_sports(tmp_path) -> None:
         sports:
           - id: sport1
             enabled: true
-            metadata:
-              url: https://example.com/sport1.yaml
+            show_slug: sport1
           - id: sport2
             enabled: true
-            metadata:
-              url: https://example.com/sport2.yaml
+            show_slug: sport2
           - id: sport3
             enabled: false
-            metadata:
-              url: https://example.com/sport3.yaml
+            show_slug: sport3
         """,
     )
     config = load_config(config_path)
@@ -198,8 +192,7 @@ def test_build_banner_info_with_notifications(tmp_path) -> None:
 
         sports:
           - id: test_sport
-            metadata:
-              url: https://example.com/test.yaml
+            show_slug: test-sport
         """,
     )
     config = load_config(config_path)
@@ -226,8 +219,7 @@ def test_build_banner_info_with_plex_sync(tmp_path) -> None:
 
         sports:
           - id: test_sport
-            metadata:
-              url: https://example.com/test.yaml
+            show_slug: test-sport
         """,
     )
     config = load_config(config_path)
@@ -253,8 +245,7 @@ def test_build_banner_info_with_kometa_trigger(tmp_path) -> None:
 
         sports:
           - id: test_sport
-            metadata:
-              url: https://example.com/test.yaml
+            show_slug: test-sport
         """,
     )
     config = load_config(config_path)

@@ -26,8 +26,7 @@ settings:
 
 sports:
   - id: demo
-    metadata:
-      url: https://example.com/demo.yaml
+    show_slug: demo
 """,
         encoding="utf-8",
     )
@@ -80,8 +79,7 @@ settings:
 
 sports:
   - id: demo
-    metadata:
-      url: https://example.com/demo.yaml
+    show_slug: demo
 """,
         encoding="utf-8",
     )

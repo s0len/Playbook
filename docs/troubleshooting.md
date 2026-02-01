@@ -6,11 +6,12 @@ Run into snags? Start with the quick triage grid below, then follow the deeper d
 
 | Symptom | Likely cause | Immediate next step |
 |---------|--------------|---------------------|
-| CLI finishes instantly, nothing processed | `source_dir` not mounted/readable or `source_globs` too strict | Run `python -m playbook.cli --config ... --dry-run --verbose` and inspect `playbook.log` for “skipped” entries |
-| Metadata looks stale / missing events | Cached YAML past TTL or wrong `metadata.url` | Delete `CACHE_DIR/metadata/*` or lower `metadata.ttl_hours`, then rerun with `--dry-run` |
+| CLI finishes instantly, nothing processed | `source_dir` not mounted/readable or `source_globs` too strict | Run `python -m playbook.cli --config ... --dry-run --verbose` and inspect `playbook.log` for "skipped" entries |
+| Metadata looks stale / missing events | Cached API responses past TTL or wrong `show_slug` | Delete `CACHE_DIR/tvsportsdb/*` or lower `tvsportsdb.ttl_hours`, then rerun with `--dry-run` |
+| Show not found in TheTVSportsDB | Invalid `show_slug` or show doesn't exist yet | Verify the slug exists in TheTVSportsDB; check API connectivity |
 | Hardlinks fail / files missing | Cross-filesystem moves or SMB/NFS target | Set `link_mode: copy` (global or per sport) and ensure destination mount permissions |
 | Kometa/Autoscan never triggers | `settings.kometa_trigger.enabled` false or Autoscan rewrites wrong | Run `python -m playbook.cli kometa-trigger ...` to test; review notification targets for correct rewrites |
-| Watcher never fires | `watchdog` missing or paths misconfigured | Check container logs for “watchdog unavailable”, confirm `file_watcher.paths` exist, or fall back to batch mode |
+| Watcher never fires | `watchdog` missing or paths misconfigured | Check container logs for "watchdog unavailable", confirm `file_watcher.paths` exist, or fall back to batch mode |
 
 ## Diagnostics Workflow
 
@@ -44,11 +45,12 @@ Validation Errors: 3 error(s) detected
 ╰────────────────────────────────────────────────────╯
 
 ╭─ Sport #1 (demo) ──────────────────────────────────╮
-│  L10   sports[0].metadata.url                      │
-│        Invalid metadata URL format                 │
-│        (metadata-url)                              │
-│        💡 Ensure the URL starts with http:// or    │
-│           https://                                 │
+│  L10   sports[0].show_slug                         │
+│        Sport must define show_slug or variants     │
+│        with show_slug                              │
+│        (show-slug-missing)                         │
+│        💡 Add 'show_slug' field referencing a      │
+│           show in TheTVSportsDB                    │
 │                                                    │
 │  L11   sports[0].id                                │
 │        Duplicate sport ID: 'demo'                  │
@@ -61,8 +63,8 @@ Validation Errors: 3 error(s) detected
 
 - **Grouped sections:** Errors are grouped by configuration area (Settings, Sport #1, Pattern Sets, etc.) making it easy to focus on one part of your config at a time
 - **Line numbers:** Each error shows `L<number>` indicating the exact line in your YAML file where the issue occurs
-- **Full path:** The complete path to the problematic field (e.g., `sports[0].metadata.url`)
-- **Error codes:** Technical error identifiers in parentheses (e.g., `(flush-time)`, `(metadata-url)`) useful for searching documentation
+- **Full path:** The complete path to the problematic field (e.g., `sports[0].show_slug`)
+- **Error codes:** Technical error identifiers in parentheses (e.g., `(flush-time)`, `(show-slug-missing)`) useful for searching documentation
 - **Fix suggestions:** Actionable guidance marked with 💡 that explains how to correct the issue
 
 ### Interpreting Fix Suggestions
@@ -82,7 +84,7 @@ Fix suggestions are context-aware and provide specific guidance based on the err
 
 - **Missing fields:** Tell you exactly which required field to add
   ```
-  💡 Add a 'metadata' section with 'url' and 'pattern_sets' fields
+  💡 Add 'show_slug' field referencing a show in TheTVSportsDB
   ```
 
 - **Invalid values:** Suggest valid alternatives or corrections
@@ -124,8 +126,8 @@ python -m playbook.cli kometa-trigger --config /config/playbook.yaml --mode dock
 
 ## Cache & Filesystem Hygiene
 
-- **Safe to delete:**  
-  `CACHE_DIR/metadata/*` (forces metadata refetch), `CACHE_DIR/processed_cache.json`, `LOG_DIR/*.previous`
+- **Safe to delete:**
+  `CACHE_DIR/tvsportsdb/*` (forces API refetch), `CACHE_DIR/processed_cache.json`, `LOG_DIR/*.previous`
 - **Keep persistent:**  
   `playbook.yaml`, notification secrets, destination directory (Plex expects consistent paths), Kometa configs
 - **Hardlink tips:**  
