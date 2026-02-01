@@ -228,6 +228,8 @@ class Processor:
             elif has_issues:
                 self._log_detailed_summary(stats)
             self._trigger_post_run_trigger_if_needed(stats)
+            # Send summary notification if in summary mode
+            self.notification_service.send_summary()
             duration = time.perf_counter() - run_started
             self._log_run_recap(stats, duration)
             return stats

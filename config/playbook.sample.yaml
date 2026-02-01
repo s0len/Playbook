@@ -43,6 +43,7 @@ settings:
   ####################################################################
   notifications:
     batch_daily: false    # When true, send one message per sport/day and edit it with new entries instead of posting each file.
+    summary_mode: false   # When true, send one summary notification per scan instead of per-file. Prevents rate limiting.
     flush_time: "00:00"   # Local HH:MM (or HH:MM:SS) boundary for the batching day rollover. Useful for overnight events.
     mentions:             # Optional: ping specific Discord roles/users per sport (or use 'default' as a fallback).
       premier_league: "<@&123456789012345678>" # Replace with your role ID. Automatically covers variants like premier_league_2025_26.
