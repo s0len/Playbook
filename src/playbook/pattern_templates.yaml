@@ -5990,3 +5990,25 @@ pattern_sets:
       season_dir_template: "{season_number:02d} {season_title}"
       filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
 
+    - description: NFL playoff date-first releases (DD-MM-YYYY format)
+      # Example: NFL 25-01-2026 AFC Championship New England Patriots vs Denver Broncos 1080p60_EN_CBS.mkv
+      # Example: NFL 25-01-2026 NFC Championship Los Angeles Rams vs Seattle Seahawks 1080p60_EN_FOX.mkv
+      regex: >-
+        (?i)^NFL[\s._-]+(?P<day>\d{2})-(?P<month>\d{2})-(?P<year>\d{4})[\s._-]+(?:(?P<conference>AFC|NFC)[\s._-]+)?(?P<round>Championship|Wild[\s._-]*Card|Divisional|Super[\s._-]*Bowl)[\s._-]+(?P<session>(?P<away><matchup_team>)[\s._-]+(?P<separator>vs\.?|v|at|@)[\s._-]+(?P<home><matchup_team>))(?:[\s._-]+(?:<suffix_token>|[A-Za-z0-9]+))*\.(?P<extension><extension>)$
+      season_selector:
+        mode: title
+        group: round
+        aliases:
+          Championship: "Conference Championships"
+          "Wild Card": "Wild Card Weekend"
+          Divisional: "Divisional Playoffs"
+          "Super Bowl": "Super Bowl"
+      episode_selector:
+        group: session
+        allow_fallback_to_title: true
+      metadata_filters:
+        team_alias_map: nfl
+      destination_root_template: "{show_title}"
+      season_dir_template: "{season_number:02d} {season_title}"
+      filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+

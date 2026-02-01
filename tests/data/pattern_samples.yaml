@@ -661,3 +661,54 @@ samples:
         expect_episode: "Philadelphia Eagles at Dallas Cowboys"
       - value: "NFL 2025 2026 Week 17 Eagles @ Cowboys 720p60fps.mkv"
         expect_episode: "Philadelphia Eagles at Dallas Cowboys"
+
+  - description: "NFL 2025 Playoff date-first samples"
+    sport:
+      id: "nfl_playoffs"
+      name: "NFL Playoffs"
+      pattern_sets:
+        - nfl
+    show:
+      key: "nfl_2025"
+      title: "NFL 2025"
+      seasons:
+        - title: "Wild Card Weekend"
+          display_number: 19
+          episodes:
+            - title: "Buffalo Bills at Houston Texans"
+              aliases:
+                - "Buffalo Bills vs Houston Texans"
+        - title: "Divisional Playoffs"
+          display_number: 20
+          episodes:
+            - title: "Kansas City Chiefs at Baltimore Ravens"
+              aliases:
+                - "Kansas City Chiefs vs Baltimore Ravens"
+        - title: "Conference Championships"
+          display_number: 21
+          episodes:
+            - title: "New England Patriots at Denver Broncos"
+              aliases:
+                - "New England Patriots vs Denver Broncos"
+            - title: "Los Angeles Rams at Seattle Seahawks"
+              aliases:
+                - "Los Angeles Rams vs Seattle Seahawks"
+        - title: "Super Bowl"
+          display_number: 22
+          episodes:
+            - title: "Super Bowl LX"
+    filenames:
+      # Exact filenames from user (DD-MM-YYYY format with AFC/NFC prefix)
+      - value: "NFL 25-01-2026 AFC Championship New England Patriots vs Denver Broncos 1080p60_EN_CBS.mkv"
+        expect_season: "Conference Championships"
+        expect_episode: "New England Patriots at Denver Broncos"
+      - value: "NFL 25-01-2026 NFC Championship Los Angeles Rams vs Seattle Seahawks 1080p60_EN_FOX.mkv"
+        expect_season: "Conference Championships"
+        expect_episode: "Los Angeles Rams at Seattle Seahawks"
+      # Variations
+      - value: "NFL 18-01-2026 AFC Wild Card Buffalo Bills vs Houston Texans 720p.mkv"
+        expect_season: "Wild Card Weekend"
+        expect_episode: "Buffalo Bills at Houston Texans"
+      - value: "NFL 19-01-2026 Divisional Kansas City Chiefs vs Baltimore Ravens 1080p.mkv"
+        expect_season: "Divisional Playoffs"
+        expect_episode: "Kansas City Chiefs at Baltimore Ravens"
