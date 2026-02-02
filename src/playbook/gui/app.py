@@ -19,6 +19,7 @@ from .components.header import header
 from .log_handler import install_gui_log_handler
 from .pages import config, dashboard, logs, sports
 from .state import gui_state
+from .utils import suppress_nicegui_disconnect_errors
 
 if TYPE_CHECKING:
     from playbook.config import AppConfig
@@ -114,6 +115,9 @@ def run_with_gui(
     """
     from playbook.config import load_config
     from playbook.processor import Processor
+
+    # Suppress harmless NiceGUI disconnect errors
+    suppress_nicegui_disconnect_errors()
 
     # Load configuration
     LOGGER.info("Loading configuration from %s", config_path)
@@ -218,6 +222,7 @@ def run_gui_standalone(port: int = 8080, host: str = "0.0.0.0") -> None:
         port: Port to run the web server on
         host: Host to bind the web server to
     """
+    suppress_nicegui_disconnect_errors()
     LOGGER.info("Running GUI in standalone mode (no processor)")
     create_app()
     ui.run(
