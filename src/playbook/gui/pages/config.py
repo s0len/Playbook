@@ -35,7 +35,7 @@ def config_page() -> None:
     with ui.column().classes("w-full max-w-7xl mx-auto p-4 gap-4"):
         # Page title with actions
         with ui.row().classes("w-full items-center justify-between"):
-            ui.label("Configuration").classes("text-3xl font-bold text-gray-800")
+            ui.label("Configuration").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
 
             with ui.row().classes("gap-2"):
                 # Save indicator
@@ -65,11 +65,11 @@ def config_page() -> None:
         # Main content: Editor + Validation panel
         with ui.row().classes("w-full gap-4"):
             # Editor panel (left, wider)
-            with ui.card().classes("flex-1"):
+            with ui.card().classes("glass-card flex-1"):
                 with ui.row().classes("items-center justify-between mb-2"):
-                    ui.label("playbook.yaml").classes("text-lg font-semibold text-gray-700")
+                    ui.label("playbook.yaml").classes("text-lg font-semibold text-slate-700 dark:text-slate-200")
                     if gui_state.config_path:
-                        ui.label(str(gui_state.config_path)).classes("text-sm text-gray-500")
+                        ui.label(str(gui_state.config_path)).classes("text-sm text-slate-500 dark:text-slate-400")
 
                 # YAML editor
                 editor = (
@@ -84,7 +84,7 @@ def config_page() -> None:
                     state["modified"] = e.value != original_text
                     if state["modified"]:
                         save_indicator.text = "Modified"
-                        save_indicator.classes(replace="text-yellow-600 text-sm")
+                        save_indicator.classes(replace="text-amber-600 dark:text-amber-400 text-sm")
                     else:
                         save_indicator.text = ""
 
@@ -93,35 +93,37 @@ def config_page() -> None:
             # Validation panel (right, narrower)
             with ui.column().classes("w-80 gap-4"):
                 # Validation results
-                with ui.card().classes("w-full"):
-                    ui.label("Validation").classes("text-lg font-semibold text-gray-700 mb-2")
+                with ui.card().classes("glass-card w-full"):
+                    ui.label("Validation").classes("text-lg font-semibold text-slate-700 dark:text-slate-200 mb-2")
                     validation_panel = ui.column().classes("w-full gap-2")
                     with validation_panel:
-                        ui.label("Click 'Validate' to check configuration").classes("text-sm text-gray-500 italic")
+                        ui.label("Click 'Validate' to check configuration").classes(
+                            "text-sm text-slate-500 dark:text-slate-400 italic"
+                        )
 
                 # Help/Tips card
-                with ui.card().classes("w-full"):
-                    ui.label("Tips").classes("text-lg font-semibold text-gray-700 mb-2")
-                    with ui.column().classes("gap-1 text-sm text-gray-600"):
+                with ui.card().classes("glass-card w-full"):
+                    ui.label("Tips").classes("text-lg font-semibold text-slate-700 dark:text-slate-200 mb-2")
+                    with ui.column().classes("gap-1 text-sm text-slate-600 dark:text-slate-400"):
                         ui.label("- Use 2-space indentation for YAML")
                         ui.label("- Required: settings, sports sections")
                         ui.label("- Each sport needs: id, show_slug")
                         ui.label("- Save creates automatic backup")
 
                 # Quick links
-                with ui.card().classes("w-full"):
-                    ui.label("Reference").classes("text-lg font-semibold text-gray-700 mb-2")
+                with ui.card().classes("glass-card w-full"):
+                    ui.label("Reference").classes("text-lg font-semibold text-slate-700 dark:text-slate-200 mb-2")
                     with ui.column().classes("gap-1"):
                         ui.link(
                             "Documentation",
                             "https://s0len.github.io/Playbook/",
                             new_tab=True,
-                        ).classes("text-sm text-blue-600")
+                        ).classes("text-sm text-blue-600 dark:text-blue-400")
                         ui.link(
                             "Sample Config",
                             "https://github.com/s0len/Playbook/blob/main/config/playbook.sample.yaml",
                             new_tab=True,
-                        ).classes("text-sm text-blue-600")
+                        ).classes("text-sm text-blue-600 dark:text-blue-400")
 
 
 def _load_config_yaml() -> str:
@@ -206,11 +208,23 @@ def _validate_config(yaml_text: str, panel: ui.column, state: dict, button: ui.b
 def _validation_message(msg_type: str, message: str) -> None:
     """Render a validation message."""
     colors = {
-        "error": ("bg-red-100 text-red-800", "error"),
-        "warning": ("bg-yellow-100 text-yellow-800", "warning"),
-        "success": ("bg-green-100 text-green-800", "check_circle"),
+        "error": (
+            "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300",
+            "error",
+        ),
+        "warning": (
+            "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300",
+            "warning",
+        ),
+        "success": (
+            "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300",
+            "check_circle",
+        ),
     }
-    color_class, icon = colors.get(msg_type, ("bg-gray-100 text-gray-800", "info"))
+    color_class, icon = colors.get(
+        msg_type,
+        ("bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200", "info"),
+    )
 
     with ui.row().classes(f"w-full items-start gap-2 p-2 rounded {color_class}"):
         ui.icon(icon).classes("text-lg shrink-0")
@@ -244,7 +258,7 @@ def _save_config(yaml_text: str, state: dict, button: ui.button, indicator: ui.l
 
         state["modified"] = False
         indicator.text = "Saved"
-        indicator.classes(replace="text-green-600 text-sm")
+        indicator.classes(replace="text-green-600 dark:text-green-400 text-sm")
 
         ui.notify("Configuration saved successfully", type="positive")
         LOGGER.info("Configuration saved to %s", gui_state.config_path)
