@@ -64,6 +64,9 @@ def stats_card(
         def update_value() -> None:
             try:
                 value_label.text = str(value_fn())
+            except (RuntimeError, KeyError):
+                # Client disconnected or element deleted - timer will be cleaned up
+                pass
             except Exception:
                 value_label.text = "?"
 

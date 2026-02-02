@@ -26,14 +26,18 @@ def activity_feed(max_items: int = 20) -> ui.column:
     feed_container = ui.column().classes("w-full gap-1")
 
     def refresh() -> None:
-        feed_container.clear()
-        events = list(gui_state.recent_events)[:max_items]
-        with feed_container:
-            if not events:
-                ui.label("No recent activity").classes("text-gray-500 italic py-4 text-center")
-            else:
-                for event in events:
-                    activity_item(event)
+        try:
+            feed_container.clear()
+            events = list(gui_state.recent_events)[:max_items]
+            with feed_container:
+                if not events:
+                    ui.label("No recent activity").classes("text-gray-500 italic py-4 text-center")
+                else:
+                    for event in events:
+                        activity_item(event)
+        except (RuntimeError, KeyError):
+            # Client disconnected or element deleted - timer will be cleaned up
+            pass
 
     ui.timer(2.0, refresh)
     refresh()

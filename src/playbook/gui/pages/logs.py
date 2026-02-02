@@ -93,39 +93,43 @@ def logs_page() -> None:
                 if state["paused"]:
                     return
 
-                logs = _get_filtered_logs(
-                    level_filter=state["level_filter"],
-                    sport_filter=state["sport_filter"],
-                    search_query=state["search_query"],
-                    max_lines=300,
-                )
+                try:
+                    logs = _get_filtered_logs(
+                        level_filter=state["level_filter"],
+                        sport_filter=state["sport_filter"],
+                        search_query=state["search_query"],
+                        max_lines=300,
+                    )
 
-                log_container.clear()
-                with log_container:
-                    if not logs:
-                        ui.label("No logs matching filters").classes("text-gray-500 italic py-4")
-                    else:
-                        for entry in logs:
-                            log_line(entry)
+                    log_container.clear()
+                    with log_container:
+                        if not logs:
+                            ui.label("No logs matching filters").classes("text-gray-500 italic py-4")
+                        else:
+                            for entry in logs:
+                                log_line(entry)
 
-                # Update stats
-                total_logs = len(gui_state.log_buffer)
-                filtered_count = len(logs)
-                log_count_label.text = f"{filtered_count} of {total_logs} entries"
+                    # Update stats
+                    total_logs = len(gui_state.log_buffer)
+                    filtered_count = len(logs)
+                    log_count_label.text = f"{filtered_count} of {total_logs} entries"
 
-                # Update filter info
-                filters_active = []
-                if state["level_filter"] != "INFO":
-                    filters_active.append(f"level={state['level_filter']}")
-                if state["sport_filter"] != "ALL":
-                    filters_active.append(f"sport={state['sport_filter']}")
-                if state["search_query"]:
-                    filters_active.append(f"search='{state['search_query']}'")
-                filter_info.text = ", ".join(filters_active) if filters_active else ""
+                    # Update filter info
+                    filters_active = []
+                    if state["level_filter"] != "INFO":
+                        filters_active.append(f"level={state['level_filter']}")
+                    if state["sport_filter"] != "ALL":
+                        filters_active.append(f"sport={state['sport_filter']}")
+                    if state["search_query"]:
+                        filters_active.append(f"search='{state['search_query']}'")
+                    filter_info.text = ", ".join(filters_active) if filters_active else ""
 
-                # Auto-scroll to top (newest)
-                if state["auto_scroll"]:
-                    log_container.scroll_to(percent=0)
+                    # Auto-scroll to top (newest)
+                    if state["auto_scroll"]:
+                        log_container.scroll_to(percent=0)
+                except (RuntimeError, KeyError):
+                    # Client disconnected - timer will be cleaned up
+                    pass
 
             ui.timer(1.0, refresh_logs)
             refresh_logs()

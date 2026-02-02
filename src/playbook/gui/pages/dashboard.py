@@ -108,12 +108,16 @@ def _status_card() -> None:
                 status_label = ui.label("Idle")
 
                 def update_status() -> None:
-                    if gui_state.is_processing:
-                        status_icon.classes(replace="text-green-500 animate-pulse")
-                        status_label.text = "Processing..."
-                    else:
-                        status_icon.classes(replace="text-gray-400")
-                        status_label.text = "Idle"
+                    try:
+                        if gui_state.is_processing:
+                            status_icon.classes(replace="text-green-500 animate-pulse")
+                            status_label.text = "Processing..."
+                        else:
+                            status_icon.classes(replace="text-gray-400")
+                            status_label.text = "Idle"
+                    except (RuntimeError, KeyError):
+                        # Client disconnected - timer will be cleaned up
+                        pass
 
                 ui.timer(1.0, update_status)
                 update_status()
@@ -124,10 +128,14 @@ def _status_card() -> None:
                 last_run_label = ui.label("Never")
 
                 def update_last_run() -> None:
-                    if gui_state.last_run_at:
-                        last_run_label.text = gui_state.last_run_at.strftime("%Y-%m-%d %H:%M:%S")
-                    else:
-                        last_run_label.text = "Never"
+                    try:
+                        if gui_state.last_run_at:
+                            last_run_label.text = gui_state.last_run_at.strftime("%Y-%m-%d %H:%M:%S")
+                        else:
+                            last_run_label.text = "Never"
+                    except (RuntimeError, KeyError):
+                        # Client disconnected - timer will be cleaned up
+                        pass
 
                 ui.timer(5.0, update_last_run)
                 update_last_run()
@@ -138,7 +146,11 @@ def _status_card() -> None:
                 run_count_label = ui.label("0 runs")
 
                 def update_run_count() -> None:
-                    run_count_label.text = f"{gui_state.run_count} runs"
+                    try:
+                        run_count_label.text = f"{gui_state.run_count} runs"
+                    except (RuntimeError, KeyError):
+                        # Client disconnected - timer will be cleaned up
+                        pass
 
                 ui.timer(5.0, update_run_count)
                 update_run_count()
