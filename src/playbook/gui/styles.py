@@ -255,6 +255,51 @@ body.body--dark .status-chip-error {
     background: rgba(59, 130, 246, 0.1);
 }
 
+/* Table header styling */
+.q-table thead th {
+    background: rgba(148, 163, 184, 0.08);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+body.body--dark .q-table thead th {
+    background: rgba(148, 163, 184, 0.05);
+}
+
+/* Table body text */
+.q-table tbody td {
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Table row hover */
+body.body--dark .q-table tbody tr:hover td {
+    background: rgba(148, 163, 184, 0.08);
+}
+
+/* Clickable rows */
+.q-table tbody tr.cursor-pointer {
+    cursor: pointer;
+}
+
+body.body--dark .q-table tbody tr.cursor-pointer:hover td {
+    background: rgba(59, 130, 246, 0.15);
+}
+
+/* Table container in dark mode */
+body.body--dark .q-table__container {
+    background: transparent;
+}
+
+/* Remove default table borders */
+.q-table--bordered thead th,
+.q-table--bordered tbody td {
+    border-color: var(--border-color);
+}
+
 /* ===== Log Viewer ===== */
 .log-container {
     background: #0f172a !important;

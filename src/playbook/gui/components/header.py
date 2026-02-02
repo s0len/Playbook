@@ -4,10 +4,15 @@ Navigation header component for the Playbook GUI.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from nicegui import ui
 
 from ..state import gui_state
 from ..theme import is_dark_mode, set_theme_preference
+
+# Logo path relative to package
+LOGO_PATH = Path(__file__).parent.parent.parent.parent.parent / "docs" / "assets" / "logo.png"
 
 
 def header(dark_mode: ui.dark_mode | None = None) -> None:
@@ -19,9 +24,13 @@ def header(dark_mode: ui.dark_mode | None = None) -> None:
     with ui.header().classes("nav-header text-white shadow-lg"):
         with ui.row().classes("w-full max-w-7xl mx-auto items-center px-4 py-2"):
             # Logo and title
-            with ui.row().classes("items-center gap-2"):
-                ui.icon("sports_soccer").classes("text-2xl")
-                ui.link("Playbook", "/").classes("text-xl font-bold text-white no-underline hover:text-blue-200")
+            with ui.link(target="/").classes("no-underline"):
+                with ui.row().classes("items-center gap-2"):
+                    if LOGO_PATH.exists():
+                        ui.image(str(LOGO_PATH)).classes("w-7 h-7")
+                    else:
+                        ui.icon("sports").classes("text-2xl text-white")
+                    ui.label("Playbook").classes("text-xl font-bold text-white")
 
             ui.space()
 
