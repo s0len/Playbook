@@ -535,7 +535,7 @@ class Processor:
             source_path=str(match.source_path),
             destination_path=str(match.destination_path),
             sport_id=match.sport.id,
-            show_id=match.show.id,
+            show_id=match.show.key,  # Show model uses 'key' not 'id'
             season_index=match.season.index,
             episode_index=match.episode.index,
             processed_at=datetime.now(),

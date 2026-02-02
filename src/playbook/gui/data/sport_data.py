@@ -140,6 +140,7 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
         or None if sport not found
     """
     if not gui_state.config:
+        LOGGER.debug("get_sport_detail: no config")
         return None
 
     # Find sport config
@@ -150,6 +151,7 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
             break
 
     if not sport_config:
+        LOGGER.debug("get_sport_detail: sport %s not found in config", sport_id)
         return None
 
     # Create base detail
@@ -164,10 +166,27 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
     # Try to load show metadata
     show = _load_show_metadata(sport_config)
     if not show:
+        LOGGER.warning("get_sport_detail: failed to load metadata for %s", sport_id)
         return detail
+
+    LOGGER.debug(
+        "get_sport_detail: loaded show %s with %d seasons",
+        show.key,
+        len(show.seasons),
+    )
 
     # Get processed records for this sport
     records_by_episode = _get_records_by_episode(sport_id)
+    LOGGER.debug(
+        "get_sport_detail: found %d processed records for %s",
+        len(records_by_episode),
+        sport_id,
+    )
+
+    # Log sample of record keys for debugging
+    if records_by_episode:
+        sample_keys = list(records_by_episode.keys())[:5]
+        LOGGER.debug("get_sport_detail: sample record keys (season, episode): %s", sample_keys)
 
     # Build season/episode status
     for season in show.seasons:
@@ -176,6 +195,7 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
             season_title=season.title,
         )
 
+        matched_in_season = 0
         for episode in season.episodes:
             # Check if we have a record for this episode
             key = (season.index, episode.index)
@@ -183,6 +203,7 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
 
             if record:
                 status: MatchStatus = "matched" if record.status != "error" else "error"
+                matched_in_season += 1
             else:
                 status = "missing"
 
@@ -195,6 +216,13 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
             )
             season_status.episodes.append(episode_status)
 
+        LOGGER.debug(
+            "get_sport_detail: season %d (%s) has %d episodes, %d matched",
+            season.index,
+            season.title,
+            len(season.episodes),
+            matched_in_season,
+        )
         detail.seasons.append(season_status)
 
     return detail
@@ -282,10 +310,25 @@ def _get_records_by_episode(sport_id: str) -> dict[tuple[int, int], ProcessedFil
         Dict mapping (season_index, episode_index) to record
     """
     if not gui_state.processed_store:
+        LOGGER.debug("_get_records_by_episode: processed_store is None")
         return {}
 
     try:
         records = gui_state.processed_store.get_by_sport(sport_id)
+        LOGGER.debug(
+            "_get_records_by_episode: got %d records from store for sport %s",
+            len(records),
+            sport_id,
+        )
+        if records:
+            # Log first record for debugging
+            r = records[0]
+            LOGGER.debug(
+                "_get_records_by_episode: sample record - season_index=%d, episode_index=%d, source=%s",
+                r.season_index,
+                r.episode_index,
+                r.source_path,
+            )
         return {(r.season_index, r.episode_index): r for r in records}
     except Exception as e:
         LOGGER.warning("Failed to get processed records for %s: %s", sport_id, e)
