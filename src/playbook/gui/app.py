@@ -187,6 +187,7 @@ def run_with_gui(
         dark=False,
         reload=False,
         show=False,  # Don't auto-open browser
+        storage_secret="playbook-gui-storage",  # Enable persistent user storage
     )
 
 
@@ -250,6 +251,7 @@ def run_gui_standalone(port: int = 8080, host: str = "0.0.0.0") -> None:
         dark=False,
         reload=True,
         show=True,
+        storage_secret="playbook-gui-storage",  # Enable persistent user storage
     )
 
 
