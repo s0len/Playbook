@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from .contexts import MatchContext
 from .templating import render_template
 from .utils import sanitize_component, slugify
 
@@ -41,49 +42,62 @@ def build_match_context(
 
     Returns:
         Dictionary containing all template variables for rendering
+
+    Note:
+        This function returns a dict for backwards compatibility.
+        Internally it uses MatchContext for type safety.
     """
     show = runtime.show
     sport = runtime.sport
 
-    context: dict[str, Any] = {}
-    context.update(groups)
-
-    context.update(
-        {
-            "sport_id": sport.id,
-            "sport_name": sport.name,
-            "show_id": show.key,
-            "show_key": show.key,
-            "show_title": show.title,
-            "season_key": season.key,
-            "season_title": season.title,
-            "season_index": season.index,
-            "season_number": season.display_number if season.display_number is not None else season.index,
-            "season_round": season.round_number if season.round_number is not None else (season.display_number if season.display_number is not None else season.index),
-            "season_sort_title": season.sort_title or season.title,
-            "season_slug": slugify(season.title),
-            "episode_title": episode.title,
-            "episode_index": episode.index,
-            "episode_number": episode.display_number if episode.display_number is not None else episode.index,
-            "episode_summary": episode.summary or "",
-            "episode_slug": slugify(episode.title),
-            "episode_originally_available": (
-                episode.originally_available.isoformat() if episode.originally_available else ""
-            ),
-            "originally_available": (episode.originally_available.isoformat() if episode.originally_available else ""),
-            "extension": source_path.suffix.lstrip("."),
-            "suffix": source_path.suffix,
-            "source_filename": source_path.name,
-            "source_stem": source_path.stem,
-            "relative_source": str(source_path.relative_to(source_dir)),
-        }
+    # Calculate derived values
+    season_number = season.display_number if season.display_number is not None else season.index
+    season_round = (
+        season.round_number
+        if season.round_number is not None
+        else (season.display_number if season.display_number is not None else season.index)
     )
+    episode_number = episode.display_number if episode.display_number is not None else episode.index
+    originally_available = episode.originally_available.isoformat() if episode.originally_available else ""
 
+    # Extract year from show title if present
+    season_year: int | None = None
     year_match = re.search(r"(\d{4})", show.title)
     if year_match:
-        context["season_year"] = int(year_match.group(1))
+        season_year = int(year_match.group(1))
 
-    return context
+    # Build typed context
+    match_context = MatchContext(
+        sport_id=sport.id,
+        sport_name=sport.name,
+        show_id=show.key,
+        show_key=show.key,
+        show_title=show.title,
+        season_key=season.key,
+        season_title=season.title,
+        season_index=season.index,
+        season_number=season_number,
+        season_round=season_round,
+        season_sort_title=season.sort_title or season.title,
+        season_slug=slugify(season.title),
+        season_year=season_year,
+        episode_title=episode.title,
+        episode_index=episode.index,
+        episode_number=episode_number,
+        episode_summary=episode.summary or "",
+        episode_slug=slugify(episode.title),
+        episode_originally_available=originally_available,
+        originally_available=originally_available,
+        extension=source_path.suffix.lstrip("."),
+        suffix=source_path.suffix,
+        source_filename=source_path.name,
+        source_stem=source_path.stem,
+        relative_source=str(source_path.relative_to(source_dir)),
+        groups=dict(groups),
+    )
+
+    # Return as dict for backwards compatibility
+    return match_context.as_template_dict()
 
 
 def build_destination(

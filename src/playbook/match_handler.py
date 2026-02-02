@@ -369,21 +369,22 @@ def handle_match(
     stale_record = stale_records.get(source_key)
     destination_display = format_destination_fn(destination)
 
-    # Calculate file checksum
+    # Calculate file checksum (skip in dry-run mode to avoid I/O)
     file_checksum: str | None = None
-    try:
-        file_checksum = hash_file(match.source_path)
-    except ValueError as exc:  # pragma: no cover - depends on filesystem state
-        logger.debug(
-            render_fields_block(
-                "Failed To Hash Source",
-                {
-                    "Source": match.source_path,
-                    "Error": exc,
-                },
-                pad_top=True,
+    if not dry_run:
+        try:
+            file_checksum = hash_file(match.source_path)
+        except ValueError as exc:  # pragma: no cover - depends on filesystem state
+            logger.debug(
+                render_fields_block(
+                    "Failed To Hash Source",
+                    {
+                        "Source": match.source_path,
+                        "Error": exc,
+                    },
+                    pad_top=True,
+                )
             )
-        )
 
     # Determine event type based on file history
     stored_checksum = processed_cache.get_checksum(match.source_path)
