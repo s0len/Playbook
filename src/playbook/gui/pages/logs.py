@@ -79,11 +79,13 @@ def logs_page() -> None:
 
         # Log display
         with ui.card().classes("w-full"):
-            log_container = (
-                ui.column()
-                .classes("w-full font-mono text-sm bg-gray-900 text-gray-100 p-3 rounded overflow-auto")
+            log_scroll = (
+                ui.scroll_area()
+                .classes("w-full font-mono text-sm bg-gray-900 text-gray-100 rounded")
                 .style("height: 600px; max-height: 70vh;")
             )
+            with log_scroll:
+                log_container = ui.column().classes("w-full p-3")
 
             # Stats row
             with ui.row().classes("w-full justify-between items-center mt-2 text-sm text-gray-600"):
@@ -127,7 +129,7 @@ def logs_page() -> None:
 
                     # Auto-scroll to top (newest)
                     if state["auto_scroll"]:
-                        log_container.scroll_to(percent=0)
+                        log_scroll.scroll_to(percent=0)
                 except (RuntimeError, KeyError):
                     # Client disconnected - timer will be cleaned up
                     pass
