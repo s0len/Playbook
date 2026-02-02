@@ -1,0 +1,20 @@
+"""
+Page definitions for the Playbook GUI.
+
+Pages:
+    - dashboard: Main dashboard with stats and activity feed
+    - logs: Log viewer with filtering
+    - config: Configuration editor with validation
+    - sports: Sport management and pattern testing
+"""
+
+from __future__ import annotations
+
+from . import config, dashboard, logs, sports
+
+__all__ = [
+    "dashboard",
+    "logs",
+    "config",
+    "sports",
+]

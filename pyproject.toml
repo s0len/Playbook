@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "playbook"
-version = "2.0.0-dev"
+version = "2.1.0"
 description = "Automated file matching, renaming, and metadata for sports content in Plex"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -43,6 +43,9 @@ dev = [
     "mkdocs-material>=9.5,<10",
     "ruff>=0.8.0",
     "pre-commit>=3.5.0",
+]
+gui = [
+    "nicegui>=3.6",
 ]
 
 [project.urls]
@@ -117,6 +120,8 @@ select = [
 "src/playbook/summary_table.py" = ["E501", "SIM108"]  # Log format strings
 "src/playbook/utils.py" = ["UP031"]
 "src/playbook/watcher.py" = ["SIM102"]
+# GUI module - NiceGUI uses specific patterns with context managers and timer callbacks
+"src/playbook/gui/**/*.py" = ["E501", "B008", "SIM102", "SIM105", "SIM117"]
 
 [tool.ruff.format]
 # Use double quotes for strings
