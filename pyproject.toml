@@ -44,6 +44,9 @@ dev = [
     "ruff>=0.8.0",
     "pre-commit>=3.5.0",
 ]
+gui = [
+    "nicegui>=3.6",
+]
 
 [project.urls]
 Homepage = "https://github.com/s0len/Playbook"
@@ -117,6 +120,8 @@ select = [
 "src/playbook/summary_table.py" = ["E501", "SIM108"]  # Log format strings
 "src/playbook/utils.py" = ["UP031"]
 "src/playbook/watcher.py" = ["SIM102"]
+# GUI module - NiceGUI uses specific patterns with context managers
+"src/playbook/gui/**/*.py" = ["E501", "B008", "SIM102", "SIM117"]
 
 [tool.ruff.format]
 # Use double quotes for strings

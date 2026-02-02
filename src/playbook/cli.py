@@ -199,6 +199,23 @@ def _add_run_subparser(subparsers) -> None:
         action="store_true",
         help="Disable filesystem watcher even if enabled in config",
     )
+    run_parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Enable web GUI on port 8080 (or GUI_PORT env var)",
+    )
+    run_parser.add_argument(
+        "--gui-port",
+        type=int,
+        default=int(os.getenv("GUI_PORT", "8080")),
+        help="Port for web GUI (default: 8080 or GUI_PORT env var)",
+    )
+    run_parser.add_argument(
+        "--gui-host",
+        type=str,
+        default=os.getenv("GUI_HOST", "0.0.0.0"),
+        help="Host to bind web GUI to (default: 0.0.0.0 or GUI_HOST env var)",
+    )
 
 
 def _add_validate_config_subparser(subparsers) -> None:
@@ -429,6 +446,11 @@ def _execute_run(args: argparse.Namespace) -> int:
         LOGGER.error("Configuration file %s does not exist", args.config)
         return 1
 
+    # Check if GUI mode is enabled
+    gui_enabled = getattr(args, "gui", False) or _env_bool("GUI_ENABLED")
+    if gui_enabled:
+        return _execute_gui_run(args, verbose)
+
     try:
         config = load_config(args.config)
     except Exception as exc:  # noqa: BLE001
@@ -478,6 +500,49 @@ def _execute_run(args: argparse.Namespace) -> int:
         processor.process_all()
     except KeyboardInterrupt:
         LOGGER.info("Interrupted by user")
+    return 0
+
+
+def _execute_gui_run(args: argparse.Namespace, verbose: bool) -> int:
+    """Execute Playbook with the GUI enabled.
+
+    Args:
+        args: Parsed command-line arguments
+        verbose: Whether verbose logging is enabled
+
+    Returns:
+        Exit code (0 for success)
+    """
+    try:
+        from .gui import run_with_gui
+    except ImportError as exc:
+        LOGGER.error(
+            "GUI dependencies not installed. Install with: pip install playbook[gui]\n"
+            "Error: %s",
+            exc,
+        )
+        return 1
+
+    gui_port = getattr(args, "gui_port", 8080)
+    gui_host = getattr(args, "gui_host", "0.0.0.0")
+
+    LOGGER.info("Starting Playbook with GUI on http://%s:%d", gui_host, gui_port)
+
+    try:
+        run_with_gui(
+            config_path=args.config,
+            port=gui_port,
+            host=gui_host,
+            dry_run=args.dry_run,
+            verbose=verbose,
+            watch_mode=not getattr(args, "no_watch", False),
+        )
+    except KeyboardInterrupt:
+        LOGGER.info("Interrupted by user")
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.exception("GUI error: %s", exc)
+        return 1
+
     return 0
 
 
