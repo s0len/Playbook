@@ -22,8 +22,10 @@ pattern_sets:
   formula1: &formula1_patterns
     - description: Formula 1 MWR releases
       # Example: Formula.1.2024.Round03.Melbourne.Albert.Park.Qualifying.F1TV-1080p
+      # Example: Formula1.2026.Round00.Barcelona.Shakedown.Day.One.SKYF1UHD.WEBRiP.2160p
+      # Example: Formula1.2026.Round00.Technical.Regulations.F1TV.WEB-DL.1080p (no location)
       regex: >-
-        (?i)^Formula\.?1\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<location>[^.]+)(?:\.(?P<venue>[^.]+(?:\.[^.]+)*))?\.(?P<session>[^.]+(?:\.[^.]+)*?(?:\.Part\d+)?)(?=\.F1)
+        (?i)^Formula\.?1\.(?P<year>\d{4})\.Round(?P<round>\d{2})(?:\.(?P<location>[^.]+(?:\.[^.]+)*?))?\.(?P<session>(?:Technical\.Regulations|Tech\.Regulations|Shakedown\.Day\.(?:One|Two|Three|Four|1|2|3|4)|Drivers\.Press\.Conference(?:\.Part\d+)?|Press\.Conference(?:\.Part\d+)?|Weekend\.Warm\.Up|Free\.Practice\.[1-3]|FP[1-3]|Sprint\.Qualifying|Sprint\.Shootout|Sprint\.Race|Sprint|Qualifying|Quali|Race|Pre\.(?:Qualifying|Race|Sprint)|Post\.(?:Qualifying|Race|Sprint))(?:\.Part\d+)?)(?=\.(?:F1|SKYF1))
       season_selector:
         mode: round           # Use captured round number to map metadata seasons.
         group: round
