@@ -220,12 +220,16 @@ class Processor:
                     )
 
             has_details = has_detailed_activity(stats)
-            has_issues = bool(stats.errors or stats.warnings)
+            has_errors = bool(stats.errors)
             if LOGGER.isEnabledFor(logging.DEBUG):
+                # In DEBUG mode, show detailed summary when there's any activity
+                has_issues = has_errors or bool(stats.warnings)
                 if has_details or has_issues:
                     level = logging.INFO if has_issues else logging.DEBUG
                     self._log_detailed_summary(stats, level=level)
-            elif has_issues:
+            elif has_errors:
+                # At INFO level, only show detailed summary for actual errors
+                # (warnings are already logged individually and counted in Run Recap)
                 self._log_detailed_summary(stats)
             self._trigger_post_run_trigger_if_needed(stats)
             # Send summary notification if in summary mode

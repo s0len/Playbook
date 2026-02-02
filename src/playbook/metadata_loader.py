@@ -249,10 +249,10 @@ def load_sports(
 
         runtimes.append(SportRuntime(sport=sport, show=show, patterns=patterns, extensions=extensions))
 
-    # Log metadata fetch statistics
+    # Log metadata fetch statistics (DEBUG level - not useful at INFO)
     if fetch_stats.has_activity():
         snapshot = fetch_stats.snapshot()
-        LOGGER.info(
+        LOGGER.debug(
             render_fields_block(
                 "Metadata API",
                 {
