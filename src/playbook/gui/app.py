@@ -20,7 +20,7 @@ from .log_handler import install_gui_log_handler
 from .pages import config, dashboard, logs, sports
 from .state import gui_state
 from .styles import setup_page_styles
-from .theme import apply_theme, is_dark_mode
+from .theme import apply_theme
 from .utils import suppress_nicegui_disconnect_errors
 
 if TYPE_CHECKING:
@@ -83,18 +83,12 @@ def create_app() -> None:
 
 def _page_wrapper(page_fn: callable) -> None:
     """Wrap a page function with common layout elements."""
-    # Inject styles and set up theme
+    # Inject styles and set up theme (includes FOUC prevention script)
     setup_page_styles()
 
-    # Create dark mode controller
+    # Create dark mode controller and apply stored preference
     dark = ui.dark_mode()
     apply_theme(dark)
-
-    # Set page styling based on theme
-    if is_dark_mode():
-        ui.query("body").classes("bg-slate-900")
-    else:
-        ui.query("body").classes("bg-slate-50")
 
     # Add header (pass dark mode controller for toggle)
     header(dark)

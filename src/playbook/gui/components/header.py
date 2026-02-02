@@ -60,7 +60,7 @@ def _dark_mode_toggle(dark_mode: ui.dark_mode | None) -> None:
         nonlocal is_dark
         is_dark = not is_dark
 
-        # Update theme preference
+        # Update theme preference (server-side storage)
         set_theme_preference("dark" if is_dark else "light")
 
         # Toggle NiceGUI dark mode
@@ -70,15 +70,9 @@ def _dark_mode_toggle(dark_mode: ui.dark_mode | None) -> None:
         # Update icon
         toggle_icon.props(f"icon={'light_mode' if is_dark else 'dark_mode'}")
 
-        # Update body background
-        if is_dark:
-            ui.run_javascript(
-                "document.body.classList.remove('bg-slate-50'); document.body.classList.add('bg-slate-900');"
-            )
-        else:
-            ui.run_javascript(
-                "document.body.classList.remove('bg-slate-900'); document.body.classList.add('bg-slate-50');"
-            )
+        # Store in localStorage for instant access on page load (prevents FOUC)
+        theme_value = "dark" if is_dark else "light"
+        ui.run_javascript(f"localStorage.setItem('playbook-theme', '{theme_value}');")
 
     toggle_icon = (
         ui.button(icon=icon_name, on_click=toggle).props("flat round dense").classes("dark-mode-toggle text-white")

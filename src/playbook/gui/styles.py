@@ -35,7 +35,8 @@ body.body--dark {
 }
 
 /* ===== Theme Transitions ===== */
-*, *::before, *::after {
+/* Transitions are disabled initially to prevent FOUC, enabled via JS after load */
+.theme-ready *, .theme-ready *::before, .theme-ready *::after {
     transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease;
 }
 
@@ -353,6 +354,30 @@ def inject_styles() -> None:
     ui.add_head_html(f"<style>{PLAYBOOK_CSS}</style>")
 
 
+# Script to apply dark mode immediately and prevent FOUC
+THEME_INIT_SCRIPT = """
+<script>
+(function() {
+    // Check localStorage for theme preference
+    var theme = localStorage.getItem('playbook-theme');
+    if (theme === 'dark') {
+        document.body.classList.add('body--dark');
+    }
+    // Enable transitions after a brief delay to prevent FOUC
+    setTimeout(function() {
+        document.body.classList.add('theme-ready');
+    }, 50);
+})();
+</script>
+"""
+
+
+def inject_theme_init_script() -> None:
+    """Inject script to apply theme immediately on page load."""
+    ui.add_body_html(THEME_INIT_SCRIPT)
+
+
 def setup_page_styles() -> None:
     """Set up all page styles."""
     inject_styles()
+    inject_theme_init_script()
