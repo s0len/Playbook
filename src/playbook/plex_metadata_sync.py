@@ -269,10 +269,10 @@ def _match_season_key(plex_seasons: list[dict[str, object]], season: Season) -> 
         rating_key = entry.get("ratingKey")
         if not rating_key:
             continue
+        # Note: parentIndex is the show's index, not the season's, so we don't use it here
         numbers = {
             _as_int(entry.get("index")),
             _as_int(entry.get("seasonNumber")),
-            _as_int(entry.get("parentIndex")),
         }
         if target_numbers & {num for num in numbers if num is not None}:
             return str(rating_key)
