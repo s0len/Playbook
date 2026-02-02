@@ -131,8 +131,8 @@ def _sports_table() -> None:
         {"name": "status", "label": "Status", "field": "status", "align": "center"},
         {"name": "name", "label": "Sport", "field": "name", "align": "left", "sortable": True},
         {"name": "slug", "label": "Show Slug", "field": "slug", "align": "left"},
-        {"name": "progress", "label": "Progress", "field": "progress", "align": "center"},
-        {"name": "count", "label": "Matched", "field": "count", "align": "center"},
+        {"name": "patterns", "label": "Patterns", "field": "patterns", "align": "center"},
+        {"name": "matched", "label": "Matched", "field": "matched", "align": "center", "sortable": True},
         {"name": "mode", "label": "Mode", "field": "mode", "align": "center"},
     ]
 
@@ -144,8 +144,8 @@ def _sports_table() -> None:
                 "status": "Enabled" if overview.enabled else "Disabled",
                 "name": overview.sport_name,
                 "slug": overview.show_slug,
-                "progress": overview.progress,
-                "count": f"{overview.matched_count}/{overview.total_count}",
+                "patterns": overview.pattern_count,
+                "matched": overview.matched_count,
                 "mode": overview.link_mode,
             }
         )
@@ -182,18 +182,15 @@ def _sports_table() -> None:
         """,
     )
 
-    # Progress bar slot
+    # Matched count with icon
     table.add_slot(
-        "body-cell-progress",
+        "body-cell-matched",
         """
         <q-td :props="props">
-            <q-linear-progress
-                :value="props.value"
-                :color="props.value >= 1 ? 'positive' : props.value >= 0.5 ? 'primary' : 'warning'"
-                class="w-24"
-                rounded
-                size="8px"
-            />
+            <div class="flex items-center gap-1 justify-center">
+                <q-icon name="check_circle" size="xs" :color="props.value > 0 ? 'positive' : 'grey'" />
+                <span>{{ props.value }}</span>
+            </div>
         </q-td>
         """,
     )

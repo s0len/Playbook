@@ -203,6 +203,10 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
 def get_sports_overview() -> list[SportOverview]:
     """Get overview information for all sports.
 
+    This function is optimized for fast loading - it only queries the local
+    database and does NOT make network requests to load metadata. Total episode
+    counts are not available in the list view to avoid blocking the UI.
+
     Returns:
         List of SportOverview for the sports list page
     """
@@ -212,16 +216,8 @@ def get_sports_overview() -> list[SportOverview]:
     overviews = []
 
     for sport in gui_state.config.sports:
-        # Get processed records count for this sport
+        # Get processed records count from local database only (fast)
         matched_count = 0
-        total_count = 0
-
-        # Try to load show metadata for total count
-        show = _load_show_metadata(sport)
-        if show:
-            total_count = sum(len(s.episodes) for s in show.seasons)
-
-        # Get matched count from processed store
         if gui_state.processed_store:
             try:
                 records = gui_state.processed_store.get_by_sport(sport.id)
@@ -229,6 +225,8 @@ def get_sports_overview() -> list[SportOverview]:
             except Exception as e:
                 LOGGER.warning("Failed to get processed records for %s: %s", sport.id, e)
 
+        # Note: total_count is 0 here - we don't load metadata in the list view
+        # to avoid blocking network requests. Full counts are shown in detail view.
         overview = SportOverview(
             sport_id=sport.id,
             sport_name=sport.name,
@@ -238,7 +236,7 @@ def get_sports_overview() -> list[SportOverview]:
             pattern_count=len(sport.patterns),
             extensions=sport.source_extensions,
             matched_count=matched_count,
-            total_count=total_count,
+            total_count=0,  # Not loaded in list view for performance
         )
         overviews.append(overview)
 
