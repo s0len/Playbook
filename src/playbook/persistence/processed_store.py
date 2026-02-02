@@ -7,6 +7,7 @@ enabling GUI visualization and manual file management capabilities.
 from __future__ import annotations
 
 import sqlite3
+import threading
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -94,21 +95,25 @@ class ProcessedFileStore:
             db_path: Path to the SQLite database file
         """
         self._db_path = db_path
-        self._connection: sqlite3.Connection | None = None
+        self._local = threading.local()
         self._init_db()
 
     def _get_connection(self) -> sqlite3.Connection:
-        """Get or create database connection."""
-        if self._connection is None:
+        """Get or create database connection for the current thread.
+
+        Uses thread-local storage to maintain separate connections per thread,
+        which is required by SQLite.
+        """
+        if not hasattr(self._local, "connection") or self._local.connection is None:
             self._db_path.parent.mkdir(parents=True, exist_ok=True)
-            self._connection = sqlite3.connect(
+            self._local.connection = sqlite3.connect(
                 self._db_path,
                 detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
             )
             # Enable WAL mode for better concurrency
-            self._connection.execute("PRAGMA journal_mode=WAL")
-            self._connection.row_factory = sqlite3.Row
-        return self._connection
+            self._local.connection.execute("PRAGMA journal_mode=WAL")
+            self._local.connection.row_factory = sqlite3.Row
+        return self._local.connection
 
     def _init_db(self) -> None:
         """Initialize database schema."""
@@ -175,10 +180,10 @@ class ProcessedFileStore:
         conn.commit()
 
     def close(self) -> None:
-        """Close the database connection."""
-        if self._connection is not None:
-            self._connection.close()
-            self._connection = None
+        """Close the database connection for the current thread."""
+        if hasattr(self._local, "connection") and self._local.connection is not None:
+            self._local.connection.close()
+            self._local.connection = None
 
     def record_processed(self, record: ProcessedFileRecord) -> None:
         """Record a processed file.
@@ -372,15 +377,11 @@ class ProcessedFileStore:
         total = cursor.fetchone()["count"]
 
         # By status
-        cursor = conn.execute(
-            "SELECT status, COUNT(*) as count FROM processed_files GROUP BY status"
-        )
+        cursor = conn.execute("SELECT status, COUNT(*) as count FROM processed_files GROUP BY status")
         by_status = {row["status"]: row["count"] for row in cursor}
 
         # By sport
-        cursor = conn.execute(
-            "SELECT sport_id, COUNT(*) as count FROM processed_files GROUP BY sport_id"
-        )
+        cursor = conn.execute("SELECT sport_id, COUNT(*) as count FROM processed_files GROUP BY sport_id")
         by_sport = {row["sport_id"]: row["count"] for row in cursor}
 
         return {
