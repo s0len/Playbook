@@ -22,7 +22,7 @@ def dashboard_page() -> None:
     """Render the main dashboard page."""
     with ui.column().classes("w-full max-w-6xl mx-auto p-4 gap-6"):
         # Page title
-        ui.label("Dashboard").classes("text-3xl font-bold text-gray-800")
+        ui.label("Dashboard").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
 
         # Stats cards row
         with ui.row().classes("w-full gap-4 flex-wrap"):
@@ -31,9 +31,9 @@ def dashboard_page() -> None:
         # Main content: Activity feed + Quick actions
         with ui.row().classes("w-full gap-4"):
             # Activity feed (left, wider)
-            with ui.card().classes("flex-1 min-w-96"):
+            with ui.card().classes("glass-card flex-1 min-w-96"):
                 with ui.row().classes("items-center justify-between mb-2"):
-                    ui.label("Recent Activity").classes("text-xl font-semibold text-gray-700")
+                    ui.label("Recent Activity").classes("text-xl font-semibold text-slate-700 dark:text-slate-200")
                     _refresh_button()
                 activity_feed(max_items=15)
 
@@ -71,8 +71,8 @@ def _stats_cards() -> None:
 
 def _quick_actions_card() -> None:
     """Create the quick actions card."""
-    with ui.card().classes("w-full"):
-        ui.label("Quick Actions").classes("text-xl font-semibold text-gray-700 mb-3")
+    with ui.card().classes("glass-card w-full"):
+        ui.label("Quick Actions").classes("text-xl font-semibold text-slate-700 dark:text-slate-200 mb-3")
 
         with ui.column().classes("w-full gap-2"):
             # Run Now button
@@ -99,22 +99,22 @@ def _quick_actions_card() -> None:
 
 def _status_card() -> None:
     """Create the status/info card."""
-    with ui.card().classes("w-full"):
-        ui.label("Status").classes("text-xl font-semibold text-gray-700 mb-3")
+    with ui.card().classes("glass-card w-full"):
+        ui.label("Status").classes("text-xl font-semibold text-slate-700 dark:text-slate-200 mb-3")
 
         with ui.column().classes("w-full gap-2"):
             # Processing status
             with ui.row().classes("items-center gap-2"):
                 status_icon = ui.icon("circle").classes("text-sm")
-                status_label = ui.label("Idle")
+                status_label = ui.label("Idle").classes("text-slate-700 dark:text-slate-300")
 
                 def update_status() -> None:
                     try:
                         if gui_state.is_processing:
-                            status_icon.classes(replace="text-green-500 animate-pulse")
+                            status_icon.classes(replace="text-green-500 animate-pulse text-sm")
                             status_label.text = "Processing..."
                         else:
-                            status_icon.classes(replace="text-gray-400")
+                            status_icon.classes(replace="text-slate-400 text-sm")
                             status_label.text = "Idle"
                     except (RuntimeError, KeyError):
                         # Client disconnected - timer will be cleaned up
@@ -124,7 +124,7 @@ def _status_card() -> None:
                 update_status()
 
             # Last run time
-            with ui.row().classes("items-center gap-2 text-sm text-gray-600"):
+            with ui.row().classes("items-center gap-2 text-sm text-slate-600 dark:text-slate-400"):
                 ui.icon("schedule").classes("text-lg")
                 last_run_label = ui.label("Never")
 
@@ -142,7 +142,7 @@ def _status_card() -> None:
                 update_last_run()
 
             # Run count
-            with ui.row().classes("items-center gap-2 text-sm text-gray-600"):
+            with ui.row().classes("items-center gap-2 text-sm text-slate-600 dark:text-slate-400"):
                 ui.icon("replay").classes("text-lg")
                 run_count_label = ui.label("0 runs")
 
@@ -158,14 +158,14 @@ def _status_card() -> None:
 
             # Config path
             if gui_state.config_path:
-                with ui.row().classes("items-center gap-2 text-sm text-gray-600"):
+                with ui.row().classes("items-center gap-2 text-sm text-slate-600 dark:text-slate-400"):
                     ui.icon("description").classes("text-lg")
                     ui.label(str(gui_state.config_path.name)).classes("truncate")
 
 
 def _refresh_button() -> None:
     """Create a small refresh button."""
-    ui.button(icon="refresh", on_click=lambda: None).props("flat dense").classes("text-gray-500")
+    ui.button(icon="refresh", on_click=lambda: None).props("flat dense").classes("text-slate-500 dark:text-slate-400")
 
 
 async def _trigger_run() -> None:

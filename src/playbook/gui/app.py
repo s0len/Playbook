@@ -19,6 +19,8 @@ from .components.header import header
 from .log_handler import install_gui_log_handler
 from .pages import config, dashboard, logs, sports
 from .state import gui_state
+from .styles import setup_page_styles
+from .theme import apply_theme, is_dark_mode
 from .utils import suppress_nicegui_disconnect_errors
 
 if TYPE_CHECKING:
@@ -51,6 +53,11 @@ def create_app() -> None:
         """Sports management page."""
         _page_wrapper(sports.sports_page)
 
+    @ui.page("/sports/{sport_id}")
+    def sport_detail_route(sport_id: str) -> None:
+        """Sport detail page with season/episode tracking."""
+        _page_wrapper(lambda: sports.sport_detail_page(sport_id))
+
     # API endpoints for programmatic access
     @app.get("/api/stats")
     def api_stats() -> dict:
@@ -76,11 +83,21 @@ def create_app() -> None:
 
 def _page_wrapper(page_fn: callable) -> None:
     """Wrap a page function with common layout elements."""
-    # Set page styling
-    ui.query("body").classes("bg-gray-100")
+    # Inject styles and set up theme
+    setup_page_styles()
 
-    # Add header
-    header()
+    # Create dark mode controller
+    dark = ui.dark_mode()
+    apply_theme(dark)
+
+    # Set page styling based on theme
+    if is_dark_mode():
+        ui.query("body").classes("bg-slate-900")
+    else:
+        ui.query("body").classes("bg-slate-50")
+
+    # Add header (pass dark mode controller for toggle)
+    header(dark)
 
     # Add page content
     page_fn()
@@ -139,6 +156,7 @@ def run_with_gui(
     gui_state.processor = processor
     gui_state.config = app_config
     gui_state.config_path = config_path
+    gui_state.processed_store = processor.processed_store
 
     # Install log handler to forward logs to GUI
     log_handler = install_gui_log_handler(gui_state, level=logging.DEBUG if verbose else logging.INFO)

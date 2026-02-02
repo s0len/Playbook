@@ -26,10 +26,10 @@ def logs_page() -> None:
 
     with ui.column().classes("w-full max-w-6xl mx-auto p-4 gap-4"):
         # Page title
-        ui.label("Logs").classes("text-3xl font-bold text-gray-800")
+        ui.label("Logs").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
 
         # Filter controls
-        with ui.card().classes("w-full"):
+        with ui.card().classes("glass-card w-full"):
             with ui.row().classes("w-full gap-3 items-center flex-wrap"):
                 # Level filter
                 ui.select(
@@ -59,7 +59,7 @@ def logs_page() -> None:
                     "Auto-scroll",
                     value=state["auto_scroll"],
                     on_change=lambda e: _update_filter(state, "auto_scroll", e.value),
-                )
+                ).classes("text-slate-700 dark:text-slate-300")
 
                 # Pause toggle
                 pause_btn = (
@@ -68,27 +68,29 @@ def logs_page() -> None:
                         on_click=lambda: _toggle_pause(state, pause_btn),
                     )
                     .props("flat")
-                    .classes("text-gray-600")
+                    .classes("text-slate-600 dark:text-slate-400")
                 )
 
                 # Clear button
                 ui.button(
                     icon="delete_sweep",
                     on_click=lambda: _clear_logs(),
-                ).props("flat").classes("text-gray-600")
+                ).props("flat").classes("text-slate-600 dark:text-slate-400")
 
         # Log display
-        with ui.card().classes("w-full"):
+        with ui.card().classes("glass-card w-full"):
             log_scroll = (
                 ui.scroll_area()
-                .classes("w-full font-mono text-sm bg-gray-900 text-gray-100 rounded")
+                .classes("w-full font-mono text-sm log-container text-slate-100 rounded-lg")
                 .style("height: 600px; max-height: 70vh;")
             )
             with log_scroll:
                 log_container = ui.column().classes("w-full p-3")
 
             # Stats row
-            with ui.row().classes("w-full justify-between items-center mt-2 text-sm text-gray-600"):
+            with ui.row().classes(
+                "w-full justify-between items-center mt-2 text-sm text-slate-600 dark:text-slate-400"
+            ):
                 log_count_label = ui.label("0 entries")
                 filter_info = ui.label("")
 
@@ -107,7 +109,7 @@ def logs_page() -> None:
                     log_container.clear()
                     with log_container:
                         if not logs:
-                            ui.label("No logs matching filters").classes("text-gray-500 italic py-4")
+                            ui.label("No logs matching filters").classes("text-slate-500 italic py-4")
                         else:
                             for entry in logs:
                                 log_line(entry)
