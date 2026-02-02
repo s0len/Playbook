@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Iterable, Mapping
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,7 @@ from .metadata import MetadataFingerprintStore
 from .metadata_loader import SportRuntime, load_sports
 from .models import ProcessingStats, SportFileMatch
 from .notifications import NotificationEvent, NotificationService
+from .persistence import ProcessedFileRecord, ProcessedFileStore
 from .plex_metadata_sync import PlexMetadataSync, create_plex_sync_from_config
 from .post_run_triggers import run_plex_sync_if_needed, trigger_kometa_if_needed
 from .processing_state import ProcessingState
@@ -49,6 +51,7 @@ class Processor:
             ensure_directory(self.config.settings.cache_dir)
         self.processed_cache = ProcessedFileCache(self.config.settings.cache_dir)
         self.metadata_fingerprints = MetadataFingerprintStore(self.config.settings.cache_dir)
+        self.processed_store = ProcessedFileStore(self.config.settings.cache_dir / "playbook.db")
         self.trace_options = trace_options or TraceOptions()
         settings = self.config.settings
         self.notification_service = NotificationService(
@@ -510,7 +513,37 @@ class Processor:
             self._record_destination_touch(match.destination_path)
             self._state.sports_with_processed_files.add(sport_id)
 
+            # Record processed file in persistence store (skip in dry-run mode)
+            if not settings.dry_run and event:
+                self._record_processed_file(match, event)
+
         return event
+
+    def _record_processed_file(self, match: SportFileMatch, event: NotificationEvent) -> None:
+        """Record a processed file in the persistence store."""
+        # Map action to ProcessingStatus
+        action_to_status = {
+            "hardlink": "linked",
+            "copy": "copied",
+            "symlink": "symlinked",
+            "skipped": "skipped",
+            "error": "error",
+        }
+        status = action_to_status.get(event.action, "linked")
+
+        record = ProcessedFileRecord(
+            source_path=str(match.source_path),
+            destination_path=str(match.destination_path),
+            sport_id=match.sport.id,
+            show_id=match.show.id,
+            season_index=match.season.index,
+            episode_index=match.episode.index,
+            processed_at=datetime.now(),
+            checksum=None,  # Checksum is handled by ProcessedFileCache
+            status=status,
+            error_message=event.skip_reason if status == "error" else None,
+        )
+        self.processed_store.record_processed(record)
 
     def _trigger_post_run_trigger_if_needed(self, stats: ProcessingStats) -> None:
         """Run post-run triggers: Plex sync and Kometa (delegates to post_run_triggers module)."""
