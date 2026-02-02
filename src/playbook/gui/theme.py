@@ -97,12 +97,12 @@ def get_theme_preference() -> ThemeMode:
     """Get the user's stored theme preference.
 
     Returns:
-        The stored theme mode, or 'auto' if not set
+        The stored theme mode, or 'dark' if not set
     """
     try:
-        return app.storage.user.get("theme", "auto")
+        return app.storage.user.get("theme", "dark")
     except Exception:
-        return "auto"
+        return "dark"
 
 
 def set_theme_preference(mode: ThemeMode) -> None:
@@ -125,8 +125,8 @@ def is_dark_mode() -> bool:
     """
     preference = get_theme_preference()
     if preference == "auto":
-        # Default to light mode for auto
-        return False
+        # Default to dark mode for auto
+        return True
     return preference == "dark"
 
 

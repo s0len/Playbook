@@ -403,9 +403,10 @@ def inject_styles() -> None:
 THEME_INIT_SCRIPT = """
 <script>
 (function() {
-    // Check localStorage for theme preference
+    // Check localStorage for theme preference (default to dark)
     var theme = localStorage.getItem('playbook-theme');
-    if (theme === 'dark') {
+    if (theme !== 'light') {
+        // Default to dark mode if no preference or preference is 'dark'
         document.body.classList.add('body--dark');
     }
     // Enable transitions after a brief delay to prevent FOUC
