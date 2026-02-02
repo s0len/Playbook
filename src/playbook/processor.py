@@ -372,7 +372,7 @@ class Processor:
                     sport=runtime.sport,
                 )
 
-                event = self._handle_match(match, stats)
+                event = self._handle_match(match, stats, captured_groups=groups)
                 if trace_context is not None:
                     trace_context.setdefault("status", event.action if event else "matched")
                     trace_context["destination"] = str(destination)
@@ -484,15 +484,28 @@ class Processor:
             settings=self.config.settings,
         )
 
-    def _handle_match(self, match: SportFileMatch, stats: ProcessingStats) -> NotificationEvent | None:
+    def _handle_match(
+        self,
+        match: SportFileMatch,
+        stats: ProcessingStats,
+        captured_groups: dict | None = None,
+    ) -> NotificationEvent | None:
         """Process a file match: create link, update cache, handle overwrites.
 
         Delegates to match_handler.handle_match().
         """
+        from .quality_scorer import get_effective_quality_profile
+
         settings = self.config.settings
         link_mode = (match.sport.link_mode or settings.link_mode).lower()
 
-        event, kometa_trigger_needed, sport_id = handle_match(
+        # Get effective quality profile (sport-specific merged with global)
+        quality_profile = get_effective_quality_profile(
+            match.sport.quality_profile,
+            settings.quality_profile,
+        )
+
+        event, kometa_trigger_needed, sport_id, quality_info, quality_score = handle_match(
             match,
             stats,
             processed_cache=self.processed_cache,
@@ -503,6 +516,9 @@ class Processor:
             link_mode=link_mode,
             format_destination_fn=self._format_relative_destination,
             logger=LOGGER,
+            quality_profile=quality_profile,
+            processed_store=self.processed_store,
+            captured_groups=captured_groups,
         )
 
         # Update processing state based on results
@@ -515,12 +531,20 @@ class Processor:
 
             # Record processed file in persistence store (skip in dry-run mode)
             if not settings.dry_run and event:
-                self._record_processed_file(match, event)
+                self._record_processed_file(match, event, quality_info, quality_score)
 
         return event
 
-    def _record_processed_file(self, match: SportFileMatch, event: NotificationEvent) -> None:
+    def _record_processed_file(
+        self,
+        match: SportFileMatch,
+        event: NotificationEvent,
+        quality_info=None,
+        quality_score=None,
+    ) -> None:
         """Record a processed file in the persistence store."""
+        import json
+
         # Map action to ProcessingStatus
         action_to_status = {
             "hardlink": "linked",
@@ -530,6 +554,14 @@ class Processor:
             "error": "error",
         }
         status = action_to_status.get(event.action, "linked")
+
+        # Serialize quality info if present
+        quality_info_json: str | None = None
+        quality_score_value: int | None = None
+        if quality_info is not None:
+            quality_info_json = json.dumps(quality_info.to_dict())
+        if quality_score is not None:
+            quality_score_value = quality_score.total
 
         record = ProcessedFileRecord(
             source_path=str(match.source_path),
@@ -542,6 +574,8 @@ class Processor:
             checksum=None,  # Checksum is handled by ProcessedFileCache
             status=status,
             error_message=event.skip_reason if status == "error" else None,
+            quality_score=quality_score_value,
+            quality_info=quality_info_json,
         )
         self.processed_store.record_processed(record)
 

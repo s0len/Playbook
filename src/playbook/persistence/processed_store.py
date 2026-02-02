@@ -51,6 +51,8 @@ class ProcessedFileRecord:
         checksum: File checksum (optional)
         status: Processing status
         error_message: Error message if status is "error"
+        quality_score: Computed quality score for upgrade comparisons (optional)
+        quality_info: JSON-encoded quality attributes (optional)
     """
 
     source_path: str
@@ -63,6 +65,8 @@ class ProcessedFileRecord:
     checksum: str | None = None
     status: ProcessingStatus = "linked"
     error_message: str | None = None
+    quality_score: int | None = None
+    quality_info: str | None = None
 
 
 class ProcessedFileStore:
@@ -86,7 +90,7 @@ class ProcessedFileStore:
         ))
     """
 
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2
 
     def __init__(self, db_path: Path) -> None:
         """Initialize the store with the given database path.
@@ -174,6 +178,36 @@ class ProcessedFileStore:
                 ON processed_files(status)
             """)
 
+        if from_version < 2:
+            # Schema v2: Add quality scoring columns
+            # Check if columns already exist (in case of partial migration)
+            cursor = conn.execute("PRAGMA table_info(processed_files)")
+            existing_columns = {row["name"] for row in cursor}
+
+            if "quality_score" not in existing_columns:
+                conn.execute("""
+                    ALTER TABLE processed_files
+                    ADD COLUMN quality_score INTEGER DEFAULT NULL
+                """)
+
+            if "quality_info" not in existing_columns:
+                conn.execute("""
+                    ALTER TABLE processed_files
+                    ADD COLUMN quality_info TEXT DEFAULT NULL
+                """)
+
+            # Add index for quality-based queries
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_processed_files_quality
+                ON processed_files(sport_id, quality_score)
+            """)
+
+            # Add index for destination path lookups (for quality comparison)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_processed_files_destination
+                ON processed_files(destination_path)
+            """)
+
         # Update schema version
         conn.execute("DELETE FROM schema_version")
         conn.execute("INSERT INTO schema_version (version) VALUES (?)", (self.SCHEMA_VERSION,))
@@ -199,8 +233,8 @@ class ProcessedFileStore:
             INSERT INTO processed_files (
                 source_path, destination_path, sport_id, show_id,
                 season_index, episode_index, processed_at, checksum,
-                status, error_message
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                status, error_message, quality_score, quality_info
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(source_path) DO UPDATE SET
                 destination_path = excluded.destination_path,
                 sport_id = excluded.sport_id,
@@ -210,7 +244,9 @@ class ProcessedFileStore:
                 processed_at = excluded.processed_at,
                 checksum = excluded.checksum,
                 status = excluded.status,
-                error_message = excluded.error_message
+                error_message = excluded.error_message,
+                quality_score = excluded.quality_score,
+                quality_info = excluded.quality_info
             """,
             (
                 record.source_path,
@@ -223,12 +259,19 @@ class ProcessedFileStore:
                 record.checksum,
                 record.status,
                 record.error_message,
+                record.quality_score,
+                record.quality_info,
             ),
         )
         conn.commit()
 
     def _row_to_record(self, row: sqlite3.Row) -> ProcessedFileRecord:
         """Convert a database row to a ProcessedFileRecord."""
+        # Handle both v1 and v2 schema rows gracefully
+        row_keys = row.keys()
+        quality_score = row["quality_score"] if "quality_score" in row_keys else None
+        quality_info = row["quality_info"] if "quality_info" in row_keys else None
+
         return ProcessedFileRecord(
             source_path=row["source_path"],
             destination_path=row["destination_path"],
@@ -240,6 +283,8 @@ class ProcessedFileStore:
             checksum=row["checksum"],
             status=row["status"],
             error_message=row["error_message"],
+            quality_score=quality_score,
+            quality_info=quality_info,
         )
 
     def get_by_source(self, source_path: str) -> ProcessedFileRecord | None:
@@ -333,6 +378,73 @@ class ProcessedFileStore:
             List of processed file records with error status
         """
         return self.get_by_status("error")
+
+    def get_by_destination(self, destination_path: str) -> ProcessedFileRecord | None:
+        """Get a record by destination path.
+
+        Args:
+            destination_path: The destination file path to look up
+
+        Returns:
+            The processed file record, or None if not found
+        """
+        conn = self._get_connection()
+        cursor = conn.execute(
+            "SELECT * FROM processed_files WHERE destination_path = ?",
+            (destination_path,),
+        )
+        row = cursor.fetchone()
+        return self._row_to_record(row) if row else None
+
+    def get_quality_score(self, destination_path: str) -> int | None:
+        """Get the quality score for a destination path.
+
+        This is used to compare quality scores when deciding whether to
+        upgrade an existing file.
+
+        Args:
+            destination_path: The destination file path to look up
+
+        Returns:
+            The quality score, or None if not found or not set
+        """
+        conn = self._get_connection()
+        cursor = conn.execute(
+            "SELECT quality_score FROM processed_files WHERE destination_path = ?",
+            (destination_path,),
+        )
+        row = cursor.fetchone()
+        if row and row["quality_score"] is not None:
+            return row["quality_score"]
+        return None
+
+    def update_quality(
+        self,
+        destination_path: str,
+        quality_score: int | None,
+        quality_info: str | None,
+    ) -> bool:
+        """Update quality information for an existing record.
+
+        Args:
+            destination_path: The destination file path to update
+            quality_score: The new quality score
+            quality_info: JSON-encoded quality attributes
+
+        Returns:
+            True if a record was updated, False otherwise
+        """
+        conn = self._get_connection()
+        cursor = conn.execute(
+            """
+            UPDATE processed_files
+            SET quality_score = ?, quality_info = ?
+            WHERE destination_path = ?
+            """,
+            (quality_score, quality_info, destination_path),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
 
     def get_recent(self, limit: int = 100) -> list[ProcessedFileRecord]:
         """Get most recently processed files.
