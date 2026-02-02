@@ -377,10 +377,7 @@ def log_run_recap(
                 f"{plex_summary['shows']['updated']}/{plex_summary['seasons']['updated']}/"
                 f"{plex_summary['episodes']['updated']} (show/season/ep)"
             )
-            # Show not-found counts if any
-            not_found = plex_summary["seasons"]["not_found"] + plex_summary["episodes"]["not_found"]
-            if not_found:
-                plex_status += f" [{not_found} not found]"
+            # Only show actual errors (not "not found" - that's normal)
             if plex_sync_stats.errors:
                 plex_status += f" [{len(plex_sync_stats.errors)} errors]"
             fields["Plex Sync"] = plex_status
