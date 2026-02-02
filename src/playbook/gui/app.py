@@ -152,6 +152,12 @@ def run_with_gui(
     gui_state.config_path = config_path
     gui_state.processed_store = processor.processed_store
 
+    # Set NiceGUI storage path to cache directory (avoids permission issues in containers)
+    storage_path = app_config.settings.cache_dir / ".nicegui"
+    storage_path.mkdir(parents=True, exist_ok=True)
+    app.storage.path = storage_path
+    LOGGER.debug("NiceGUI storage path: %s", storage_path)
+
     # Install log handler to forward logs to GUI
     log_handler = install_gui_log_handler(gui_state, level=logging.DEBUG if verbose else logging.INFO)
 
