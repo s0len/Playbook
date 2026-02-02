@@ -2,38 +2,85 @@
 CSS styles for the Playbook GUI.
 
 Provides glassmorphism effects, transitions, and modern styling.
+Uses Quasar's dark mode class (body--dark) for theme switching.
 """
 
 from __future__ import annotations
 
 from nicegui import ui
 
-# Main CSS stylesheet
+# Main CSS stylesheet - uses body.body--dark for Quasar dark mode compatibility
 PLAYBOOK_CSS = """
+/* ===== CSS Variables for Theming ===== */
+:root {
+    --bg-primary: #f8fafc;
+    --bg-card: rgba(255, 255, 255, 0.85);
+    --bg-card-solid: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --border-color: rgba(148, 163, 184, 0.2);
+    --shadow-color: rgba(31, 38, 135, 0.1);
+}
+
+body.body--dark {
+    --bg-primary: #0f172a;
+    --bg-card: rgba(30, 41, 59, 0.85);
+    --bg-card-solid: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --border-color: rgba(148, 163, 184, 0.1);
+    --shadow-color: rgba(0, 0, 0, 0.3);
+}
+
 /* ===== Theme Transitions ===== */
 *, *::before, *::after {
     transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease;
 }
 
+/* ===== Page Background ===== */
+body {
+    background: var(--bg-primary) !important;
+}
+
+/* ===== Main Content Text ===== */
+.q-page, .q-page-container {
+    color: var(--text-primary);
+}
+
 /* ===== Glassmorphism Cards ===== */
 .glass-card {
-    background: rgba(255, 255, 255, 0.85);
+    background: var(--bg-card) !important;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 32px var(--shadow-color);
     border-radius: 12px;
 }
 
-.dark .glass-card {
-    background: rgba(30, 41, 59, 0.75);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+.glass-card.q-card {
+    background: var(--bg-card) !important;
 }
 
-/* Remove default card background when using glass-card */
-.glass-card.q-card {
-    background: transparent;
+/* ===== Card text colors ===== */
+.glass-card .text-slate-800,
+.glass-card .text-slate-700 {
+    color: var(--text-primary) !important;
+}
+
+.glass-card .text-slate-600,
+.glass-card .text-slate-500 {
+    color: var(--text-muted) !important;
+}
+
+/* ===== Page titles ===== */
+.text-3xl.font-bold {
+    color: var(--text-primary) !important;
+}
+
+.text-xl.font-semibold {
+    color: var(--text-secondary) !important;
 }
 
 /* ===== Modern Progress Bar ===== */
@@ -85,8 +132,8 @@ PLAYBOOK_CSS = """
     color: #16a34a;
 }
 
-.dark .status-chip-matched {
-    background: rgba(34, 197, 94, 0.2);
+body.body--dark .status-chip-matched {
+    background: rgba(34, 197, 94, 0.25);
     color: #4ade80;
 }
 
@@ -95,7 +142,7 @@ PLAYBOOK_CSS = """
     color: #64748b;
 }
 
-.dark .status-chip-missing {
+body.body--dark .status-chip-missing {
     background: rgba(148, 163, 184, 0.2);
     color: #94a3b8;
 }
@@ -105,8 +152,8 @@ PLAYBOOK_CSS = """
     color: #dc2626;
 }
 
-.dark .status-chip-error {
-    background: rgba(239, 68, 68, 0.2);
+body.body--dark .status-chip-error {
+    background: rgba(239, 68, 68, 0.25);
     color: #f87171;
 }
 
@@ -119,10 +166,6 @@ PLAYBOOK_CSS = """
 
 .episode-row:hover {
     background: rgba(148, 163, 184, 0.1);
-}
-
-.dark .episode-row:hover {
-    background: rgba(148, 163, 184, 0.08);
 }
 
 .episode-row-matched {
@@ -139,13 +182,9 @@ PLAYBOOK_CSS = """
 
 /* ===== Season Section ===== */
 .season-section {
-    border: 1px solid rgba(148, 163, 184, 0.2);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     overflow: hidden;
-}
-
-.dark .season-section {
-    border-color: rgba(148, 163, 184, 0.1);
 }
 
 .season-header {
@@ -153,13 +192,9 @@ PLAYBOOK_CSS = """
     padding: 16px;
 }
 
-.dark .season-header {
-    background: rgba(148, 163, 184, 0.03);
-}
-
 /* ===== Navigation Header ===== */
 .nav-header {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
@@ -171,10 +206,6 @@ PLAYBOOK_CSS = """
 
 .nav-link:hover {
     background: rgba(255, 255, 255, 0.1);
-}
-
-.nav-link.active {
-    background: rgba(59, 130, 246, 0.2);
 }
 
 /* ===== Dark Mode Toggle ===== */
@@ -201,11 +232,7 @@ PLAYBOOK_CSS = """
 
 .stat-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(31, 38, 135, 0.15);
-}
-
-.dark .stat-card:hover {
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 12px 40px var(--shadow-color);
 }
 
 /* ===== Tables ===== */
@@ -223,22 +250,13 @@ PLAYBOOK_CSS = """
     background: rgba(148, 163, 184, 0.08);
 }
 
-.dark .modern-table tbody tr:hover {
-    background: rgba(148, 163, 184, 0.05);
-}
-
-/* Clickable row styling */
 .modern-table tbody tr.cursor-pointer:hover {
-    background: rgba(59, 130, 246, 0.08);
-}
-
-.dark .modern-table tbody tr.cursor-pointer:hover {
-    background: rgba(59, 130, 246, 0.12);
+    background: rgba(59, 130, 246, 0.1);
 }
 
 /* ===== Log Viewer ===== */
 .log-container {
-    background: #0f172a;
+    background: #0f172a !important;
     border-radius: 12px;
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -262,18 +280,6 @@ PLAYBOOK_CSS = """
     border-radius: 8px;
 }
 
-/* ===== Buttons ===== */
-.btn-glass {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.dark .btn-glass {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
 /* ===== Scrollbar Styling ===== */
 ::-webkit-scrollbar {
     width: 8px;
@@ -293,21 +299,8 @@ PLAYBOOK_CSS = """
     background: rgba(148, 163, 184, 0.5);
 }
 
-.dark ::-webkit-scrollbar-thumb {
+body.body--dark ::-webkit-scrollbar-thumb {
     background: rgba(148, 163, 184, 0.2);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.4);
-}
-
-/* ===== Page Background ===== */
-body {
-    background: #f8fafc;
-}
-
-body.dark {
-    background: #0f172a;
 }
 
 /* ===== Focus States ===== */
@@ -316,20 +309,41 @@ body.dark {
     outline-offset: 2px;
 }
 
-/* ===== Utility Classes ===== */
-.text-gradient {
-    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+/* ===== Quasar Component Overrides for Dark Mode ===== */
+body.body--dark .q-card {
+    background: var(--bg-card-solid);
 }
 
-.shadow-glow {
-    box-shadow: 0 0 40px rgba(59, 130, 246, 0.15);
+body.body--dark .q-table {
+    background: transparent;
 }
 
-.dark .shadow-glow {
-    box-shadow: 0 0 40px rgba(59, 130, 246, 0.1);
+body.body--dark .q-table th,
+body.body--dark .q-table td {
+    color: var(--text-primary);
+}
+
+body.body--dark .q-field__label,
+body.body--dark .q-field__native,
+body.body--dark .q-select__dropdown-icon {
+    color: var(--text-primary);
+}
+
+body.body--dark .q-checkbox__label {
+    color: var(--text-primary);
+}
+
+body.body--dark .q-expansion-item__toggle-icon {
+    color: var(--text-muted);
+}
+
+/* ===== Link Colors ===== */
+a.text-blue-600 {
+    color: #3b82f6;
+}
+
+body.body--dark a.text-blue-600 {
+    color: #60a5fa;
 }
 """
 
@@ -339,37 +353,6 @@ def inject_styles() -> None:
     ui.add_head_html(f"<style>{PLAYBOOK_CSS}</style>")
 
 
-def inject_dark_mode_script() -> None:
-    """Inject JavaScript for dark mode class management on body."""
-    script = """
-    <script>
-    // Observe dark mode changes and sync to body class
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.attributeName === 'class') {
-                const html = document.documentElement;
-                const body = document.body;
-                if (html.classList.contains('dark')) {
-                    body.classList.add('dark');
-                } else {
-                    body.classList.remove('dark');
-                }
-            }
-        });
-    });
-
-    observer.observe(document.documentElement, { attributes: true });
-
-    // Initial sync
-    if (document.documentElement.classList.contains('dark')) {
-        document.body.classList.add('dark');
-    }
-    </script>
-    """
-    ui.add_head_html(script)
-
-
 def setup_page_styles() -> None:
-    """Set up all page styles including CSS and dark mode script."""
+    """Set up all page styles."""
     inject_styles()
-    inject_dark_mode_script()
