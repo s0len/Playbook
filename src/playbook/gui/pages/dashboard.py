@@ -13,6 +13,7 @@ from nicegui import ui
 
 from ..components import activity_feed, stats_card
 from ..state import gui_state
+from ..utils import safe_timer
 
 LOGGER = logging.getLogger(__name__)
 
@@ -119,7 +120,7 @@ def _status_card() -> None:
                         # Client disconnected - timer will be cleaned up
                         pass
 
-                ui.timer(1.0, update_status)
+                safe_timer(1.0, update_status)
                 update_status()
 
             # Last run time
@@ -137,7 +138,7 @@ def _status_card() -> None:
                         # Client disconnected - timer will be cleaned up
                         pass
 
-                ui.timer(5.0, update_last_run)
+                safe_timer(5.0, update_last_run)
                 update_last_run()
 
             # Run count
@@ -152,7 +153,7 @@ def _status_card() -> None:
                         # Client disconnected - timer will be cleaned up
                         pass
 
-                ui.timer(5.0, update_run_count)
+                safe_timer(5.0, update_run_count)
                 update_run_count()
 
             # Config path

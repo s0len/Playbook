@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from nicegui import ui
 
 from ..state import gui_state
+from ..utils import safe_timer
 
 if TYPE_CHECKING:
     from playbook.notifications import NotificationEvent
@@ -39,7 +40,7 @@ def activity_feed(max_items: int = 20) -> ui.column:
             # Client disconnected or element deleted - timer will be cleaned up
             pass
 
-    ui.timer(2.0, refresh)
+    safe_timer(2.0, refresh)
     refresh()
 
     return feed_container

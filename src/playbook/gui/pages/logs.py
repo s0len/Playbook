@@ -10,6 +10,7 @@ from nicegui import ui
 
 from ..components.log_viewer import log_line
 from ..state import LogEntry, gui_state
+from ..utils import safe_timer
 
 
 def logs_page() -> None:
@@ -131,7 +132,7 @@ def logs_page() -> None:
                     # Client disconnected - timer will be cleaned up
                     pass
 
-            ui.timer(1.0, refresh_logs)
+            safe_timer(1.0, refresh_logs)
             refresh_logs()
 
 

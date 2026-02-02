@@ -9,6 +9,8 @@ from typing import Any
 
 from nicegui import ui
 
+from ..utils import safe_timer
+
 
 def stats_card(
     title: str,
@@ -70,7 +72,7 @@ def stats_card(
             except Exception:
                 value_label.text = "?"
 
-        ui.timer(2.0, update_value)
+        safe_timer(2.0, update_value)
 
     return card
 
