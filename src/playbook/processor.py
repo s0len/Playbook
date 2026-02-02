@@ -3,12 +3,13 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Iterable, Mapping
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from rich.progress import Progress
 
-from .cache import CachedFileRecord, ProcessedFileCache
+from .cache import ProcessedFileCache
 from .config import AppConfig
 from .destination_builder import build_destination, build_match_context, format_relative_destination
 from .file_discovery import gather_source_files, matches_globs, should_suppress_sample_ignored
@@ -16,16 +17,14 @@ from .kometa_trigger import build_kometa_trigger
 from .logging_utils import render_fields_block
 from .match_handler import handle_match
 from .matcher import PatternRuntime, match_file_to_episode
-from .metadata import (
-    MetadataChangeResult,
-    MetadataFetchStatistics,
-    MetadataFingerprintStore,
-)
+from .metadata import MetadataFingerprintStore
 from .metadata_loader import SportRuntime, load_sports
 from .models import ProcessingStats, SportFileMatch
 from .notifications import NotificationEvent, NotificationService
-from .plex_metadata_sync import PlexMetadataSync, PlexSyncStats, create_plex_sync_from_config
+from .persistence import ProcessedFileRecord, ProcessedFileStore
+from .plex_metadata_sync import PlexMetadataSync, create_plex_sync_from_config
 from .post_run_triggers import run_plex_sync_if_needed, trigger_kometa_if_needed
+from .processing_state import ProcessingState
 from .run_summary import (
     has_activity,
     has_detailed_activity,
@@ -52,6 +51,7 @@ class Processor:
             ensure_directory(self.config.settings.cache_dir)
         self.processed_cache = ProcessedFileCache(self.config.settings.cache_dir)
         self.metadata_fingerprints = MetadataFingerprintStore(self.config.settings.cache_dir)
+        self.processed_store = ProcessedFileStore(self.config.settings.cache_dir / "playbook.db")
         self.trace_options = trace_options or TraceOptions()
         settings = self.config.settings
         self.notification_service = NotificationService(
@@ -61,19 +61,27 @@ class Processor:
             enabled=enable_notifications,
         )
         self._kometa_trigger = build_kometa_trigger(settings.kometa_trigger)
-        self._kometa_trigger_fired = False
-        self._kometa_trigger_needed = False
         self._plex_sync: PlexMetadataSync | None = create_plex_sync_from_config(config)
-        self._plex_sync_stats: PlexSyncStats | None = None
-        self._plex_sync_ran = False
-        self._previous_summary: tuple[int, int, int] | None = None
-        self._metadata_changed_sports: list[tuple[str, str]] = []
-        self._metadata_change_map: dict[str, MetadataChangeResult] = {}
-        self._stale_destinations: dict[str, Path] = {}
-        self._stale_records: dict[str, CachedFileRecord] = {}
-        self._metadata_fetch_stats = MetadataFetchStatistics()
-        self._touched_destinations: set[str] = set()
-        self._sports_with_processed_files: set[str] = set()
+
+        # Mutable processing state (reset between runs)
+        self._state = ProcessingState()
+
+    # Backwards-compatible property accessors for tests
+    @property
+    def _kometa_trigger_fired(self) -> bool:
+        return self._state.kometa_trigger_fired
+
+    @_kometa_trigger_fired.setter
+    def _kometa_trigger_fired(self, value: bool) -> None:
+        self._state.kometa_trigger_fired = value
+
+    @property
+    def _kometa_trigger_needed(self) -> bool:
+        return self._state.kometa_trigger_needed
+
+    @_kometa_trigger_needed.setter
+    def _kometa_trigger_needed(self, value: bool) -> None:
+        self._state.kometa_trigger_needed = value
 
     @staticmethod
     def _format_log(event: str, fields: Mapping[str, object] | None = None) -> str:
@@ -87,7 +95,7 @@ class Processor:
         """Load sports metadata in parallel and track changes.
 
         Delegates to metadata_loader.load_sports() and unpacks results into
-        instance variables for tracking metadata changes and fetch statistics.
+        processing state for tracking metadata changes and fetch statistics.
 
         Returns:
             List of successfully loaded SportRuntime objects
@@ -98,10 +106,10 @@ class Processor:
             metadata_fingerprints=self.metadata_fingerprints,
         )
 
-        # Unpack results into instance variables
-        self._metadata_changed_sports = result.changed_sports
-        self._metadata_change_map = result.change_map
-        self._metadata_fetch_stats = result.fetch_stats
+        # Unpack results into processing state
+        self._state.metadata_changed_sports = result.changed_sports
+        self._state.metadata_change_map = result.change_map
+        self._state.metadata_fetch_stats = result.fetch_stats
 
         return result.runtimes
 
@@ -120,15 +128,14 @@ class Processor:
         LOGGER.debug(self._format_log("Processed File Cache Cleared"))
 
     def process_all(self) -> ProcessingStats:
-        self._kometa_trigger_fired = False
-        self._kometa_trigger_needed = False
+        # Reset state for new run (preserves previous_summary for deduplication)
+        self._state.reset()
         runtimes = self._load_sports()
-        self._stale_destinations = {}
-        self._stale_records = {}
-        if self._metadata_changed_sports:
+
+        if self._state.metadata_changed_sports:
             labels = ", ".join(
                 f"{sport_id} ({sport_name})" if sport_name and sport_name != sport_id else sport_id
-                for sport_id, sport_name in self._metadata_changed_sports
+                for sport_id, sport_name in self._state.metadata_changed_sports
             )
             LOGGER.info(
                 self._format_log(
@@ -138,14 +145,12 @@ class Processor:
                     },
                 )
             )
-            removed_records = self.processed_cache.remove_by_metadata_changes(self._metadata_change_map)
-            self._stale_destinations = {
+            removed_records = self.processed_cache.remove_by_metadata_changes(self._state.metadata_change_map)
+            self._state.stale_destinations = {
                 source: Path(record.destination) for source, record in removed_records.items() if record.destination
             }
-            self._stale_records = removed_records
+            self._state.stale_records = removed_records
         stats = ProcessingStats()
-        self._touched_destinations = set()
-        self._sports_with_processed_files = set()
         run_started = time.perf_counter()
 
         try:
@@ -196,7 +201,7 @@ class Processor:
                     progress.advance(task_id, 1)
 
             summary_counts = (stats.processed, stats.skipped, stats.ignored)
-            summary_changed = summary_counts != self._previous_summary
+            summary_changed = summary_counts != self._state.previous_summary
             should_log_summary = (LOGGER.isEnabledFor(logging.DEBUG) or has_activity(stats)) and summary_changed
             if should_log_summary:
                 LOGGER.info(
@@ -209,7 +214,7 @@ class Processor:
                         },
                     )
                 )
-            self._previous_summary = summary_counts
+            self._state.previous_summary = summary_counts
             if stats.errors:
                 for error in stats.errors:
                     LOGGER.error(
@@ -220,14 +225,20 @@ class Processor:
                     )
 
             has_details = has_detailed_activity(stats)
-            has_issues = bool(stats.errors or stats.warnings)
+            has_errors = bool(stats.errors)
             if LOGGER.isEnabledFor(logging.DEBUG):
+                # In DEBUG mode, show detailed summary when there's any activity
+                has_issues = has_errors or bool(stats.warnings)
                 if has_details or has_issues:
                     level = logging.INFO if has_issues else logging.DEBUG
                     self._log_detailed_summary(stats, level=level)
-            elif has_issues:
+            elif has_errors:
+                # At INFO level, only show detailed summary for actual errors
+                # (warnings are already logged individually and counted in Run Recap)
                 self._log_detailed_summary(stats)
             self._trigger_post_run_trigger_if_needed(stats)
+            # Send summary notification if in summary mode
+            self.notification_service.send_summary()
             duration = time.perf_counter() - run_started
             self._log_run_recap(stats, duration)
             return stats
@@ -436,7 +447,7 @@ class Processor:
         """Log detailed summary of processing results (delegates to run_summary module)."""
         log_detailed_summary(
             stats,
-            plex_sync_stats=self._plex_sync_stats,
+            plex_sync_stats=self._state.plex_sync_stats,
             level=level,
         )
 
@@ -445,14 +456,14 @@ class Processor:
         log_run_recap(
             stats,
             duration,
-            touched_destinations=sorted(self._touched_destinations),
+            touched_destinations=sorted(self._state.touched_destinations),
             plex_sync_enabled=self._plex_sync is not None,
-            plex_sync_ran=self._plex_sync_ran,
-            plex_sync_stats=self._plex_sync_stats,
+            plex_sync_ran=self._state.plex_sync_ran,
+            plex_sync_stats=self._state.plex_sync_stats,
             plex_sync_dry_run=self._plex_sync.dry_run if self._plex_sync else False,
             global_dry_run=self.config.settings.dry_run,
             kometa_enabled=self._kometa_trigger.enabled,
-            kometa_fired=self._kometa_trigger_fired,
+            kometa_fired=self._state.kometa_trigger_fired,
         )
 
     def _build_context(self, runtime: SportRuntime, source_path: Path, season, episode, groups) -> dict[str, object]:
@@ -485,8 +496,8 @@ class Processor:
             match,
             stats,
             processed_cache=self.processed_cache,
-            stale_destinations=self._stale_destinations,
-            stale_records=self._stale_records,
+            stale_destinations=self._state.stale_destinations,
+            stale_records=self._state.stale_records,
             skip_existing=settings.skip_existing,
             dry_run=settings.dry_run,
             link_mode=link_mode,
@@ -494,15 +505,45 @@ class Processor:
             logger=LOGGER,
         )
 
-        # Update instance state based on results
+        # Update processing state based on results
         if kometa_trigger_needed and not settings.dry_run:
-            self._kometa_trigger_needed = True
+            self._state.kometa_trigger_needed = True
 
         if sport_id:
             self._record_destination_touch(match.destination_path)
-            self._sports_with_processed_files.add(sport_id)
+            self._state.sports_with_processed_files.add(sport_id)
+
+            # Record processed file in persistence store (skip in dry-run mode)
+            if not settings.dry_run and event:
+                self._record_processed_file(match, event)
 
         return event
+
+    def _record_processed_file(self, match: SportFileMatch, event: NotificationEvent) -> None:
+        """Record a processed file in the persistence store."""
+        # Map action to ProcessingStatus
+        action_to_status = {
+            "hardlink": "linked",
+            "copy": "copied",
+            "symlink": "symlinked",
+            "skipped": "skipped",
+            "error": "error",
+        }
+        status = action_to_status.get(event.action, "linked")
+
+        record = ProcessedFileRecord(
+            source_path=str(match.source_path),
+            destination_path=str(match.destination_path),
+            sport_id=match.sport.id,
+            show_id=match.show.id,
+            season_index=match.season.index,
+            episode_index=match.episode.index,
+            processed_at=datetime.now(),
+            checksum=None,  # Checksum is handled by ProcessedFileCache
+            status=status,
+            error_message=event.skip_reason if status == "error" else None,
+        )
+        self.processed_store.record_processed(record)
 
     def _trigger_post_run_trigger_if_needed(self, stats: ProcessingStats) -> None:
         """Run post-run triggers: Plex sync and Kometa (delegates to post_run_triggers module)."""
@@ -510,26 +551,26 @@ class Processor:
         self._run_plex_sync_if_needed(stats)
 
         # Run Kometa trigger if enabled (legacy, may be removed)
-        self._kometa_trigger_fired, self._kometa_trigger_needed = trigger_kometa_if_needed(
+        self._state.kometa_trigger_fired, self._state.kometa_trigger_needed = trigger_kometa_if_needed(
             self._kometa_trigger,
-            self._kometa_trigger_fired,
-            self._kometa_trigger_needed,
+            self._state.kometa_trigger_fired,
+            self._state.kometa_trigger_needed,
             global_dry_run=self.config.settings.dry_run,
             stats=stats,
         )
 
     def _run_plex_sync_if_needed(self, stats: ProcessingStats) -> None:
         """Run Plex metadata sync after file processing (delegates to post_run_triggers module)."""
-        self._plex_sync_stats, self._plex_sync_ran = run_plex_sync_if_needed(
+        self._state.plex_sync_stats, self._state.plex_sync_ran = run_plex_sync_if_needed(
             self._plex_sync,
-            self._plex_sync_ran,
+            self._state.plex_sync_ran,
             global_dry_run=self.config.settings.dry_run,
-            sports_with_processed_files=self._sports_with_processed_files,
-            metadata_changed_sports=self._metadata_changed_sports,
+            sports_with_processed_files=self._state.sports_with_processed_files,
+            metadata_changed_sports=self._state.metadata_changed_sports,
         )
 
     def _format_relative_destination(self, destination: Path) -> str:
         return format_relative_destination(destination, self.config.settings.destination_dir)
 
     def _record_destination_touch(self, destination: Path) -> None:
-        self._touched_destinations.add(self._format_relative_destination(destination))
+        self._state.touched_destinations.add(self._format_relative_destination(destination))

@@ -101,11 +101,20 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
+      - name: Set Git info for build
+        run: |
+          echo "GIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "GIT_BRANCH=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
+          build-args: |
+            GIT_SHA=${{ env.GIT_SHA }}
+            GIT_BRANCH=${{ env.GIT_BRANCH }}
+            BUILD_VERSION=${{ startsWith(github.ref, 'refs/tags/v') && env.VERSION || '' }}
           tags: |
             ${{ github.ref == 'refs/heads/develop' && 'ghcr.io/s0len/playbook:develop' || '' }}
             ${{ startsWith(github.ref, 'refs/tags/v') && format('ghcr.io/s0len/playbook:{0}', env.VERSION) || '' }}

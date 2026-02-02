@@ -344,6 +344,10 @@ def configure_logging(log_level_name: str, log_file: Path, console_level_name: s
 
     logging.captureWarnings(True)
 
+    # Silence noisy third-party loggers at INFO level
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+
     if rotated:
         LOGGER.debug("Rotated previous log to %s", previous_log)
     LOGGER.info(

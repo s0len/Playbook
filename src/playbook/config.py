@@ -94,6 +94,7 @@ class NotificationSettings:
     targets: list[dict[str, Any]] = field(default_factory=list)
     throttle: dict[str, int] = field(default_factory=dict)
     mentions: dict[str, str] = field(default_factory=dict)
+    summary_mode: bool = False  # Send one summary notification per scan instead of per-file
 
 
 @dataclass

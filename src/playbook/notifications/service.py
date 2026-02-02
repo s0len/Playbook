@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,69 @@ from .utils import _normalize_mentions_map
 from .webhook import GenericWebhookTarget
 
 LOGGER = logging.getLogger(__name__)
+
+
+class ScanSummary:
+    """Aggregates events from a scan for summary notification."""
+
+    def __init__(self) -> None:
+        self.events: list[NotificationEvent] = []
+        self.by_sport: dict[str, list[NotificationEvent]] = defaultdict(list)
+
+    def add(self, event: NotificationEvent) -> None:
+        self.events.append(event)
+        self.by_sport[event.sport_id].append(event)
+
+    def clear(self) -> None:
+        self.events.clear()
+        self.by_sport.clear()
+
+    def __len__(self) -> int:
+        return len(self.events)
+
+    def format_discord_embed(self) -> dict[str, Any]:
+        """Format summary as a Discord embed."""
+        if not self.events:
+            return {}
+
+        # Count by sport and type
+        lines = []
+        total_new = 0
+        total_replaced = 0
+
+        for sport_id in sorted(self.by_sport.keys()):
+            sport_events = self.by_sport[sport_id]
+            sport_name = sport_events[0].sport_name if sport_events else sport_id
+
+            new_count = sum(1 for e in sport_events if e.event_type == "new" and not e.replaced)
+            replaced_count = sum(1 for e in sport_events if e.replaced)
+            changed_count = sum(1 for e in sport_events if e.event_type == "changed")
+            error_count = sum(1 for e in sport_events if e.event_type == "error")
+
+            total_new += new_count + changed_count
+            total_replaced += replaced_count
+
+            parts = []
+            if new_count:
+                parts.append(f"{new_count} new")
+            if replaced_count:
+                parts.append(f"{replaced_count} replaced")
+            if changed_count:
+                parts.append(f"{changed_count} changed")
+            if error_count:
+                parts.append(f"{error_count} errors")
+
+            if parts:
+                lines.append(f"**{sport_name}**: {', '.join(parts)}")
+
+        description = "\n".join(lines) if lines else "No files processed"
+
+        return {
+            "title": "Playbook Scan Complete",
+            "description": description,
+            "color": 0x5865F2,  # Discord blurple
+            "footer": {"text": f"Total: {total_new} new, {total_replaced} replaced"},
+        }
 
 
 class NotificationService:
@@ -38,6 +102,8 @@ class NotificationService:
         )
         self._throttle_map = settings.throttle
         self._last_sent: dict[str, datetime] = {}
+        self._summary_mode = getattr(settings, "summary_mode", False)
+        self._scan_summary = ScanSummary()
 
     @property
     def enabled(self) -> bool:
@@ -55,6 +121,18 @@ class NotificationService:
                 event.event_type,
             )
             return
+
+        # In summary mode, collect events instead of sending immediately
+        if self._summary_mode:
+            self._scan_summary.add(event)
+            LOGGER.debug(
+                "Collected notification for summary | sport=%s episode=%s event=%s",
+                event.sport_id,
+                event.episode,
+                event.event_type,
+            )
+            return
+
         throttle_seconds = self._resolve_throttle(event.sport_id)
         last_event = self._last_sent.get(event.sport_id)
         if throttle_seconds and last_event:
@@ -93,6 +171,57 @@ class NotificationService:
                 event.sport_id,
                 event.event_type,
             )
+
+    def send_summary(self) -> None:
+        """Send a summary notification for all collected events.
+
+        Only used when summary_mode is enabled. Call at the end of each scan.
+        """
+        if not self._summary_mode:
+            return
+
+        if not self._scan_summary:
+            LOGGER.debug("No events to summarize")
+            return
+
+        LOGGER.info(
+            "Sending summary notification for %d events across %d sports",
+            len(self._scan_summary),
+            len(self._scan_summary.by_sport),
+        )
+
+        embed = self._scan_summary.format_discord_embed()
+
+        successes: list[str] = []
+        for target in self._targets:
+            if not target.enabled():
+                continue
+            try:
+                # For Discord targets, send the embed directly
+                if hasattr(target, "send_embed"):
+                    target.send_embed(embed)
+                else:
+                    # For other targets, create a simple text summary
+                    summary_text = self._format_text_summary()
+                    target.send_raw(summary_text) if hasattr(target, "send_raw") else None
+            except Exception as exc:  # pragma: no cover
+                LOGGER.warning("Summary notification to %s failed: %s", target.name, exc)
+            else:
+                successes.append(target.name)
+
+        self._scan_summary.clear()
+
+        if successes:
+            LOGGER.debug("Summary notification sent to: %s", ", ".join(successes))
+
+    def _format_text_summary(self) -> str:
+        """Format summary as plain text for non-Discord targets."""
+        lines = ["Playbook Scan Complete", ""]
+        for sport_id in sorted(self._scan_summary.by_sport.keys()):
+            events = self._scan_summary.by_sport[sport_id]
+            sport_name = events[0].sport_name if events else sport_id
+            lines.append(f"  {sport_name}: {len(events)} file(s)")
+        return "\n".join(lines)
 
     def _build_targets(
         self,

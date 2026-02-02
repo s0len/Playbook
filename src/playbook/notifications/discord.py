@@ -68,6 +68,22 @@ class DiscordTarget(NotificationTarget):
         payload = self._build_single_payload(event, now)
         self._send_with_retries("POST", self.webhook_url, payload)
 
+    def send_embed(self, embed: dict[str, Any]) -> None:
+        """Send a pre-built embed directly (used for summary notifications)."""
+        if not self.enabled():
+            return
+
+        # Add timestamp if not present
+        if "timestamp" not in embed:
+            embed["timestamp"] = datetime.now().isoformat()
+
+        # Add footer if not present
+        if "footer" not in embed:
+            embed["footer"] = {"text": "Playbook"}
+
+        payload = {"embeds": [embed]}
+        self._send_with_retries("POST", self.webhook_url, payload)
+
     def _build_single_payload(self, event: NotificationEvent, now: datetime) -> dict[str, Any]:
         embed: dict[str, Any] = {
             "title": _trim(f"{event.show_title} – {event.session}", 256),

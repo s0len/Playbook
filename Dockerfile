@@ -1,8 +1,16 @@
 FROM python:3.12-slim-bookworm
 
+# Build arguments for version info (set by CI/CD)
+ARG BUILD_VERSION
+ARG GIT_SHA
+ARG GIT_BRANCH
+
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    BUILD_VERSION=${BUILD_VERSION} \
+    GIT_SHA=${GIT_SHA} \
+    GIT_BRANCH=${GIT_BRANCH}
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

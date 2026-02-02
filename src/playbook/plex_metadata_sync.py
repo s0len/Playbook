@@ -269,10 +269,10 @@ def _match_season_key(plex_seasons: list[dict[str, object]], season: Season) -> 
         rating_key = entry.get("ratingKey")
         if not rating_key:
             continue
+        # Note: parentIndex is the show's index, not the season's, so we don't use it here
         numbers = {
             _as_int(entry.get("index")),
             _as_int(entry.get("seasonNumber")),
-            _as_int(entry.get("parentIndex")),
         }
         if target_numbers & {num for num in numbers if num is not None}:
             return str(rating_key)
@@ -724,11 +724,11 @@ class PlexMetadataSync:
                 summary["episodes"]["skipped"],
                 summary["assets"]["updated"],
             )
-            # Log not-found items
+            # Log not-found items at DEBUG level (normal - user doesn't have all content)
             not_found_total = summary["seasons"]["not_found"] + summary["episodes"]["not_found"]
             if not_found_total:
-                LOGGER.warning(
-                    "Plex sync: %d season(s) and %d episode(s) not found in Plex library",
+                LOGGER.debug(
+                    "Plex sync: %d season(s) and %d episode(s) in API but not in Plex library (normal)",
                     summary["seasons"]["not_found"],
                     summary["episodes"]["not_found"],
                 )
@@ -959,35 +959,15 @@ class PlexMetadataSync:
             rating_key = season_rating_cache.get(season_id)
 
             if not rating_key:
-                # Build enhanced log message showing what seasons exist in Plex
-                builder = LogBlockBuilder("Season Not Found In Plex", pad_top=True)
-                builder.add_fields(
-                    {
-                        "Show Title": show.title,
-                        "Season Title": season.title,
-                        "Season Index": season.index,
-                        "Display Number": season.display_number,
-                    }
-                )
-                # Extract season info from Plex for diagnostic purposes
-                plex_season_titles = [f"{s.get('index', '?')}: {s.get('title', '(untitled)')}" for s in plex_seasons]
-                if plex_season_titles:
-                    builder.add_section("Seasons In Plex", plex_season_titles)
-                else:
-                    builder.add_section("Seasons In Plex", [], empty_label="(no seasons found)")
-                LOGGER.warning(builder.render())
-
-                # Enhanced error with actionable context
-                season_info = f"'{season.title}'" if season.title else f"index={season.index}"
-                plex_seasons_str = ""
-                if plex_season_titles:
-                    plex_seasons_str = f" Available: {', '.join(plex_season_titles[:3])}"
-                    if len(plex_season_titles) > 3:
-                        plex_seasons_str += f" (+{len(plex_season_titles) - 3} more)"
-                stats.errors.append(
-                    f"Season not found: {season_info} in show '{show.title}' | "
-                    f"library={self._library_id_resolved} | source={base_url}.{plex_seasons_str}"
-                )
+                # Season exists in API but not in user's Plex library - this is normal
+                # (user doesn't have all seasons). Only log at DEBUG level.
+                if LOGGER.isEnabledFor(logging.DEBUG):
+                    LOGGER.debug(
+                        "Season '%s' (index=%s) not found in Plex for show '%s' - skipping",
+                        season.title,
+                        season.index,
+                        show.title,
+                    )
                 stats.seasons_not_found += 1
                 continue
 
@@ -1053,39 +1033,15 @@ class PlexMetadataSync:
                 episode_rating = _match_episode_key(plex_episodes, episode)
 
                 if not episode_rating:
-                    # Build enhanced log message showing what episodes exist in Plex
-                    builder = LogBlockBuilder("Episode Not Found In Plex", pad_top=True)
-                    builder.add_fields(
-                        {
-                            "Show Title": show.title,
-                            "Season Title": season.title,
-                            "Episode Title": episode.title,
-                            "Episode Index": episode.index,
-                            "Display Number": episode.display_number,
-                        }
-                    )
-                    # Extract episode info from Plex for diagnostic purposes
-                    plex_episode_titles = [
-                        f"{e.get('index', '?')}: {e.get('title', '(untitled)')}" for e in plex_episodes
-                    ]
-                    if plex_episode_titles:
-                        builder.add_section("Episodes In Plex", plex_episode_titles)
-                    else:
-                        builder.add_section("Episodes In Plex", [], empty_label="(no episodes found)")
-                    LOGGER.warning(builder.render())
-
-                    # Enhanced error with actionable context
-                    episode_info = f"'{episode.title}'" if episode.title else f"index={episode.index}"
-                    season_info = f"'{season.title}'" if season.title else f"index={season.index}"
-                    plex_episodes_str = ""
-                    if plex_episode_titles:
-                        plex_episodes_str = f" Available: {', '.join(plex_episode_titles[:3])}"
-                        if len(plex_episode_titles) > 3:
-                            plex_episodes_str += f" (+{len(plex_episode_titles) - 3} more)"
-                    stats.errors.append(
-                        f"Episode not found: {episode_info} in season {season_info} of '{show.title}' | "
-                        f"library={self._library_id_resolved} | source={base_url}.{plex_episodes_str}"
-                    )
+                    # Episode exists in API but not in user's Plex library - this is normal
+                    # (user doesn't have all episodes). Only log at DEBUG level.
+                    if LOGGER.isEnabledFor(logging.DEBUG):
+                        LOGGER.debug(
+                            "Episode '%s' (index=%s) not found in Plex for season '%s' - skipping",
+                            episode.title,
+                            episode.index,
+                            season.title,
+                        )
                     stats.episodes_not_found += 1
                     continue
 
