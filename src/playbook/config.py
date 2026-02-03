@@ -52,6 +52,7 @@ class PlexSyncSettings:
     sports: list[str] = field(default_factory=list)
     scan_wait: float = 5.0  # Seconds to wait after triggering library scan
     lock_poster_fields: bool = False  # Whether to lock poster fields to prevent updates
+    scan_after_link: bool = False  # Trigger partial scan after linking files
 
 
 @dataclass

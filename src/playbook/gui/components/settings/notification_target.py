@@ -61,6 +61,16 @@ NOTIFICATION_TYPES = {
             {"key": "password", "label": "Password", "type": "password"},
         ],
     },
+    "plex_scan": {
+        "label": "Plex Scan",
+        "icon": "play_circle",
+        "fields": [
+            {"key": "url", "label": "Plex URL", "type": "text", "required": True, "placeholder": "http://192.168.1.100:32400"},
+            {"key": "token", "label": "Plex Token", "type": "password", "required": True},
+            {"key": "library_name", "label": "Library Name", "type": "text", "placeholder": "Sport"},
+            {"key": "library_id", "label": "Library ID", "type": "text", "placeholder": "Or use library ID instead"},
+        ],
+    },
 }
 
 
