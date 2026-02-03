@@ -5653,6 +5653,32 @@ pattern_sets:
         metadata_filters:
           team_alias_map: uefa_champions_league
 
+      - description: UCL abbreviated with date and matchday
+        # Example: UCL.2026.01.28.MD8.Liverpool.vs.Qarabag.1080p50.x264.EN.TNT.mp4
+        regex: >-
+          (?i)^UCL[._\s-]+(?P<season_year>\d{4})[._\s-]+(?P<month>\d{2})[._\s-]+(?P<day>\d{2})[._\s-]+(?:MD|Matchday|Round|R)(?P<round>\d{1,2})[._\s-]+(?P<matchup>(?P<home>[A-Za-z]+(?:[._\s-]+[A-Za-z]+){0,3})[._\s-]+(?:vs?|VS?|V)[._\s-]+(?P<away>[A-Za-z]+(?:[._\s-]+[A-Za-z]+){0,3}))[._\s-]+(?:\d{3,4}p|1080|720|2160)
+        season_selector:
+          mode: round
+          group: round
+        episode_selector:
+          group: matchup
+          allow_fallback_to_title: true
+        metadata_filters:
+          team_alias_map: uefa_champions_league
+
+      - description: UCL abbreviated with date only (no matchday)
+        # Example: UCL.2026.01.28.Liverpool.vs.Qarabag.1080p50.x264.EN.TNT.mp4
+        regex: >-
+          (?i)^UCL[._\s-]+(?P<season_year>\d{4})[._\s-]+(?P<month>\d{2})[._\s-]+(?P<day>\d{2})[._\s-]+(?P<matchup>(?P<home>[A-Za-z]+(?:[._\s-]+[A-Za-z]+){0,3})[._\s-]+(?:vs?|VS?|V)[._\s-]+(?P<away>[A-Za-z]+(?:[._\s-]+[A-Za-z]+){0,3}))[._\s-]+(?:\d{3,4}p|1080|720|2160)
+        season_selector:
+          mode: title
+          group: matchup
+        episode_selector:
+          group: matchup
+          allow_fallback_to_title: true
+        metadata_filters:
+          team_alias_map: uefa_champions_league
+
   # ------------------------------------------------------------------
   # Premier League releases
   # ------------------------------------------------------------------
