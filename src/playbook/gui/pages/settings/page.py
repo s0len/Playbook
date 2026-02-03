@@ -46,9 +46,6 @@ def settings_page() -> None:
     else:
         ui.notify("No configuration file loaded", type="warning")
 
-    # Get active tab from URL or default
-    active_tab = "general"
-
     with ui.column().classes("w-full max-w-7xl mx-auto p-4 gap-4"):
         # Page header
         with ui.row().classes("w-full items-center justify-between"):
@@ -86,11 +83,15 @@ def settings_page() -> None:
         # Main content area
         with ui.row().classes("w-full gap-6"):
             # Sidebar navigation
-            with ui.column().classes("w-48 shrink-0 gap-1"):
-                ui.label("Settings").classes("text-sm font-semibold text-slate-500 dark:text-slate-400 px-2 mb-2")
+            sidebar_container = ui.column().classes("w-48 shrink-0 gap-1")
 
-                for tab_id, tab_label, tab_icon in SETTINGS_TABS:
-                    _render_tab_button(state, tab_id, tab_label, tab_icon, active_tab)
+            def render_sidebar() -> None:
+                """Render the sidebar navigation."""
+                sidebar_container.clear()
+                with sidebar_container:
+                    ui.label("Settings").classes("text-sm font-semibold text-slate-500 dark:text-slate-400 px-2 mb-2")
+                    for tab_id, tab_label, tab_icon in SETTINGS_TABS:
+                        _render_tab_button(state, tab_id, tab_label, tab_icon)
 
             # Content area
             content_container = ui.column().classes("flex-1 min-w-0")
@@ -113,17 +114,19 @@ def settings_page() -> None:
                     renderer(state)
 
             # Initial render
+            render_sidebar()
             render_content()
 
-            # Update content when tab changes
+            # Update sidebar and content when tab changes
             def on_state_update(event_type: str, data) -> None:
                 if event_type == "tab_changed":
+                    render_sidebar()
                     render_content()
 
             state.register_callback(on_state_update)
 
 
-def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, tab_icon: str, active_tab: str) -> None:
+def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, tab_icon: str) -> None:
     """Render a sidebar tab button."""
     is_active = state.active_tab == tab_id
 
