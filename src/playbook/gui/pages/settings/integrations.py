@@ -39,12 +39,95 @@ def integrations_tab(state: SettingsFormState) -> None:
         state: Settings form state
     """
     with ui.column().classes("w-full gap-6"):
-        # Plex Sync Section
+        # Plex Library Scan Section
+        _render_plex_scan_section(state)
+
+        # Plex Metadata Sync Section
         _render_plex_section(state)
 
 
+def _has_plex_scan_target(state: SettingsFormState) -> bool:
+    """Check if a plex_scan notification target exists."""
+    targets = state.get_value("settings.notifications.targets", []) or []
+    return any(t.get("type") in ("plex_scan", "plex") for t in targets if isinstance(t, dict))
+
+
+def _get_plex_scan_target(state: SettingsFormState) -> dict | None:
+    """Get the plex_scan notification target if it exists."""
+    targets = state.get_value("settings.notifications.targets", []) or []
+    for t in targets:
+        if isinstance(t, dict) and t.get("type") in ("plex_scan", "plex"):
+            return t
+    return None
+
+
+def _add_plex_scan_target(state: SettingsFormState) -> None:
+    """Add a plex_scan notification target."""
+    targets = state.get_value("settings.notifications.targets", []) or []
+    if not isinstance(targets, list):
+        targets = []
+
+    # Don't add if already exists
+    if _has_plex_scan_target(state):
+        return
+
+    # Add new plex_scan target (uses env vars by default)
+    targets.append({"type": "plex_scan", "enabled": True})
+    state.set_value("settings.notifications.targets", targets)
+
+
+def _remove_plex_scan_target(state: SettingsFormState) -> None:
+    """Remove the plex_scan notification target."""
+    targets = state.get_value("settings.notifications.targets", []) or []
+    if not isinstance(targets, list):
+        return
+
+    # Filter out plex_scan targets
+    new_targets = [t for t in targets if not (isinstance(t, dict) and t.get("type") in ("plex_scan", "plex"))]
+    state.set_value("settings.notifications.targets", new_targets)
+
+
+def _render_plex_scan_section(state: SettingsFormState) -> None:
+    """Render Plex library scan settings."""
+    with settings_card(
+        "Plex Library Scan",
+        icon="refresh",
+        description="Trigger Plex to scan for new files",
+    ):
+        # Check for env vars
+        has_plex_env = any(os.environ.get(v) for v in ["PLEX_URL", "PLEX_TOKEN"])
+        scan_enabled = _has_plex_scan_target(state)
+
+        def on_scan_toggle(enabled: bool) -> None:
+            if enabled:
+                _add_plex_scan_target(state)
+            else:
+                _remove_plex_scan_target(state)
+
+        with ui.row().classes("w-full items-center justify-between"):
+            with ui.column().classes("gap-1"):
+                ui.label("Enable Plex Scan").classes("text-sm font-medium text-slate-700 dark:text-slate-200")
+                ui.label("Trigger partial library scan when files are linked").classes(
+                    "text-xs text-slate-500 dark:text-slate-400"
+                )
+            ui.switch(value=scan_enabled, on_change=lambda e: on_scan_toggle(e.value))
+
+        if has_plex_env:
+            with ui.row().classes("w-full items-center gap-2 p-2 rounded bg-green-50 dark:bg-green-900/20 mt-2"):
+                ui.icon("check_circle").classes("text-green-500")
+                ui.label("Will use PLEX_URL and PLEX_TOKEN from environment").classes(
+                    "text-sm text-green-700 dark:text-green-300"
+                )
+        elif not scan_enabled:
+            with ui.row().classes("w-full items-center gap-2 p-2 rounded bg-amber-50 dark:bg-amber-900/20 mt-2"):
+                ui.icon("warning").classes("text-amber-500")
+                ui.label("Set PLEX_URL and PLEX_TOKEN environment variables, or configure in Notifications").classes(
+                    "text-sm text-amber-700 dark:text-amber-300"
+                )
+
+
 def _render_plex_section(state: SettingsFormState) -> None:
-    """Render Plex sync settings."""
+    """Render Plex metadata sync settings."""
     # Container for dynamic content that depends on enabled state
     container = ui.column().classes("w-full gap-6")
 
