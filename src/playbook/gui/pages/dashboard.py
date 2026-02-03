@@ -18,6 +18,18 @@ from ..utils import safe_timer
 LOGGER = logging.getLogger(__name__)
 
 
+def _safe_notify(message: str, type: str = "info") -> None:
+    """Safely call ui.notify, handling deleted UI context."""
+    try:
+        ui.notify(message, type=type)
+    except RuntimeError as e:
+        if "deleted" in str(e):
+            # User navigated away, ignore
+            LOGGER.debug("Notification skipped (UI context deleted): %s", message)
+        else:
+            raise
+
+
 def dashboard_page() -> None:
     """Render the main dashboard page."""
     with ui.column().classes("w-full max-w-6xl mx-auto p-4 gap-6"):
@@ -182,23 +194,23 @@ def _refresh_button() -> None:
 async def _trigger_run() -> None:
     """Trigger a manual processing run."""
     if not gui_state.processor:
-        ui.notify("Processor not initialized", type="warning")
+        _safe_notify("Processor not initialized", type="warning")
         return
 
     if gui_state.is_processing:
-        ui.notify("Processing already in progress", type="info")
+        _safe_notify("Processing already in progress", type="info")
         return
 
-    ui.notify("Starting processing run...", type="info")
+    _safe_notify("Starting processing run...", type="info")
     gui_state.set_processing(True)
 
     try:
         # Run processor in background
         await asyncio.get_event_loop().run_in_executor(None, gui_state.processor.process_all)
-        ui.notify("Processing complete", type="positive")
+        _safe_notify("Processing complete", type="positive")
     except Exception as e:
         LOGGER.exception("Processing error: %s", e)
-        ui.notify(f"Processing error: {e}", type="negative")
+        _safe_notify(f"Processing error: {e}", type="negative")
     finally:
         gui_state.set_processing(False)
 
@@ -206,18 +218,18 @@ async def _trigger_run() -> None:
 async def _clear_cache() -> None:
     """Clear the processed file cache."""
     if not gui_state.processor:
-        ui.notify("Processor not initialized", type="warning")
+        _safe_notify("Processor not initialized", type="warning")
         return
 
     try:
         gui_state.processor.clear_processed_cache()
         gui_state.recent_events.clear()
-        ui.notify("Cache cleared", type="positive")
+        _safe_notify("Cache cleared", type="positive")
     except Exception as e:
         LOGGER.exception("Error clearing cache: %s", e)
-        ui.notify(f"Error clearing cache: {e}", type="negative")
+        _safe_notify(f"Error clearing cache: {e}", type="negative")
 
 
 async def _refresh_metadata() -> None:
     """Trigger metadata refresh."""
-    ui.notify("Metadata refresh will happen on next run", type="info")
+    _safe_notify("Metadata refresh will happen on next run", type="info")
