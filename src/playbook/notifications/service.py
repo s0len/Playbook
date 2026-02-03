@@ -234,53 +234,57 @@ class NotificationService:
 
         for entry in configs:
             target_type = entry.get("type", "").lower()
+            is_enabled = entry.get("enabled", True)
+            target: NotificationTarget | None = None
+
             if target_type == "discord":
                 webhook = self._discord_webhook_from(entry)
                 if webhook:
                     batch = entry.get("batch")
                     mentions_override = _normalize_mentions_map(entry.get("mentions"))
-                    targets.append(
-                        DiscordTarget(
-                            webhook,
-                            cache_dir=cache_dir,
-                            settings=self._settings,
-                            batch=batch if batch is not None else entry.get("batch_daily"),
-                            mentions=mentions_override if mentions_override else None,
-                        )
+                    target = DiscordTarget(
+                        webhook,
+                        cache_dir=cache_dir,
+                        settings=self._settings,
+                        batch=batch if batch is not None else entry.get("batch_daily"),
+                        mentions=mentions_override if mentions_override else None,
                     )
                 else:
                     LOGGER.warning("Skipped Discord target because webhook_url was not provided.")
             elif target_type == "slack":
                 url = entry.get("webhook_url") or entry.get("url")
                 if url:
-                    targets.append(SlackTarget(url, template=entry.get("template")))
+                    target = SlackTarget(url, template=entry.get("template"))
                 else:
                     LOGGER.warning("Skipped Slack target because webhook_url/url was not provided.")
             elif target_type == "webhook":
                 url = entry.get("url")
                 if url:
-                    targets.append(
-                        GenericWebhookTarget(
-                            url,
-                            method=entry.get("method", "POST"),
-                            headers=entry.get("headers"),
-                            template=entry.get("template"),
-                        )
+                    target = GenericWebhookTarget(
+                        url,
+                        method=entry.get("method", "POST"),
+                        headers=entry.get("headers"),
+                        template=entry.get("template"),
                     )
                 else:
                     LOGGER.warning("Skipped webhook target because url was not provided.")
             elif target_type == "autoscan":
                 url = entry.get("url")
                 if url:
-                    targets.append(AutoscanTarget(entry, destination_dir=destination_dir))
+                    target = AutoscanTarget(entry, destination_dir=destination_dir)
                 else:
                     LOGGER.warning("Skipped Autoscan target because url was not provided.")
             elif target_type == "email":
-                targets.append(EmailTarget(entry))
+                target = EmailTarget(entry)
             else:
                 LOGGER.warning("Unknown notification target type '%s'", target_type or "<missing>")
 
-        return [target for target in targets if target.enabled()]
+            # Set enabled state and add to list
+            if target is not None:
+                target.set_enabled(is_enabled)
+                targets.append(target)
+
+        return targets
 
     def _discord_webhook_from(self, entry: dict[str, Any]) -> str | None:
         webhook = entry.get("webhook_url")

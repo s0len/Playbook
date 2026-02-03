@@ -441,3 +441,28 @@ def test_autoscan_target_posts_manual_trigger(tmp_path, monkeypatch) -> None:
     assert request["url"] == "http://autoscan.test:3030/triggers/manual"
     assert ("dir", "/mnt/unionfs/Show") in request["params"]
     assert request["auth"] is None
+
+
+def test_disabled_target_does_not_send_notifications(tmp_path, monkeypatch) -> None:
+    """Targets with enabled=False should not send notifications."""
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        targets=[
+            {"type": "discord", "webhook_url": "https://discord.test/webhook", "enabled": False},
+        ],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    def fake_request(method, url, json=None, timeout=None, headers=None):
+        raise AssertionError("Request should not be sent when target is disabled")
+
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
+
+    # Should not raise because target is disabled
+    service.notify(_build_event())
