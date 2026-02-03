@@ -121,6 +121,56 @@ def _get_progress_variant(progress: float) -> str:
     return "default"
 
 
+def _toggle_sport_enabled(sport_id: str, enabled: bool) -> bool:
+    """Toggle a sport's enabled status in the config.
+
+    Args:
+        sport_id: The sport identifier
+        enabled: New enabled state
+
+    Returns:
+        True if successful, False otherwise
+    """
+    from pathlib import Path
+
+    import yaml
+
+    if not gui_state.config_path:
+        LOGGER.error("No config path available")
+        return False
+
+    try:
+        config_path = Path(gui_state.config_path)
+        content = config_path.read_text(encoding="utf-8")
+        config = yaml.safe_load(content) or {}
+
+        # Find and update the sport
+        sports = config.get("sports", [])
+        for sport in sports:
+            if sport.get("id") == sport_id:
+                sport["enabled"] = enabled
+                break
+        else:
+            LOGGER.warning("Sport %s not found in config", sport_id)
+            return False
+
+        # Write back
+        config_path.write_text(yaml.dump(config, default_flow_style=False, allow_unicode=True, sort_keys=False))
+        LOGGER.info("Updated sport %s enabled=%s", sport_id, enabled)
+
+        # Reload config in processor
+        if gui_state.processor:
+            from playbook.config import AppConfig
+
+            gui_state.config = AppConfig.load(config_path)
+            gui_state.processor.config = gui_state.config
+
+        return True
+    except Exception as e:
+        LOGGER.exception("Failed to toggle sport enabled: %s", e)
+        return False
+
+
 def _sports_table() -> None:
     """Create the sports overview table with progress."""
     overviews = get_sports_overview()
@@ -160,17 +210,36 @@ def _sports_table() -> None:
         selection="single",
     ).classes("w-full modern-table")
 
-    # Status badge slot
+    # Status toggle slot
     table.add_slot(
         "body-cell-status",
         """
         <q-td :props="props">
-            <q-badge :color="props.value === 'Enabled' ? 'positive' : 'grey'">
-                {{ props.value }}
-            </q-badge>
+            <q-toggle
+                :model-value="props.value === 'Enabled'"
+                @update:model-value="() => $parent.$emit('toggle_status', props.row)"
+                :color="props.value === 'Enabled' ? 'positive' : 'grey'"
+                :label="props.value"
+                dense
+            />
         </q-td>
         """,
     )
+
+    def on_toggle_status(e) -> None:
+        """Handle status toggle."""
+        row = e.args
+        sport_id = row.get("id")
+        current_status = row.get("status")
+        new_enabled = current_status != "Enabled"
+
+        if _toggle_sport_enabled(sport_id, new_enabled):
+            ui.notify(f"{row.get('name')} {'enabled' if new_enabled else 'disabled'}", type="positive")
+            ui.navigate.to("/sports")  # Refresh
+        else:
+            ui.notify("Failed to update sport status", type="negative")
+
+    table.on("toggle_status", on_toggle_status)
 
     # Make name clickable
     table.add_slot(
@@ -344,7 +413,6 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
 
         default_globs = get_default_source_globs(sport_config.pattern_set_names)
         disabled_set = set(sport_config.disabled_source_globs)
-        extra_set = set(sport_config.extra_source_globs)
 
         with container:
             # Default globs section
@@ -358,7 +426,7 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
                     is_disabled = pattern in disabled_set
                     with ui.row().classes("w-full items-center gap-2 py-1"):
                         # Toggle switch
-                        switch = ui.switch(
+                        ui.switch(
                             value=not is_disabled,
                             on_change=lambda e, p=pattern: toggle_glob(
                                 SourceGlobInfo(pattern=p, is_default=True, is_disabled=not e.value)

@@ -89,7 +89,6 @@ def settings_page() -> None:
                 """Render the sidebar navigation."""
                 sidebar_container.clear()
                 with sidebar_container:
-                    ui.label("Settings").classes("text-sm font-semibold text-slate-500 dark:text-slate-400 px-2 mb-2")
                     for tab_id, tab_label, tab_icon in SETTINGS_TABS:
                         _render_tab_button(state, tab_id, tab_label, tab_icon)
 
@@ -151,13 +150,14 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
 
     with (
         ui.button(on_click=lambda t=tab_id: state.set_active_tab(t))
-        .classes(f"w-full justify-start gap-3 px-3 py-2 rounded-lg {btn_classes}")
+        .classes(f"w-full justify-start px-3 py-2 rounded-lg {btn_classes}")
         .props("flat")
     ):
-        ui.icon(tab_icon).classes("text-lg")
-        ui.label(tab_label).classes("text-sm")
-        if has_modifications:
-            ui.badge("", color="amber").classes("ml-auto").props("dense rounded")
+        with ui.row().classes("w-full items-center gap-3"):
+            ui.icon(tab_icon).classes("text-lg w-5 text-center")
+            ui.label(tab_label.upper()).classes("text-sm flex-1 text-left")
+            if has_modifications:
+                ui.badge("", color="amber").props("dense rounded")
 
 
 def _save_changes(state: SettingsFormState) -> None:

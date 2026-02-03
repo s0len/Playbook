@@ -40,11 +40,70 @@ SOURCE_PRESETS = {
     "dvdrip": 40,
 }
 
+# Frame rate scores (critical for sports)
+FRAME_RATE_PRESETS = {
+    "60": 100,
+    "50": 75,
+    "30": 25,
+    "25": 0,
+    "24": 0,
+}
+
+# Codec scores
+CODEC_PRESETS = {
+    "x265": 25,
+    "h265": 25,
+    "x264": 0,
+    "h264": 0,
+    "xvid": -25,
+    "divx": -25,
+}
+
+# Bit depth scores
+BIT_DEPTH_PRESETS = {
+    "10": 25,
+    "8": 0,
+}
+
+# Audio scores
+AUDIO_PRESETS = {
+    "atmos": 40,
+    "truehd": 35,
+    "dtshd": 30,
+    "ddp51": 25,
+    "dd51": 20,
+    "eac3": 20,
+    "dts": 15,
+    "ac3": 10,
+    "aac51": 15,
+    "aac": 0,
+    "mp3": -10,
+}
+
+# Broadcaster scores (official sources preferred)
+BROADCASTER_PRESETS = {
+    "f1tv": 50,
+    "skyf1uhd": 50,
+    "skyf1": 40,
+    "sky": 30,
+    "espn": 30,
+    "tnt": 25,
+    "nbc": 20,
+    "cbs": 20,
+    "fox": 20,
+    "dazn": 25,
+    "stan": 20,
+}
+
 # Common release groups
 RELEASE_GROUP_PRESETS = {
     "mwr": 50,
     "verum": 40,
     "smcgill1969": 30,
+    "darksport": 30,
+    "f1carreras": 25,
+    "gametime": 20,
+    "dnu": 20,
 }
 
 
@@ -136,6 +195,96 @@ def quality_tab(state: SettingsFormState) -> None:
                     disabled=not quality_enabled,
                 )
 
+            # Frame Rate Scoring Section (critical for sports!)
+            with settings_card(
+                "Frame Rate Scores",
+                icon="speed",
+                description="Higher frame rate = smoother sports action (critical for fast motion)",
+                collapsible=True,
+                default_expanded=quality_enabled,
+                disabled=not quality_enabled,
+            ):
+                quality_score_editor(
+                    state,
+                    "settings.quality_profile.scoring.frame_rate",
+                    "Frame Rate",
+                    description="60fps is ideal for sports, 50fps is common in Europe",
+                    presets=FRAME_RATE_PRESETS,
+                    disabled=not quality_enabled,
+                )
+
+            # Codec Scoring Section
+            with settings_card(
+                "Codec Scores",
+                icon="movie",
+                description="Points awarded for video codec efficiency",
+                collapsible=True,
+                default_expanded=False,
+                disabled=not quality_enabled,
+            ):
+                quality_score_editor(
+                    state,
+                    "settings.quality_profile.scoring.codec",
+                    "Codec",
+                    description="x265/H.265 is more efficient than x264/H.264",
+                    presets=CODEC_PRESETS,
+                    disabled=not quality_enabled,
+                )
+
+            # Bit Depth Scoring Section
+            with settings_card(
+                "Bit Depth Scores",
+                icon="gradient",
+                description="10-bit has better color gradients and less banding",
+                collapsible=True,
+                default_expanded=False,
+                disabled=not quality_enabled,
+            ):
+                quality_score_editor(
+                    state,
+                    "settings.quality_profile.scoring.bit_depth",
+                    "Bit Depth",
+                    description="10-bit encoding preserves more color detail",
+                    presets=BIT_DEPTH_PRESETS,
+                    disabled=not quality_enabled,
+                )
+
+            # Audio Scoring Section
+            with settings_card(
+                "Audio Scores",
+                icon="surround_sound",
+                description="Points awarded for audio format quality",
+                collapsible=True,
+                default_expanded=False,
+                disabled=not quality_enabled,
+            ):
+                quality_score_editor(
+                    state,
+                    "settings.quality_profile.scoring.audio",
+                    "Audio Format",
+                    description="Surround sound formats (5.1) score higher than stereo",
+                    presets=AUDIO_PRESETS,
+                    disabled=not quality_enabled,
+                )
+
+            # Broadcaster Scoring Section
+            with settings_card(
+                "Broadcaster Scores",
+                icon="tv",
+                description="Points for official broadcast sources (F1TV, Sky, ESPN, etc.)",
+                collapsible=True,
+                default_expanded=False,
+                disabled=not quality_enabled,
+            ):
+                quality_score_editor(
+                    state,
+                    "settings.quality_profile.scoring.broadcaster",
+                    "Broadcaster",
+                    description="Official sources like F1TV and Sky typically have better quality",
+                    presets=BROADCASTER_PRESETS,
+                    disabled=not quality_enabled,
+                )
+
             # Release Group Scoring Section
             with settings_card(
                 "Release Group Scores",
@@ -190,7 +339,7 @@ def quality_tab(state: SettingsFormState) -> None:
                         "HDR Bonus",
                         description="Bonus for HDR content",
                         input_type="number",
-                        placeholder="25",
+                        placeholder="50",
                         disabled=not quality_enabled,
                         width="w-32",
                     )
@@ -235,9 +384,14 @@ def _calculate_score(state: SettingsFormState, filename: str) -> None:
             resolution=scoring_data.get("resolution", {}),
             source=scoring_data.get("source", {}),
             release_group=scoring_data.get("release_group", {}),
+            frame_rate=scoring_data.get("frame_rate", {}),
+            codec=scoring_data.get("codec", {}),
+            bit_depth=scoring_data.get("bit_depth", {}),
+            audio=scoring_data.get("audio", {}),
+            broadcaster=scoring_data.get("broadcaster", {}),
             proper_bonus=int(scoring_data.get("proper_bonus", 50) or 50),
             repack_bonus=int(scoring_data.get("repack_bonus", 50) or 50),
-            hdr_bonus=int(scoring_data.get("hdr_bonus", 25) or 25),
+            hdr_bonus=int(scoring_data.get("hdr_bonus", 50) or 50),
         )
         profile = QualityProfile(enabled=True, scoring=scoring)
 
@@ -249,8 +403,18 @@ def _calculate_score(state: SettingsFormState, filename: str) -> None:
         parts = []
         if quality_info.resolution:
             parts.append(f"{quality_info.resolution}: {score.resolution_score}")
+        if quality_info.frame_rate and score.frame_rate_score:
+            parts.append(f"{quality_info.frame_rate}fps: {score.frame_rate_score}")
         if quality_info.source:
             parts.append(f"{quality_info.source}: {score.source_score}")
+        if quality_info.codec and score.codec_score:
+            parts.append(f"{quality_info.codec}: {score.codec_score}")
+        if quality_info.bit_depth and score.bit_depth_score:
+            parts.append(f"{quality_info.bit_depth}bit: {score.bit_depth_score}")
+        if quality_info.audio and score.audio_score:
+            parts.append(f"{quality_info.audio}: {score.audio_score}")
+        if quality_info.broadcaster and score.broadcaster_score:
+            parts.append(f"{quality_info.broadcaster}: {score.broadcaster_score}")
         if quality_info.release_group and score.release_group_score:
             parts.append(f"{quality_info.release_group}: {score.release_group_score}")
         if score.proper_bonus:
