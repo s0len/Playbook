@@ -505,14 +505,24 @@ class PlexClient:
         """Trigger a metadata refresh for an item."""
         self._request("PUT", f"/library/metadata/{rating_key}/refresh")
 
-    def scan_library(self, library_id: str) -> None:
+    def scan_library(self, library_id: str, *, path: str | None = None) -> None:
         """Trigger a library scan to detect new/changed files.
 
         This is important to call before syncing metadata if files were
         recently added, so Plex knows about them.
+
+        Args:
+            library_id: The library section ID to scan.
+            path: Optional specific path to scan (partial scan). If not provided,
+                  the entire library is scanned. The path must be within the
+                  library's configured paths.
         """
-        LOGGER.debug("Triggering Plex library scan for library %s", library_id)
-        self._request("GET", f"/library/sections/{library_id}/refresh")
+        if path:
+            LOGGER.debug("Triggering Plex partial scan for path: %s", path)
+            self._request("GET", f"/library/sections/{library_id}/refresh", params={"path": path})
+        else:
+            LOGGER.debug("Triggering Plex library scan for library %s", library_id)
+            self._request("GET", f"/library/sections/{library_id}/refresh")
 
     def is_library_scanning(self, library_id: str) -> bool:
         """Check if a library is currently scanning."""

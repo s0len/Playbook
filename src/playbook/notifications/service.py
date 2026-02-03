@@ -11,6 +11,7 @@ from ..config import NotificationSettings
 from .autoscan import AutoscanTarget
 from .discord import DiscordTarget
 from .email import EmailTarget
+from .plex_scan import PlexScanTarget
 from .slack import SlackTarget
 from .types import NotificationEvent, NotificationTarget
 from .utils import _normalize_mentions_map
@@ -274,6 +275,13 @@ class NotificationService:
                     target = AutoscanTarget(entry, destination_dir=destination_dir)
                 else:
                     LOGGER.warning("Skipped Autoscan target because url was not provided.")
+            elif target_type in ("plex_scan", "plex"):
+                url = entry.get("url")
+                token = entry.get("token")
+                if url and token:
+                    target = PlexScanTarget(entry, destination_dir=destination_dir)
+                else:
+                    LOGGER.warning("Skipped Plex scan target because url or token was not provided.")
             elif target_type == "email":
                 target = EmailTarget(entry)
             else:
