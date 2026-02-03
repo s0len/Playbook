@@ -54,151 +54,168 @@ def quality_tab(state: SettingsFormState) -> None:
     Args:
         state: Settings form state
     """
-    # Get current enabled state for conditional rendering
-    quality_enabled = state.get_value("settings.quality_profile.enabled", False)
+    # Container for dynamic content that depends on enabled state
+    container = ui.column().classes("w-full gap-6")
 
-    with ui.column().classes("w-full gap-6"):
-        # Enable Quality Profile Section
-        with settings_card("Quality Profile", icon="tune", description="Enable automatic quality upgrades"):
-            settings_toggle(
-                state,
-                "settings.quality_profile.enabled",
-                "Enable Quality Upgrades",
-                description="When enabled, files will be scored and higher-quality versions will replace existing ones",
-                on_change=lambda v: ui.navigate.to("/config"),  # Refresh to update disabled states
-            )
+    def render_quality_content() -> None:
+        """Render the quality tab content."""
+        container.clear()
+        quality_enabled = state.get_value("settings.quality_profile.enabled", False)
 
-            with ui.row().classes("w-full gap-4 mt-4"):
-                settings_input(
+        with container:
+            # Enable Quality Profile Section
+            with settings_card("Quality Profile", icon="tune", description="Enable automatic quality upgrades"):
+
+                def on_enable_change(enabled: bool) -> None:
+                    # Re-render the tab to update disabled states
+                    render_quality_content()
+
+                settings_toggle(
                     state,
-                    "settings.quality_profile.cutoff",
-                    "Cutoff Score",
-                    description="Stop upgrading when this score is reached (except PROPER/REPACK)",
-                    input_type="number",
-                    placeholder="e.g., 450",
-                    disabled=not quality_enabled,
-                    width="w-48",
-                )
-                settings_input(
-                    state,
-                    "settings.quality_profile.min_score",
-                    "Minimum Score",
-                    description="Reject files below this score",
-                    input_type="number",
-                    placeholder="e.g., 200",
-                    disabled=not quality_enabled,
-                    width="w-48",
+                    "settings.quality_profile.enabled",
+                    "Enable Quality Upgrades",
+                    description="When enabled, files will be scored and higher-quality versions will replace existing ones",
+                    on_change=on_enable_change,
                 )
 
-        # Resolution Scoring Section
-        with settings_card(
-            "Resolution Scores",
-            icon="aspect_ratio",
-            description="Points awarded for video resolution",
-            collapsible=True,
-            default_expanded=quality_enabled,
-            disabled=not quality_enabled,
-        ):
-            quality_score_editor(
-                state,
-                "settings.quality_profile.scoring.resolution",
-                "Resolution",
-                description="Higher resolution = higher score",
-                presets=RESOLUTION_PRESETS,
-                disabled=not quality_enabled,
-            )
-
-        # Source Scoring Section
-        with settings_card(
-            "Source Scores",
-            icon="source",
-            description="Points awarded for media source type",
-            collapsible=True,
-            default_expanded=quality_enabled,
-            disabled=not quality_enabled,
-        ):
-            quality_score_editor(
-                state,
-                "settings.quality_profile.scoring.source",
-                "Source Type",
-                description="Bluray and WEB-DL are typically higher quality than HDTV",
-                presets=SOURCE_PRESETS,
-                disabled=not quality_enabled,
-            )
-
-        # Release Group Scoring Section
-        with settings_card(
-            "Release Group Scores",
-            icon="group",
-            description="Bonus points for preferred release groups",
-            collapsible=True,
-            default_expanded=False,
-            disabled=not quality_enabled,
-        ):
-            quality_score_editor(
-                state,
-                "settings.quality_profile.scoring.release_group",
-                "Release Groups",
-                description="Add groups you trust for higher quality releases",
-                presets=RELEASE_GROUP_PRESETS,
-                disabled=not quality_enabled,
-            )
-
-        # Bonus Scores Section
-        with settings_card(
-            "Bonus Scores",
-            icon="star",
-            description="Additional points for special releases",
-            collapsible=True,
-            default_expanded=False,
-            disabled=not quality_enabled,
-        ):
-            with ui.row().classes("w-full gap-4"):
-                settings_input(
-                    state,
-                    "settings.quality_profile.scoring.proper_bonus",
-                    "PROPER Bonus",
-                    description="Bonus for PROPER releases",
-                    input_type="number",
-                    placeholder="50",
-                    disabled=not quality_enabled,
-                    width="w-32",
-                )
-                settings_input(
-                    state,
-                    "settings.quality_profile.scoring.repack_bonus",
-                    "REPACK Bonus",
-                    description="Bonus for REPACK releases",
-                    input_type="number",
-                    placeholder="50",
-                    disabled=not quality_enabled,
-                    width="w-32",
-                )
-                settings_input(
-                    state,
-                    "settings.quality_profile.scoring.hdr_bonus",
-                    "HDR Bonus",
-                    description="Bonus for HDR content",
-                    input_type="number",
-                    placeholder="25",
-                    disabled=not quality_enabled,
-                    width="w-32",
-                )
-
-        # Score Calculator (interactive preview)
-        if quality_enabled:
-            with settings_card("Score Calculator", icon="calculate", description="Preview how files would be scored"):
-                with ui.row().classes("w-full items-center gap-2 mb-2"):
-                    test_input = (
-                        ui.input(
-                            placeholder="Enter a filename to test",
-                        )
-                        .classes("flex-1")
-                        .props('outlined dense label="Test Filename"')
+                with ui.row().classes("w-full gap-4 mt-4"):
+                    settings_input(
+                        state,
+                        "settings.quality_profile.cutoff",
+                        "Cutoff Score",
+                        description="Stop upgrading when this score is reached (except PROPER/REPACK)",
+                        input_type="number",
+                        placeholder="e.g., 450",
+                        disabled=not quality_enabled,
+                        width="w-48",
                     )
-                    ui.button("Calculate", icon="calculate", on_click=lambda: _calculate_score(state, test_input.value))
+                    settings_input(
+                        state,
+                        "settings.quality_profile.min_score",
+                        "Minimum Score",
+                        description="Reject files below this score",
+                        input_type="number",
+                        placeholder="e.g., 200",
+                        disabled=not quality_enabled,
+                        width="w-48",
+                    )
 
-                ui.label("").bind_text_from(state, "")  # Placeholder for result
+            # Resolution Scoring Section
+            with settings_card(
+                "Resolution Scores",
+                icon="aspect_ratio",
+                description="Points awarded for video resolution",
+                collapsible=True,
+                default_expanded=quality_enabled,
+                disabled=not quality_enabled,
+            ):
+                quality_score_editor(
+                    state,
+                    "settings.quality_profile.scoring.resolution",
+                    "Resolution",
+                    description="Higher resolution = higher score",
+                    presets=RESOLUTION_PRESETS,
+                    disabled=not quality_enabled,
+                )
+
+            # Source Scoring Section
+            with settings_card(
+                "Source Scores",
+                icon="source",
+                description="Points awarded for media source type",
+                collapsible=True,
+                default_expanded=quality_enabled,
+                disabled=not quality_enabled,
+            ):
+                quality_score_editor(
+                    state,
+                    "settings.quality_profile.scoring.source",
+                    "Source Type",
+                    description="Bluray and WEB-DL are typically higher quality than HDTV",
+                    presets=SOURCE_PRESETS,
+                    disabled=not quality_enabled,
+                )
+
+            # Release Group Scoring Section
+            with settings_card(
+                "Release Group Scores",
+                icon="group",
+                description="Bonus points for preferred release groups",
+                collapsible=True,
+                default_expanded=False,
+                disabled=not quality_enabled,
+            ):
+                quality_score_editor(
+                    state,
+                    "settings.quality_profile.scoring.release_group",
+                    "Release Groups",
+                    description="Add groups you trust for higher quality releases",
+                    presets=RELEASE_GROUP_PRESETS,
+                    disabled=not quality_enabled,
+                )
+
+            # Bonus Scores Section
+            with settings_card(
+                "Bonus Scores",
+                icon="star",
+                description="Additional points for special releases",
+                collapsible=True,
+                default_expanded=False,
+                disabled=not quality_enabled,
+            ):
+                with ui.row().classes("w-full gap-4"):
+                    settings_input(
+                        state,
+                        "settings.quality_profile.scoring.proper_bonus",
+                        "PROPER Bonus",
+                        description="Bonus for PROPER releases",
+                        input_type="number",
+                        placeholder="50",
+                        disabled=not quality_enabled,
+                        width="w-32",
+                    )
+                    settings_input(
+                        state,
+                        "settings.quality_profile.scoring.repack_bonus",
+                        "REPACK Bonus",
+                        description="Bonus for REPACK releases",
+                        input_type="number",
+                        placeholder="50",
+                        disabled=not quality_enabled,
+                        width="w-32",
+                    )
+                    settings_input(
+                        state,
+                        "settings.quality_profile.scoring.hdr_bonus",
+                        "HDR Bonus",
+                        description="Bonus for HDR content",
+                        input_type="number",
+                        placeholder="25",
+                        disabled=not quality_enabled,
+                        width="w-32",
+                    )
+
+            # Score Calculator (interactive preview)
+            if quality_enabled:
+                with settings_card(
+                    "Score Calculator", icon="calculate", description="Preview how files would be scored"
+                ):
+                    with ui.row().classes("w-full items-center gap-2 mb-2"):
+                        test_input = (
+                            ui.input(
+                                placeholder="Enter a filename to test",
+                            )
+                            .classes("flex-1")
+                            .props('outlined dense label="Test Filename"')
+                        )
+                        ui.button(
+                            "Calculate",
+                            icon="calculate",
+                            on_click=lambda: _calculate_score(state, test_input.value),
+                        )
+
+    # Initial render
+    render_quality_content()
 
 
 def _calculate_score(state: SettingsFormState, filename: str) -> None:
