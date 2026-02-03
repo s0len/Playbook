@@ -38,9 +38,13 @@ class NotificationEvent:
 
 class NotificationTarget:
     name: str = "target"
+    _enabled: bool = True
 
     def enabled(self) -> bool:
-        return True
+        return self._enabled
+
+    def set_enabled(self, enabled: bool) -> None:
+        self._enabled = enabled
 
     def send(self, event: NotificationEvent) -> None:
         raise NotImplementedError
