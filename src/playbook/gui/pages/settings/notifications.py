@@ -104,11 +104,11 @@ def notifications_tab(state: SettingsFormState) -> None:
             mentions_data = state.get_value("settings.notifications.mentions", {}) or {}
 
             if mentions_data:
-                with ui.column().classes("w-full gap-2"):
+                with ui.column().classes("w-full gap-3"):
                     for event_type, mention in mentions_data.items():
-                        with ui.row().classes("w-full items-center gap-2"):
-                            ui.label(event_type).classes("w-32 text-sm font-mono")
-                            ui.input(value=mention, placeholder="@user or @role").classes("flex-1").props(
+                        with ui.row().classes("w-full items-center gap-4"):
+                            ui.label(event_type).classes("min-w-48 w-48 shrink-0 text-sm font-mono truncate")
+                            ui.input(value=mention, placeholder="@user or @role").classes("flex-1 min-w-0").props(
                                 "outlined dense"
                             )
             else:
