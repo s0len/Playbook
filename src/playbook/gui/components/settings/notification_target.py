@@ -155,7 +155,7 @@ def notification_target_editor(
                     update_target_type(i, e.value)
 
                 ui.select(
-                    options=[{"label": v["label"], "value": k} for k, v in NOTIFICATION_TYPES.items()],
+                    options={k: v["label"] for k, v in NOTIFICATION_TYPES.items()},
                     value=target_type,
                     on_change=on_type_change,
                 ).classes("w-48 mb-3").props("outlined dense label='Type'")
