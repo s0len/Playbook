@@ -391,6 +391,74 @@ a.text-blue-600 {
 body.body--dark a.text-blue-600 {
     color: #60a5fa;
 }
+
+/* ===== Settings Page Styles ===== */
+.settings-sidebar {
+    border-right: 1px solid var(--border-color);
+}
+
+.settings-tab {
+    transition: all 0.15s ease;
+    border-radius: 8px;
+}
+
+.settings-tab:hover {
+    background: rgba(148, 163, 184, 0.1);
+}
+
+.settings-tab-active {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+body.body--dark .settings-tab-active {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+}
+
+/* Settings form inputs */
+.settings-input .q-field__control {
+    min-height: 40px;
+}
+
+.settings-input .q-field__label {
+    font-size: 0.875rem;
+}
+
+/* Settings toggle */
+.settings-toggle .q-toggle__label {
+    font-size: 0.875rem;
+}
+
+/* Key-value editor */
+.kv-editor-row {
+    background: rgba(148, 163, 184, 0.05);
+    border-radius: 6px;
+    padding: 8px;
+}
+
+body.body--dark .kv-editor-row {
+    background: rgba(148, 163, 184, 0.08);
+}
+
+/* List editor items */
+.list-editor-item {
+    background: rgba(148, 163, 184, 0.05);
+    border-radius: 6px;
+    transition: background-color 0.15s ease;
+}
+
+.list-editor-item:hover {
+    background: rgba(148, 163, 184, 0.1);
+}
+
+body.body--dark .list-editor-item {
+    background: rgba(148, 163, 184, 0.08);
+}
+
+body.body--dark .list-editor-item:hover {
+    background: rgba(148, 163, 184, 0.12);
+}
 """
 
 

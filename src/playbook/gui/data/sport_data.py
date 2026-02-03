@@ -71,6 +71,15 @@ class SeasonMatchStatus:
 
 
 @dataclass
+class SourceGlobInfo:
+    """Information about a source glob pattern."""
+
+    pattern: str
+    is_default: bool  # True if from pattern template, False if user-added
+    is_disabled: bool  # True if in disabled_source_globs
+
+
+@dataclass
 class SportDetail:
     """Complete sport detail with all seasons and match status."""
 
@@ -80,6 +89,9 @@ class SportDetail:
     seasons: list[SeasonMatchStatus] = field(default_factory=list)
     enabled: bool = True
     link_mode: str = "hardlink"
+    # Source glob information
+    source_globs: list[SourceGlobInfo] = field(default_factory=list)
+    pattern_set_names: list[str] = field(default_factory=list)
 
     @property
     def overall_matched(self) -> int:
@@ -154,6 +166,9 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
         LOGGER.debug("get_sport_detail: sport %s not found in config", sport_id)
         return None
 
+    # Build source glob info list
+    source_glob_info = _build_source_glob_info(sport_config)
+
     # Create base detail
     detail = SportDetail(
         sport_id=sport_config.id,
@@ -161,6 +176,8 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
         show_slug=sport_config.show_slug,
         enabled=sport_config.enabled,
         link_mode=sport_config.link_mode,
+        source_globs=source_glob_info,
+        pattern_set_names=sport_config.pattern_set_names,
     )
 
     # Try to load show metadata
@@ -298,6 +315,45 @@ def _load_show_metadata(sport_config):
         LOGGER.warning("Failed to load metadata for %s: %s", sport_config.id, e)
 
     return None
+
+
+def _build_source_glob_info(sport_config) -> list[SourceGlobInfo]:
+    """Build source glob info list combining defaults, extras, and disabled.
+
+    Args:
+        sport_config: Sport configuration
+
+    Returns:
+        List of SourceGlobInfo objects
+    """
+    from playbook.pattern_templates import get_default_source_globs
+
+    # Get default globs from pattern templates
+    default_globs = set(get_default_source_globs(sport_config.pattern_set_names))
+    disabled_globs = set(sport_config.disabled_source_globs)
+    extra_globs = set(sport_config.extra_source_globs)
+
+    result: list[SourceGlobInfo] = []
+
+    # Add default globs first
+    for pattern in get_default_source_globs(sport_config.pattern_set_names):
+        if pattern not in {g.pattern for g in result}:  # Avoid duplicates
+            result.append(SourceGlobInfo(
+                pattern=pattern,
+                is_default=True,
+                is_disabled=pattern in disabled_globs,
+            ))
+
+    # Add extra (custom) globs
+    for pattern in sport_config.extra_source_globs:
+        if pattern not in {g.pattern for g in result}:  # Avoid duplicates
+            result.append(SourceGlobInfo(
+                pattern=pattern,
+                is_default=False,
+                is_disabled=pattern in disabled_globs,
+            ))
+
+    return result
 
 
 def _get_records_by_episode(sport_id: str) -> dict[tuple[int, int], ProcessedFileRecord]:

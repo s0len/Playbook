@@ -821,9 +821,7 @@ class PlexMetadataSync:
         show_rating = str(plex_show.get("ratingKey"))
         if not show_rating:
             LOGGER.error("Show ratingKey missing for '%s'", show.title)
-            stats.errors.append(
-                f"Missing ratingKey: '{show.title}' | library={library_id} | source={sport.show_slug}"
-            )
+            stats.errors.append(f"Missing ratingKey: '{show.title}' | library={library_id} | source={sport.show_slug}")
             return
 
         # Base URL for asset resolution (use API base URL)

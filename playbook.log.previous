@@ -1,0 +1,99 @@
+2026-01-31 20:54:27 | DEBUG    | __main__
+Rotated previous log to /Users/solen/GitHub/Playbook/playbook.log.previous
+
+2026-01-31 20:54:27 | INFO     | __main__
+Logging to /Users/solen/GitHub/Playbook/playbook.log (file level DEBUG, console level DEBUG, console style plain)
+
+2026-01-31 20:54:27 | INFO     | __main__
+Starting Playbook (dry-run)
+
+2026-01-31 20:54:27 | INFO     | __main__
+Filesystem watcher disabled; running a single processing pass.
+
+2026-01-31 20:54:27 | DEBUG    | playbook.metadata_loader
+
+Loading Metadata
+----------------
+    Sport   : Formula 1 2026
+    Slug    : formula-1-2026
+
+2026-01-31 20:54:27 | DEBUG    | playbook.tvsportsdb.client
+Using cached show: formula-1-2026
+
+2026-01-31 20:54:27 | INFO     | playbook.metadata_loader
+Metadata API
+------------
+    Requests: 1
+    Failures: 0
+
+2026-01-31 20:54:27 | INFO     | playbook.processor
+
+Metadata Updated
+----------------
+    Sports  : formula1_2026 (Formula 1 2026)
+
+2026-01-31 20:54:27 | DEBUG    | playbook.processor
+
+Discovered Candidate Files
+--------------------------
+    Total            : 1
+    Skipped Via Cache: 0
+
+2026-01-31 20:54:27 | DEBUG    | playbook.matcher
+File Formula.1.2026.Australian.Grand.Prix.FP1.1080p.WEB.h264-EXAMPLE.mkv did not match any configured patterns
+
+2026-01-31 20:54:27 | DEBUG    | playbook.processor
+
+Ignoring Detection
+------------------
+    Source  : Formula.1.2026.Australian.Grand.Prix.FP1.1080p.WEB.h264-EXAMPLE.mkv
+    Sport   : formula1_2026
+    Severity: ignored
+    Reason  : Did not match any configured patterns
+
+2026-01-31 20:54:27 | INFO     | playbook.processor
+Summary
+-------
+    Processed: 0
+    Skipped  : 0
+    Ignored  : 1
+
+2026-01-31 20:54:27 | DEBUG    | playbook.run_summary
+
+Detailed Summary
+----------------
+    Processed: 0
+    Skipped  : 0
+    Ignored  : 1
+    Warnings : 0
+    Errors   : 0
+
+Errors:
+    (none)
+
+Warnings:
+    (none)
+
+Skipped:
+    (none)
+
+Ignored:
+    - Formula.1.2026.Australian.Grand.Prix.FP1.1080p.WEB.h264-EXAMPLE.mkv
+        - [IGNORED] formula1_2026: Did not match any configured patterns
+
+2026-01-31 20:54:27 | INFO     | playbook.run_summary
+
+Run Recap
+---------
+    Duration    : 0.01s
+    Processed   : 0
+    Skipped     : 0
+    Ignored     : 1
+    Warnings    : 0
+    Errors      : 0
+    Destinations: 0
+    Plex Sync   : disabled
+
+Destinations (sample):
+    (none)
+

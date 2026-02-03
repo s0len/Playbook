@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .pattern_templates import expand_regex_with_tokens, load_builtin_pattern_sets
+from .pattern_templates import expand_regex_with_tokens, get_default_source_globs, load_builtin_pattern_sets
 from .utils import load_yaml_file, validate_url
 
 
@@ -88,6 +88,66 @@ class DestinationTemplates:
 
 
 @dataclass
+class QualityScoring:
+    """Quality scoring configuration for upgrade decisions.
+
+    Attributes:
+        resolution: Mapping of resolution (e.g., "2160p") to score
+        source: Mapping of source type (e.g., "webdl") to score
+        release_group: Mapping of release group (e.g., "mwr") to score
+        proper_bonus: Bonus points for PROPER releases
+        repack_bonus: Bonus points for REPACK releases
+        hdr_bonus: Bonus points for HDR content
+    """
+
+    resolution: dict[str, int] = field(
+        default_factory=lambda: {
+            "2160p": 400,
+            "1080p": 300,
+            "720p": 200,
+            "576p": 150,
+            "480p": 100,
+        }
+    )
+    source: dict[str, int] = field(
+        default_factory=lambda: {
+            "bluray": 100,
+            "webdl": 90,
+            "webrip": 70,
+            "hdtv": 50,
+            "sdtv": 30,
+            "dvdrip": 40,
+        }
+    )
+    release_group: dict[str, int] = field(default_factory=dict)
+    proper_bonus: int = 50
+    repack_bonus: int = 50
+    hdr_bonus: int = 25
+
+
+@dataclass
+class QualityProfile:
+    """Quality profile for controlling file upgrade decisions.
+
+    When enabled, files are scored based on quality attributes (resolution,
+    source, release group, etc.) and upgrades are allowed when a higher-scoring
+    file is found.
+
+    Attributes:
+        enabled: Whether quality-based upgrades are enabled
+        scoring: Quality scoring configuration
+        cutoff: Score threshold - stop upgrading when this score is reached
+            (unless PROPER/REPACK which always upgrade)
+        min_score: Minimum score required - reject files below this threshold
+    """
+
+    enabled: bool = False
+    scoring: QualityScoring = field(default_factory=QualityScoring)
+    cutoff: int | None = None
+    min_score: int | None = None
+
+
+@dataclass
 class NotificationSettings:
     batch_daily: bool = False
     flush_time: dt.time = field(default_factory=lambda: dt.time(hour=0, minute=0))
@@ -140,11 +200,15 @@ class SportConfig:
     patterns: list[PatternConfig] = field(default_factory=list)
     team_alias_map: str | None = None
     destination: DestinationTemplates = field(default_factory=DestinationTemplates)
-    source_globs: list[str] = field(default_factory=list)
+    source_globs: list[str] = field(default_factory=list)  # Effective globs (computed from defaults + extra - disabled)
+    extra_source_globs: list[str] = field(default_factory=list)  # User-added custom globs
+    disabled_source_globs: list[str] = field(default_factory=list)  # Globs to exclude (can disable defaults or custom)
+    pattern_set_names: list[str] = field(default_factory=list)  # Names of pattern sets used (for GUI to show defaults)
     source_extensions: list[str] = field(default_factory=lambda: [".mkv", ".mp4", ".ts", ".m4v", ".avi"])
     link_mode: str = "hardlink"
     allow_unmatched: bool = False
     season_overrides: dict[str, dict[str, Any]] = field(default_factory=dict)  # Moved from MetadataConfig
+    quality_profile: QualityProfile | None = None  # Per-sport quality profile override
 
 
 @dataclass
@@ -161,6 +225,7 @@ class Settings:
     kometa_trigger: KometaTriggerSettings = field(default_factory=KometaTriggerSettings)
     plex_sync: PlexSyncSettings = field(default_factory=PlexSyncSettings)
     tvsportsdb: TVSportsDBConfig = field(default_factory=TVSportsDBConfig)
+    quality_profile: QualityProfile = field(default_factory=QualityProfile)  # Global quality profile
 
 
 @dataclass
@@ -269,6 +334,34 @@ def _build_sport_config(
     if "season_overrides" in data:
         season_overrides = data["season_overrides"]
 
+    # Parse per-sport quality profile if present
+    quality_profile: QualityProfile | None = None
+    quality_profile_raw = data.get("quality_profile")
+    if quality_profile_raw:
+        sport_id = data.get("id", "unknown")
+        quality_profile = _build_quality_profile(quality_profile_raw, f"sports[{sport_id}].quality_profile")
+
+    # Source globs: compute effective globs from defaults + extra - disabled
+    extra_source_globs = list(data.get("extra_source_globs", []))
+    disabled_source_globs = set(data.get("disabled_source_globs", []))
+    pattern_set_names = [str(s) for s in pattern_set_refs]
+
+    # If source_globs is explicitly set in config, use it as-is (backwards compatibility)
+    # Otherwise, compute effective globs from defaults + extra - disabled
+    if "source_globs" in data and data["source_globs"]:
+        # Legacy mode: explicit source_globs overrides defaults
+        effective_globs = list(data["source_globs"])
+    else:
+        # New mode: compute from defaults + extra - disabled
+        default_globs = get_default_source_globs(pattern_set_names)
+        # Merge: defaults + extra, then remove disabled
+        seen: set[str] = set()
+        effective_globs: list[str] = []
+        for glob in default_globs + extra_source_globs:
+            if glob not in seen and glob not in disabled_source_globs:
+                seen.add(glob)
+                effective_globs.append(glob)
+
     return SportConfig(
         id=data["id"],
         name=data.get("name", data["id"]),
@@ -278,11 +371,15 @@ def _build_sport_config(
         patterns=patterns,
         team_alias_map=data.get("team_alias_map"),
         destination=destination,
-        source_globs=list(data.get("source_globs", [])),
+        source_globs=effective_globs,
+        extra_source_globs=extra_source_globs,
+        disabled_source_globs=list(disabled_source_globs),
+        pattern_set_names=pattern_set_names,
         source_extensions=list(data.get("source_extensions", [".mkv", ".mp4", ".ts", ".m4v", ".avi"])),
         link_mode=str(data.get("link_mode", global_link_mode)),
         allow_unmatched=bool(data.get("allow_unmatched", False)),
         season_overrides=season_overrides,
+        quality_profile=quality_profile,
     )
 
 
@@ -586,6 +683,152 @@ def _build_tvsportsdb_config(data: dict[str, Any]) -> TVSportsDBConfig:
     )
 
 
+def _build_quality_scoring(data: dict[str, Any], field_prefix: str = "quality_profile.scoring") -> QualityScoring:
+    """Build quality scoring configuration from YAML data."""
+    if not data:
+        return QualityScoring()
+    if not isinstance(data, dict):
+        raise ValueError(f"'{field_prefix}' must be provided as a mapping when specified")
+
+    # Parse resolution scores
+    resolution_raw = data.get("resolution", {}) or {}
+    if not isinstance(resolution_raw, dict):
+        raise ValueError(f"'{field_prefix}.resolution' must be a mapping")
+    resolution: dict[str, int] = {}
+    for key, value in resolution_raw.items():
+        try:
+            resolution[str(key).lower()] = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"'{field_prefix}.resolution.{key}' must be an integer") from exc
+
+    # Parse source scores
+    source_raw = data.get("source", {}) or {}
+    if not isinstance(source_raw, dict):
+        raise ValueError(f"'{field_prefix}.source' must be a mapping")
+    source: dict[str, int] = {}
+    for key, value in source_raw.items():
+        try:
+            source[str(key).lower()] = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"'{field_prefix}.source.{key}' must be an integer") from exc
+
+    # Parse release group scores
+    release_group_raw = data.get("release_group", {}) or {}
+    if not isinstance(release_group_raw, dict):
+        raise ValueError(f"'{field_prefix}.release_group' must be a mapping")
+    release_group: dict[str, int] = {}
+    for key, value in release_group_raw.items():
+        try:
+            release_group[str(key).lower()] = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"'{field_prefix}.release_group.{key}' must be an integer") from exc
+
+    # Parse bonus values
+    try:
+        proper_bonus = int(data.get("proper_bonus", 50))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"'{field_prefix}.proper_bonus' must be an integer") from exc
+
+    try:
+        repack_bonus = int(data.get("repack_bonus", 50))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"'{field_prefix}.repack_bonus' must be an integer") from exc
+
+    try:
+        hdr_bonus = int(data.get("hdr_bonus", 25))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"'{field_prefix}.hdr_bonus' must be an integer") from exc
+
+    # Use defaults for any missing mappings
+    default_scoring = QualityScoring()
+    if not resolution:
+        resolution = default_scoring.resolution
+    if not source:
+        source = default_scoring.source
+
+    return QualityScoring(
+        resolution=resolution,
+        source=source,
+        release_group=release_group,
+        proper_bonus=proper_bonus,
+        repack_bonus=repack_bonus,
+        hdr_bonus=hdr_bonus,
+    )
+
+
+def _build_quality_profile(data: dict[str, Any], field_prefix: str = "quality_profile") -> QualityProfile:
+    """Build quality profile configuration from YAML data."""
+    if not data:
+        return QualityProfile()
+    if not isinstance(data, dict):
+        raise ValueError(f"'{field_prefix}' must be provided as a mapping when specified")
+
+    enabled = bool(data.get("enabled", False))
+
+    scoring = _build_quality_scoring(data.get("scoring", {}), f"{field_prefix}.scoring")
+
+    cutoff: int | None = None
+    cutoff_raw = data.get("cutoff")
+    if cutoff_raw is not None:
+        try:
+            cutoff = int(cutoff_raw)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"'{field_prefix}.cutoff' must be an integer") from exc
+
+    min_score: int | None = None
+    min_score_raw = data.get("min_score")
+    if min_score_raw is not None:
+        try:
+            min_score = int(min_score_raw)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"'{field_prefix}.min_score' must be an integer") from exc
+
+    return QualityProfile(
+        enabled=enabled,
+        scoring=scoring,
+        cutoff=cutoff,
+        min_score=min_score,
+    )
+
+
+def _merge_quality_profile(
+    base: QualityProfile,
+    override: QualityProfile | None,
+) -> QualityProfile:
+    """Merge a sport-specific quality profile with the global profile.
+
+    The sport-specific profile's scoring values override the global ones,
+    while non-specified values inherit from the global profile.
+    """
+    if override is None:
+        return base
+
+    # Merge scoring dictionaries
+    merged_resolution = {**base.scoring.resolution, **override.scoring.resolution}
+    merged_source = {**base.scoring.source, **override.scoring.source}
+    merged_release_group = {**base.scoring.release_group, **override.scoring.release_group}
+
+    merged_scoring = QualityScoring(
+        resolution=merged_resolution,
+        source=merged_source,
+        release_group=merged_release_group,
+        proper_bonus=override.scoring.proper_bonus
+        if override.scoring.proper_bonus != 50
+        else base.scoring.proper_bonus,
+        repack_bonus=override.scoring.repack_bonus
+        if override.scoring.repack_bonus != 50
+        else base.scoring.repack_bonus,
+        hdr_bonus=override.scoring.hdr_bonus if override.scoring.hdr_bonus != 25 else base.scoring.hdr_bonus,
+    )
+
+    return QualityProfile(
+        enabled=override.enabled if override.enabled else base.enabled,
+        scoring=merged_scoring,
+        cutoff=override.cutoff if override.cutoff is not None else base.cutoff,
+        min_score=override.min_score if override.min_score is not None else base.min_score,
+    )
+
+
 def _build_settings(data: dict[str, Any]) -> Settings:
     destination_defaults = DestinationTemplates(
         root_template=data.get("destination", {}).get("root_template", "{show_title}"),
@@ -670,6 +913,7 @@ def _build_settings(data: dict[str, Any]) -> Settings:
     kometa_trigger = _build_kometa_trigger_settings(data.get("kometa_trigger", {}) or {})
     plex_sync = _build_plex_sync_settings(data.get("plex_metadata_sync", {}) or {})
     tvsportsdb = _build_tvsportsdb_config(data.get("tvsportsdb", {}) or {})
+    quality_profile = _build_quality_profile(data.get("quality_profile", {}) or {})
 
     return Settings(
         source_dir=source_dir,
@@ -684,6 +928,7 @@ def _build_settings(data: dict[str, Any]) -> Settings:
         kometa_trigger=kometa_trigger,
         plex_sync=plex_sync,
         tvsportsdb=tvsportsdb,
+        quality_profile=quality_profile,
     )
 
 

@@ -13,7 +13,6 @@ from dataclasses import dataclass
 from ..config import PatternConfig
 from ..session_index import SessionLookupIndex
 
-
 # Noise tokens to filter out during session matching
 NOISE_TOKENS = (
     "f1live",

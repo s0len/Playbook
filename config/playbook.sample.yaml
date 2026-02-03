@@ -32,6 +32,44 @@ settings:
   link_mode: hardlink     # Global default for linking: hardlink | copy | symlink.
 
   ####################################################################
+  # QUALITY MANAGEMENT (OPTIONAL)
+  ####################################################################
+  # Score-based upgrade system for replacing files with higher quality releases.
+  # When enabled, Playbook computes a quality score for each file based on
+  # resolution, source, release group, and other attributes. Files are only
+  # replaced when a higher-scoring release is found.
+  #
+  # SCORING: Total score = resolution + source + release_group + bonuses
+  # CUTOFF: Stop upgrading when the existing file reaches this score
+  # MIN_SCORE: Reject files below this threshold
+  # PROPER/REPACK: Always upgrade regardless of cutoff (corrected releases)
+  quality_profile:
+    enabled: false        # Set to true to enable quality-based upgrades
+    scoring:
+      resolution:         # Resolution scores (higher = better)
+        2160p: 400
+        1080p: 300
+        720p: 200
+        576p: 150
+        480p: 100
+      source:             # Source type scores (higher = better)
+        bluray: 100
+        webdl: 90
+        webrip: 70
+        hdtv: 50
+        sdtv: 30
+        dvdrip: 40
+      release_group:      # Preferred release groups (add your favorites)
+        # mwr: 50         # Uncomment and add groups you prefer
+        # verum: 40
+        # nightninjas: 30
+      proper_bonus: 50    # Bonus points for PROPER releases
+      repack_bonus: 50    # Bonus points for REPACK releases
+      hdr_bonus: 25       # Bonus points for HDR content
+    cutoff: 350           # Stop upgrading at this score (null = no limit)
+    min_score: 100        # Reject files below this score (null = no minimum)
+
+  ####################################################################
   # LOGGING
   ####################################################################
   # Logs now default to a human-friendly block layout with blank lines between sections.
@@ -181,6 +219,7 @@ pattern_sets:
 #   * `source_globs` to pick up matching downloads.
 #   * `pattern_sets` to pull in built-in matchers (or `file_patterns` for inline setups).
 #   * Optional `season_overrides` for per-season configuration.
+#   * Optional `quality_profile` to override global quality settings for this sport.
 ######################################################################
 
 sports:
@@ -201,6 +240,19 @@ sports:
     # Use the built-in Formula 1 pattern template.
     pattern_sets:
       - formula1
+
+    # Per-sport quality profile override (optional)
+    # This merges with the global quality_profile - sport values take precedence.
+    # Uncomment to enable F1-specific quality preferences:
+    # quality_profile:
+    #   enabled: true
+    #   scoring:
+    #     release_group:      # F1 community prefers certain release groups
+    #       mwr: 100          # MWR releases are highly valued
+    #       smcgill1969: 80
+    #       verum: 60
+    #       sh0ww: 50
+    #   cutoff: 600           # Only stop at 4K + preferred group
 
     # Per-season variants with different show slugs
     variants:

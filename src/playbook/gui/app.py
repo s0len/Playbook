@@ -17,7 +17,7 @@ from nicegui import app, ui
 
 from .components.header import header
 from .log_handler import install_gui_log_handler
-from .pages import config, dashboard, logs, sports
+from .pages import dashboard, logs, settings, sports
 from .state import gui_state
 from .styles import setup_page_styles
 from .theme import apply_theme
@@ -45,8 +45,8 @@ def create_app() -> None:
 
     @ui.page("/config")
     def config_page_route() -> None:
-        """Configuration editor page."""
-        _page_wrapper(config.config_page)
+        """Settings page with form-based configuration."""
+        _page_wrapper(settings.settings_page)
 
     @ui.page("/sports")
     def sports_page_route() -> None:

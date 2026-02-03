@@ -47,11 +47,17 @@ def _stats_cards() -> None:
     """Create the row of statistics cards."""
 
     def get_processed() -> int:
-        if not gui_state.processor:
-            return 0
-        return len(gui_state.processor._state.touched_destinations)
+        # Use persistent store for accurate count across restarts
+        if gui_state.processed_store:
+            stats = gui_state.processed_store.get_stats()
+            return stats.get("total", 0)
+        # Fallback to in-memory state
+        if gui_state.processor:
+            return len(gui_state.processor._state.touched_destinations)
+        return 0
 
     def get_events_count() -> int:
+        # Recent events from memory (session only)
         return len(gui_state.recent_events)
 
     def get_sports_count() -> int:
@@ -60,7 +66,12 @@ def _stats_cards() -> None:
         return len([s for s in gui_state.config.sports if s.enabled])
 
     def get_errors() -> int:
-        # Count error events in recent activity
+        # Use persistent store for error count
+        if gui_state.processed_store:
+            stats = gui_state.processed_store.get_stats()
+            by_status = stats.get("by_status", {})
+            return by_status.get("error", 0)
+        # Fallback to in-memory events
         return sum(1 for e in gui_state.recent_events if e.action == "error")
 
     stats_card("Processed", get_processed, color="green", icon="check_circle")

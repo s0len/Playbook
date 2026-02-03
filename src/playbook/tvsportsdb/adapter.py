@@ -22,10 +22,7 @@ class TVSportsDBAdapter:
         Returns:
             Playbook Show dataclass
         """
-        seasons = [
-            self.to_season(s, idx + 1)
-            for idx, s in enumerate(sorted(response.seasons, key=lambda x: x.number))
-        ]
+        seasons = [self.to_season(s, idx + 1) for idx, s in enumerate(sorted(response.seasons, key=lambda x: x.number))]
         return Show(
             key=response.slug,
             title=response.title,
@@ -53,8 +50,7 @@ class TVSportsDBAdapter:
             Playbook Season dataclass
         """
         episodes = [
-            self.to_episode(e, idx + 1)
-            for idx, e in enumerate(sorted(response.episodes, key=lambda x: x.number))
+            self.to_episode(e, idx + 1) for idx, e in enumerate(sorted(response.episodes, key=lambda x: x.number))
         ]
         return Season(
             key=str(response.number),

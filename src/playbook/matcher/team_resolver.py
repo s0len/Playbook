@@ -8,9 +8,7 @@ from __future__ import annotations
 
 import re
 
-from ..team_aliases import get_team_alias_map
 from ..utils import normalize_token
-from .similarity import token_similarity
 
 # Regex pattern to extract teams from matchup strings
 TEAM_PATTERN = re.compile(r"(?P<a>[A-Za-z0-9 .&'/-]+?)\s+(?:vs|v|at|@)\s+(?P<b>[A-Za-z0-9 .&'/-]+)", re.IGNORECASE)
@@ -92,7 +90,7 @@ def build_team_alias_lookup(show, base: dict[str, str]) -> dict[str, str]:
             for alias in episode.aliases:
                 alias_teams = extract_teams_from_text(alias, lookup)
                 if episode_teams and alias_teams and len(alias_teams) == len(episode_teams):
-                    for canonical, alias_team in zip(episode_teams, alias_teams):
+                    for canonical, alias_team in zip(episode_teams, alias_teams, strict=True):
                         token = normalize_token(alias_team)
                         if token and token not in lookup:
                             lookup[token] = canonical

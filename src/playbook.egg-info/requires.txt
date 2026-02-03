@@ -1,0 +1,17 @@
+PyYAML==6.0.3
+jsonschema==4.26.0
+requests==2.32.5
+python-dateutil==2.9.0.post0
+rich==14.3.1
+tenacity==9.1.2
+rapidfuzz==3.14.3
+watchdog==6.0.0
+kubernetes==35.0.0
+httpx==0.28.1
+pydantic==2.12.5
+
+[dev]
+pytest<9,>=8
+mkdocs-material<10,>=9.5
+ruff>=0.8.0
+pre-commit>=3.5.0

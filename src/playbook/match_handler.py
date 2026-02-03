@@ -10,11 +10,18 @@ from __future__ import annotations
 import logging
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .cache import CachedFileRecord, ProcessedFileCache
 from .models import ProcessingStats, SportFileMatch
 from .notifications import NotificationEvent
+from .quality import QualityInfo, extract_quality
+from .quality_scorer import QualityScore, compare_quality, compute_quality_score
 from .utils import hash_file, link_file, normalize_token
+
+if TYPE_CHECKING:
+    from .config import QualityProfile
+    from .persistence import ProcessedFileStore
 
 LOGGER = logging.getLogger(__name__)
 
@@ -222,6 +229,87 @@ def should_overwrite_existing(match: SportFileMatch) -> bool:
     return session_specificity > min(baseline_scores)
 
 
+def evaluate_quality_upgrade(
+    match: SportFileMatch,
+    quality_profile: QualityProfile,
+    processed_store: ProcessedFileStore | None,
+    captured_groups: dict | None = None,
+) -> tuple[bool, QualityInfo, QualityScore, str]:
+    """Evaluate whether to upgrade based on quality scoring.
+
+    This function extracts quality attributes from the source filename,
+    computes a quality score, and compares it against the existing file's
+    score (if any) to determine if an upgrade should happen.
+
+    Args:
+        match: The matched file to evaluate.
+        quality_profile: Quality profile with scoring configuration.
+        processed_store: Persistence store for looking up existing quality scores.
+        captured_groups: Optional regex capture groups from pattern matching.
+
+    Returns:
+        Tuple of:
+        - should_upgrade: Whether the file should replace an existing one
+        - quality_info: Extracted quality attributes
+        - quality_score: Computed quality score
+        - reason: Human-readable explanation for the decision
+    """
+    # Extract quality from the source filename
+    quality_info = extract_quality(match.source_path.name, captured_groups)
+    quality_score = compute_quality_score(quality_info, quality_profile)
+
+    # Check minimum score threshold first
+    if quality_profile.min_score is not None and quality_score.total < quality_profile.min_score:
+        reason = f"Below minimum score threshold: {quality_score.total} < {quality_profile.min_score}"
+        return False, quality_info, quality_score, reason
+
+    # Look up existing quality score from persistence store
+    existing_score: int | None = None
+    if processed_store is not None:
+        destination_str = str(match.destination_path)
+        existing_score = processed_store.get_quality_score(destination_str)
+
+    # Compare quality
+    comparison = compare_quality(quality_info, existing_score, quality_profile)
+
+    return comparison.should_upgrade, quality_info, quality_score, comparison.reason
+
+
+def should_upgrade_with_quality(
+    match: SportFileMatch,
+    quality_profile: QualityProfile | None,
+    processed_store: ProcessedFileStore | None,
+    captured_groups: dict | None = None,
+) -> tuple[bool, QualityInfo | None, QualityScore | None, str]:
+    """Determine if a file should upgrade an existing destination using quality scoring.
+
+    When quality profile is enabled, uses quality-based comparison.
+    Otherwise, falls back to legacy should_overwrite_existing logic.
+
+    Args:
+        match: The matched file to check.
+        quality_profile: Quality profile (None or disabled = use legacy logic).
+        processed_store: Persistence store for quality score lookups.
+        captured_groups: Optional regex capture groups.
+
+    Returns:
+        Tuple of:
+        - should_upgrade: Whether the file should replace existing
+        - quality_info: Extracted quality info (None if using legacy mode)
+        - quality_score: Computed score (None if using legacy mode)
+        - reason: Explanation for the decision
+    """
+    # If quality profile is not enabled, use legacy logic
+    if quality_profile is None or not quality_profile.enabled:
+        should_upgrade = should_overwrite_existing(match)
+        if should_upgrade:
+            return True, None, None, "Legacy upgrade (PROPER/REPACK/4K or specificity)"
+        return False, None, None, "No upgrade (legacy mode)"
+
+    # Use quality-based evaluation
+    return evaluate_quality_upgrade(match, quality_profile, processed_store, captured_groups)
+
+
 def cleanup_old_destination(
     source_key: str,
     old_destination: Path | None,
@@ -314,6 +402,50 @@ def cleanup_old_destination(
         stale_destinations.pop(source_key, None)
 
 
+def format_quality_summary(
+    quality_info: QualityInfo | None,
+    quality_score: QualityScore | None,
+) -> str | None:
+    """Format quality information into a human-readable summary string.
+
+    Args:
+        quality_info: Extracted quality attributes.
+        quality_score: Computed quality score with breakdown.
+
+    Returns:
+        A formatted string like "440 (1080p: 300, webdl: 90, mwr: 50)" or None if no info.
+    """
+    if quality_score is None:
+        return None
+
+    parts = []
+
+    # Resolution
+    if quality_info and quality_info.resolution and quality_score.resolution_score > 0:
+        parts.append(f"{quality_info.resolution}: {quality_score.resolution_score}")
+
+    # Source
+    if quality_info and quality_info.source and quality_score.source_score > 0:
+        parts.append(f"{quality_info.source}: {quality_score.source_score}")
+
+    # Release group
+    if quality_info and quality_info.release_group and quality_score.release_group_score > 0:
+        parts.append(f"{quality_info.release_group}: {quality_score.release_group_score}")
+
+    # Bonuses
+    if quality_score.proper_bonus > 0:
+        parts.append(f"proper: +{quality_score.proper_bonus}")
+    if quality_score.repack_bonus > 0:
+        parts.append(f"repack: +{quality_score.repack_bonus}")
+    if quality_score.hdr_bonus > 0:
+        hdr_label = quality_info.hdr_format if quality_info and quality_info.hdr_format else "hdr"
+        parts.append(f"{hdr_label}: +{quality_score.hdr_bonus}")
+
+    if parts:
+        return f"{quality_score.total} ({', '.join(parts)})"
+    return str(quality_score.total) if quality_score.total > 0 else None
+
+
 def handle_match(
     match: SportFileMatch,
     stats: ProcessingStats,
@@ -326,7 +458,10 @@ def handle_match(
     link_mode: str,
     format_destination_fn,
     logger,
-) -> tuple[NotificationEvent | None, bool, str | None]:
+    quality_profile: QualityProfile | None = None,
+    processed_store: ProcessedFileStore | None = None,
+    captured_groups: dict | None = None,
+) -> tuple[NotificationEvent | None, bool, str | None, QualityInfo | None, QualityScore | None]:
     """Process a file match: create link, update cache, handle overwrites.
 
     This is the core file processing logic that:
@@ -335,6 +470,7 @@ def handle_match(
     - Updates processed file cache
     - Cleans up old destinations when files move
     - Creates notification events
+    - Extracts and returns quality information when quality profile is enabled
 
     Args:
         match: The matched file to process.
@@ -347,12 +483,17 @@ def handle_match(
         link_mode: Link mode ("symlink", "hardlink", or "copy").
         format_destination_fn: Function to format destination paths for display.
         logger: Logger instance for output.
+        quality_profile: Optional quality profile for quality-based upgrades.
+        processed_store: Optional persistence store for quality score lookups.
+        captured_groups: Optional regex capture groups from pattern matching.
 
     Returns:
-        Tuple of (notification_event, kometa_trigger_needed, sport_id_if_processed).
+        Tuple of (notification_event, kometa_trigger_needed, sport_id_if_processed, quality_info, quality_score).
         - notification_event: Event describing what happened (or None).
         - kometa_trigger_needed: True if Kometa should be triggered.
         - sport_id_if_processed: Sport ID if file was processed, None otherwise.
+        - quality_info: Extracted quality info (None if quality profile disabled).
+        - quality_score: Computed quality score (None if quality profile disabled).
     """
     from .logging_utils import render_fields_block
 
@@ -421,13 +562,80 @@ def handle_match(
         event_type=event_type,
     )
 
+    # Extract quality information (always extracted for logging, but only used for scoring if profile enabled)
+    quality_info: QualityInfo | None = None
+    quality_score_obj: QualityScore | None = None
+    quality_upgrade_reason: str = ""
+
+    if quality_profile is not None and quality_profile.enabled:
+        should_upgrade, quality_info, quality_score_obj, quality_upgrade_reason = should_upgrade_with_quality(
+            match, quality_profile, processed_store, captured_groups
+        )
+    else:
+        # Extract quality info even in legacy mode for logging purposes
+        quality_info = extract_quality(match.source_path.name, captured_groups)
+
     # Check if destination exists and handle skip/overwrite logic
     replace_existing = False
     if destination.exists():
         if skip_existing:
-            if should_overwrite_existing(match):
+            # Use quality-based upgrade decision if profile is enabled
+            if quality_profile is not None and quality_profile.enabled:
+                should_upgrade, quality_info, quality_score_obj, quality_upgrade_reason = should_upgrade_with_quality(
+                    match, quality_profile, processed_store, captured_groups
+                )
+                if should_upgrade:
+                    replace_existing = True
+                    logger.debug(
+                        render_fields_block(
+                            "Quality Upgrade",
+                            {
+                                "Destination": destination,
+                                "Source": match.source_path,
+                                "Reason": quality_upgrade_reason,
+                                "Score": quality_score_obj.total if quality_score_obj else "N/A",
+                            },
+                            pad_top=True,
+                        )
+                    )
+                else:
+                    # Check min_score rejection - this is a special case
+                    if quality_profile.min_score is not None and quality_score_obj is not None:
+                        if quality_score_obj.total < quality_profile.min_score:
+                            min_score = quality_profile.min_score
+                            skip_message = f"Quality below minimum: {quality_score_obj.total} < {min_score}"
+                            logger.debug(
+                                render_fields_block(
+                                    "Rejecting Low Quality File",
+                                    {
+                                        "Source": match.source_path,
+                                        "Score": quality_score_obj.total,
+                                        "Min Score": quality_profile.min_score,
+                                    },
+                                    pad_top=True,
+                                )
+                            )
+                            stats.register_skipped(skip_message, is_error=False, sport_id=match.sport.id)
+                            event.action = "skipped"
+                            event.skip_reason = skip_message
+                            event.event_type = "skipped"
+                            return event, False, None, quality_info, quality_score_obj
+
+                    logger.debug(
+                        render_fields_block(
+                            "Skipping (Quality Not Better)",
+                            {
+                                "Destination": destination,
+                                "Source": match.source_path,
+                                "Reason": quality_upgrade_reason,
+                            },
+                            pad_top=True,
+                        )
+                    )
+            elif should_overwrite_existing(match):
                 replace_existing = True
-            else:
+
+            if not replace_existing:
                 logger.debug(
                     render_fields_block(
                         "Skipping Existing Destination",
@@ -460,7 +668,7 @@ def handle_match(
                 event.action = "skipped"
                 event.skip_reason = skip_message
                 event.event_type = "skipped"
-                return event, False, None
+                return event, False, None, quality_info, quality_score_obj
 
     # Handle replace existing destination
     if replace_existing:
@@ -493,37 +701,30 @@ def handle_match(
                 event.action = "error"
                 event.skip_reason = f"failed-to-remove: {exc}"
                 event.event_type = "error"
-                return event, False, None
+                return event, False, None, quality_info, quality_score_obj
 
-    # Log what we're about to do
-    logger.debug(
+    # Build processing details fields
+    quality_summary = format_quality_summary(quality_info, quality_score_obj)
+    action_desc = f"{link_mode} ({'replace existing' if replace_existing else 'new file'})"
+
+    # Log at INFO level with quality info when available
+    processed_fields: list[tuple[str, object]] = [
+        ("Source", match.source_path.name),
+        ("Destination", destination_display),
+    ]
+    if quality_summary:
+        processed_fields.append(("Quality", quality_summary))
+    if replace_existing and quality_upgrade_reason:
+        processed_fields.append(("Upgrade", f"Yes ({quality_upgrade_reason})"))
+    processed_fields.append(("Action", action_desc))
+
+    logger.info(
         render_fields_block(
-            "Processed",
-            {
-                "Action": "replace" if replace_existing else "link",
-                "Sport": match.sport.id,
-                "Season": match.context.get("season_title"),
-                "Session": match.context.get("session"),
-                "Dest": destination_display,
-                "Src": match.source_path.name,
-            },
+            "Processing Details",
+            processed_fields,
             pad_top=True,
         )
     )
-
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(
-            render_fields_block(
-                "Processing Details",
-                {
-                    "Source": match.source_path,
-                    "Destination": destination,
-                    "Link Mode": link_mode,
-                    "Replace": replace_existing,
-                },
-                pad_top=True,
-            )
-        )
 
     # Handle dry-run mode
     if dry_run:
@@ -531,7 +732,7 @@ def handle_match(
         event.action = "dry-run"
         event.event_type = "dry-run"
         event.replaced = replace_existing
-        return event, False, match.sport.id
+        return event, False, match.sport.id, quality_info, quality_score_obj
 
     # Actually create the link
     result = link_file(match.source_path, destination, mode=link_mode)
@@ -555,7 +756,7 @@ def handle_match(
         )
         event.action = link_mode
         event.replaced = replace_existing
-        return event, True, match.sport.id
+        return event, True, match.sport.id, quality_info, quality_score_obj
     else:
         failure_message = f"Failed to link {match.source_path} -> {destination}: {result.reason}"
         stats.register_skipped(failure_message, sport_id=match.sport.id)
@@ -579,8 +780,8 @@ def handle_match(
             event.action = "skipped"
             event.skip_reason = failure_message
             event.event_type = "skipped"
-            return event, False, None
+            return event, False, None, quality_info, quality_score_obj
         event.action = "error"
         event.skip_reason = failure_message
         event.event_type = "error"
-        return event, False, None
+        return event, False, None, quality_info, quality_score_obj

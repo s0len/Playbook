@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "playbook"
-version = "2.2.2"
+version = "2.3.0"
 description = "Automated file matching, renaming, and metadata for sports content in Plex"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -112,6 +112,7 @@ select = [
 "src/playbook/logging_utils.py" = ["UP007"]
 "src/playbook/match_handler.py" = ["SIM102"]  # Complex conditional logic
 "src/playbook/matcher.py" = ["E402", "B905", "C413", "SIM102"]  # Delayed imports + style patterns
+"src/playbook/matcher/**/*.py" = ["B905", "C413", "SIM102"]  # Matcher submodules
 "src/playbook/metadata.py" = ["SIM105", "SIM108"]
 "src/playbook/notifications/**/*.py" = ["E501", "SIM105"]  # Notification modules
 "src/playbook/plex_metadata_sync.py" = ["E501"]
