@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .pattern_templates import expand_regex_with_tokens, load_builtin_pattern_sets
+from .pattern_templates import expand_regex_with_tokens, get_default_source_globs, load_builtin_pattern_sets
 from .utils import load_yaml_file, validate_url
 
 
@@ -200,7 +200,10 @@ class SportConfig:
     patterns: list[PatternConfig] = field(default_factory=list)
     team_alias_map: str | None = None
     destination: DestinationTemplates = field(default_factory=DestinationTemplates)
-    source_globs: list[str] = field(default_factory=list)
+    source_globs: list[str] = field(default_factory=list)  # Effective globs (computed from defaults + extra - disabled)
+    extra_source_globs: list[str] = field(default_factory=list)  # User-added custom globs
+    disabled_source_globs: list[str] = field(default_factory=list)  # Globs to exclude (can disable defaults or custom)
+    pattern_set_names: list[str] = field(default_factory=list)  # Names of pattern sets used (for GUI to show defaults)
     source_extensions: list[str] = field(default_factory=lambda: [".mkv", ".mp4", ".ts", ".m4v", ".avi"])
     link_mode: str = "hardlink"
     allow_unmatched: bool = False
@@ -338,6 +341,27 @@ def _build_sport_config(
         sport_id = data.get("id", "unknown")
         quality_profile = _build_quality_profile(quality_profile_raw, f"sports[{sport_id}].quality_profile")
 
+    # Source globs: compute effective globs from defaults + extra - disabled
+    extra_source_globs = list(data.get("extra_source_globs", []))
+    disabled_source_globs = set(data.get("disabled_source_globs", []))
+    pattern_set_names = [str(s) for s in pattern_set_refs]
+
+    # If source_globs is explicitly set in config, use it as-is (backwards compatibility)
+    # Otherwise, compute effective globs from defaults + extra - disabled
+    if "source_globs" in data and data["source_globs"]:
+        # Legacy mode: explicit source_globs overrides defaults
+        effective_globs = list(data["source_globs"])
+    else:
+        # New mode: compute from defaults + extra - disabled
+        default_globs = get_default_source_globs(pattern_set_names)
+        # Merge: defaults + extra, then remove disabled
+        seen: set[str] = set()
+        effective_globs: list[str] = []
+        for glob in default_globs + extra_source_globs:
+            if glob not in seen and glob not in disabled_source_globs:
+                seen.add(glob)
+                effective_globs.append(glob)
+
     return SportConfig(
         id=data["id"],
         name=data.get("name", data["id"]),
@@ -347,7 +371,10 @@ def _build_sport_config(
         patterns=patterns,
         team_alias_map=data.get("team_alias_map"),
         destination=destination,
-        source_globs=list(data.get("source_globs", [])),
+        source_globs=effective_globs,
+        extra_source_globs=extra_source_globs,
+        disabled_source_globs=list(disabled_source_globs),
+        pattern_set_names=pattern_set_names,
         source_extensions=list(data.get("source_extensions", [".mkv", ".mp4", ".ts", ".m4v", ".avi"])),
         link_mode=str(data.get("link_mode", global_link_mode)),
         allow_unmatched=bool(data.get("allow_unmatched", False)),

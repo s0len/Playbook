@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass, field
 from functools import lru_cache
 from importlib import resources
 from typing import Any
@@ -9,6 +10,14 @@ from .utils import load_yaml_file
 
 PLACEHOLDER_RE = re.compile(r"(?<!\?P)<([A-Za-z0-9_]+)>")
 _REGEX_TOKENS: dict[str, str] = {}
+
+
+@dataclass
+class PatternSetData:
+    """Parsed pattern set containing patterns and optional default source globs."""
+
+    patterns: list[dict[str, Any]] = field(default_factory=list)
+    default_source_globs: list[str] = field(default_factory=list)
 
 
 def _resolve_regex_tokens(raw_tokens: dict[str, str]) -> dict[str, str]:
@@ -49,9 +58,8 @@ def _expand_placeholders(text: str, tokens: dict[str, str]) -> str:
 
 
 @lru_cache
-def load_builtin_pattern_sets() -> dict[str, list[dict[str, Any]]]:
-    """Load the curated pattern sets shipped with Playbook."""
-
+def _load_raw_pattern_data() -> dict[str, PatternSetData]:
+    """Load and parse the pattern templates file."""
     with resources.as_file(resources.files(__package__) / "pattern_templates.yaml") as path:
         data = load_yaml_file(path)
 
@@ -63,21 +71,82 @@ def load_builtin_pattern_sets() -> dict[str, list[dict[str, Any]]]:
     global _REGEX_TOKENS
     _REGEX_TOKENS = resolved_tokens
 
-    pattern_sets = data.get("pattern_sets", {})
-    if not isinstance(pattern_sets, dict):
+    raw_pattern_sets = data.get("pattern_sets", {})
+    if not isinstance(raw_pattern_sets, dict):
         raise ValueError("Builtin pattern templates must define a mapping of pattern sets")
 
-    for pattern_list in pattern_sets.values():
-        if not isinstance(pattern_list, list):
+    result: dict[str, PatternSetData] = {}
+
+    for name, value in raw_pattern_sets.items():
+        # Support both old format (list of patterns) and new format (dict with patterns and default_source_globs)
+        if isinstance(value, list):
+            # Legacy format: just a list of patterns
+            patterns = value
+            default_source_globs: list[str] = []
+        elif isinstance(value, dict):
+            # New format: dict with 'patterns' and optional 'default_source_globs'
+            patterns = value.get("patterns", [])
+            default_source_globs = value.get("default_source_globs", [])
+            if not isinstance(patterns, list):
+                patterns = []
+            if not isinstance(default_source_globs, list):
+                default_source_globs = []
+        else:
             continue
-        for pattern in pattern_list:
+
+        # Expand regex tokens in patterns
+        for pattern in patterns:
             if not isinstance(pattern, dict):
                 continue
             regex_value = pattern.get("regex")
             if isinstance(regex_value, str):
                 pattern["regex"] = _expand_placeholders(regex_value, resolved_tokens)
 
-    return pattern_sets
+        result[name] = PatternSetData(
+            patterns=patterns,
+            default_source_globs=[str(g) for g in default_source_globs],
+        )
+
+    return result
+
+
+def load_builtin_pattern_sets() -> dict[str, list[dict[str, Any]]]:
+    """Load the curated pattern sets shipped with Playbook.
+
+    Returns just the patterns for backwards compatibility.
+    Use load_pattern_set_data() to also get default_source_globs.
+    """
+    data = _load_raw_pattern_data()
+    return {name: ps.patterns for name, ps in data.items()}
+
+
+def load_pattern_set_data() -> dict[str, PatternSetData]:
+    """Load pattern sets with both patterns and default_source_globs."""
+    return _load_raw_pattern_data()
+
+
+def get_default_source_globs(pattern_set_names: list[str]) -> list[str]:
+    """Get merged default source globs from multiple pattern sets.
+
+    Args:
+        pattern_set_names: List of pattern set names to get defaults from
+
+    Returns:
+        Merged list of default source globs (duplicates removed, order preserved)
+    """
+    data = _load_raw_pattern_data()
+    seen: set[str] = set()
+    result: list[str] = []
+
+    for name in pattern_set_names:
+        if name not in data:
+            continue
+        for glob in data[name].default_source_globs:
+            if glob not in seen:
+                seen.add(glob)
+                result.append(glob)
+
+    return result
 
 
 def expand_regex_with_tokens(regex: str) -> str:

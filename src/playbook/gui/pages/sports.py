@@ -98,6 +98,9 @@ def sport_detail_page(sport_id: str) -> None:
                             "text-lg font-semibold text-slate-700 dark:text-slate-300"
                         )
 
+        # Source Globs
+        _source_globs_card(sport_id, detail)
+
         # Seasons
         with ui.card().classes("glass-card w-full"):
             ui.label("Seasons").classes("text-xl font-semibold text-slate-700 dark:text-slate-200 mb-4")
@@ -213,6 +216,235 @@ def _sports_table() -> None:
 
     # Row click handler
     table.on("row-click", lambda e: ui.navigate.to(f"/sports/{e.args[1]['id']}"))
+
+
+def _source_globs_card(sport_id: str, detail: Any) -> None:
+    """Show and manage source glob patterns for a sport.
+
+    Args:
+        sport_id: The sport identifier
+        detail: SportDetail with source_globs info
+    """
+    from ..data.sport_data import SourceGlobInfo
+
+    if not detail.source_globs and not detail.pattern_set_names:
+        return
+
+    # State for tracking changes
+    state = {
+        "modified": False,
+        "new_glob": "",
+    }
+    globs_container = None
+
+    def get_sport_config():
+        """Get the current sport config."""
+        if not gui_state.config:
+            return None
+        for sport in gui_state.config.sports:
+            if sport.id == sport_id:
+                return sport
+        return None
+
+    def toggle_glob(glob_info: SourceGlobInfo) -> None:
+        """Toggle a glob's enabled/disabled state."""
+        sport_config = get_sport_config()
+        if not sport_config:
+            return
+
+        disabled = set(sport_config.disabled_source_globs)
+        if glob_info.is_disabled:
+            # Enable it (remove from disabled)
+            disabled.discard(glob_info.pattern)
+        else:
+            # Disable it (add to disabled)
+            disabled.add(glob_info.pattern)
+
+        sport_config.disabled_source_globs = list(disabled)
+        state["modified"] = True
+        _refresh_globs_ui()
+
+    def add_custom_glob() -> None:
+        """Add a new custom glob pattern."""
+        new_pattern = state["new_glob"].strip()
+        if not new_pattern:
+            ui.notify("Please enter a glob pattern", type="warning")
+            return
+
+        sport_config = get_sport_config()
+        if not sport_config:
+            return
+
+        # Check for duplicate
+        existing = set(sport_config.source_globs) | set(sport_config.extra_source_globs)
+        if new_pattern in existing:
+            ui.notify("This pattern already exists", type="warning")
+            return
+
+        sport_config.extra_source_globs = list(sport_config.extra_source_globs) + [new_pattern]
+        state["new_glob"] = ""
+        state["modified"] = True
+        _refresh_globs_ui()
+        ui.notify(f"Added: {new_pattern}", type="positive")
+
+    def remove_custom_glob(pattern: str) -> None:
+        """Remove a custom glob pattern."""
+        sport_config = get_sport_config()
+        if not sport_config:
+            return
+
+        sport_config.extra_source_globs = [g for g in sport_config.extra_source_globs if g != pattern]
+        # Also remove from disabled if it was there
+        sport_config.disabled_source_globs = [g for g in sport_config.disabled_source_globs if g != pattern]
+        state["modified"] = True
+        _refresh_globs_ui()
+        ui.notify(f"Removed: {pattern}", type="info")
+
+    def save_changes() -> None:
+        """Save changes to the config file."""
+        if not gui_state.config or not gui_state.config_path:
+            ui.notify("Cannot save: config not loaded", type="negative")
+            return
+
+        try:
+            from playbook.gui.utils.config_persistence import save_sport_source_globs
+
+            sport_config = get_sport_config()
+            if not sport_config:
+                ui.notify("Sport config not found", type="negative")
+                return
+
+            save_sport_source_globs(
+                gui_state.config_path,
+                sport_id,
+                sport_config.extra_source_globs,
+                sport_config.disabled_source_globs,
+            )
+            state["modified"] = False
+            _refresh_globs_ui()
+            ui.notify("Source globs saved!", type="positive")
+        except Exception as e:
+            LOGGER.exception("Failed to save source globs: %s", e)
+            ui.notify(f"Failed to save: {e}", type="negative")
+
+    def _refresh_globs_ui() -> None:
+        """Refresh the globs UI."""
+        nonlocal globs_container
+        if globs_container:
+            globs_container.clear()
+            _render_globs_list(globs_container)
+
+    def _render_globs_list(container) -> None:
+        """Render the list of globs."""
+        from playbook.pattern_templates import get_default_source_globs
+
+        sport_config = get_sport_config()
+        if not sport_config:
+            return
+
+        default_globs = get_default_source_globs(sport_config.pattern_set_names)
+        disabled_set = set(sport_config.disabled_source_globs)
+        extra_set = set(sport_config.extra_source_globs)
+
+        with container:
+            # Default globs section
+            if default_globs:
+                ui.label("Default Patterns").classes("text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2")
+                ui.label("From pattern templates - these are shared with all users").classes(
+                    "text-xs text-slate-500 dark:text-slate-500 mb-2"
+                )
+
+                for pattern in default_globs:
+                    is_disabled = pattern in disabled_set
+                    with ui.row().classes("w-full items-center gap-2 py-1"):
+                        # Toggle switch
+                        switch = ui.switch(
+                            value=not is_disabled,
+                            on_change=lambda e, p=pattern: toggle_glob(
+                                SourceGlobInfo(pattern=p, is_default=True, is_disabled=not e.value)
+                            ),
+                        ).classes("flex-none")
+
+                        # Pattern text
+                        pattern_class = (
+                            "font-mono text-sm text-slate-400 dark:text-slate-600 line-through"
+                            if is_disabled
+                            else "font-mono text-sm text-slate-700 dark:text-slate-300"
+                        )
+                        ui.label(pattern).classes(pattern_class + " flex-1")
+
+                        # Default badge
+                        ui.badge("default", color="blue").classes("flex-none")
+
+            # Custom globs section
+            ui.label("Custom Patterns").classes(
+                "text-sm font-semibold text-slate-600 dark:text-slate-400 mt-4 mb-2"
+            )
+            ui.label("Your own patterns - only in your config").classes(
+                "text-xs text-slate-500 dark:text-slate-500 mb-2"
+            )
+
+            if sport_config.extra_source_globs:
+                for pattern in sport_config.extra_source_globs:
+                    is_disabled = pattern in disabled_set
+                    with ui.row().classes("w-full items-center gap-2 py-1"):
+                        # Toggle switch
+                        ui.switch(
+                            value=not is_disabled,
+                            on_change=lambda e, p=pattern: toggle_glob(
+                                SourceGlobInfo(pattern=p, is_default=False, is_disabled=not e.value)
+                            ),
+                        ).classes("flex-none")
+
+                        # Pattern text
+                        pattern_class = (
+                            "font-mono text-sm text-slate-400 dark:text-slate-600 line-through"
+                            if is_disabled
+                            else "font-mono text-sm text-slate-700 dark:text-slate-300"
+                        )
+                        ui.label(pattern).classes(pattern_class + " flex-1")
+
+                        # Custom badge
+                        ui.badge("custom", color="green").classes("flex-none")
+
+                        # Remove button
+                        ui.button(
+                            icon="close",
+                            on_click=lambda _, p=pattern: remove_custom_glob(p),
+                        ).props("flat round dense size=sm").classes("text-red-500")
+            else:
+                ui.label("No custom patterns added yet").classes(
+                    "text-sm text-slate-400 dark:text-slate-500 italic"
+                )
+
+            # Add new pattern input
+            with ui.row().classes("w-full items-end gap-2 mt-4"):
+                ui.input(
+                    label="Add custom pattern",
+                    placeholder="e.g. MyTeam.*",
+                    on_change=lambda e: state.update({"new_glob": e.value}),
+                ).classes("flex-1").bind_value(state, "new_glob")
+
+                ui.button("Add", icon="add", on_click=add_custom_glob).props("color=primary")
+
+            # Save button (shown when modified)
+            if state["modified"]:
+                with ui.row().classes("w-full justify-end mt-4"):
+                    ui.button("Save Changes", icon="save", on_click=save_changes).props(
+                        "color=primary"
+                    ).classes("animate-pulse")
+
+    # Render the card
+    with ui.card().classes("glass-card w-full"):
+        with ui.row().classes("w-full items-center justify-between mb-4"):
+            ui.label("Source Globs").classes("text-xl font-semibold text-slate-700 dark:text-slate-200")
+            if detail.pattern_set_names:
+                ui.label(f"Pattern sets: {', '.join(detail.pattern_set_names)}").classes(
+                    "text-sm text-slate-500 dark:text-slate-400"
+                )
+
+        globs_container = ui.column().classes("w-full gap-1")
+        _render_globs_list(globs_container)
 
 
 def _recent_matches_card(sport_id: str) -> None:
