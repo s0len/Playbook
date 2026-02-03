@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import lru_cache
 from importlib import resources
@@ -10,6 +11,7 @@ from .utils import load_yaml_file
 
 PLACEHOLDER_RE = re.compile(r"(?<!\?P)<([A-Za-z0-9_]+)>")
 _REGEX_TOKENS: dict[str, str] = {}
+_DEFAULT_SPORTS: list[dict[str, Any]] = []
 
 
 @dataclass
@@ -70,6 +72,11 @@ def _load_raw_pattern_data() -> dict[str, PatternSetData]:
     resolved_tokens = _resolve_regex_tokens(normalized_tokens)
     global _REGEX_TOKENS
     _REGEX_TOKENS = resolved_tokens
+
+    # Load default sports definitions
+    global _DEFAULT_SPORTS
+    raw_default_sports = data.get("default_sports", [])
+    _DEFAULT_SPORTS = deepcopy(raw_default_sports) if isinstance(raw_default_sports, list) else []
 
     raw_pattern_sets = data.get("pattern_sets", {})
     if not isinstance(raw_pattern_sets, dict):
@@ -156,3 +163,25 @@ def expand_regex_with_tokens(regex: str) -> str:
         # Ensure tokens are loaded by forcing the builtin template load.
         load_builtin_pattern_sets()
     return _expand_placeholders(regex, _REGEX_TOKENS)
+
+
+def load_default_sports() -> list[dict[str, Any]]:
+    """Load the default sports definitions from pattern_templates.yaml.
+
+    Returns a list of sport configuration dictionaries that should be enabled
+    by default. Each sport includes:
+    - id: Sport identifier
+    - name: Display name
+    - pattern_sets: List of pattern set names to use
+    - variants: Year-based variants with show_slugs
+    - team_alias_map: Optional team alias mapping
+    - destination: Optional destination template overrides
+    - season_overrides: Optional per-season configuration
+
+    Note: source_globs are NOT included here; they are computed from
+    the pattern_sets' default_source_globs at config load time.
+    """
+    if not _DEFAULT_SPORTS:
+        # Ensure data is loaded
+        _load_raw_pattern_data()
+    return deepcopy(_DEFAULT_SPORTS)

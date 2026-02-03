@@ -25,6 +25,7 @@ def build_minimal_config(tmp_path: Path) -> AppConfig:
           source_dir: "{tmp_path / 'source'}"
           destination_dir: "{tmp_path / 'dest'}"
           cache_dir: "{tmp_path / 'cache'}"
+          use_default_sports: false
 
         sports:
           - id: test_sport
@@ -154,6 +155,7 @@ def test_build_banner_info_counts_enabled_sports(tmp_path) -> None:
           source_dir: "{tmp_path / 'source'}"
           destination_dir: "{tmp_path / 'dest'}"
           cache_dir: "{tmp_path / 'cache'}"
+          use_default_sports: false
 
         sports:
           - id: sport1

@@ -2,44 +2,66 @@
 # Playbook Sample Configuration
 ######################################################################
 # This annotated example is designed to be copied to `playbook.yaml`
-# and tweaked for your environment. Comments call out what each block
-# controls so you can quickly adapt it for new sports or release formats.
+# and tweaked for your environment.
 #
-# Key ideas:
-#   * `settings` control the global behavior of the organizer.
-#   * `pattern_sets` describe how to recognize and normalize filenames.
-#   * `sports` tie pattern sets to TheTVSportsDB show slugs.
+# KEY FEATURE: All supported sports are ENABLED BY DEFAULT!
+# You don't need to define any sports - Playbook comes with built-in
+# support for Formula 1, MotoGP, UFC, NFL, NBA, NHL, Premier League,
+# Champions League, and more. Just configure your directories and go!
 #
-# Tips for customization:
-#   * Strings like ${SOURCE_DIR:-/data/source} can be overridden via env vars.
-#   * Templates such as "{season_number:02d}" use Python's format syntax.
-#   * Regular expressions use Python-style syntax; `(?i)` makes them case-insensitive.
+# To customize:
+#   * Use `disabled_sports` to turn off sports you don't want
+#   * Use the `sports` section to override specific sport settings
+#   * Use `use_default_sports: false` to disable all defaults and
+#     define only the sports you want manually
+#
+# Tips:
+#   * Strings like ${SOURCE_DIR:-/data/source} can be overridden via env vars
+#   * Templates such as "{season_number:02d}" use Python's format syntax
 ######################################################################
 
 settings:
   ####################################################################
   # REQUIRED DIRECTORIES
   ####################################################################
-  source_dir: ${SOURCE_DIR:-/data/source} # Where Playbook looks for newly downloaded media files.
-  destination_dir: ${DESTINATION_DIR:-/data/destination} # Destination root for organized media. Files are written here (or hard-linked).
-  cache_dir: ${CACHE_DIR:-/var/cache/playbook} # Location for metadata caches, fingerprints, and temp state.
+  source_dir: ${SOURCE_DIR:-/data/source}       # Where Playbook looks for newly downloaded media files
+  destination_dir: ${DESTINATION_DIR:-/data/destination} # Destination root for organized media
+  cache_dir: ${CACHE_DIR:-/var/cache/playbook}  # Location for metadata caches and temp state
 
   ####################################################################
   # EXECUTION BEHAVIOUR
   ####################################################################
-  dry_run: false          # When true, identify matches and log actions without touching the filesystem.
-  skip_existing: true     # When true, leave destinations alone unless a better (e.g. PROPER/REPACK) source is detected.
-  link_mode: hardlink     # Global default for linking: hardlink | copy | symlink.
+  dry_run: false          # When true, identify matches and log actions without touching the filesystem
+  skip_existing: true     # When true, leave destinations alone unless a better source is detected
+  link_mode: hardlink     # Global default for linking: hardlink | copy | symlink
+
+  ####################################################################
+  # DEFAULT SPORTS (NEW IN 2.7.0)
+  ####################################################################
+  # All TVSportsDB-supported sports are enabled by default. Playbook
+  # automatically handles Formula 1, MotoGP, UFC, NFL, NBA, NHL,
+  # Premier League, Champions League, Figure Skating, and more.
+  #
+  # Source globs are computed automatically from pattern templates,
+  # so new patterns added in updates will work immediately.
+
+  use_default_sports: true  # Set to false to disable all defaults
+
+  # Disable specific sports you don't want (by base ID):
+  disabled_sports: []
+    # - formula_e       # Uncomment to disable Formula E
+    # - moto2           # Uncomment to disable Moto2
+    # - moto3           # Uncomment to disable Moto3
+    # - figure_skating_grand_prix
 
   ####################################################################
   # QUALITY MANAGEMENT (OPTIONAL)
   ####################################################################
   # Score-based upgrade system for replacing files with higher quality releases.
   # When enabled, Playbook computes a quality score for each file based on
-  # resolution, source, release group, and other attributes. Files are only
-  # replaced when a higher-scoring release is found.
+  # resolution, source, release group, frame rate, and other attributes.
   #
-  # SCORING: Total score = resolution + source + release_group + bonuses
+  # SCORING: Total = resolution + source + release_group + frame_rate + bonuses
   # CUTOFF: Stop upgrading when the existing file reaches this score
   # MIN_SCORE: Reject files below this threshold
   # PROPER/REPACK: Always upgrade regardless of cutoff (corrected releases)
@@ -59,6 +81,12 @@ settings:
         hdtv: 50
         sdtv: 30
         dvdrip: 40
+      frame_rate:         # Frame rate scores (critical for sports)
+        "60": 100         # 60fps ideal for fast action
+        "50": 75          # 50fps (PAL regions)
+        "30": 25
+        "25": 0
+        "24": 0
       release_group:      # Preferred release groups (add your favorites)
         # mwr: 50         # Uncomment and add groups you prefer
         # verum: 40
@@ -70,35 +98,27 @@ settings:
     min_score: 100        # Reject files below this score (null = no minimum)
 
   ####################################################################
-  # LOGGING
-  ####################################################################
-  # Logs now default to a human-friendly block layout with blank lines between sections.
-  # Use VERBOSE=true or LOG_LEVEL=DEBUG when you want per-file diagnostics; INFO keeps
-  # the log airy by only showing grouped counts per sport/source.
-
-  ####################################################################
-  # NOTIFICATIONS
+  # NOTIFICATIONS (OPTIONAL)
   ####################################################################
   notifications:
-    batch_daily: false    # When true, send one message per sport/day and edit it with new entries instead of posting each file.
-    summary_mode: false   # When true, send one summary notification per scan instead of per-file. Prevents rate limiting.
-    flush_time: "00:00"   # Local HH:MM (or HH:MM:SS) boundary for the batching day rollover. Useful for overnight events.
-    mentions:             # Optional: ping specific Discord roles/users per sport (or use 'default' as a fallback).
-      premier_league: "<@&123456789012345678>" # Replace with your role ID. Automatically covers variants like premier_league_2025_26.
-      formula1: "<@&222333444555666777>"      # Variant IDs (formula1_2025, formula1_2026, etc.) inherit this mention automatically.
-      # default: "@here"   # Uncomment for a fallback mention when a sport ID isn't listed.
-    targets:              # Define at least one target (Discord, Slack, webhook, Autoscan, etc.).
+    batch_daily: false    # When true, send one message per sport/day
+    summary_mode: false   # When true, send one summary notification per scan
+    flush_time: "00:00"   # Local HH:MM boundary for the batching day rollover
+    mentions:             # Optional: ping specific Discord roles/users per sport
+      premier_league: "<@&123456789012345678>"
+      formula1: "<@&222333444555666777>"
+      # default: "@here"  # Fallback mention when a sport ID isn't listed
+    targets:              # Define at least one target
       - type: discord
-        webhook_env: DISCORD_WEBHOOK_URL # Pull from env vars at runtime (preferred for secrets).
-        # webhook_url: ${DISCORD_WEBHOOK_URL} # Alternative: inline expansion if your config loader supports it.
-        mentions:          # Override/extend global mentions just for this webhook.
+        webhook_env: DISCORD_WEBHOOK_URL
+        mentions:
           formula1: "<@&222333444555666777>"
       - type: autoscan
-        url: ${AUTOSCAN_URL:-http://autoscan:3030} # Base Autoscan URL; delete this block if not using Autoscan.
-        trigger: manual       # Autoscan trigger name; `manual` works with the built-in manual endpoint.
-        username: ${AUTOSCAN_USERNAME:-} # Optional basic auth credentials for Autoscan.
+        url: ${AUTOSCAN_URL:-http://autoscan:3030}
+        trigger: manual
+        username: ${AUTOSCAN_USERNAME:-}
         password: ${AUTOSCAN_PASSWORD:-}
-        rewrite:              # Rewrite Playbook's destination paths to whatever Autoscan/Plex can see.
+        rewrite:
           - from: ${DESTINATION_DIR:-/data/destination}
             to: /mnt/unionfs/Media
 
@@ -106,21 +126,18 @@ settings:
   # FILESYSTEM WATCHER (OPTIONAL)
   ####################################################################
   file_watcher:
-    enabled: false        # When true, Playbook stays running and reacts to filesystem events automatically. When false, the CLI runs a single pass and exits.
-    paths: []             # Directories to watch; defaults to source_dir when empty. Relative paths resolve under source_dir.
-    include: []           # Optional glob filters (e.g. "*.mkv") to limit which files trigger a run.
-    ignore:               # Globs that should never trigger a run.
+    enabled: false        # When true, Playbook stays running and reacts to filesystem events
+    paths: []             # Directories to watch; defaults to source_dir when empty
+    include: []           # Optional glob filters (e.g. "*.mkv")
+    ignore:
       - "*.part"
       - "*.tmp"
-    debounce_seconds: 5   # Minimum number of seconds between watcher-triggered processor runs.
-    reconcile_interval: 900 # Run a full scan every N seconds even if no events arrive. Set 0 to disable.
+    debounce_seconds: 5
+    reconcile_interval: 900
 
   ####################################################################
   # KOMETA CRONJOB TRIGGER (OPTIONAL)
   ####################################################################
-  # Enable this to have Playbook kick Kometa right after the first newly ingested
-  # file each run. You can point it at the in-cluster CronJob or fall back to a
-  # simple `docker run` command when you're not on Kubernetes.
   kometa_trigger:
     enabled: false
     mode: kubernetes         # kubernetes | docker
@@ -134,432 +151,105 @@ settings:
       container_path: /config
       volume_mode: rw
       libraries: "Sports|TV Shows - 4K"
-      extra_args: []         # Additional CLI args (e.g. '--config', '/config/config.yml')
+      extra_args: []
       remove_container: true
       interactive: false
-      # Set container_name to reuse an existing Kometa container (docker exec mode)
-      # container_name: kometa
-      # exec_python: python3
-      # exec_script: /app/kometa/kometa.py
-      # exec_command: []      # Optional explicit command list, e.g. ["python3", "/app/kometa/kometa.py"]
-      # Make sure your Playbook container can reach Docker:
-      #   - Mount the socket:   -v /var/run/docker.sock:/var/run/docker.sock
-      #   - Mount the binaries: -v $(which docker):/usr/local/bin/docker
-      #   - On macOS, also mount com.docker.cli (command -v com.docker.cli)
 
   ####################################################################
   # PLEX METADATA SYNC (OPTIONAL)
   ####################################################################
-  # Push show/season/episode metadata (titles, sort titles, summaries, dates,
-  # posters, backgrounds) to Plex. Uses TheTVSportsDB as the source of truth.
-  #
-  # SYNC TRIGGERS:
-  #   - New files processed (automatically syncs the affected sports)
-  #   - Metadata changed in API (fingerprint-based detection)
-  #   - First-time sync (sports that have never been synced will auto-sync)
-  #   - Force mode (force: true syncs all sports regardless of state)
-  #
-  # This "first-time sync" feature ensures that existing content in Plex gets
-  # proper metadata even if you enable sync after already having files in place.
-  # Once a sport is synced, it only re-syncs when metadata changes or force=true.
   plex_metadata_sync:
-    enabled: false                   # Set true to enable; or PLEX_SYNC_ENABLED=true
+    enabled: false
     url: ${PLEX_URL:-http://plex:32400}
     token: ${PLEX_TOKEN:-}
-    library_id: ${PLEX_LIBRARY_ID:-} # Optional: prefer ID for faster lookup
-    library_name: ${PLEX_LIBRARY_NAME:-TV Shows} # Used when library_id is not set
-    timeout: ${PLEX_TIMEOUT:-15}     # HTTP timeout in seconds
-    force: ${PLEX_FORCE:-false}      # Force all updates even if unchanged
-    dry_run: ${PLEX_SYNC_DRY_RUN:-false} # Log only, no Plex writes
-    sports: []                       # Limit to specific sport ids; env PLEX_SPORTS=foo,bar
-    scan_wait: ${PLEX_SCAN_WAIT:-5}  # Seconds to wait after triggering library scan (0 to skip)
-    # Features: automatic library scan trigger, retry with backoff, rate limiting,
-    # field locking, fingerprint-based change detection, first-time sync detection
+    library_id: ${PLEX_LIBRARY_ID:-}
+    library_name: ${PLEX_LIBRARY_NAME:-TV Shows}
+    timeout: ${PLEX_TIMEOUT:-15}
+    force: ${PLEX_FORCE:-false}
+    dry_run: ${PLEX_SYNC_DRY_RUN:-false}
+    sports: []
+    scan_wait: ${PLEX_SCAN_WAIT:-5}
 
   ####################################################################
   # DEFAULT DESTINATION TEMPLATES
   ####################################################################
-  # These templates are used for every sport unless overridden under that sport's `destination` block.
   destination:
-    root_template: "{show_title}" # Top-level folder pattern for each sport/show.
-    season_dir_template: "{season_number:02d} {season_title}" # Sub-folder per season or round (zero-padded for ordering).
-    episode_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}" # Final filename.
+    root_template: "{show_title}"
+    season_dir_template: "{season_number:02d} {season_title}"
+    episode_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
 
 
 ######################################################################
 # Pattern Sets - reusable filename matchers grouped by sport
+######################################################################
+# Built-in pattern templates load automatically from `pattern_templates.yaml`.
+# You don't need to define anything here unless adding custom patterns.
 #
-# Each entry is a list of regex-driven matchers. Captured groups feed into
-# `season_selector` and `episode_selector`. Built-in templates live in
-# `pattern_templates.yaml` and are referenced from `sports` via the
-# `pattern_sets` list.
-######################################################################
+# Available built-in sets: formula1, formula_e, indycar, motogp, moto2,
+# moto3, world_superbike, world_supersport, isle_of_man_tt, ufc, nfl,
+# nba, nhl, premier_league, uefa_champions_league, figure_skating_grand_prix
 
-pattern_sets:
-  # Built-in pattern templates load automatically from `pattern_templates.yaml`.
-  # Available names: formula1, formula_e, indycar, motogp, moto2, moto3, world_superbike, world_supersport, isle_of_man_tt, football, premier_league, ufc, uefa_champions_league, nba, nhl, figure_skating_grand_prix.
-  # Add custom sets below if you need overrides or extra matchers.
-  # Example:
-  #   my_custom_pack:
-  #     - description: Custom fallback matcher
-  #       regex: >-
-  #         (?i)^Example\.(?P<year>\d{4})\.(?P<session>.+)$
-  #       season_selector:
-  #         mode: round
-  #         group: year
-  #       episode_selector:
-  #         group: session
-#         default_value: "Main Card"   # Optional fallback when the regex omits a session.
+pattern_sets: {}
+  # Add custom pattern sets if needed:
+  # my_custom_sport:
+  #   - description: Custom matcher
+  #     regex: >-
+  #       (?i)^Example\.(?P<year>\d{4})\.(?P<session>.+)$
+  #     season_selector:
+  #       mode: round
+  #       group: year
+  #     episode_selector:
+  #       group: session
+
 
 ######################################################################
-# Sports - tie pattern sets to TheTVSportsDB shows
+# Sports - Override default settings or add custom sports
+######################################################################
+# Most users don't need to define anything here! All supported sports
+# are enabled by default with the correct source_globs, pattern_sets,
+# and TVSportsDB show_slugs.
 #
-# Each sport declares:
-#   * `show_slug` - TheTVSportsDB API slug for the show (REQUIRED)
-#   * `source_globs` to pick up matching downloads.
-#   * `pattern_sets` to pull in built-in matchers (or `file_patterns` for inline setups).
-#   * Optional `season_overrides` for per-season configuration.
-#   * Optional `quality_profile` to override global quality settings for this sport.
+# Use this section only to:
+#   1. Override settings for a specific sport (e.g., custom quality profile)
+#   2. Add a custom sport not in the defaults
+#   3. Replace a default sport with different variants/slugs
+#
+# To disable a sport, use `disabled_sports` in settings instead.
 ######################################################################
 
-sports:
-  - id: formula1
-    name: Formula 1
-    enabled: true
+sports: []
+  # Example: Override F1 with custom quality preferences
+  # - id: formula1
+  #   name: Formula 1
+  #   pattern_sets:
+  #     - formula1
+  #   quality_profile:
+  #     enabled: true
+  #     scoring:
+  #       release_group:
+  #         mwr: 100
+  #         smcgill1969: 80
+  #         verum: 60
+  #     cutoff: 600
+  #   variants:
+  #     - year: 2025
+  #       show_slug: "formula-1-2025"
+  #       season_overrides:
+  #         Pre-Season Testing:
+  #           season_number: 0
+  #           round: 0
+  #     - year: 2026
+  #       show_slug: "formula-1-2026"
+  #       season_overrides:
+  #         Pre-Season Testing:
+  #           season_number: 0
+  #           round: 0
 
-    # Filenames that should be considered for Formula 1 processing.
-    source_globs:
-      - "Formula.1.*"
-      - "Formula1.*"
-      - "Formula1 *"
-      - "Formula 1 *"
-      - "formula1.*"
-      - "formula1 *"
-      - "formula 1 *"
-
-    # Use the built-in Formula 1 pattern template.
-    pattern_sets:
-      - formula1
-
-    # Per-sport quality profile override (optional)
-    # This merges with the global quality_profile - sport values take precedence.
-    # Uncomment to enable F1-specific quality preferences:
-    # quality_profile:
-    #   enabled: true
-    #   scoring:
-    #     release_group:      # F1 community prefers certain release groups
-    #       mwr: 100          # MWR releases are highly valued
-    #       smcgill1969: 80
-    #       verum: 60
-    #       sh0ww: 50
-    #   cutoff: 600           # Only stop at 4K + preferred group
-
-    # Per-season variants with different show slugs
-    variants:
-      - year: 2025
-        show_slug: "formula-1-2025"
-        season_overrides:
-          Pre-Season Testing:
-            season_number: 0
-            round: 0
-      - year: 2026
-        show_slug: "formula-1-2026"
-        season_overrides:
-          Pre-Season Testing:
-            season_number: 0
-            round: 0
-
-  - id: formula_e
-    name: Formula E
-    enabled: true
-
-    source_globs:
-      - "FormulaE.*"
-      - "FormulaE *"
-      - "Formula.E.*"
-      - "Formula E *"
-      - "formulae.*"
-      - "formulae *"
-      - "formula.e.*"
-      - "formula e *"
-
-    pattern_sets:
-      - formula_e
-
-    variants:
-      - year: 2025
-        show_slug: "formula-e-2024-2025"
-      - year: 2026
-        show_slug: "formula-e-2025-2026"
-
-  - id: indycar
-    name: NTT IndyCar Series
-    enabled: true
-
-    source_globs:
-      - "IndyCar.*"
-      - "IndyCar *"
-      - "IndyCar.Series.*"
-      - "IndyCar Series *"
-      - "indycar.*"
-      - "indycar *"
-      - "indycar.series.*"
-      - "indycar series *"
-
-    pattern_sets:
-      - indycar
-
-    variants:
-      - year: 2025
-        show_slug: "ntt-indycar-series-2025"
-      - year: 2026
-        show_slug: "ntt-indycar-series-2026"
-
-  - id: motogp
-    name: MotoGP
-    enabled: true
-
-    source_globs:
-      - "MotoGP.*"
-      - "MotoGP *"
-      - "motogp.*"
-      - "motogp *"
-
-    # Use the built-in MotoGP pattern template.
-    pattern_sets:
-      - motogp
-
-    variants:
-      - year: 2025
-        show_slug: "motogp-2025"
-      - year: 2024
-        show_slug: "motogp-2024"
-      - year: 2023
-        show_slug: "motogp-2023"
-
-  - id: moto2
-    name: Moto2
-    enabled: true
-
-    source_globs:
-      - "Moto2.*"
-      - "Moto2 *"
-      - "moto2.*"
-      - "moto2 *"
-
-    # Use the built-in Moto2 pattern template.
-    pattern_sets:
-      - moto2
-
-    variants:
-      - year: 2025
-        show_slug: "moto2-2025"
-
-  - id: moto3
-    name: Moto3
-    enabled: true
-
-    source_globs:
-      - "Moto3.*"
-      - "Moto3 *"
-      - "moto3.*"
-      - "moto3 *"
-
-    # Use the built-in Moto3 pattern template.
-    pattern_sets:
-      - moto3
-
-    variants:
-      - year: 2025
-        show_slug: "moto3-2025"
-
-  - id: world_supersport
-    name: World Supersport
-    enabled: true
-
-    source_globs:
-      - "WSSP.*"
-      - "WSSP *"
-      - "World.Supersport.*"
-      - "World Supersport *"
-      - "world.supersport.*"
-      - "world supersport *"
-
-    pattern_sets:
-      - world_supersport
-
-    variants:
-      - year: 2025
-        show_slug: "world-supersport-2025"
-      - year: 2024
-        show_slug: "world-supersport-2024"
-      - year: 2023
-        show_slug: "world-supersport-2023"
-
-  - id: world_superbike
-    name: World Superbike
-    enabled: true
-
-    source_globs:
-      - "WSBK.*"
-      - "WSBK *"
-      - "wsbk.*"
-      - "wsbk *"
-      - "World.Superbike.*"
-      - "World Superbike *"
-      - "WorldSuperbike.*"
-      - "WorldSuperbike *"
-      - "world.superbike.*"
-      - "world superbike *"
-
-    pattern_sets:
-      - world_superbike
-
-    variants:
-      - year: 2025
-        show_slug: "world-superbike-2025"
-      - year: 2024
-        show_slug: "world-superbike-2024"
-      - year: 2023
-        show_slug: "world-superbike-2023"
-
-  - id: isle_of_man_tt
-    name: Isle of Man TT
-    enabled: true
-    show_slug: "isle-of-man-tt"
-
-    source_globs:
-      - "Isle*TT*"
-      - "isle*tt*"
-      - "IOMTT*"
-      - "iomtt*"
-
-    # Use the built-in Isle of Man TT template.
-    pattern_sets:
-      - isle_of_man_tt
-
-    destination:
-      season_dir_template: "{season_title}"
-      episode_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
-
-  - id: nfl
-    name: NFL
-    enabled: true
-    show_slug: "nfl-2025"
-
-    source_globs:
-      - "NFL.*"
-      - "NFL *"
-      - "nfl.*"
-      - "nfl *"
-
-    # Use the built-in NFL template (pattern set name `nfl`).
-    pattern_sets:
-      - nfl
-
-  - id: nba
-    name: NBA
-    enabled: true
-    show_slug: "nba-2025-2026"
-
-    source_globs:
-      - "NBA.*"
-      - "NBA *"
-      - "nba.*"
-      - "nba *"
-
-    # Use the built-in NBA template (pattern set name `nba`).
-    pattern_sets:
-      - nba
-
-  - id: nhl
-    name: NHL
-    enabled: true
-    show_slug: "nhl-2025-2026"
-
-    # Built-in team alias map normalizes abbreviations (e.g., "NJD", "Caps").
-    team_alias_map: nhl
-
-    source_globs:
-      - "NHL.*"
-      - "NHL *"
-      - "nhl.*"
-      - "nhl *"
-
-    pattern_sets:
-      - nhl
-
-  - id: uefa_champions_league
-    name: UEFA Champions League
-    enabled: true
-    show_slug: "uefa-champions-league-2025-2026"
-
-    source_globs:
-      - "UEFA Champions League *"
-      - "UEFA Champions League*"
-      - "UEFA.Champions.League.*"
-      - "UEFA.Champions.League*"
-      - "UEFA-Champions-League-*"
-      - "UCL.*"
-      - "UCL *"
-
-    pattern_sets:
-      - uefa_champions_league
-
-  - id: figure_skating_grand_prix
-    name: Figure Skating Grand Prix
-    enabled: true
-    show_slug: "figure-skating-grand-prix-2025"
-
-    source_globs:
-      - "Figure Skating Grand Prix *"
-      - "Figure Skating Grand Prix*"
-      - "Figure.Skating.Grand.Prix.*"
-      - "Figure.Skating.Grand.Prix*"
-      - "Figure Skating * Grand Prix *"
-
-    pattern_sets:
-      - figure_skating_grand_prix
-
-  - id: premier_league
-    name: Premier League
-    enabled: true
-    show_slug: "english-premier-league-2025-2026"
-
-    # Built-in alias map handles common shorthand (e.g., "Man City", "Spurs").
-    team_alias_map: premier_league
-
-    source_globs:
-      - "EPL.*"
-      - "EPL *"
-      - "epl.*"
-      - "epl *"
-      - "Premier.League.*"
-      - "Premier League *"
-      - "premier.league.*"
-      - "premier league *"
-      - "English.Premier.League.*"
-      - "English Premier League *"
-
-    # Use the built-in Premier League pattern template.
-    pattern_sets:
-      - premier_league
-
-  - id: ufc
-    name: UFC
-    enabled: true
-
-    variants:
-      - year: 2025
-        show_slug: "ufc-2025"
-      - year: 2024
-        show_slug: "ufc-2024"
-
-    source_globs:
-      - "UFC.*"
-      - "UFC *"
-      - "ufc.*"
-      - "ufc *"
-
-    pattern_sets:
-      - ufc
+  # Example: Add a custom sport not in defaults
+  # - id: my_custom_sport
+  #   name: My Custom Sport
+  #   show_slug: "my-custom-sport-2025"
+  #   source_globs:
+  #     - "MyCustomSport.*"
+  #   pattern_sets:
+  #     - my_custom_sport  # Reference pattern set defined above

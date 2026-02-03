@@ -20,6 +20,7 @@ def test_load_config_expands_variants_and_merges_patterns(tmp_path) -> None:
           source_dir: "{tmp_path / "source"}"
           destination_dir: "{tmp_path / "dest"}"
           cache_dir: "{tmp_path / "cache"}"
+          use_default_sports: false
 
         pattern_sets:
           shared:
