@@ -6,6 +6,7 @@ Handles Plex integration settings.
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 from nicegui import ui
@@ -19,6 +20,16 @@ from ...components.settings import (
 
 if TYPE_CHECKING:
     from ...settings_state.settings_state import SettingsFormState
+
+
+def _get_env_placeholder(env_var: str, default: str, mask: bool = False) -> str:
+    """Get placeholder text showing env var value if set."""
+    value = os.environ.get(env_var)
+    if value:
+        if mask:
+            return f"From {env_var}: {'*' * min(8, len(value))}"
+        return f"From {env_var}: {value}"
+    return default
 
 
 def integrations_tab(state: SettingsFormState) -> None:
@@ -61,6 +72,15 @@ def _render_plex_section(state: SettingsFormState) -> None:
                     on_change=on_enable_change,
                 )
 
+                # Check for env vars
+                has_plex_env = any(os.environ.get(v) for v in ["PLEX_URL", "PLEX_TOKEN"])
+                if has_plex_env and not state.get_value("settings.plex_metadata_sync.url"):
+                    with ui.row().classes("w-full items-center gap-2 p-2 rounded bg-blue-50 dark:bg-blue-900/20"):
+                        ui.icon("info").classes("text-blue-500")
+                        ui.label("Plex settings detected from environment variables").classes(
+                            "text-sm text-blue-700 dark:text-blue-300"
+                        )
+
                 with ui.column().classes("w-full gap-4 mt-4"):
                     with ui.row().classes("w-full gap-4"):
                         settings_input(
@@ -68,7 +88,7 @@ def _render_plex_section(state: SettingsFormState) -> None:
                             "settings.plex_metadata_sync.url",
                             "Plex URL",
                             description="URL of your Plex server",
-                            placeholder="http://localhost:32400",
+                            placeholder=_get_env_placeholder("PLEX_URL", "http://localhost:32400"),
                             disabled=not plex_enabled,
                             width="flex-1",
                         )
@@ -77,7 +97,7 @@ def _render_plex_section(state: SettingsFormState) -> None:
                             "settings.plex_metadata_sync.token",
                             "Plex Token",
                             description="Your Plex authentication token",
-                            placeholder="xxxxxxxxxxxx",
+                            placeholder=_get_env_placeholder("PLEX_TOKEN", "xxxxxxxxxxxx", mask=True),
                             input_type="password",
                             disabled=not plex_enabled,
                             width="w-48",
@@ -89,7 +109,7 @@ def _render_plex_section(state: SettingsFormState) -> None:
                             "settings.plex_metadata_sync.library_id",
                             "Library ID",
                             description="Numeric ID of the library to sync",
-                            placeholder="1",
+                            placeholder=_get_env_placeholder("PLEX_LIBRARY_ID", "1"),
                             disabled=not plex_enabled,
                             width="w-32",
                         )
@@ -98,7 +118,7 @@ def _render_plex_section(state: SettingsFormState) -> None:
                             "settings.plex_metadata_sync.library_name",
                             "Library Name",
                             description="Alternative: use library name instead of ID",
-                            placeholder="Sports",
+                            placeholder=_get_env_placeholder("PLEX_LIBRARY_NAME", "Sports"),
                             disabled=not plex_enabled,
                             width="flex-1",
                         )
