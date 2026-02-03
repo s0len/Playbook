@@ -307,7 +307,7 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
             return
 
         try:
-            from playbook.gui.utils.config_persistence import save_sport_source_globs
+            from playbook.gui.config_utils.config_persistence import save_sport_source_globs
 
             sport_config = get_sport_config()
             if not sport_config:
