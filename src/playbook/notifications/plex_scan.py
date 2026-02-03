@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -20,31 +21,85 @@ class PlexScanTarget(NotificationTarget):
 
     Configuration:
         url: Plex server URL (e.g., http://192.168.1.100:32400)
+        url_env: Environment variable name for Plex URL (default: PLEX_URL)
         token: Plex authentication token
+        token_env: Environment variable name for Plex token (default: PLEX_TOKEN)
         library_id: Library section ID to scan (optional if library_name provided)
+        library_id_env: Environment variable name for library ID (default: PLEX_LIBRARY_ID)
         library_name: Library name to scan (optional if library_id provided)
+        library_name_env: Environment variable name for library name (default: PLEX_LIBRARY_NAME)
         timeout: Request timeout in seconds (default: 15)
         rewrite: Path rewrite rules (same format as Autoscan)
+
+    Environment variables are used as fallbacks if the config values are not set.
+    By default, PLEX_URL, PLEX_TOKEN, PLEX_LIBRARY_ID, and PLEX_LIBRARY_NAME are checked.
     """
 
     name = "plex_scan"
 
     def __init__(self, config: dict[str, Any], *, destination_dir: Path) -> None:
         self._destination_dir = destination_dir
-        self._url = self._normalize_url(config.get("url"))
-        self._token = config.get("token")
-        self._library_id = config.get("library_id")
-        self._library_name = config.get("library_name")
+
+        # URL: config value -> custom env var -> default env var
+        self._url = self._resolve_value(
+            config.get("url"),
+            config.get("url_env"),
+            "PLEX_URL",
+        )
+
+        # Token: config value -> custom env var -> default env var
+        self._token = self._resolve_value(
+            config.get("token"),
+            config.get("token_env"),
+            "PLEX_TOKEN",
+        )
+
+        # Library ID: config value -> custom env var -> default env var
+        self._library_id = self._resolve_value(
+            config.get("library_id"),
+            config.get("library_id_env"),
+            "PLEX_LIBRARY_ID",
+        )
+
+        # Library name: config value -> custom env var -> default env var
+        self._library_name = self._resolve_value(
+            config.get("library_name"),
+            config.get("library_name_env"),
+            "PLEX_LIBRARY_NAME",
+        )
+
         self._timeout = self._parse_timeout(config.get("timeout"))
         self._rewrite_rules = self._build_rewrite_rules(config.get("rewrite"))
         self._resolved_library_id: str | None = None
 
     @staticmethod
-    def _normalize_url(url: Any) -> str | None:
-        if not url:
-            return None
-        url_str = str(url).strip().rstrip("/")
-        return url_str if url_str else None
+    def _resolve_value(
+        config_value: Any,
+        custom_env_var: str | None,
+        default_env_var: str,
+    ) -> str | None:
+        """Resolve a value from config or environment variables.
+
+        Priority: config_value -> custom_env_var -> default_env_var
+        """
+        # Direct config value takes priority
+        if config_value:
+            value = str(config_value).strip()
+            if value:
+                return value
+
+        # Try custom env var if specified
+        if custom_env_var:
+            env_value = os.environ.get(custom_env_var.strip())
+            if env_value:
+                return env_value.strip()
+
+        # Fall back to default env var
+        env_value = os.environ.get(default_env_var)
+        if env_value:
+            return env_value.strip()
+
+        return None
 
     @staticmethod
     def _parse_timeout(value: Any) -> float:
