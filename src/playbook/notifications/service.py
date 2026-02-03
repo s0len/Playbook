@@ -276,12 +276,14 @@ class NotificationService:
                 else:
                     LOGGER.warning("Skipped Autoscan target because url was not provided.")
             elif target_type in ("plex_scan", "plex"):
-                url = entry.get("url")
-                token = entry.get("token")
-                if url and token:
-                    target = PlexScanTarget(entry, destination_dir=destination_dir)
-                else:
-                    LOGGER.warning("Skipped Plex scan target because url or token was not provided.")
+                # PlexScanTarget handles env var fallbacks internally
+                target = PlexScanTarget(entry, destination_dir=destination_dir)
+                if not target.enabled():
+                    LOGGER.warning(
+                        "Plex scan target disabled: url/token not found in config or env vars "
+                        "(PLEX_URL, PLEX_TOKEN)"
+                    )
+                    target = None
             elif target_type == "email":
                 target = EmailTarget(entry)
             else:
