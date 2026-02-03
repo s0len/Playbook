@@ -7,7 +7,6 @@ the configured season selector mode (round, key, title, sequential, date, week).
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from ..config import SeasonSelector
 from ..models import Season, Show

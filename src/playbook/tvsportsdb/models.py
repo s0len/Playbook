@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
-
-T = TypeVar("T")
 
 
 class EpisodeResponse(BaseModel):
@@ -68,7 +65,7 @@ class TeamAliasResponse(BaseModel):
     sport_slug: str | None = None
 
 
-class PaginatedResponse(BaseModel, Generic[T]):
+class PaginatedResponse[T](BaseModel):
     """Generic paginated API response wrapper."""
 
     model_config = ConfigDict(extra="ignore")

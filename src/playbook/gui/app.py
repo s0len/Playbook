@@ -17,7 +17,7 @@ from nicegui import app, ui
 
 from .components.header import header
 from .log_handler import install_gui_log_handler
-from .pages import config, dashboard, logs, settings, sports
+from .pages import dashboard, logs, settings, sports
 from .state import gui_state
 from .styles import setup_page_styles
 from .theme import apply_theme
