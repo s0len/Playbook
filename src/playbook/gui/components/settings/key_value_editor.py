@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 from nicegui import ui
 
 if TYPE_CHECKING:
-    from playbook.gui.state.settings_state import SettingsFormState
+    from playbook.gui.settings_state.settings_state import SettingsFormState
 
 
 def key_value_editor(

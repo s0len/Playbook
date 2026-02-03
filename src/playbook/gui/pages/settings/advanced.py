@@ -18,7 +18,7 @@ from nicegui import ui
 from ...components.settings import settings_card
 
 if TYPE_CHECKING:
-    from ...state.settings_state import SettingsFormState
+    from ...settings_state.settings_state import SettingsFormState
 
 LOGGER = logging.getLogger(__name__)
 

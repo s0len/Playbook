@@ -14,7 +14,7 @@ from pathlib import Path
 from nicegui import ui
 
 from ...state import gui_state
-from ...state.settings_state import SETTINGS_TABS, SettingsFormState
+from ...settings_state.settings_state import SETTINGS_TABS, SettingsFormState
 from .advanced import advanced_tab
 from .general import general_tab
 from .integrations import integrations_tab

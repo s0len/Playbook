@@ -18,7 +18,7 @@ from ...components.settings import (
 from ...components.settings.key_value_editor import quality_score_editor
 
 if TYPE_CHECKING:
-    from ...state.settings_state import SettingsFormState
+    from ...settings_state.settings_state import SettingsFormState
 
 
 # Default resolution scores

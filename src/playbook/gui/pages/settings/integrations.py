@@ -19,7 +19,7 @@ from ...components.settings import (
 )
 
 if TYPE_CHECKING:
-    from ...state.settings_state import SettingsFormState
+    from ...settings_state.settings_state import SettingsFormState
 
 
 def integrations_tab(state: SettingsFormState) -> None:

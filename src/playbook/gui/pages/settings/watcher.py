@@ -19,7 +19,7 @@ from ...components.settings import (
 from ...components.settings.list_editor import glob_pattern_editor
 
 if TYPE_CHECKING:
-    from ...state.settings_state import SettingsFormState
+    from ...settings_state.settings_state import SettingsFormState
 
 
 def watcher_tab(state: SettingsFormState) -> None:
