@@ -1,3 +1,50 @@
+## [2.7.0] - 2026-02-03
+
+### Added
+- **All TVSportsDB sports enabled by default** - No configuration required! Playbook now automatically enables all 16 supported sports (26 variants including yearly versions). Just set your directories and go.
+- New `use_default_sports` setting (default: `true`) - Toggle all default sports on/off
+- New `disabled_sports` setting - List of sport IDs to exclude from defaults (e.g., `disabled_sports: [formula_e, moto2]`)
+- Default sports registry in `pattern_templates.yaml` with all sport configurations
+- Source globs automatically inherited from pattern templates - updates benefit all users immediately
+
+### Changed
+- Simplified sample config to demonstrate minimal configuration approach
+- User-defined sports now override defaults (define a sport in `sports:` to replace its default)
+- Pattern templates now include `default_sports` section with complete sport definitions
+
+### Default Sports
+| Category | Sports |
+|----------|--------|
+| Motorsport | Formula 1, Formula E, IndyCar, MotoGP, Moto2, Moto3, World Superbike, World Supersport, Isle of Man TT |
+| Combat Sports | UFC |
+| North American | NFL, NBA, NHL |
+| Football (Soccer) | Premier League, UEFA Champions League |
+| Figure Skating | Figure Skating Grand Prix |
+
+## [2.6.1] - 2026-01-29
+
+### Fixed
+- Added UCL abbreviated format patterns for UEFA Champions League (e.g., `UCL.2026.01.28.MD8.Liverpool.vs.Qarabag.1080p50.x264.EN.TNT.mp4`)
+
+## [2.6.0] - 2026-01-29
+
+### Added
+- **Enhanced quality scoring system** with new attributes:
+  - Frame rate scoring (critical for sports: 60fps=100, 50fps=75, 30fps=25)
+  - Bit depth scoring (10-bit=25, 8-bit=0)
+  - Audio format scoring (Atmos=40, TrueHD=35, DTS-HD=30, DDP5.1=25)
+  - Broadcaster scoring (F1TV=50, Sky=30, ESPN=30, etc.)
+  - Codec scoring (x265=25, x264=0, xvid=-25)
+- Quality extraction patterns for frame rate (60fps, 50fps, 1080p50, etc.)
+- Quality extraction patterns for bit depth (10bit, 8bit)
+- Quality extraction patterns for audio formats (Atmos, TrueHD, DTS-HD, etc.)
+- Quality extraction patterns for broadcasters (F1TV, Sky, ESPN, TNT, CBS, FOX, NBC)
+- GUI settings page for quality scoring configuration
+
+### Changed
+- Resolution pattern matching improved to handle embedded frame rates (e.g., "1080p50")
+- Broadcaster names (CBS, FOX, NBC) no longer detected as release groups
+
 ## [1.4.2] - 2026-01-07
 
 ### ✨ New Features

@@ -28,10 +28,14 @@ The same YAML files that power matching also feed Kometa to set posters, summari
 
 ## Quickstart
 
+**All sports are enabled by default!** Just configure your directories:
+
 1. Copy `config/playbook.sample.yaml` to `playbook.yaml`
-2. Set `SOURCE_DIR` (where downloads land), `DESTINATION_DIR` (Plex library), and enable your sports
+2. Set `SOURCE_DIR` (where downloads land) and `DESTINATION_DIR` (Plex library)
 3. Run a dry-run to test: `playbook process --dry-run`
 4. Let it run automatically with `playbook watch` or Docker
+
+That's it! Playbook automatically processes Formula 1, MotoGP, UFC, NFL, NBA, NHL, Premier League, Champions League, and more. Use `disabled_sports` to exclude any sports you don't want.
 
 See [Getting Started](getting-started.md) for detailed installation (Docker, Python, Kubernetes) or run `make docs-serve` for local docs at `http://127.0.0.1:8000`.
 

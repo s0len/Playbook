@@ -12,12 +12,47 @@ Every Playbook deployment runs from a single YAML file. Start by copying `config
 | `dry_run` | When `true`, logs intent but skips filesystem writes. | `false` |
 | `skip_existing` | Leave destination files untouched unless a higher-priority release arrives. | `true` |
 | `link_mode` | Default link behavior: `hardlink`, `copy`, or `symlink`. | `hardlink` |
+| `use_default_sports` | Auto-enable all built-in sports. Set `false` to only use explicitly defined sports. | `true` |
+| `disabled_sports` | List of sport base IDs to exclude from defaults (e.g., `[formula_e, moto2]`). | `[]` |
 | `file_watcher.enabled` | Keeps Playbook running and reacts to filesystem events. | `false` |
 | `file_watcher.paths` | Directories to observe; defaults to `source_dir` when empty. | `[]` |
 | `file_watcher.include` / `ignore` | Glob filters to allow/skip events (e.g., ignore `*.part`). | `[]` / `["*.part","*.tmp"]` |
 | `file_watcher.debounce_seconds` | Minimum seconds between watcher-triggered runs. | `5` |
 | `file_watcher.reconcile_interval` | Forces a full scan every _N_ seconds even if no events arrive. | `900` |
 | `destination.*` | Default templates for root folder, season folder, and filename. | See sample |
+
+### Default Sports
+
+When `use_default_sports: true` (the default), Playbook automatically enables these sports:
+
+| Category | Sports |
+|----------|--------|
+| **Motorsport** | Formula 1, Formula E, IndyCar, MotoGP, Moto2, Moto3, World Superbike, World Supersport, Isle of Man TT |
+| **Combat Sports** | UFC |
+| **North American** | NFL, NBA, NHL |
+| **Football (Soccer)** | Premier League, UEFA Champions League |
+| **Figure Skating** | Figure Skating Grand Prix |
+
+To disable specific sports:
+
+```yaml
+settings:
+  disabled_sports:
+    - formula_e      # Disable Formula E
+    - moto2          # Disable Moto2
+    - moto3          # Disable Moto3
+```
+
+To disable all defaults and only use your explicit sports:
+
+```yaml
+settings:
+  use_default_sports: false
+
+sports:
+  - id: formula1
+    # ... your custom config
+```
 
 ### Notifications & Autoscan
 
@@ -92,6 +127,13 @@ settings:
 This section is optional—omit it entirely to use defaults.
 
 ## 3. Sport Entries
+
+!!! tip "Most users don't need this section"
+    All supported sports are enabled by default with correct configurations. Only define sports here if you need to:
+
+    - Override settings for a specific sport (e.g., custom quality profile)
+    - Add a custom sport not in the defaults
+    - Replace a default sport with different variants/slugs
 
 Each sport links to a show in TheTVSportsDB via `show_slug` and defines detection filters and pattern packs:
 

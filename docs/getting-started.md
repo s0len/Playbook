@@ -4,11 +4,13 @@ This guide walks you through installing Playbook, configuring your first sport, 
 
 ## Quick Overview
 
-Every deployment needs three things:
+**All sports are enabled by default!** Every deployment needs just three things:
 
-1. **A config file** (`playbook.yaml`) defining which sports to process and how to match them
+1. **A config file** (`playbook.yaml`) with your directory paths
 2. **Three directories**: source (downloads), destination (Plex library), and cache (metadata storage)
 3. **Network access** to TheTVSportsDB API (metadata source for show/season/episode information)
+
+Playbook automatically processes Formula 1, MotoGP, UFC, NFL, NBA, NHL, Premier League, Champions League, Figure Skating, and more. No need to configure individual sports unless you want to customize or disable them.
 
 All deployment methods use the same config schema and produce identical folder layouts in your Plex library.
 
@@ -24,8 +26,18 @@ Then:
 
 1. Copy `config/playbook.sample.yaml` to your preferred location (Docker defaults to `/config/playbook.yaml`)
 2. Edit the config to set `SOURCE_DIR`, `DESTINATION_DIR`, and `CACHE_DIR` (or provide them as environment variables)
-3. Enable at least one sport in the `sports` section
+3. _(Optional)_ Disable sports you don't want using `disabled_sports: [sport_id, ...]`
 4. Validate your config: `playbook validate-config --config playbook.yaml --diff-sample`
+
+!!! tip "Minimal Configuration"
+    With default sports enabled, your config can be as simple as:
+    ```yaml
+    settings:
+      source_dir: /downloads/sport
+      destination_dir: /library/sport
+      cache_dir: /cache/playbook
+    ```
+    All 16 sports (26 variants) will be processed automatically!
 
 ## Installation Methods
 
