@@ -11,10 +11,13 @@ from playbook.match_handler import (
     alias_candidates,
     cleanup_old_destination,
     episode_cache_key,
+    format_quality_summary,
     season_cache_key,
     should_overwrite_existing,
     specificity_score,
 )
+from playbook.quality import QualityInfo
+from playbook.quality_scorer import QualityScore
 from playbook.models import ProcessingStats
 
 
@@ -810,3 +813,156 @@ class TestCleanupOldDestination:
 
         # Should always be removed from dict
         assert source_key not in stale_destinations
+
+
+class TestFormatQualitySummary:
+    """Test format_quality_summary function."""
+
+    def test_returns_none_when_no_score(self) -> None:
+        """Test that None is returned when quality_score is None."""
+        quality_info = QualityInfo(resolution="1080p", source="webdl")
+        assert format_quality_summary(quality_info, None) is None
+
+    def test_formats_resolution_and_source(self) -> None:
+        """Test formatting with resolution and source."""
+        quality_info = QualityInfo(resolution="1080p", source="webdl")
+        quality_score = QualityScore(
+            total=390,
+            resolution_score=300,
+            source_score=90,
+        )
+        result = format_quality_summary(quality_info, quality_score)
+        assert result == "390 (1080p: 300, webdl: 90)"
+
+    def test_formats_full_quality_info(self) -> None:
+        """Test formatting with all quality attributes."""
+        quality_info = QualityInfo(
+            resolution="1080p",
+            source="webdl",
+            release_group="mwr",
+        )
+        quality_score = QualityScore(
+            total=440,
+            resolution_score=300,
+            source_score=90,
+            release_group_score=50,
+        )
+        result = format_quality_summary(quality_info, quality_score)
+        assert result == "440 (1080p: 300, webdl: 90, mwr: 50)"
+
+    def test_formats_with_proper_bonus(self) -> None:
+        """Test formatting with PROPER bonus."""
+        quality_info = QualityInfo(
+            resolution="1080p",
+            source="webdl",
+            is_proper=True,
+        )
+        quality_score = QualityScore(
+            total=415,
+            resolution_score=300,
+            source_score=90,
+            proper_bonus=25,
+        )
+        result = format_quality_summary(quality_info, quality_score)
+        assert result == "415 (1080p: 300, webdl: 90, proper: +25)"
+
+    def test_formats_with_repack_bonus(self) -> None:
+        """Test formatting with REPACK bonus."""
+        quality_info = QualityInfo(
+            resolution="1080p",
+            source="webdl",
+            is_repack=True,
+        )
+        quality_score = QualityScore(
+            total=410,
+            resolution_score=300,
+            source_score=90,
+            repack_bonus=20,
+        )
+        result = format_quality_summary(quality_info, quality_score)
+        assert result == "410 (1080p: 300, webdl: 90, repack: +20)"
+
+    def test_formats_with_hdr_bonus(self) -> None:
+        """Test formatting with HDR bonus."""
+        quality_info = QualityInfo(
+            resolution="2160p",
+            source="webdl",
+            hdr_format="hdr10",
+        )
+        quality_score = QualityScore(
+            total=540,
+            resolution_score=400,
+            source_score=90,
+            hdr_bonus=50,
+        )
+        result = format_quality_summary(quality_info, quality_score)
+        assert result == "540 (2160p: 400, webdl: 90, hdr10: +50)"
+
+    def test_formats_with_all_bonuses(self) -> None:
+        """Test formatting with all bonus types."""
+        quality_info = QualityInfo(
+            resolution="1080p",
+            source="webdl",
+            release_group="mwr",
+            is_proper=True,
+            is_repack=True,
+            hdr_format="hdr",
+        )
+        quality_score = QualityScore(
+            total=535,
+            resolution_score=300,
+            source_score=90,
+            release_group_score=50,
+            proper_bonus=25,
+            repack_bonus=20,
+            hdr_bonus=50,
+        )
+        result = format_quality_summary(quality_info, quality_score)
+        assert result == "535 (1080p: 300, webdl: 90, mwr: 50, proper: +25, repack: +20, hdr: +50)"
+
+    def test_skips_zero_score_components(self) -> None:
+        """Test that components with zero score are skipped."""
+        quality_info = QualityInfo(
+            resolution="1080p",
+            source="webdl",
+            release_group="unknown_group",  # Not in scoring, should be 0
+        )
+        quality_score = QualityScore(
+            total=390,
+            resolution_score=300,
+            source_score=90,
+            release_group_score=0,  # Zero score, should be skipped
+        )
+        result = format_quality_summary(quality_info, quality_score)
+        assert result == "390 (1080p: 300, webdl: 90)"
+
+    def test_returns_total_only_when_all_components_zero(self) -> None:
+        """Test that only total is returned when all component scores are zero."""
+        quality_info = QualityInfo()  # No quality attributes
+        quality_score = QualityScore(
+            total=0,
+            resolution_score=0,
+            source_score=0,
+        )
+        result = format_quality_summary(quality_info, quality_score)
+        assert result is None  # Zero total should return None
+
+    def test_returns_total_only_for_non_zero_total_with_no_parts(self) -> None:
+        """Test that total is returned when there's a score but no identifiable parts."""
+        quality_info = QualityInfo()  # No quality attributes
+        quality_score = QualityScore(
+            total=100,  # Has a total but no breakdown
+            resolution_score=0,
+            source_score=0,
+        )
+        result = format_quality_summary(quality_info, quality_score)
+        assert result == "100"
+
+    def test_handles_none_quality_info(self) -> None:
+        """Test handling of None quality_info with valid score."""
+        quality_score = QualityScore(
+            total=300,
+            resolution_score=300,
+        )
+        result = format_quality_summary(None, quality_score)
+        assert result == "300"

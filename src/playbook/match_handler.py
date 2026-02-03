@@ -402,6 +402,50 @@ def cleanup_old_destination(
         stale_destinations.pop(source_key, None)
 
 
+def format_quality_summary(
+    quality_info: QualityInfo | None,
+    quality_score: QualityScore | None,
+) -> str | None:
+    """Format quality information into a human-readable summary string.
+
+    Args:
+        quality_info: Extracted quality attributes.
+        quality_score: Computed quality score with breakdown.
+
+    Returns:
+        A formatted string like "440 (1080p: 300, webdl: 90, mwr: 50)" or None if no info.
+    """
+    if quality_score is None:
+        return None
+
+    parts = []
+
+    # Resolution
+    if quality_info and quality_info.resolution and quality_score.resolution_score > 0:
+        parts.append(f"{quality_info.resolution}: {quality_score.resolution_score}")
+
+    # Source
+    if quality_info and quality_info.source and quality_score.source_score > 0:
+        parts.append(f"{quality_info.source}: {quality_score.source_score}")
+
+    # Release group
+    if quality_info and quality_info.release_group and quality_score.release_group_score > 0:
+        parts.append(f"{quality_info.release_group}: {quality_score.release_group_score}")
+
+    # Bonuses
+    if quality_score.proper_bonus > 0:
+        parts.append(f"proper: +{quality_score.proper_bonus}")
+    if quality_score.repack_bonus > 0:
+        parts.append(f"repack: +{quality_score.repack_bonus}")
+    if quality_score.hdr_bonus > 0:
+        hdr_label = quality_info.hdr_format if quality_info and quality_info.hdr_format else "hdr"
+        parts.append(f"{hdr_label}: +{quality_score.hdr_bonus}")
+
+    if parts:
+        return f"{quality_score.total} ({', '.join(parts)})"
+    return str(quality_score.total) if quality_score.total > 0 else None
+
+
 def handle_match(
     match: SportFileMatch,
     stats: ProcessingStats,
@@ -659,35 +703,28 @@ def handle_match(
                 event.event_type = "error"
                 return event, False, None, quality_info, quality_score_obj
 
-    # Log what we're about to do
-    logger.debug(
+    # Build processing details fields
+    quality_summary = format_quality_summary(quality_info, quality_score_obj)
+    action_desc = f"{link_mode} ({'replace existing' if replace_existing else 'new file'})"
+
+    # Log at INFO level with quality info when available
+    processed_fields: list[tuple[str, object]] = [
+        ("Source", match.source_path.name),
+        ("Destination", destination_display),
+    ]
+    if quality_summary:
+        processed_fields.append(("Quality", quality_summary))
+    if replace_existing and quality_upgrade_reason:
+        processed_fields.append(("Upgrade", f"Yes ({quality_upgrade_reason})"))
+    processed_fields.append(("Action", action_desc))
+
+    logger.info(
         render_fields_block(
-            "Processed",
-            {
-                "Action": "replace" if replace_existing else "link",
-                "Sport": match.sport.id,
-                "Season": match.context.get("season_title"),
-                "Session": match.context.get("session"),
-                "Dest": destination_display,
-                "Src": match.source_path.name,
-            },
+            "Processing Details",
+            processed_fields,
             pad_top=True,
         )
     )
-
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(
-            render_fields_block(
-                "Processing Details",
-                {
-                    "Source": match.source_path,
-                    "Destination": destination,
-                    "Link Mode": link_mode,
-                    "Replace": replace_existing,
-                },
-                pad_top=True,
-            )
-        )
 
     # Handle dry-run mode
     if dry_run:
