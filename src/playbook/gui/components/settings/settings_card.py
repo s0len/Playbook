@@ -41,25 +41,27 @@ def settings_card(
 
     with ui.card().classes(card_classes):
         if collapsible:
-            with (
+            expansion = (
                 ui.expansion(
                     text="",
                     value=default_expanded,
                 )
                 .classes("w-full")
                 .props("dense expand-separator")
-            ):
-                # Custom header
-                with ui.row().classes("w-full items-center gap-2").slot("header"):
-                    if icon:
-                        ui.icon(icon).classes("text-slate-500 dark:text-slate-400")
-                    with ui.column().classes("gap-0 flex-1"):
-                        with ui.row().classes("items-center gap-2"):
-                            ui.label(title).classes("text-lg font-semibold text-slate-700 dark:text-slate-200")
-                            if modified:
-                                ui.badge("Modified").props("color=warning").classes("text-xs")
-                        if description:
-                            ui.label(description).classes("text-sm text-slate-500 dark:text-slate-400")
+            )
+            with expansion:
+                # Custom header in the header slot
+                with expansion.add_slot("header"):
+                    with ui.row().classes("w-full items-center gap-2"):
+                        if icon:
+                            ui.icon(icon).classes("text-slate-500 dark:text-slate-400")
+                        with ui.column().classes("gap-0 flex-1"):
+                            with ui.row().classes("items-center gap-2"):
+                                ui.label(title).classes("text-lg font-semibold text-slate-700 dark:text-slate-200")
+                                if modified:
+                                    ui.badge("Modified").props("color=warning").classes("text-xs")
+                            if description:
+                                ui.label(description).classes("text-sm text-slate-500 dark:text-slate-400")
 
                 # Content area
                 with ui.column().classes("w-full gap-4 pt-2") as content:
