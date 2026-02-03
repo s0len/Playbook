@@ -21,7 +21,13 @@ NOTIFICATION_TYPES = {
         "label": "Discord",
         "icon": "chat",
         "fields": [
-            {"key": "webhook_url", "label": "Webhook URL", "type": "text", "required": True},
+            {
+                "key": "webhook_url",
+                "label": "Webhook URL",
+                "type": "text",
+                "placeholder": "https://discord.com/api/webhooks/...",
+            },
+            {"key": "webhook_env", "label": "Webhook Env Var", "type": "text", "placeholder": "DISCORD_WEBHOOK_URL"},
             {"key": "mentions", "label": "Mentions", "type": "text", "placeholder": "@user or @role"},
         ],
     },
@@ -119,9 +125,9 @@ def notification_target_editor(
         target_type = target.get("type", "webhook")
         type_config = NOTIFICATION_TYPES.get(target_type, NOTIFICATION_TYPES["webhook"])
 
-        with ui.card().classes("w-full glass-card"):
+        with ui.card().classes("w-full p-4"):
             # Header row with type and actions
-            with ui.row().classes("w-full items-center justify-between mb-2"):
+            with ui.row().classes("w-full items-center justify-between mb-3"):
                 with ui.row().classes("items-center gap-2"):
                     ui.icon(type_config["icon"]).classes("text-slate-500")
                     ui.label(type_config["label"]).classes("font-medium text-slate-700 dark:text-slate-200")
@@ -144,21 +150,19 @@ def notification_target_editor(
 
             # Target type selector
             if not disabled:
-                with ui.row().classes("w-full mb-2"):
 
-                    def on_type_change(e, i=idx) -> None:
-                        update_target_type(i, e.value)
+                def on_type_change(e, i=idx) -> None:
+                    update_target_type(i, e.value)
 
-                    ui.select(
-                        options=[{"label": v["label"], "value": k} for k, v in NOTIFICATION_TYPES.items()],
-                        value=target_type,
-                        on_change=on_type_change,
-                    ).classes("w-48").props("outlined dense label='Type'")
+                ui.select(
+                    options=[{"label": v["label"], "value": k} for k, v in NOTIFICATION_TYPES.items()],
+                    value=target_type,
+                    on_change=on_type_change,
+                ).classes("w-48 mb-3").props("outlined dense label='Type'")
 
-            # Type-specific fields
-            with ui.column().classes("w-full gap-2"):
-                for field_def in type_config["fields"]:
-                    _render_field(idx, target, field_def)
+            # Type-specific fields - render each field directly
+            for field_def in type_config["fields"]:
+                _render_field(idx, target, field_def)
 
     def _render_field(idx: int, target: dict, field_def: dict) -> None:
         """Render a single field for a notification target."""
@@ -166,44 +170,42 @@ def notification_target_editor(
         field_type = field_def.get("type", "text")
         field_label = field_def["label"]
         current_value = target.get(field_key, "")
-        _ = field_def.get("required", False)  # Reserved for future validation
 
-        with ui.row().classes("w-full items-center gap-2"):
-            if field_type == "select":
-                options = field_def.get("options", [])
+        if field_type == "select":
+            options = field_def.get("options", [])
 
-                def on_select_change(e, i=idx, k=field_key) -> None:
-                    update_target_field(i, k, e.value)
+            def on_select_change(e, i=idx, k=field_key) -> None:
+                update_target_field(i, k, e.value)
 
-                ui.select(
-                    options=options,
-                    value=current_value or options[0] if options else "",
-                    on_change=on_select_change,
+            ui.select(
+                options=options,
+                value=current_value or (options[0] if options else ""),
+                on_change=on_select_change,
+                label=field_label,
+            ).classes("w-full mb-2").props("outlined dense")
+        else:
+            input_props = "outlined dense"
+            if field_type == "password":
+                input_props += ' type="password"'
+            elif field_type == "number":
+                input_props += ' type="number"'
+
+            def on_input_change(e, i=idx, k=field_key) -> None:
+                update_target_field(i, k, e.value)
+
+            inp = (
+                ui.input(
+                    value=str(current_value) if current_value else "",
                     label=field_label,
-                ).classes("flex-1").props("outlined dense")
-            else:
-                input_props = "outlined dense"
-                if field_type == "password":
-                    input_props += ' type="password"'
-                elif field_type == "number":
-                    input_props += ' type="number"'
-
-                def on_input_change(e, i=idx, k=field_key) -> None:
-                    update_target_field(i, k, e.value)
-
-                inp = (
-                    ui.input(
-                        value=str(current_value) if current_value else "",
-                        label=field_label,
-                        placeholder=field_def.get("placeholder", ""),
-                        on_change=on_input_change,
-                    )
-                    .classes("flex-1")
-                    .props(input_props)
+                    placeholder=field_def.get("placeholder", ""),
+                    on_change=on_input_change,
                 )
+                .classes("w-full mb-2")
+                .props(input_props)
+            )
 
-                if disabled:
-                    inp.disable()
+            if disabled:
+                inp.disable()
 
     def add_target() -> None:
         """Add a new notification target."""
