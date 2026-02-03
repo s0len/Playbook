@@ -6394,3 +6394,194 @@ pattern_sets:
         season_dir_template: "{season_number:02d} {season_title}"
         filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
 
+# ==============================================================================
+# DEFAULT SPORTS
+# ==============================================================================
+# These sports are enabled by default when Playbook starts. Users can disable
+# specific sports by adding them to `disabled_sports` in their config, or
+# override any settings by defining the sport explicitly in their `sports` list.
+#
+# Each default sport uses:
+#   - pattern_sets: References the pattern set(s) defined above
+#   - source_globs: Automatically inherited from the pattern set's default_source_globs
+#   - variants: Year-based variants with TVSportsDB show_slugs
+#
+# To disable a sport: Add it to settings.disabled_sports in your config
+# To override settings: Define the sport in your sports list (your config wins)
+# ==============================================================================
+
+default_sports:
+  # ------------------------------------------------------------------
+  # Motorsport
+  # ------------------------------------------------------------------
+  - id: formula1
+    name: Formula 1
+    pattern_sets:
+      - formula1
+    variants:
+      - year: 2025
+        show_slug: "formula-1-2025"
+        season_overrides:
+          Pre-Season Testing:
+            season_number: 0
+            round: 0
+      - year: 2026
+        show_slug: "formula-1-2026"
+        season_overrides:
+          Pre-Season Testing:
+            season_number: 0
+            round: 0
+
+  - id: formula_e
+    name: Formula E
+    pattern_sets:
+      - formula_e
+    variants:
+      - year: 2025
+        show_slug: "formula-e-2024-2025"
+      - year: 2026
+        show_slug: "formula-e-2025-2026"
+
+  - id: indycar
+    name: NTT IndyCar Series
+    pattern_sets:
+      - indycar
+    variants:
+      - year: 2025
+        show_slug: "ntt-indycar-series-2025"
+      - year: 2026
+        show_slug: "ntt-indycar-series-2026"
+
+  - id: motogp
+    name: MotoGP
+    pattern_sets:
+      - motogp
+    variants:
+      - year: 2023
+        show_slug: "motogp-2023"
+      - year: 2024
+        show_slug: "motogp-2024"
+      - year: 2025
+        show_slug: "motogp-2025"
+
+  - id: moto2
+    name: Moto2
+    pattern_sets:
+      - moto2
+    variants:
+      - year: 2025
+        show_slug: "moto2-2025"
+
+  - id: moto3
+    name: Moto3
+    pattern_sets:
+      - moto3
+    variants:
+      - year: 2025
+        show_slug: "moto3-2025"
+
+  - id: world_superbike
+    name: World Superbike
+    pattern_sets:
+      - world_superbike
+    variants:
+      - year: 2023
+        show_slug: "world-superbike-2023"
+      - year: 2024
+        show_slug: "world-superbike-2024"
+      - year: 2025
+        show_slug: "world-superbike-2025"
+
+  - id: world_supersport
+    name: World Supersport
+    pattern_sets:
+      - world_supersport
+    variants:
+      - year: 2023
+        show_slug: "world-supersport-2023"
+      - year: 2024
+        show_slug: "world-supersport-2024"
+      - year: 2025
+        show_slug: "world-supersport-2025"
+
+  - id: isle_of_man_tt
+    name: Isle of Man TT
+    show_slug: "isle-of-man-tt"
+    pattern_sets:
+      - isle_of_man_tt
+    destination:
+      season_dir_template: "{season_title}"
+      episode_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
+  # ------------------------------------------------------------------
+  # Combat Sports
+  # ------------------------------------------------------------------
+  - id: ufc
+    name: UFC
+    pattern_sets:
+      - ufc
+    variants:
+      - year: 2024
+        show_slug: "ufc-2024"
+      - year: 2025
+        show_slug: "ufc-2025"
+
+  # ------------------------------------------------------------------
+  # North American Leagues
+  # ------------------------------------------------------------------
+  - id: nfl
+    name: NFL
+    pattern_sets:
+      - nfl
+    variants:
+      - year: 2025
+        show_slug: "nfl-2025"
+
+  - id: nba
+    name: NBA
+    pattern_sets:
+      - nba
+    variants:
+      - year: 2025
+        show_slug: "nba-2025-2026"
+
+  - id: nhl
+    name: NHL
+    team_alias_map: nhl
+    pattern_sets:
+      - nhl
+    variants:
+      - year: 2025
+        show_slug: "nhl-2025-2026"
+
+  # ------------------------------------------------------------------
+  # Football (Soccer)
+  # ------------------------------------------------------------------
+  - id: premier_league
+    name: Premier League
+    team_alias_map: premier_league
+    pattern_sets:
+      - premier_league
+    variants:
+      - year: 2025
+        show_slug: "english-premier-league-2025-2026"
+
+  - id: uefa_champions_league
+    name: UEFA Champions League
+    pattern_sets:
+      - uefa_champions_league
+    variants:
+      - year: 2025
+        show_slug: "uefa-champions-league-2025-2026"
+
+  # ------------------------------------------------------------------
+  # Figure Skating
+  # ------------------------------------------------------------------
+  - id: figure_skating_grand_prix
+    name: Figure Skating Grand Prix
+    pattern_sets:
+      - figure_skating_grand_prix
+    variants:
+      - year: 2025
+        show_slug: "figure-skating-grand-prix-2025"
+

@@ -3,13 +3,17 @@ from __future__ import annotations
 import datetime as dt
 import re
 import shlex
-from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .pattern_templates import expand_regex_with_tokens, get_default_source_globs, load_builtin_pattern_sets
+from .pattern_templates import (
+    expand_regex_with_tokens,
+    get_default_source_globs,
+    load_builtin_pattern_sets,
+    load_default_sports,
+)
 from .utils import load_yaml_file, validate_url
 
 
@@ -304,6 +308,8 @@ class Settings:
     plex_sync: PlexSyncSettings = field(default_factory=PlexSyncSettings)
     tvsportsdb: TVSportsDBConfig = field(default_factory=TVSportsDBConfig)
     quality_profile: QualityProfile = field(default_factory=QualityProfile)  # Global quality profile
+    disabled_sports: list[str] = field(default_factory=list)  # Sport IDs to exclude from defaults
+    use_default_sports: bool = True  # Whether to auto-include default sports
 
 
 @dataclass
@@ -1011,6 +1017,15 @@ def _build_settings(data: dict[str, Any]) -> Settings:
     tvsportsdb = _build_tvsportsdb_config(data.get("tvsportsdb", {}) or {})
     quality_profile = _build_quality_profile(data.get("quality_profile", {}) or {})
 
+    # Parse disabled_sports list
+    disabled_sports_raw = data.get("disabled_sports", []) or []
+    if not isinstance(disabled_sports_raw, list):
+        raise ValueError("'disabled_sports' must be provided as a list of sport IDs")
+    disabled_sports = [str(s).strip() for s in disabled_sports_raw if s]
+
+    # Parse use_default_sports toggle
+    use_default_sports = bool(data.get("use_default_sports", True))
+
     return Settings(
         source_dir=source_dir,
         destination_dir=destination_dir,
@@ -1025,6 +1040,8 @@ def _build_settings(data: dict[str, Any]) -> Settings:
         plex_sync=plex_sync,
         tvsportsdb=tvsportsdb,
         quality_profile=quality_profile,
+        disabled_sports=disabled_sports,
+        use_default_sports=use_default_sports,
     )
 
 
@@ -1046,15 +1063,50 @@ def load_config(path: Path) -> AppConfig:
 
     settings = _build_settings(data.get("settings", {}))
     defaults = settings.default_destination
-    sports_raw: Iterable[dict[str, Any]] = data.get("sports", [])
+    user_sports_raw: list[dict[str, Any]] = list(data.get("sports", []) or [])
 
+    # Get base IDs from user-defined sports (before variant expansion)
+    user_sport_base_ids: set[str] = set()
+    for sport_data in user_sports_raw:
+        base_id = sport_data.get("id")
+        if base_id:
+            user_sport_base_ids.add(str(base_id))
+
+    # Build expanded sports list, starting with defaults if enabled
     expanded_sports: list[dict[str, Any]] = []
-    for sport_data in sports_raw:
+
+    if settings.use_default_sports:
+        # Load default sports from pattern_templates.yaml
+        default_sports_raw = load_default_sports()
+        disabled_set = set(settings.disabled_sports)
+
+        for default_sport in default_sports_raw:
+            base_id = default_sport.get("id")
+            if not base_id:
+                continue
+
+            # Skip if user has defined this sport (user config wins)
+            if base_id in user_sport_base_ids:
+                continue
+
+            # Skip if explicitly disabled
+            if base_id in disabled_set:
+                continue
+
+            # Expand variants and add to sports list
+            for variant_data in _expand_sport_variants(deepcopy(default_sport)):
+                expanded_sports.append(variant_data)
+
+    # Expand user-defined sports (these override defaults)
+    for sport_data in user_sports_raw:
         for variant_data in _expand_sport_variants(sport_data):
             expanded_sports.append(variant_data)
 
     sports = []
     for sport_data in expanded_sports:
+        # Skip sports with enabled: false
+        if not sport_data.get("enabled", True):
+            continue
         sports.append(_build_sport_config(sport_data, defaults, settings.link_mode, builtin_pattern_sets))
 
     return AppConfig(settings=settings, sports=sports)
