@@ -785,8 +785,12 @@ def _merge_quality_profile(
         resolution=merged_resolution,
         source=merged_source,
         release_group=merged_release_group,
-        proper_bonus=override.scoring.proper_bonus if override.scoring.proper_bonus != 50 else base.scoring.proper_bonus,
-        repack_bonus=override.scoring.repack_bonus if override.scoring.repack_bonus != 50 else base.scoring.repack_bonus,
+        proper_bonus=override.scoring.proper_bonus
+        if override.scoring.proper_bonus != 50
+        else base.scoring.proper_bonus,
+        repack_bonus=override.scoring.repack_bonus
+        if override.scoring.repack_bonus != 50
+        else base.scoring.repack_bonus,
         hdr_bonus=override.scoring.hdr_bonus if override.scoring.hdr_bonus != 25 else base.scoring.hdr_bonus,
     )
 

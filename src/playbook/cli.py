@@ -517,8 +517,7 @@ def _execute_gui_run(args: argparse.Namespace, verbose: bool) -> int:
         from .gui import run_with_gui
     except ImportError as exc:
         LOGGER.error(
-            "GUI dependencies not installed. Install with: pip install playbook[gui]\n"
-            "Error: %s",
+            "GUI dependencies not installed. Install with: pip install playbook[gui]\nError: %s",
             exc,
         )
         return 1
