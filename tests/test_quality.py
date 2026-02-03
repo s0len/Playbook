@@ -20,6 +20,10 @@ class TestQualityInfo:
         assert info.is_repack is False
         assert info.codec is None
         assert info.hdr_format is None
+        assert info.frame_rate is None
+        assert info.bit_depth is None
+        assert info.audio is None
+        assert info.broadcaster is None
 
     def test_to_dict(self):
         """Test serialization to dictionary."""
@@ -31,6 +35,10 @@ class TestQualityInfo:
             is_repack=False,
             codec="h265",
             hdr_format="hdr10",
+            frame_rate=50,
+            bit_depth=10,
+            audio="ddp51",
+            broadcaster="f1tv",
         )
         result = info.to_dict()
         assert result == {
@@ -41,6 +49,10 @@ class TestQualityInfo:
             "is_repack": False,
             "codec": "h265",
             "hdr_format": "hdr10",
+            "frame_rate": 50,
+            "bit_depth": 10,
+            "audio": "ddp51",
+            "broadcaster": "f1tv",
         }
 
     def test_from_dict(self):
@@ -191,6 +203,115 @@ class TestExtractQualityHDR:
         assert info.hdr_format == expected
 
 
+class TestExtractQualityFrameRate:
+    """Tests for frame rate extraction."""
+
+    @pytest.mark.parametrize(
+        "filename,expected",
+        [
+            # Explicit fps markers
+            ("Formula.1.2026.Monaco.1080p.60fps.WEB-DL.mkv", 60),
+            ("Formula.1.2026.Monaco.1080p.50fps.WEB-DL.mkv", 50),
+            ("Formula.1.2026.Monaco.720p50fps.WEB-DL.mkv", 50),
+            ("Movie.2024.1080p.25fps.mkv", 25),
+            # Embedded in resolution
+            ("Formula.1.2026.Monaco.1080p60.WEB-DL.mkv", 60),
+            ("Formula.1.2026.Monaco.1080p50.WEB-DL.mkv", 50),
+            ("Formula.1.2026.Monaco.720p50.WEB-DL.mkv", 50),
+            # Interlaced with fps
+            ("Formula.1.2026.Monaco.1080i50.HDTV.mkv", 50),
+            # No frame rate info
+            ("Formula.1.2026.Monaco.1080p.WEB-DL.mkv", None),
+        ],
+    )
+    def test_frame_rate_extraction(self, filename: str, expected: int | None):
+        """Test that frame rate is correctly extracted."""
+        info = extract_quality(filename)
+        assert info.frame_rate == expected
+
+
+class TestExtractQualityBitDepth:
+    """Tests for bit depth extraction."""
+
+    @pytest.mark.parametrize(
+        "filename,expected",
+        [
+            ("Formula.1.2026.Monaco.2160p.WEB-DL.x265.10bit.mkv", 10),
+            ("Formula.1.2026.Monaco.2160p.WEB-DL.x265.10-bit.mkv", 10),
+            ("Formula.1.2026.Monaco.2160p.WEB-DL.HEVC.10bit.mkv", 10),
+            ("Formula.1.2026.Monaco.2160p.WEB-DL.8bit.mkv", 8),
+            ("Formula.1.2026.Monaco.1080p.WEB-DL.mkv", None),
+        ],
+    )
+    def test_bit_depth_extraction(self, filename: str, expected: int | None):
+        """Test that bit depth is correctly extracted."""
+        info = extract_quality(filename)
+        assert info.bit_depth == expected
+
+
+class TestExtractQualityAudio:
+    """Tests for audio format extraction."""
+
+    @pytest.mark.parametrize(
+        "filename,expected",
+        [
+            # Dolby Digital Plus / E-AC-3
+            ("Formula.1.2026.Monaco.1080p.WEB-DL.DDP5.1.mkv", "ddp51"),
+            ("Formula.1.2026.Monaco.1080p.WEB-DL.DD5.1.mkv", "dd51"),
+            ("Formula.1.2026.Monaco.1080p.WEB-DL.EAC3.mkv", "eac3"),
+            ("Formula.1.2026.Monaco.1080p.WEB-DL.E-AC-3.mkv", "eac3"),
+            # DTS
+            ("Movie.2024.1080p.BluRay.DTS-HD.MA.mkv", "dtshd"),
+            ("Movie.2024.1080p.BluRay.DTS.mkv", "dts"),
+            # AAC
+            ("Formula.1.2026.Monaco.1080p.WEB-DL.AAC2.0.mkv", "aac"),
+            ("Formula.1.2026.Monaco.1080p.WEB-DL.AAC.mkv", "aac"),
+            # AC3
+            ("Movie.2024.720p.HDTV.AC3.mkv", "ac3"),
+            # Atmos
+            ("Movie.2024.2160p.BluRay.Atmos.mkv", "atmos"),
+            # No audio info
+            ("Formula.1.2026.Monaco.1080p.WEB-DL.mkv", None),
+        ],
+    )
+    def test_audio_extraction(self, filename: str, expected: str | None):
+        """Test that audio format is correctly extracted."""
+        info = extract_quality(filename)
+        assert info.audio == expected
+
+
+class TestExtractQualityBroadcaster:
+    """Tests for broadcaster extraction."""
+
+    @pytest.mark.parametrize(
+        "filename,expected",
+        [
+            # F1 official sources
+            ("Formula.1.2026.Monaco.1080p50.F1TV.WEB-DL.mkv", "f1tv"),
+            ("Formula.1.2026.Monaco.1080p.F1Live.WEB-DL.mkv", "f1tv"),
+            ("Formula.1.2026.Monaco.2160p.SKYF1UHD.WEB-DL.mkv", "skyf1uhd"),
+            ("Formula.1.2026.Monaco.1080p.SkyF1.WEB-DL.mkv", "skyf1"),
+            # Premium networks
+            ("Formula.1.2026.Monaco.1080p.Sky.WEB-DL.mkv", "sky"),
+            ("UFC.300.1080p.ESPN.HDTV.mkv", "espn"),
+            ("NBA.2026.Lakers.vs.Celtics.720p.TNT.HDTV.mkv", "tnt"),
+            # US networks
+            ("NFL.2026.SuperBowl.1080p.CBS.HDTV.mkv", "cbs"),
+            ("NFL.2026.Game.720p.FOX.HDTV.mkv", "fox"),
+            ("NHL.2026.Game.1080p.NBC.HDTV.mkv", "nbc"),
+            # Streaming
+            ("UFC.300.1080p.DAZN.WEB-DL.mkv", "dazn"),
+            ("AFL.2026.Game.1080p.STAN.WEB-DL.mkv", "stan"),
+            # No broadcaster
+            ("Formula.1.2026.Monaco.1080p.WEB-DL.mkv", None),
+        ],
+    )
+    def test_broadcaster_extraction(self, filename: str, expected: str | None):
+        """Test that broadcaster is correctly extracted."""
+        info = extract_quality(filename)
+        assert info.broadcaster == expected
+
+
 class TestExtractQualityReleaseGroup:
     """Tests for release group extraction."""
 
@@ -205,6 +326,11 @@ class TestExtractQualityReleaseGroup:
             ("Formula.1.2026.R05.Monaco.1080p.WEB-DL.SMCGILL1969.mkv", "smcgill1969"),
             ("Formula.1.2026.R05.Monaco.1080p.WEB-DL-NTb.mkv", "ntb"),
             ("Movie.2024.1080p.WEB-DL-FLUX.mkv", "flux"),
+            # New sports release groups
+            ("Formula.1.2026.R05.Monaco.1080p.WEB-DL.DARKSPORT.mkv", "darksport"),
+            ("Formula.1.2026.R05.Monaco.1080p.WEB-DL.F1Carreras.mkv", "f1carreras"),
+            ("NBA.2026.Game.720p.HDTV-GAMETiME.mkv", "gametime"),
+            ("UFC.300.1080p.WEB-DL-DNU.mkv", "dnu"),
             # Edge cases
             ("Movie.2024.1080p.WEB-DL.mkv", None),  # No group
             # Dot-separated groups need 3+ chars to avoid matching "DL"

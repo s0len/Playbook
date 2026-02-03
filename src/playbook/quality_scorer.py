@@ -23,6 +23,11 @@ class QualityScore:
         resolution_score: Points from resolution (e.g., 1080p = 300)
         source_score: Points from source (e.g., webdl = 90)
         release_group_score: Points from release group (e.g., mwr = 50)
+        frame_rate_score: Points from frame rate (e.g., 60fps = 100)
+        codec_score: Points from codec (e.g., x265 = 25)
+        bit_depth_score: Points from bit depth (e.g., 10-bit = 25)
+        audio_score: Points from audio format (e.g., ddp51 = 25)
+        broadcaster_score: Points from broadcaster (e.g., f1tv = 50)
         proper_bonus: Bonus points for PROPER release
         repack_bonus: Bonus points for REPACK release
         hdr_bonus: Bonus points for HDR content
@@ -32,6 +37,11 @@ class QualityScore:
     resolution_score: int = 0
     source_score: int = 0
     release_group_score: int = 0
+    frame_rate_score: int = 0
+    codec_score: int = 0
+    bit_depth_score: int = 0
+    audio_score: int = 0
+    broadcaster_score: int = 0
     proper_bonus: int = 0
     repack_bonus: int = 0
     hdr_bonus: int = 0
@@ -43,6 +53,11 @@ class QualityScore:
             "resolution_score": self.resolution_score,
             "source_score": self.source_score,
             "release_group_score": self.release_group_score,
+            "frame_rate_score": self.frame_rate_score,
+            "codec_score": self.codec_score,
+            "bit_depth_score": self.bit_depth_score,
+            "audio_score": self.audio_score,
+            "broadcaster_score": self.broadcaster_score,
             "proper_bonus": self.proper_bonus,
             "repack_bonus": self.repack_bonus,
             "hdr_bonus": self.hdr_bonus,
@@ -56,6 +71,11 @@ class QualityScore:
             resolution_score=data.get("resolution_score", 0),
             source_score=data.get("source_score", 0),
             release_group_score=data.get("release_group_score", 0),
+            frame_rate_score=data.get("frame_rate_score", 0),
+            codec_score=data.get("codec_score", 0),
+            bit_depth_score=data.get("bit_depth_score", 0),
+            audio_score=data.get("audio_score", 0),
+            broadcaster_score=data.get("broadcaster_score", 0),
             proper_bonus=data.get("proper_bonus", 0),
             repack_bonus=data.get("repack_bonus", 0),
             hdr_bonus=data.get("hdr_bonus", 0),
@@ -97,11 +117,11 @@ def compute_quality_score(
     Examples:
         >>> from playbook.quality import QualityInfo
         >>> from playbook.config import QualityProfile
-        >>> info = QualityInfo(resolution="1080p", source="webdl", release_group="mwr")
+        >>> info = QualityInfo(resolution="1080p", source="webdl", release_group="mwr", frame_rate=50)
         >>> profile = QualityProfile(enabled=True)
         >>> score = compute_quality_score(info, profile)
         >>> score.total
-        440  # 300 (1080p) + 90 (webdl) + 50 (mwr)
+        515  # 300 (1080p) + 90 (webdl) + 50 (mwr) + 75 (50fps)
     """
     scoring = profile.scoring
 
@@ -120,18 +140,60 @@ def compute_quality_score(
     if quality_info.release_group:
         release_group_score = scoring.release_group.get(quality_info.release_group.lower(), 0)
 
+    # Frame rate score (critical for sports)
+    frame_rate_score = 0
+    if quality_info.frame_rate:
+        frame_rate_score = scoring.frame_rate.get(str(quality_info.frame_rate), 0)
+
+    # Codec score
+    codec_score = 0
+    if quality_info.codec:
+        codec_score = scoring.codec.get(quality_info.codec.lower(), 0)
+
+    # Bit depth score
+    bit_depth_score = 0
+    if quality_info.bit_depth:
+        bit_depth_score = scoring.bit_depth.get(str(quality_info.bit_depth), 0)
+
+    # Audio score
+    audio_score = 0
+    if quality_info.audio:
+        audio_score = scoring.audio.get(quality_info.audio.lower(), 0)
+
+    # Broadcaster score
+    broadcaster_score = 0
+    if quality_info.broadcaster:
+        broadcaster_score = scoring.broadcaster.get(quality_info.broadcaster.lower(), 0)
+
     # Bonus scores
     proper_bonus = scoring.proper_bonus if quality_info.is_proper else 0
     repack_bonus = scoring.repack_bonus if quality_info.is_repack else 0
     hdr_bonus = scoring.hdr_bonus if quality_info.hdr_format else 0
 
-    total = resolution_score + source_score + release_group_score + proper_bonus + repack_bonus + hdr_bonus
+    total = (
+        resolution_score
+        + source_score
+        + release_group_score
+        + frame_rate_score
+        + codec_score
+        + bit_depth_score
+        + audio_score
+        + broadcaster_score
+        + proper_bonus
+        + repack_bonus
+        + hdr_bonus
+    )
 
     return QualityScore(
         total=total,
         resolution_score=resolution_score,
         source_score=source_score,
         release_group_score=release_group_score,
+        frame_rate_score=frame_rate_score,
+        codec_score=codec_score,
+        bit_depth_score=bit_depth_score,
+        audio_score=audio_score,
+        broadcaster_score=broadcaster_score,
         proper_bonus=proper_bonus,
         repack_bonus=repack_bonus,
         hdr_bonus=hdr_bonus,
@@ -288,6 +350,11 @@ def get_effective_quality_profile(
     merged_resolution = {**global_profile.scoring.resolution, **sport_profile.scoring.resolution}
     merged_source = {**global_profile.scoring.source, **sport_profile.scoring.source}
     merged_release_group = {**global_profile.scoring.release_group, **sport_profile.scoring.release_group}
+    merged_frame_rate = {**global_profile.scoring.frame_rate, **sport_profile.scoring.frame_rate}
+    merged_codec = {**global_profile.scoring.codec, **sport_profile.scoring.codec}
+    merged_bit_depth = {**global_profile.scoring.bit_depth, **sport_profile.scoring.bit_depth}
+    merged_audio = {**global_profile.scoring.audio, **sport_profile.scoring.audio}
+    merged_broadcaster = {**global_profile.scoring.broadcaster, **sport_profile.scoring.broadcaster}
 
     # For bonus values, use sport's value if it differs from default
     default_scoring = QualityScoring()
@@ -311,6 +378,11 @@ def get_effective_quality_profile(
         resolution=merged_resolution,
         source=merged_source,
         release_group=merged_release_group,
+        frame_rate=merged_frame_rate,
+        codec=merged_codec,
+        bit_depth=merged_bit_depth,
+        audio=merged_audio,
+        broadcaster=merged_broadcaster,
         proper_bonus=proper_bonus,
         repack_bonus=repack_bonus,
         hdr_bonus=hdr_bonus,

@@ -96,6 +96,11 @@ class QualityScoring:
         resolution: Mapping of resolution (e.g., "2160p") to score
         source: Mapping of source type (e.g., "webdl") to score
         release_group: Mapping of release group (e.g., "mwr") to score
+        frame_rate: Mapping of frame rate (e.g., "60") to score - critical for sports
+        codec: Mapping of codec (e.g., "x265") to score
+        bit_depth: Mapping of bit depth (e.g., "10") to score
+        audio: Mapping of audio format (e.g., "ddp51") to score
+        broadcaster: Mapping of broadcaster (e.g., "f1tv") to score
         proper_bonus: Bonus points for PROPER releases
         repack_bonus: Bonus points for REPACK releases
         hdr_bonus: Bonus points for HDR content
@@ -121,9 +126,81 @@ class QualityScoring:
         }
     )
     release_group: dict[str, int] = field(default_factory=dict)
+    # Frame rate scoring - crucial for sports (higher fps = smoother motion)
+    frame_rate: dict[str, int] = field(
+        default_factory=lambda: {
+            "60": 100,  # Best for fast action
+            "50": 75,   # European broadcast standard
+            "30": 25,   # US web standard
+            "25": 0,    # Baseline PAL
+            "24": 0,    # Film standard
+        }
+    )
+    # Codec efficiency scoring
+    codec: dict[str, int] = field(
+        default_factory=lambda: {
+            "x265": 25,
+            "h265": 25,
+            "x264": 0,
+            "h264": 0,
+            "xvid": -25,
+            "divx": -25,
+        }
+    )
+    # Bit depth scoring (10-bit = better color gradients, less banding)
+    bit_depth: dict[str, int] = field(
+        default_factory=lambda: {
+            "10": 25,
+            "8": 0,
+        }
+    )
+    # Audio format scoring
+    audio: dict[str, int] = field(
+        default_factory=lambda: {
+            "atmos": 40,
+            "truehd": 35,
+            "dtshd": 30,
+            "ddp51": 25,
+            "dd51": 20,
+            "eac3": 20,
+            "dts": 15,
+            "ac3": 10,
+            "aac51": 15,
+            "flac": 15,
+            "aac": 0,
+            "mp3": -10,
+        }
+    )
+    # Broadcaster scoring (official sources preferred)
+    broadcaster: dict[str, int] = field(
+        default_factory=lambda: {
+            # F1 official sources
+            "f1tv": 50,
+            "skyf1uhd": 50,
+            "skyf1": 40,
+            # Premium sports networks
+            "sky": 30,
+            "bt": 30,
+            "espn": 30,
+            "tnt": 25,
+            # US networks
+            "nbc": 20,
+            "cbs": 20,
+            "fox": 20,
+            "msg": 20,
+            # Streaming services
+            "dazn": 25,
+            "stan": 20,
+            "fubo": 15,
+            "nowtv": 15,
+            # Regional
+            "tsn": 20,
+            "sportsnet": 20,
+        }
+    )
     proper_bonus: int = 50
     repack_bonus: int = 50
-    hdr_bonus: int = 25
+    hdr_bonus: int = 50  # Increased - HDR is valuable for sports
 
 
 @dataclass
@@ -684,6 +761,22 @@ def _build_tvsportsdb_config(data: dict[str, Any]) -> TVSportsDBConfig:
     )
 
 
+def _parse_scoring_dict(
+    data: dict[str, Any], field_name: str, field_prefix: str
+) -> dict[str, int]:
+    """Parse a scoring dictionary from YAML data."""
+    raw = data.get(field_name, {}) or {}
+    if not isinstance(raw, dict):
+        raise ValueError(f"'{field_prefix}.{field_name}' must be a mapping")
+    result: dict[str, int] = {}
+    for key, value in raw.items():
+        try:
+            result[str(key).lower()] = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"'{field_prefix}.{field_name}.{key}' must be an integer") from exc
+    return result
+
+
 def _build_quality_scoring(data: dict[str, Any], field_prefix: str = "quality_profile.scoring") -> QualityScoring:
     """Build quality scoring configuration from YAML data."""
     if not data:
@@ -691,38 +784,15 @@ def _build_quality_scoring(data: dict[str, Any], field_prefix: str = "quality_pr
     if not isinstance(data, dict):
         raise ValueError(f"'{field_prefix}' must be provided as a mapping when specified")
 
-    # Parse resolution scores
-    resolution_raw = data.get("resolution", {}) or {}
-    if not isinstance(resolution_raw, dict):
-        raise ValueError(f"'{field_prefix}.resolution' must be a mapping")
-    resolution: dict[str, int] = {}
-    for key, value in resolution_raw.items():
-        try:
-            resolution[str(key).lower()] = int(value)
-        except (TypeError, ValueError) as exc:
-            raise ValueError(f"'{field_prefix}.resolution.{key}' must be an integer") from exc
-
-    # Parse source scores
-    source_raw = data.get("source", {}) or {}
-    if not isinstance(source_raw, dict):
-        raise ValueError(f"'{field_prefix}.source' must be a mapping")
-    source: dict[str, int] = {}
-    for key, value in source_raw.items():
-        try:
-            source[str(key).lower()] = int(value)
-        except (TypeError, ValueError) as exc:
-            raise ValueError(f"'{field_prefix}.source.{key}' must be an integer") from exc
-
-    # Parse release group scores
-    release_group_raw = data.get("release_group", {}) or {}
-    if not isinstance(release_group_raw, dict):
-        raise ValueError(f"'{field_prefix}.release_group' must be a mapping")
-    release_group: dict[str, int] = {}
-    for key, value in release_group_raw.items():
-        try:
-            release_group[str(key).lower()] = int(value)
-        except (TypeError, ValueError) as exc:
-            raise ValueError(f"'{field_prefix}.release_group.{key}' must be an integer") from exc
+    # Parse all scoring dictionaries
+    resolution = _parse_scoring_dict(data, "resolution", field_prefix)
+    source = _parse_scoring_dict(data, "source", field_prefix)
+    release_group = _parse_scoring_dict(data, "release_group", field_prefix)
+    frame_rate = _parse_scoring_dict(data, "frame_rate", field_prefix)
+    codec = _parse_scoring_dict(data, "codec", field_prefix)
+    bit_depth = _parse_scoring_dict(data, "bit_depth", field_prefix)
+    audio = _parse_scoring_dict(data, "audio", field_prefix)
+    broadcaster = _parse_scoring_dict(data, "broadcaster", field_prefix)
 
     # Parse bonus values
     try:
@@ -736,7 +806,7 @@ def _build_quality_scoring(data: dict[str, Any], field_prefix: str = "quality_pr
         raise ValueError(f"'{field_prefix}.repack_bonus' must be an integer") from exc
 
     try:
-        hdr_bonus = int(data.get("hdr_bonus", 25))
+        hdr_bonus = int(data.get("hdr_bonus", 50))
     except (TypeError, ValueError) as exc:
         raise ValueError(f"'{field_prefix}.hdr_bonus' must be an integer") from exc
 
@@ -746,11 +816,26 @@ def _build_quality_scoring(data: dict[str, Any], field_prefix: str = "quality_pr
         resolution = default_scoring.resolution
     if not source:
         source = default_scoring.source
+    if not frame_rate:
+        frame_rate = default_scoring.frame_rate
+    if not codec:
+        codec = default_scoring.codec
+    if not bit_depth:
+        bit_depth = default_scoring.bit_depth
+    if not audio:
+        audio = default_scoring.audio
+    if not broadcaster:
+        broadcaster = default_scoring.broadcaster
 
     return QualityScoring(
         resolution=resolution,
         source=source,
         release_group=release_group,
+        frame_rate=frame_rate,
+        codec=codec,
+        bit_depth=bit_depth,
+        audio=audio,
+        broadcaster=broadcaster,
         proper_bonus=proper_bonus,
         repack_bonus=repack_bonus,
         hdr_bonus=hdr_bonus,
@@ -808,18 +893,28 @@ def _merge_quality_profile(
     merged_resolution = {**base.scoring.resolution, **override.scoring.resolution}
     merged_source = {**base.scoring.source, **override.scoring.source}
     merged_release_group = {**base.scoring.release_group, **override.scoring.release_group}
+    merged_frame_rate = {**base.scoring.frame_rate, **override.scoring.frame_rate}
+    merged_codec = {**base.scoring.codec, **override.scoring.codec}
+    merged_bit_depth = {**base.scoring.bit_depth, **override.scoring.bit_depth}
+    merged_audio = {**base.scoring.audio, **override.scoring.audio}
+    merged_broadcaster = {**base.scoring.broadcaster, **override.scoring.broadcaster}
 
     merged_scoring = QualityScoring(
         resolution=merged_resolution,
         source=merged_source,
         release_group=merged_release_group,
+        frame_rate=merged_frame_rate,
+        codec=merged_codec,
+        bit_depth=merged_bit_depth,
+        audio=merged_audio,
+        broadcaster=merged_broadcaster,
         proper_bonus=override.scoring.proper_bonus
         if override.scoring.proper_bonus != 50
         else base.scoring.proper_bonus,
         repack_bonus=override.scoring.repack_bonus
         if override.scoring.repack_bonus != 50
         else base.scoring.repack_bonus,
-        hdr_bonus=override.scoring.hdr_bonus if override.scoring.hdr_bonus != 25 else base.scoring.hdr_bonus,
+        hdr_bonus=override.scoring.hdr_bonus if override.scoring.hdr_bonus != 50 else base.scoring.hdr_bonus,
     )
 
     return QualityProfile(
