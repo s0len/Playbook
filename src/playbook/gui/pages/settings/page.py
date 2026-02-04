@@ -15,6 +15,7 @@ from nicegui import ui
 
 from ...settings_state.settings_state import SETTINGS_TABS, SettingsFormState
 from ...state import gui_state
+from ...utils import safe_notify
 from .advanced import advanced_tab
 from .general import general_tab
 from .integrations import integrations_tab
@@ -210,19 +211,17 @@ def _save_changes(state: SettingsFormState) -> None:
         executor = ThreadPoolExecutor(max_workers=1)
         try:
             success, warning = await loop.run_in_executor(executor, do_save)
-            # Use captured client context for notifications after async operation
-            with client:
-                if success:
-                    if warning:
-                        ui.notify(warning, type="warning")
-                    else:
-                        ui.notify("Configuration saved successfully", type="positive")
+            # Use safe_notify for notifications after async operation (client may have disconnected)
+            if success:
+                if warning:
+                    safe_notify(client, warning, type="warning")
                 else:
-                    ui.notify(warning or "Failed to save configuration", type="negative")
+                    safe_notify(client, "Configuration saved successfully", type="positive")
+            else:
+                safe_notify(client, warning or "Failed to save configuration", type="negative")
         except Exception as e:
             LOGGER.exception("Save failed: %s", e)
-            with client:
-                ui.notify(f"Save failed: {e}", type="negative")
+            safe_notify(client, f"Save failed: {e}", type="negative")
         finally:
             executor.shutdown(wait=False)
 

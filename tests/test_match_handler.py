@@ -6,7 +6,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from playbook.cache import CachedFileRecord, ProcessedFileCache
 from playbook.match_handler import (
     alias_candidates,
     cleanup_old_destination,

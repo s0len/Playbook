@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .cache import CachedFileRecord
     from .metadata import MetadataChangeResult, MetadataFetchStatistics
+    from .persistence import ProcessedFileRecord
     from .plex_metadata_sync import PlexSyncStats
 
 
@@ -36,7 +36,7 @@ class ProcessingState:
         metadata_change_map: Map of sport_id to metadata change details
         metadata_fetch_stats: Statistics about metadata fetching
         stale_destinations: Map of source key to old destination path
-        stale_records: Map of source key to stale cache record
+        stale_records: Map of source key to stale processed file record
         plex_sync_stats: Statistics from Plex sync (if run)
         previous_summary: Previous summary counts for deduplication
     """
@@ -57,7 +57,7 @@ class ProcessingState:
 
     # Stale file handling
     stale_destinations: dict[str, Path] = field(default_factory=dict)
-    stale_records: dict[str, CachedFileRecord] = field(default_factory=dict)
+    stale_records: dict[str, ProcessedFileRecord] = field(default_factory=dict)
 
     # Results
     plex_sync_stats: PlexSyncStats | None = None

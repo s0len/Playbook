@@ -728,7 +728,7 @@ class Processor:
             season_index=match.season.index,
             episode_index=match.episode.index,
             processed_at=datetime.now(),
-            checksum=None,  # Checksum is handled by ProcessedFileCache
+            checksum=None,  # Checksum feature removed in v2.9.0
             status=status,
             error_message=event.skip_reason if status == "error" else None,
             quality_score=quality_score_value,
