@@ -5874,6 +5874,7 @@ pattern_sets:
         season_selector:
           mode: title
           group: location
+          fallback_groups: [location2]  # Location can appear before or after "Grand Prix"
           # Matches captured location (France/China/Japan/etc.) against season aliases in TVSportsDB
         episode_selector:
           group: session

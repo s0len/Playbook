@@ -25,6 +25,7 @@ class SeasonSelector:
     mapping: dict[str, int] = field(default_factory=dict)
     aliases: dict[str, str] = field(default_factory=dict)
     value_template: str | None = None
+    fallback_groups: list[str] = field(default_factory=list)  # Try these groups if primary group is None
 
 
 @dataclass

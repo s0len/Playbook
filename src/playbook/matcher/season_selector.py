@@ -42,6 +42,12 @@ def resolve_selector_value(
     if key is None:
         return None
     value = match_groups.get(key)
+    # Try fallback groups if primary group has no value
+    if value is None and selector.fallback_groups:
+        for fallback_key in selector.fallback_groups:
+            value = match_groups.get(fallback_key)
+            if value is not None:
+                break
     if value is None:
         return None
     return value
