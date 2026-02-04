@@ -33,17 +33,28 @@ def unmatched_page() -> None:
         page: int = 0
         page_size: int = 50
         results_container: ui.column = None
+        stats_container: ui.row = None
 
     state = State()
     state.categories = list(DEFAULT_CATEGORIES)
 
     def refresh_results():
         """Refresh the results after filter change."""
-        state.page = 0
         if state.results_container:
             state.results_container.clear()
             with state.results_container:
-                _render_results_content(state)
+                _render_results_content(state, refresh_results, refresh_page)
+
+    def refresh_page():
+        """Full page refresh including stats and results."""
+        state.page = 0
+        # Refresh stats
+        if state.stats_container:
+            state.stats_container.clear()
+            with state.stats_container:
+                _render_stats_content()
+        # Refresh results
+        refresh_results()
 
     with ui.column().classes("w-full max-w-6xl mx-auto p-4 gap-6"):
         # Page title with refresh button
@@ -53,11 +64,13 @@ def unmatched_page() -> None:
                 ui.button(
                     "Rescan",
                     icon="refresh",
-                    on_click=lambda: _trigger_rescan(),
+                    on_click=lambda: _trigger_rescan(refresh_page),
                 ).props("flat").classes("text-slate-600 dark:text-slate-400")
 
         # Stats overview
-        _stats_overview()
+        state.stats_container = ui.row().classes("w-full gap-4 flex-wrap")
+        with state.stats_container:
+            _render_stats_content()
 
         # Filters card
         with ui.card().classes("glass-card w-full"):
@@ -66,11 +79,11 @@ def unmatched_page() -> None:
         # Results container
         state.results_container = ui.column().classes("w-full gap-4")
         with state.results_container:
-            _render_results_content(state)
+            _render_results_content(state, refresh_results, refresh_page)
 
 
-def _stats_overview() -> None:
-    """Render statistics overview cards."""
+def _render_stats_content() -> None:
+    """Render statistics content inside the stats container."""
     if not gui_state.unmatched_store:
         return
 
@@ -200,7 +213,7 @@ def _render_category_toggles(state, on_filter_change, refresh_toggles) -> None:
         btn.classes("text-sm")
 
 
-def _render_results_content(state) -> None:
+def _render_results_content(state, refresh_results, refresh_page) -> None:
     """Render the results list content."""
     if not gui_state.unmatched_store:
         ui.label("Unmatched file store not available").classes("text-slate-500 dark:text-slate-400 italic py-8")
@@ -227,12 +240,6 @@ def _render_results_content(state) -> None:
         LOGGER.exception("Failed to get unmatched files: %s", e)
         ui.label(f"Error loading unmatched files: {e}").classes("text-red-600 dark:text-red-400")
         return
-
-    def refresh_results():
-        if state.results_container:
-            state.results_container.clear()
-            with state.results_container:
-                _render_results_content(state)
 
     # Results header
     with ui.row().classes("w-full items-center justify-between"):
@@ -282,10 +289,10 @@ def _render_results_content(state) -> None:
     else:
         # File cards
         for record in records:
-            _file_card(record, state, refresh_results)
+            _file_card(record, state, refresh_page)
 
 
-def _file_card(record, state, refresh_results) -> None:
+def _file_card(record, state, refresh_page) -> None:
     """Render a single file card."""
     from playbook.persistence import UnmatchedFileRecord
 
@@ -344,13 +351,13 @@ def _file_card(record, state, refresh_results) -> None:
                 ui.button(
                     "Match",
                     icon="link",
-                    on_click=lambda r=record, rr=refresh_results: _show_manual_match_dialog_v2(r, rr),
+                    on_click=lambda r=record, rp=refresh_page: _show_manual_match_dialog_v2(r, rp),
                 ).props("flat dense color=primary").classes("text-sm")
 
                 ui.button(
                     "Hide",
                     icon="visibility_off",
-                    on_click=lambda r=record, rr=refresh_results: _hide_file_v2(r.source_path, rr),
+                    on_click=lambda r=record, rp=refresh_page: _hide_file_v2(r.source_path, rp),
                 ).props("flat dense").classes("text-sm text-slate-500")
 
 
@@ -387,7 +394,7 @@ def _format_relative_time(dt: datetime) -> str:
         return "Just now"
 
 
-def _trigger_rescan() -> None:
+def _trigger_rescan(refresh_callback=None) -> None:
     """Trigger a processing run to rescan files."""
     import asyncio
     from concurrent.futures import ThreadPoolExecutor
@@ -411,6 +418,9 @@ def _trigger_rescan() -> None:
             # Run process_all in a separate thread
             await loop.run_in_executor(executor, gui_state.processor.process_all)
             ui.notify("Scan complete!", type="positive")
+            # Refresh the page to show updated list
+            if refresh_callback:
+                refresh_callback()
         except Exception as e:
             LOGGER.exception("Scan failed: %s", e)
             ui.notify(f"Scan failed: {e}", type="negative")
@@ -422,7 +432,7 @@ def _trigger_rescan() -> None:
     asyncio.create_task(run_scan())
 
 
-def _hide_file_v2(source_path: str, refresh_results) -> None:
+def _hide_file_v2(source_path: str, refresh_page) -> None:
     """Hide a file from the unmatched list."""
     if not gui_state.unmatched_store:
         return
@@ -430,7 +440,7 @@ def _hide_file_v2(source_path: str, refresh_results) -> None:
     try:
         gui_state.unmatched_store.hide_file(source_path)
         ui.notify("File hidden", type="info")
-        refresh_results()
+        refresh_page()
     except Exception as e:
         LOGGER.exception("Failed to hide file: %s", e)
         ui.notify(f"Failed to hide file: {e}", type="negative")
@@ -600,7 +610,7 @@ def _render_suggestions(record) -> None:
                 ui.label(description).classes("text-sm text-slate-500 dark:text-slate-400")
 
 
-def _show_manual_match_dialog_v2(record, refresh_results) -> None:
+def _show_manual_match_dialog_v2(record, refresh_page) -> None:
     """Show manual match dialog (v2 with refresh callback)."""
     from playbook.persistence import UnmatchedFileRecord
 
@@ -745,7 +755,7 @@ def _show_manual_match_dialog_v2(record, refresh_results) -> None:
                     lambda: _execute_manual_match(match_record, match_sport, match_show, match_season, match_episode),
                 )
                 ui.notify("File matched successfully!", type="positive")
-                refresh_results()
+                refresh_page()
             except Exception as e:
                 LOGGER.exception("Manual match failed: %s", e)
                 ui.notify(f"Match failed: {e}", type="negative")
