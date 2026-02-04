@@ -135,17 +135,17 @@ def _filters_section_v2(state, on_filter_change) -> None:
 
         # Search and sport filter
         with ui.row().classes("w-full gap-4 flex-wrap"):
-            search_input = ui.input(
-                label="Search filename",
-                placeholder="e.g., Formula.1",
-            ).classes("flex-1 min-w-48")
-
-            # Use debounced search to avoid too many refreshes
+            # Use on_change parameter for real-time filtering as user types
             def on_search_change(e):
                 state.search_query = e.value or ""
+                state.page = 0  # Reset to first page on search
                 on_filter_change()
 
-            search_input.on("change", on_search_change)
+            ui.input(
+                label="Search filename",
+                placeholder="e.g., Formula.1",
+                on_change=on_search_change,
+            ).classes("flex-1 min-w-48").props('debounce="300"')
 
             # Sport filter dropdown
             sport_options = ["All Sports"]
@@ -154,6 +154,7 @@ def _filters_section_v2(state, on_filter_change) -> None:
 
             def on_sport_change(e):
                 state.sport_filter = "" if e.value == "All Sports" else e.value
+                state.page = 0  # Reset to first page on filter change
                 on_filter_change()
 
             ui.select(
@@ -179,18 +180,19 @@ def _render_category_toggles(state, on_filter_change, refresh_toggles) -> None:
     for category, label, icon in categories_config:
         is_active = category in state.categories
 
-        def make_toggle_handler(cat):
+        def make_toggle_handler(cat, st):
             def handler():
-                if cat in state.categories:
-                    state.categories.remove(cat)
+                if cat in st.categories:
+                    st.categories.remove(cat)
                 else:
-                    state.categories.append(cat)
+                    st.categories.append(cat)
+                st.page = 0  # Reset to first page on filter change
                 refresh_toggles()
                 on_filter_change()
 
             return handler
 
-        btn = ui.button(label, icon=icon, on_click=make_toggle_handler(category))
+        btn = ui.button(label, icon=icon, on_click=make_toggle_handler(category, state))
         if is_active:
             btn.props("color=primary")
         else:
