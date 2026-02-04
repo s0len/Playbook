@@ -134,7 +134,14 @@ class Processor:
 
         self.processed_cache.clear()
         self.processed_cache.save()
-        LOGGER.debug(self._format_log("Processed File Cache Cleared"))
+        # Also clear the SQLite database to ensure files are re-processed
+        cleared_count = self.processed_store.clear()
+        LOGGER.debug(
+            self._format_log(
+                "Processed File Cache Cleared",
+                {"Database Records": cleared_count},
+            )
+        )
 
     def process_all(self) -> ProcessingStats:
         # Reset state for new run (preserves previous_summary for deduplication)
