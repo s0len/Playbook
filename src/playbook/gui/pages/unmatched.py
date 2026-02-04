@@ -387,21 +387,37 @@ def _format_relative_time(dt: datetime) -> str:
 
 def _trigger_rescan() -> None:
     """Trigger a processing run to rescan files."""
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+
     if not gui_state.processor:
         ui.notify("Processor not available", type="warning")
         return
 
-    ui.notify("Starting scan...", type="info")
-    try:
-        gui_state.set_processing(True)
-        gui_state.processor.process_all()
-        ui.notify("Scan complete!", type="positive")
-        ui.navigate.to("/unmatched")
-    except Exception as e:
-        LOGGER.exception("Scan failed: %s", e)
-        ui.notify(f"Scan failed: {e}", type="negative")
-    finally:
-        gui_state.set_processing(False)
+    if gui_state.is_processing:
+        ui.notify("Scan already in progress", type="warning")
+        return
+
+    ui.notify("Starting scan in background...", type="info")
+    gui_state.set_processing(True)
+
+    async def run_scan():
+        """Run the scan in a thread pool to not block the GUI."""
+        loop = asyncio.get_event_loop()
+        executor = ThreadPoolExecutor(max_workers=1)
+        try:
+            # Run process_all in a separate thread
+            await loop.run_in_executor(executor, gui_state.processor.process_all)
+            ui.notify("Scan complete!", type="positive")
+        except Exception as e:
+            LOGGER.exception("Scan failed: %s", e)
+            ui.notify(f"Scan failed: {e}", type="negative")
+        finally:
+            gui_state.set_processing(False)
+            executor.shutdown(wait=False)
+
+    # Schedule the async scan without blocking
+    asyncio.create_task(run_scan())
 
 
 def _hide_file_v2(source_path: str, refresh_results) -> None:
