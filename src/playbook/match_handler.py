@@ -12,12 +12,12 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .cache import CachedFileRecord, ProcessedFileCache
 from .models import ProcessingStats, SportFileMatch
 from .notifications import NotificationEvent
+from .persistence import ProcessedFileRecord
 from .quality import QualityInfo, extract_quality
 from .quality_scorer import QualityScore, compare_quality, compute_quality_score
-from .utils import hash_file, link_file, normalize_token
+from .utils import link_file, normalize_token
 
 if TYPE_CHECKING:
     from .config import QualityProfile
@@ -316,7 +316,7 @@ def cleanup_old_destination(
     new_destination: Path,
     *,
     dry_run: bool,
-    stale_records: dict[str, CachedFileRecord],
+    stale_records: dict[str, ProcessedFileRecord],
     stale_destinations: dict[str, Path],
     format_destination_fn,
     logger,
@@ -331,7 +331,7 @@ def cleanup_old_destination(
         old_destination: Previous destination path, if any.
         new_destination: New destination path.
         dry_run: If True, only log what would be done.
-        stale_records: Dictionary of stale cache records to clean up.
+        stale_records: Dictionary of stale records to clean up.
         stale_destinations: Dictionary of stale destination paths to clean up.
         format_destination_fn: Function to format destination paths for display.
         logger: Logger instance for output.
@@ -452,9 +452,8 @@ def handle_match(
     match: SportFileMatch,
     stats: ProcessingStats,
     *,
-    processed_cache: ProcessedFileCache,
     stale_destinations: dict[str, Path],
-    stale_records: dict[str, CachedFileRecord],
+    stale_records: dict[str, ProcessedFileRecord],
     skip_existing: bool,
     dry_run: bool,
     link_mode: str,
@@ -469,7 +468,6 @@ def handle_match(
     This is the core file processing logic that:
     - Checks if destination exists and decides whether to overwrite
     - Creates symlink or hardlink to destination
-    - Updates processed file cache
     - Cleans up old destinations when files move
     - Creates notification events
     - Extracts and returns quality information when quality profile is enabled
@@ -477,11 +475,10 @@ def handle_match(
     Args:
         match: The matched file to process.
         stats: Processing statistics to update.
-        processed_cache: Cache tracking processed files.
         stale_destinations: Dictionary of old destination paths to clean up.
-        stale_records: Dictionary of stale cache records.
+        stale_records: Dictionary of stale records from metadata changes.
         skip_existing: If True, skip files with existing destinations.
-        dry_run: If True, don't actually create links or modify cache.
+        dry_run: If True, don't actually create links.
         link_mode: Link mode ("symlink", "hardlink", or "copy").
         format_destination_fn: Function to format destination paths for display.
         logger: Logger instance for output.
@@ -503,49 +500,11 @@ def handle_match(
     source_key = str(match.source_path)
     old_destination = stale_destinations.get(source_key)
 
-    cache_kwargs = {
-        "sport_id": match.sport.id,
-        "season_key": season_cache_key(match),
-        "episode_key": episode_cache_key(match),
-    }
-
     stale_record = stale_records.get(source_key)
     destination_display = format_destination_fn(destination)
 
-    # Calculate file checksum (skip in dry-run mode to avoid I/O)
-    file_checksum: str | None = None
-    if not dry_run:
-        try:
-            file_checksum = hash_file(match.source_path)
-        except ValueError as exc:  # pragma: no cover - depends on filesystem state
-            logger.debug(
-                render_fields_block(
-                    "Failed To Hash Source",
-                    {
-                        "Source": match.source_path,
-                        "Error": exc,
-                    },
-                    pad_top=True,
-                )
-            )
-
-    # Determine event type based on file history
-    stored_checksum = processed_cache.get_checksum(match.source_path)
-    previous_checksum = stored_checksum or (stale_record.checksum if stale_record else None)
-    previously_seen = bool(stored_checksum or stale_record)
-    content_changed = (
-        previously_seen
-        and file_checksum is not None
-        and previous_checksum is not None
-        and file_checksum != previous_checksum
-    )
-
-    if not previously_seen:
-        event_type = "new"
-    elif content_changed:
-        event_type = "changed"
-    else:
-        event_type = "refresh"
+    # Determine event type: "new" for first-time files, "refresh" for re-processing after metadata change
+    event_type = "refresh" if stale_record else "new"
 
     # Create notification event
     event = NotificationEvent(
@@ -660,13 +619,6 @@ def handle_match(
                 )
                 skip_message = f"Destination exists: {destination} (source {match.source_path})"
                 stats.register_skipped(skip_message, is_error=False, sport_id=match.sport.id)
-                if not dry_run:
-                    processed_cache.mark_processed(
-                        match.source_path,
-                        destination,
-                        checksum=file_checksum,
-                        **cache_kwargs,
-                    )
                 event.action = "skipped"
                 event.skip_reason = skip_message
                 event.event_type = "skipped"
@@ -743,12 +695,6 @@ def handle_match(
     result = link_file(match.source_path, destination, mode=link_mode)
     if result.created:
         stats.register_processed()
-        processed_cache.mark_processed(
-            match.source_path,
-            destination,
-            checksum=file_checksum,
-            **cache_kwargs,
-        )
         cleanup_old_destination(
             source_key,
             old_destination,
@@ -766,12 +712,6 @@ def handle_match(
         failure_message = f"Failed to link {match.source_path} -> {destination}: {result.reason}"
         stats.register_skipped(failure_message, sport_id=match.sport.id)
         if result.reason == "destination-exists":
-            processed_cache.mark_processed(
-                match.source_path,
-                destination,
-                checksum=file_checksum,
-                **cache_kwargs,
-            )
             cleanup_old_destination(
                 source_key,
                 old_destination,

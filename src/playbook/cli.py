@@ -485,7 +485,7 @@ def _execute_run(args: argparse.Namespace) -> int:
     )
 
     if clear_processed_cache:
-        LOGGER.info("Clearing processed file cache at %s", processor.processed_cache.cache_path)
+        LOGGER.info("Clearing processed file database")
         if processor.notification_service.enabled:
             LOGGER.info("Notifications disabled for this run because the processed cache was cleared")
         processor.clear_processed_cache()

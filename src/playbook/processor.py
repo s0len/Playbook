@@ -9,7 +9,6 @@ from typing import Any
 
 from rich.progress import Progress
 
-from .cache import ProcessedFileCache
 from .config import AppConfig
 from .destination_builder import build_destination, build_match_context, format_relative_destination
 from .file_discovery import gather_source_files, matches_globs, should_suppress_sample_ignored
@@ -57,7 +56,6 @@ class Processor:
         if not self.config.settings.dry_run:
             ensure_directory(self.config.settings.destination_dir)
             ensure_directory(self.config.settings.cache_dir)
-        self.processed_cache = ProcessedFileCache(self.config.settings.cache_dir)
         self.metadata_fingerprints = MetadataFingerprintStore(self.config.settings.cache_dir)
         self.processed_store = ProcessedFileStore(self.config.settings.cache_dir / "playbook.db")
         self.unmatched_store = UnmatchedFileStore(self.config.settings.cache_dir / "playbook.db")
@@ -127,14 +125,11 @@ class Processor:
             LOGGER.debug(
                 self._format_log(
                     "Dry-Run: Skipping Processed Cache Clear",
-                    {"Cache": self.processed_cache.cache_path.parent},
+                    {"Cache": self.config.settings.cache_dir},
                 )
             )
             return
 
-        self.processed_cache.clear()
-        self.processed_cache.save()
-        # Also clear the SQLite database to ensure files are re-processed
         cleared_count = self.processed_store.clear()
         LOGGER.debug(
             self._format_log(
@@ -161,9 +156,10 @@ class Processor:
                     },
                 )
             )
-            removed_records = self.processed_cache.remove_by_metadata_changes(self._state.metadata_change_map)
+            # Remove records for sports with metadata changes so files get re-processed
+            removed_records = self.processed_store.remove_by_metadata_changes(self._state.metadata_change_map)
             self._state.stale_destinations = {
-                source: Path(record.destination) for source, record in removed_records.items() if record.destination
+                source: Path(record.destination_path) for source, record in removed_records.items()
             }
             self._state.stale_records = removed_records
         stats = ProcessingStats()
@@ -172,23 +168,11 @@ class Processor:
         try:
             all_source_files = list(self._gather_source_files(stats))
             filtered_source_files: list[Path] = []
-            skipped_by_cache = 0
             skipped_by_db = 0
             reprocess_missing_dest = 0
 
             for source_path in all_source_files:
-                # Existing JSON cache check
-                if self.processed_cache.is_processed(source_path):
-                    skipped_by_cache += 1
-                    LOGGER.debug(
-                        self._format_log(
-                            "Skipping Previously Processed File",
-                            {"Path": source_path},
-                        )
-                    )
-                    continue
-
-                # Early database check (unless force_reprocess)
+                # Database check (unless force_reprocess)
                 if not self.config.settings.force_reprocess:
                     is_processed, dest_path = self.processed_store.check_processed_with_destination(str(source_path))
                     if is_processed:
@@ -220,8 +204,7 @@ class Processor:
                         "Discovered Candidate Files",
                         {
                             "Total": len(all_source_files),
-                            "Skipped Via Cache": skipped_by_cache,
-                            "Skipped Via Database": skipped_by_db,
+                            "Skipped (Already Processed)": skipped_by_db,
                             "Re-processing (Missing Dest)": reprocess_missing_dest,
                         },
                     )
@@ -294,7 +277,6 @@ class Processor:
             return stats
         finally:
             if not self.config.settings.dry_run:
-                self.processed_cache.save()
                 self.metadata_fingerprints.save()
 
     def _gather_source_files(self, stats: ProcessingStats | None = None) -> Iterable[Path]:
@@ -600,7 +582,6 @@ class Processor:
         event, kometa_trigger_needed, sport_id, quality_info, quality_score = handle_match(
             match,
             stats,
-            processed_cache=self.processed_cache,
             stale_destinations=self._state.stale_destinations,
             stale_records=self._state.stale_records,
             skip_existing=settings.skip_existing,

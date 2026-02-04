@@ -546,6 +546,76 @@ class ProcessedFileStore:
         conn.commit()
         return cursor.rowcount > 0
 
+    def remove_by_metadata_changes(
+        self,
+        changes: dict[str, object],
+    ) -> dict[str, ProcessedFileRecord]:
+        """Remove records affected by metadata changes.
+
+        When metadata changes for a sport (episode titles corrected, etc.),
+        we need to remove affected records so files get re-processed with
+        the new metadata.
+
+        For simplicity, this removes ALL records for any sport that has
+        metadata changes. This is simpler than fine-grained invalidation
+        and the cost is minimal (re-processing a sport takes seconds).
+
+        Args:
+            changes: Dict of sport_id -> MetadataChangeResult. Any sport
+                with a truthy change result will have all its records removed.
+
+        Returns:
+            Dict of source_path -> ProcessedFileRecord for removed records.
+            Used for tracking stale destinations that need cleanup.
+        """
+        if not changes:
+            return {}
+
+        removed: dict[str, ProcessedFileRecord] = {}
+
+        for sport_id, change in changes.items():
+            # Check if this sport has any changes that require invalidation
+            # The change object has: updated, changed_seasons, changed_episodes, invalidate_all
+            if not change:
+                continue
+
+            # Get the change attributes safely
+            invalidate_all = getattr(change, "invalidate_all", False)
+            updated = getattr(change, "updated", False)
+            changed_seasons = getattr(change, "changed_seasons", set())
+            changed_episodes = getattr(change, "changed_episodes", {})
+
+            # Skip if no actual changes
+            if not (invalidate_all or updated or changed_seasons or changed_episodes):
+                continue
+
+            # Get all records for this sport before deleting
+            records = self.get_by_sport(sport_id)
+            for record in records:
+                removed[record.source_path] = record
+
+            # Delete all records for this sport
+            self.delete_by_sport(sport_id)
+
+        return removed
+
+    def delete_by_sport(self, sport_id: str) -> int:
+        """Delete all records for a sport.
+
+        Args:
+            sport_id: The sport identifier
+
+        Returns:
+            Number of records deleted
+        """
+        conn = self._get_connection()
+        cursor = conn.execute(
+            "DELETE FROM processed_files WHERE sport_id = ?",
+            (sport_id,),
+        )
+        conn.commit()
+        return cursor.rowcount
+
     def delete_old_destination_records(self, destination_path: str, keep_source: str) -> int:
         """Delete old records for a destination, keeping only the specified source.
 
