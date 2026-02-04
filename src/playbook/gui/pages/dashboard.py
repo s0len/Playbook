@@ -221,8 +221,13 @@ async def _clear_cache() -> None:
         _safe_notify("Processor not initialized", type="warning")
         return
 
+    _safe_notify("Clearing cache...", type="info")
+
     try:
-        gui_state.processor.clear_processed_cache()
+        # Run cache clear in background to avoid blocking
+        await asyncio.get_event_loop().run_in_executor(
+            None, gui_state.processor.clear_processed_cache
+        )
         gui_state.recent_events.clear()
         _safe_notify("Cache cleared", type="positive")
     except Exception as e:

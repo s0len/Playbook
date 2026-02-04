@@ -161,36 +161,64 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
 
 
 def _save_changes(state: SettingsFormState) -> None:
-    """Save configuration changes."""
+    """Save configuration changes asynchronously."""
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+
     if not state.config_path:
         ui.notify("No configuration file to save", type="warning")
         return
 
-    # Create backup first
-    try:
-        backup_path = _create_backup(state.config_path)
-        if backup_path:
-            LOGGER.info("Created backup: %s", backup_path)
-    except Exception as e:
-        LOGGER.warning("Failed to create backup: %s", e)
+    ui.notify("Saving configuration...", type="info")
+    config_path = state.config_path
 
-    # Save
-    if state.save():
-        ui.notify("Configuration saved successfully", type="positive")
+    def do_save():
+        """Synchronous save operation."""
+        # Create backup first
+        try:
+            backup_path = _create_backup(config_path)
+            if backup_path:
+                LOGGER.info("Created backup: %s", backup_path)
+        except Exception as e:
+            LOGGER.warning("Failed to create backup: %s", e)
+
+        # Save
+        if not state.save():
+            return False, "Failed to save configuration"
 
         # Reload the processor config if available
         if gui_state.processor:
             try:
                 from playbook.config import load_config
 
-                new_config = load_config(state.config_path)
+                new_config = load_config(config_path)
                 gui_state.config = new_config
                 LOGGER.info("Reloaded configuration after save")
             except Exception as e:
                 LOGGER.warning("Failed to reload configuration: %s", e)
-                ui.notify("Configuration saved but reload failed. Restart may be needed.", type="warning")
-    else:
-        ui.notify("Failed to save configuration", type="negative")
+                return True, "Configuration saved but reload failed. Restart may be needed."
+
+        return True, None
+
+    async def async_save():
+        loop = asyncio.get_event_loop()
+        executor = ThreadPoolExecutor(max_workers=1)
+        try:
+            success, warning = await loop.run_in_executor(executor, do_save)
+            if success:
+                if warning:
+                    ui.notify(warning, type="warning")
+                else:
+                    ui.notify("Configuration saved successfully", type="positive")
+            else:
+                ui.notify(warning or "Failed to save configuration", type="negative")
+        except Exception as e:
+            LOGGER.exception("Save failed: %s", e)
+            ui.notify(f"Save failed: {e}", type="negative")
+        finally:
+            executor.shutdown(wait=False)
+
+    asyncio.create_task(async_save())
 
 
 def _reset_changes(state: SettingsFormState) -> None:

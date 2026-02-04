@@ -688,8 +688,16 @@ def _show_manual_match_dialog_v2(record, refresh_results) -> None:
 
     def do_manual_match():
         """Execute the manual match."""
+        import asyncio
+        from concurrent.futures import ThreadPoolExecutor
+
         if dialog_state["season_index"] is None or dialog_state["episode_index"] is None:
             ui.notify("Please select a season and episode", type="warning")
+            return
+
+        # Check if a scan is already running
+        if gui_state.is_processing:
+            ui.notify("A scan is in progress. Please wait for it to complete.", type="warning")
             return
 
         sport = next((s for s in gui_state.config.sports if s.id == dialog_state["sport_id"]), None)
@@ -714,15 +722,35 @@ def _show_manual_match_dialog_v2(record, refresh_results) -> None:
             ui.notify("Season or episode not found", type="warning")
             return
 
-        try:
-            # Process the manual match
-            _execute_manual_match(record, sport, dialog_state["show"], season, episode)
-            dialog.close()
-            ui.notify("File matched successfully!", type="positive")
-            refresh_results()
-        except Exception as e:
-            LOGGER.exception("Manual match failed: %s", e)
-            ui.notify(f"Match failed: {e}", type="negative")
+        # Close dialog immediately for better UX
+        dialog.close()
+        ui.notify("Processing match...", type="info")
+
+        # Capture values for the async task
+        match_record = record
+        match_sport = sport
+        match_show = dialog_state["show"]
+        match_season = season
+        match_episode = episode
+
+        async def run_manual_match():
+            """Run manual match in background thread."""
+            loop = asyncio.get_event_loop()
+            executor = ThreadPoolExecutor(max_workers=1)
+            try:
+                await loop.run_in_executor(
+                    executor,
+                    lambda: _execute_manual_match(match_record, match_sport, match_show, match_season, match_episode),
+                )
+                ui.notify("File matched successfully!", type="positive")
+                refresh_results()
+            except Exception as e:
+                LOGGER.exception("Manual match failed: %s", e)
+                ui.notify(f"Match failed: {e}", type="negative")
+            finally:
+                executor.shutdown(wait=False)
+
+        asyncio.create_task(run_manual_match())
 
     with ui.dialog() as dialog, ui.card().classes("w-full max-w-2xl"):
         with ui.column().classes("w-full gap-4"):
