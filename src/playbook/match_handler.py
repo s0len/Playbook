@@ -369,7 +369,8 @@ def cleanup_old_destination(
         return
 
     try:
-        old_destination.unlink()
+        # Use missing_ok=True to handle race condition where file was deleted externally
+        old_destination.unlink(missing_ok=True)
     except OSError as exc:
         from .logging_utils import render_fields_block
 
@@ -384,6 +385,7 @@ def cleanup_old_destination(
                 pad_top=True,
             )
         )
+        return  # Don't log success if we failed
     else:
         from .logging_utils import render_fields_block
 
@@ -681,8 +683,11 @@ def handle_match(
         )
         if not dry_run:
             try:
-                destination.unlink()
+                # Use missing_ok=True to handle race condition where file was deleted
+                # between exists() check and unlink() (e.g., by Plex or user)
+                destination.unlink(missing_ok=True)
             except OSError as exc:
+                # Only fail for real errors (permissions, etc.), not "file not found"
                 logger.error(
                     render_fields_block(
                         "Failed To Remove Destination",
