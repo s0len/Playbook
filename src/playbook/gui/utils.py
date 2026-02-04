@@ -62,6 +62,39 @@ def safe_timer(interval: float, callback: Callable[[], Any], *, once: bool = Fal
     return timer
 
 
+def safe_notify(
+    client,
+    message: str,
+    *,
+    type: str = "info",  # noqa: A002
+    position: str = "bottom",
+    **kwargs,
+) -> None:
+    """Safely send a notification to a client that may have disconnected.
+
+    Use this for notifications after async operations where the client
+    may have closed the browser tab or navigated away.
+
+    Args:
+        client: The NiceGUI client to notify
+        message: The notification message
+        type: Notification type (info, positive, negative, warning)
+        position: Notification position
+        **kwargs: Additional arguments passed to ui.notify
+    """
+    # Check if client is deleted before attempting to use it
+    # NiceGUI uses _deleted (private attribute) to track deleted clients
+    if getattr(client, "_deleted", False):
+        LOGGER.debug("Skipping notification - client disconnected: %s", message)
+        return
+    try:
+        with client:
+            ui.notify(message, type=type, position=position, **kwargs)
+    except Exception:
+        # Client disconnected or other error - silently ignore
+        LOGGER.debug("Failed to send notification (client likely disconnected): %s", message)
+
+
 def suppress_nicegui_disconnect_errors() -> None:
     """Suppress NiceGUI 'parent slot deleted' errors in logging.
 

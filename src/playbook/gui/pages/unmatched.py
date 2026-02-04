@@ -16,6 +16,7 @@ from datetime import datetime
 from nicegui import ui
 
 from ..state import gui_state
+from ..utils import safe_notify
 
 LOGGER = logging.getLogger(__name__)
 
@@ -414,16 +415,14 @@ async def _trigger_rescan(refresh_callback=None) -> None:
     try:
         # Run process_all in a separate thread
         await asyncio.get_event_loop().run_in_executor(None, gui_state.processor.process_all)
-        # Use captured client context for notification after async operation
-        with client:
-            ui.notify("Scan complete!", type="positive")
+        # Use safe_notify for notification after async operation (client may have disconnected)
+        safe_notify(client, "Scan complete!", type="positive")
         # Refresh the page to show updated list
         if refresh_callback:
             refresh_callback()
     except Exception as e:
         LOGGER.exception("Scan failed: %s", e)
-        with client:
-            ui.notify(f"Scan failed: {e}", type="negative")
+        safe_notify(client, f"Scan failed: {e}", type="negative")
     finally:
         gui_state.set_processing(False)
 
@@ -751,14 +750,12 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
                 None,
                 lambda: _execute_manual_match(match_record, match_sport, match_show, match_season, match_episode),
             )
-            # Use captured client context for notification after dialog is closed
-            with client:
-                ui.notify("File matched successfully!", type="positive")
+            # Use safe_notify for notification after dialog is closed (client may have disconnected)
+            safe_notify(client, "File matched successfully!", type="positive")
             refresh_page()
         except Exception as e:
             LOGGER.exception("Manual match failed: %s", e)
-            with client:
-                ui.notify(f"Match failed: {e}", type="negative")
+            safe_notify(client, f"Match failed: {e}", type="negative")
 
     with ui.dialog() as dialog, ui.card().classes("w-full max-w-2xl"):
         with ui.column().classes("w-full gap-4"):
