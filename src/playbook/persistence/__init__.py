@@ -1,7 +1,7 @@
-"""Persistence layer for file tracking.
+"""Persistence layer for file tracking and caching.
 
 This package provides SQLite-backed storage for tracking processed and
-unmatched files, enabling GUI visualization and manual file management.
+unmatched files, as well as caching API metadata responses.
 
 Public API:
 - ProcessedFileRecord: Record of a processed file
@@ -11,6 +11,8 @@ Public API:
 - MatchAttempt: Details of a match attempt against a sport
 - classify_file_category: Classify a file by extension/name
 - get_file_size_safe: Get file size without raising exceptions
+- CacheEntry: A cached metadata entry with TTL and HTTP headers
+- MetadataCacheStore: SQLite-backed cache for API metadata
 
 Example:
     from playbook.persistence import ProcessedFileStore, ProcessedFileRecord
@@ -24,6 +26,7 @@ Example:
     ))
 """
 
+from .metadata_cache import CacheEntry, MetadataCacheStore
 from .processed_store import ProcessedFileRecord, ProcessedFileStore
 from .unmatched_store import (
     FileCategory,
@@ -35,6 +38,8 @@ from .unmatched_store import (
 )
 
 __all__ = [
+    "CacheEntry",
+    "MetadataCacheStore",
     "ProcessedFileRecord",
     "ProcessedFileStore",
     "UnmatchedFileRecord",

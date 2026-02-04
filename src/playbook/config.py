@@ -40,7 +40,7 @@ class TVSportsDBConfig:
     """Configuration for TheTVSportsDB API cache and timeout settings."""
 
     base_url: str = "http://localhost:8000"
-    ttl_hours: int = 12
+    ttl_hours: int = 2
     timeout: float = 30.0
 
 
@@ -81,7 +81,7 @@ class PatternConfig:
 class MetadataConfig:
     url: str
     show_key: str | None = None
-    ttl_hours: int = 12
+    ttl_hours: int = 2
     headers: dict[str, str] = field(default_factory=dict)
     season_overrides: dict[str, dict[str, Any]] = field(default_factory=dict)
 
@@ -362,7 +362,7 @@ def _build_metadata_config(data: dict[str, Any]) -> MetadataConfig:
     return MetadataConfig(
         url=data["url"],
         show_key=data.get("show_key"),
-        ttl_hours=int(data.get("ttl_hours", 12)),
+        ttl_hours=int(data.get("ttl_hours", 2)),
         headers={str(k): str(v) for k, v in data.get("headers", {}).items()},
         season_overrides=data.get("season_overrides", {}),
     )
@@ -754,7 +754,7 @@ def _build_tvsportsdb_config(data: dict[str, Any]) -> TVSportsDBConfig:
         base_url = TVSportsDBConfig.base_url
 
     try:
-        ttl_hours = int(data.get("ttl_hours", 12))
+        ttl_hours = int(data.get("ttl_hours", 2))
     except (TypeError, ValueError) as exc:
         raise ValueError("'tvsportsdb.ttl_hours' must be an integer") from exc
 
