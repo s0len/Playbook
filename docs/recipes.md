@@ -10,7 +10,7 @@ These walkthroughs illustrate how to adapt Playbook to new sports, tune regexes,
 | Tweak per-league notifications | [Customizing Notifications per Sport](#customizing-notifications-per-sport) |
 | Build downloader filters | [Autobrr Filter Walkthrough](#autobrr-filter-walkthrough) |
 | Vet pattern changes safely | [Testing Pattern Changes Quickly](#testing-pattern-changes-quickly) |
-| Validate metadata-driven workflows | [Figure Skating Grand Prix Example](#sample-figure-skating-grand-prix-workflow) |
+| Validate metadata-driven workflows | [ISU Figure Skating Example](#sample-isu-figure-skating-workflow) |
 
 ## Extending to New Sports
 
@@ -29,17 +29,18 @@ These walkthroughs illustrate how to adapt Playbook to new sports, tune regexes,
 - [ ] Notifications configured for the new `sport_id`.
 - [ ] `tests/data/pattern_samples.yaml` updated with at least one real release name.
 
-## Sample Figure Skating Grand Prix Workflow
+## Sample ISU Figure Skating Workflow
 
-Pair the `figure_skating_grand_prix` pattern set with the `show_slug: "figure-skating-grand-prix-2025"` to normalize releases such as:
+The `isu_figure_skating` pattern set handles all ISU competitions (Grand Prix, Europeans, Four Continents, Worlds) with `show_slug: "isu-figure-skating-2025-2026"`. Example releases:
 
 - `Figure Skating Grand Prix France 2025 Pairs Short Program 17 10 720pEN50fps ES`
-- `Figure Skating Grand Prix France 2025 Ice Dancing Rhythm Dance 18 10 720pEN50fps ES`
-- `Figure Skating Grand Prix China 2025 Exhibition Gala 26 10 720pEN50fps ES`
-- `Figure Skating Grand Prix Final 2025 Women Free Program 06 12 1080pEN50fps.mkv`
+- `ISU Figure Skating Grand Prix China 2025 Ice Dancing Rhythm Dance 18 10`
+- `European Figure Skating Championships Sheffield 2026 Men Free Program 17 01`
+- `ISU World Figure Skating Championships 2026 Women Free Program 26 03`
 
 Tips:
 
+- The pattern set includes 7 patterns covering all major ISU competitions.
 - When releases omit round numbers, use `season_selector.mode: title` plus `session_aliases` to map `Rhythm Dance`/`Free Program` onto canonical metadata.
 - Add `destination.filename_template` overrides if you need federation-specific folder structures (`{season_round:02} {season_title}` works well for multi-stop tours).
 - Keep `allow_unmatched: true` during onboarding to reduce noise while you iterate on regexes.

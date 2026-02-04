@@ -31,7 +31,7 @@ When `use_default_sports: true` (the default), Playbook automatically enables th
 | **Combat Sports** | UFC |
 | **North American** | NFL, NBA, NHL |
 | **Football (Soccer)** | Premier League, UEFA Champions League |
-| **Figure Skating** | Figure Skating Grand Prix |
+| **Figure Skating** | ISU Figure Skating |
 
 To disable specific sports:
 

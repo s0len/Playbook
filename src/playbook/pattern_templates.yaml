@@ -6577,11 +6577,11 @@ default_sports:
   # ------------------------------------------------------------------
   # Figure Skating
   # ------------------------------------------------------------------
-  - id: figure_skating_grand_prix
-    name: Figure Skating Grand Prix
+  - id: isu_figure_skating
+    name: ISU Figure Skating
     pattern_sets:
-      - figure_skating_grand_prix
+      - isu_figure_skating
     variants:
       - year: 2025
-        show_slug: "figure-skating-grand-prix-2025"
+        show_slug: "isu-figure-skating-2025-2026"
 
