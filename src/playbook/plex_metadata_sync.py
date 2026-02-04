@@ -31,7 +31,6 @@ from typing import Any
 from urllib.parse import urljoin
 
 from .config import AppConfig, SportConfig
-from .logging_utils import LogBlockBuilder
 from .metadata import (
     MetadataChangeResult,
     MetadataFingerprintStore,
@@ -712,7 +711,7 @@ class PlexMetadataSync:
         self.fingerprint_store.save()
         self.sync_state_store.save()  # Persist sync state
 
-        if stats.has_activity():
+        if stats.has_activity() or stats.shows_not_in_plex > 0:
             summary = stats.summary()
             LOGGER.info(
                 "Plex sync complete: shows=%d/%d seasons=%d/%d episodes=%d/%d assets=%d",
@@ -724,6 +723,12 @@ class PlexMetadataSync:
                 summary["episodes"]["skipped"],
                 summary["assets"]["updated"],
             )
+            # Log shows not in Plex at DEBUG level (normal - user doesn't have all shows)
+            if summary["shows"]["not_in_plex"] > 0:
+                LOGGER.debug(
+                    "Skipped %d sport(s) not found in Plex library (this is normal)",
+                    summary["shows"]["not_in_plex"],
+                )
             # Log not-found items at DEBUG level (normal - user doesn't have all content)
             not_found_total = summary["seasons"]["not_found"] + summary["episodes"]["not_found"]
             if not_found_total:
@@ -763,11 +768,39 @@ class PlexMetadataSync:
         """Sync a single sport to Plex."""
         LOGGER.debug("Syncing sport: %s (%s)", sport.id, sport.name)
 
-        # Load metadata from TheTVSportsDB API
+        # First, check if the show exists in Plex using the sport name as a hint.
+        # This avoids unnecessary TheTVSportsDB API calls for shows the user doesn't have.
+        search_result = self.client.search_show(library_id, sport.name)
+        stats.api_calls += 1
+
+        if search_result.result is None:
+            # Show not in user's Plex library - this is expected (user may not have
+            # files for all configured sports). Skip silently at DEBUG level.
+            LOGGER.debug(
+                "Sport '%s' not found in Plex library %s - skipping (user may not have this show)",
+                sport.name,
+                library_id,
+            )
+            stats.shows_not_in_plex += 1
+            return
+
+        # Show exists in Plex - now load metadata from TheTVSportsDB API
         show = self._load_show(sport)
         if show is None:
             stats.errors.append(f"Failed to load metadata for sport: {sport.id} ({sport.show_slug})")
             return
+
+        # Re-search with exact title from metadata (in case sport.name differs from show.title)
+        if show.title != sport.name:
+            search_result = self.client.search_show(library_id, show.title)
+            stats.api_calls += 1
+            if search_result.result is None:
+                LOGGER.debug(
+                    "Show '%s' (from metadata) not found in Plex - skipping",
+                    show.title,
+                )
+                stats.shows_not_in_plex += 1
+                return
 
         # Compute and compare fingerprint
         previous_fingerprint = self.fingerprint_store.get(sport.id)
@@ -785,37 +818,6 @@ class PlexMetadataSync:
             change.updated,
             is_first_sync,
         )
-
-        # Find show in Plex using case-insensitive matching.
-        # Plex may have normalized the title (e.g., "NTT" → "Ntt"), but search_show
-        # handles this. We'll restore original casing when syncing metadata back.
-        search_result = self.client.search_show(library_id, show.title)
-        stats.api_calls += 1
-
-        if search_result.result is None:
-            # Build enhanced log message with library context and close matches
-            builder = LogBlockBuilder("Show Not Found In Plex", pad_top=True)
-            builder.add_fields(
-                {
-                    "Show Title": show.title,
-                    "Library ID": library_id,
-                    "API Slug": sport.show_slug,
-                }
-            )
-            if search_result.close_matches:
-                builder.add_section("Similar Shows In Plex", search_result.close_matches)
-            else:
-                builder.add_section("Similar Shows In Plex", [], empty_label="(no similar titles found)")
-            LOGGER.warning(builder.render())
-
-            # Enhanced error message for stats with actionable context
-            close_matches_str = ""
-            if search_result.close_matches:
-                close_matches_str = f" Similar: {', '.join(search_result.close_matches[:3])}"
-            stats.errors.append(
-                f"Show not found: '{show.title}' in library {library_id} (slug: {sport.show_slug}).{close_matches_str}"
-            )
-            return
 
         plex_show = search_result.result
         show_rating = str(plex_show.get("ratingKey"))

@@ -82,6 +82,7 @@ class PlexSyncStats:
 
     shows_updated: int = 0
     shows_skipped: int = 0
+    shows_not_in_plex: int = 0  # Shows configured but not in user's Plex library
     seasons_updated: int = 0
     seasons_skipped: int = 0
     seasons_not_found: int = 0
@@ -106,7 +107,11 @@ class PlexSyncStats:
 
     def summary(self) -> dict[str, Any]:
         return {
-            "shows": {"updated": self.shows_updated, "skipped": self.shows_skipped},
+            "shows": {
+                "updated": self.shows_updated,
+                "skipped": self.shows_skipped,
+                "not_in_plex": self.shows_not_in_plex,
+            },
             "seasons": {
                 "updated": self.seasons_updated,
                 "skipped": self.seasons_skipped,
