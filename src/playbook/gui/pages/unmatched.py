@@ -150,7 +150,7 @@ def _filters_section_v2(state, on_filter_change) -> None:
         with ui.row().classes("w-full gap-4 flex-wrap"):
             # Use on_change parameter for real-time filtering as user types
             def on_search_change(e):
-                state.search_query = e.value or ""
+                state.search_query = e.sender.value or ""
                 state.page = 0  # Reset to first page on search
                 on_filter_change()
 
@@ -394,10 +394,9 @@ def _format_relative_time(dt: datetime) -> str:
         return "Just now"
 
 
-def _trigger_rescan(refresh_callback=None) -> None:
+async def _trigger_rescan(refresh_callback=None) -> None:
     """Trigger a processing run to rescan files."""
     import asyncio
-    from concurrent.futures import ThreadPoolExecutor
 
     if not gui_state.processor:
         ui.notify("Processor not available", type="warning")
@@ -410,26 +409,18 @@ def _trigger_rescan(refresh_callback=None) -> None:
     ui.notify("Starting scan in background...", type="info")
     gui_state.set_processing(True)
 
-    async def run_scan():
-        """Run the scan in a thread pool to not block the GUI."""
-        loop = asyncio.get_event_loop()
-        executor = ThreadPoolExecutor(max_workers=1)
-        try:
-            # Run process_all in a separate thread
-            await loop.run_in_executor(executor, gui_state.processor.process_all)
-            ui.notify("Scan complete!", type="positive")
-            # Refresh the page to show updated list
-            if refresh_callback:
-                refresh_callback()
-        except Exception as e:
-            LOGGER.exception("Scan failed: %s", e)
-            ui.notify(f"Scan failed: {e}", type="negative")
-        finally:
-            gui_state.set_processing(False)
-            executor.shutdown(wait=False)
-
-    # Schedule the async scan without blocking
-    asyncio.create_task(run_scan())
+    try:
+        # Run process_all in a separate thread
+        await asyncio.get_event_loop().run_in_executor(None, gui_state.processor.process_all)
+        ui.notify("Scan complete!", type="positive")
+        # Refresh the page to show updated list
+        if refresh_callback:
+            refresh_callback()
+    except Exception as e:
+        LOGGER.exception("Scan failed: %s", e)
+        ui.notify(f"Scan failed: {e}", type="negative")
+    finally:
+        gui_state.set_processing(False)
 
 
 def _hide_file_v2(source_path: str, refresh_page) -> None:
@@ -698,10 +689,9 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
             except (ValueError, IndexError):
                 pass
 
-    def do_manual_match():
+    async def do_manual_match():
         """Execute the manual match."""
         import asyncio
-        from concurrent.futures import ThreadPoolExecutor
 
         if dialog_state["season_index"] is None or dialog_state["episode_index"] is None:
             ui.notify("Please select a season and episode", type="warning")
@@ -738,31 +728,24 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
         dialog.close()
         ui.notify("Processing match...", type="info")
 
-        # Capture values for the async task
+        # Capture values for the background task
         match_record = record
         match_sport = sport
         match_show = dialog_state["show"]
         match_season = season
         match_episode = episode
 
-        async def run_manual_match():
-            """Run manual match in background thread."""
-            loop = asyncio.get_event_loop()
-            executor = ThreadPoolExecutor(max_workers=1)
-            try:
-                await loop.run_in_executor(
-                    executor,
-                    lambda: _execute_manual_match(match_record, match_sport, match_show, match_season, match_episode),
-                )
-                ui.notify("File matched successfully!", type="positive")
-                refresh_page()
-            except Exception as e:
-                LOGGER.exception("Manual match failed: %s", e)
-                ui.notify(f"Match failed: {e}", type="negative")
-            finally:
-                executor.shutdown(wait=False)
-
-        asyncio.create_task(run_manual_match())
+        try:
+            # Run the match in background thread
+            await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: _execute_manual_match(match_record, match_sport, match_show, match_season, match_episode),
+            )
+            ui.notify("File matched successfully!", type="positive")
+            refresh_page()
+        except Exception as e:
+            LOGGER.exception("Manual match failed: %s", e)
+            ui.notify(f"Match failed: {e}", type="negative")
 
     with ui.dialog() as dialog, ui.card().classes("w-full max-w-2xl"):
         with ui.column().classes("w-full gap-4"):
