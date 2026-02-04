@@ -40,6 +40,7 @@ def header(dark_mode: ui.dark_mode | None = None) -> None:
                 _nav_link("Logs", "/logs", "article")
                 _nav_link("Config", "/config", "settings")
                 _nav_link("Sports", "/sports", "emoji_events")
+                _nav_link("Unmatched", "/unmatched", "help_outline")
 
             ui.space()
 

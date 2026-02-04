@@ -397,20 +397,22 @@ class ProcessedFileStore:
         return self._row_to_record(row) if row else None
 
     def get_quality_score(self, destination_path: str) -> int | None:
-        """Get the quality score for a destination path.
+        """Get the highest quality score for a destination path.
 
         This is used to compare quality scores when deciding whether to
-        upgrade an existing file.
+        upgrade an existing file. We use MAX because multiple source files
+        may have been processed to the same destination (after upgrades),
+        and we want to compare against the best quality we've ever achieved.
 
         Args:
             destination_path: The destination file path to look up
 
         Returns:
-            The quality score, or None if not found or not set
+            The highest quality score, or None if not found or not set
         """
         conn = self._get_connection()
         cursor = conn.execute(
-            "SELECT quality_score FROM processed_files WHERE destination_path = ?",
+            "SELECT MAX(quality_score) as quality_score FROM processed_files WHERE destination_path = ?",
             (destination_path,),
         )
         row = cursor.fetchone()
@@ -518,6 +520,27 @@ class ProcessedFileStore:
         )
         conn.commit()
         return cursor.rowcount > 0
+
+    def delete_old_destination_records(self, destination_path: str, keep_source: str) -> int:
+        """Delete old records for a destination, keeping only the specified source.
+
+        This should be called when a file is replaced to clean up stale records
+        from previous sources that pointed to the same destination.
+
+        Args:
+            destination_path: The destination file path
+            keep_source: The source path to keep (the new replacement file)
+
+        Returns:
+            Number of old records deleted
+        """
+        conn = self._get_connection()
+        cursor = conn.execute(
+            "DELETE FROM processed_files WHERE destination_path = ? AND source_path != ?",
+            (destination_path, keep_source),
+        )
+        conn.commit()
+        return cursor.rowcount
 
     def delete_by_show(self, show_id: str) -> int:
         """Delete all records for a show.

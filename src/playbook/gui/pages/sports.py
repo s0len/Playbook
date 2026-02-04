@@ -121,8 +121,8 @@ def _get_progress_variant(progress: float) -> str:
     return "default"
 
 
-def _toggle_sport_enabled(sport_id: str, enabled: bool) -> bool:
-    """Toggle a sport's enabled status in the config.
+def _toggle_sport_enabled_sync(sport_id: str, enabled: bool) -> bool:
+    """Toggle a sport's enabled status in the config (synchronous implementation).
 
     Args:
         sport_id: The sport identifier
@@ -169,6 +169,32 @@ def _toggle_sport_enabled(sport_id: str, enabled: bool) -> bool:
     except Exception as e:
         LOGGER.exception("Failed to toggle sport enabled: %s", e)
         return False
+
+
+def _toggle_sport_enabled(sport_id: str, enabled: bool, callback=None) -> None:
+    """Toggle a sport's enabled status asynchronously.
+
+    Args:
+        sport_id: The sport identifier
+        enabled: New enabled state
+        callback: Optional callback(success: bool) to call after completion
+    """
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+
+    async def async_toggle():
+        loop = asyncio.get_event_loop()
+        executor = ThreadPoolExecutor(max_workers=1)
+        try:
+            success = await loop.run_in_executor(
+                executor, lambda: _toggle_sport_enabled_sync(sport_id, enabled)
+            )
+            if callback:
+                callback(success)
+        finally:
+            executor.shutdown(wait=False)
+
+    asyncio.create_task(async_toggle())
 
 
 def _sports_table() -> None:
@@ -230,14 +256,19 @@ def _sports_table() -> None:
         """Handle status toggle."""
         row = e.args
         sport_id = row.get("id")
+        sport_name = row.get("name")
         current_status = row.get("status")
         new_enabled = current_status != "Enabled"
 
-        if _toggle_sport_enabled(sport_id, new_enabled):
-            ui.notify(f"{row.get('name')} {'enabled' if new_enabled else 'disabled'}", type="positive")
-            ui.navigate.to("/sports")  # Refresh
-        else:
-            ui.notify("Failed to update sport status", type="negative")
+        def on_complete(success: bool):
+            if success:
+                ui.notify(f"{sport_name} {'enabled' if new_enabled else 'disabled'}", type="positive")
+                ui.navigate.to("/sports")  # Refresh
+            else:
+                ui.notify("Failed to update sport status", type="negative")
+
+        ui.notify(f"Updating {sport_name}...", type="info")
+        _toggle_sport_enabled(sport_id, new_enabled, callback=on_complete)
 
     table.on("toggle_status", on_toggle_status)
 
@@ -371,30 +402,45 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
 
     def save_changes() -> None:
         """Save changes to the config file."""
+        import asyncio
+        from concurrent.futures import ThreadPoolExecutor
+
         if not gui_state.config or not gui_state.config_path:
             ui.notify("Cannot save: config not loaded", type="negative")
             return
 
-        try:
+        sport_config = get_sport_config()
+        if not sport_config:
+            ui.notify("Sport config not found", type="negative")
+            return
+
+        # Capture values for background thread
+        config_path = gui_state.config_path
+        extra_globs = list(sport_config.extra_source_globs)
+        disabled_globs = list(sport_config.disabled_source_globs)
+
+        ui.notify("Saving...", type="info")
+
+        def do_save():
             from playbook.gui.config_utils.config_persistence import save_sport_source_globs
 
-            sport_config = get_sport_config()
-            if not sport_config:
-                ui.notify("Sport config not found", type="negative")
-                return
+            save_sport_source_globs(config_path, sport_id, extra_globs, disabled_globs)
 
-            save_sport_source_globs(
-                gui_state.config_path,
-                sport_id,
-                sport_config.extra_source_globs,
-                sport_config.disabled_source_globs,
-            )
-            state["modified"] = False
-            _refresh_globs_ui()
-            ui.notify("Source globs saved!", type="positive")
-        except Exception as e:
-            LOGGER.exception("Failed to save source globs: %s", e)
-            ui.notify(f"Failed to save: {e}", type="negative")
+        async def async_save():
+            loop = asyncio.get_event_loop()
+            executor = ThreadPoolExecutor(max_workers=1)
+            try:
+                await loop.run_in_executor(executor, do_save)
+                state["modified"] = False
+                _refresh_globs_ui()
+                ui.notify("Source globs saved!", type="positive")
+            except Exception as e:
+                LOGGER.exception("Failed to save source globs: %s", e)
+                ui.notify(f"Failed to save: {e}", type="negative")
+            finally:
+                executor.shutdown(wait=False)
+
+        asyncio.create_task(async_save())
 
     def _refresh_globs_ui() -> None:
         """Refresh the globs UI."""
@@ -603,6 +649,9 @@ def _pattern_tester() -> None:
 
 def _test_pattern(filename: str, sport_id: str, container: ui.column) -> None:
     """Test a filename against sport patterns."""
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+
     container.clear()
 
     if not filename or not sport_id:
@@ -626,7 +675,14 @@ def _test_pattern(filename: str, sport_id: str, container: ui.column) -> None:
             ui.label(f"Sport '{sport_id}' not found").classes("text-red-600 dark:text-red-400")
         return
 
-    try:
+    # Show loading indicator
+    with container:
+        with ui.row().classes("items-center gap-2"):
+            ui.spinner(size="sm")
+            ui.label("Testing pattern...").classes("text-slate-500 dark:text-slate-400")
+
+    def run_pattern_test():
+        """Run the pattern test in a background thread."""
         from playbook.matcher import match_file_to_episode
         from playbook.metadata_loader import load_sports
 
@@ -637,9 +693,7 @@ def _test_pattern(filename: str, sport_id: str, container: ui.column) -> None:
         )
 
         if not result.runtimes:
-            with container:
-                ui.label("Failed to load sport metadata").classes("text-red-600 dark:text-red-400")
-            return
+            return None, None, None, "Failed to load sport metadata"
 
         runtime = result.runtimes[0]
         diagnostics: list[tuple[str, str]] = []
@@ -654,16 +708,33 @@ def _test_pattern(filename: str, sport_id: str, container: ui.column) -> None:
             trace=trace,
         )
 
-        with container:
-            if detection:
-                _render_match_result(detection, trace, diagnostics)
-            else:
-                _render_no_match(diagnostics, trace)
+        return detection, diagnostics, trace, None
 
-    except Exception as e:
-        LOGGER.exception("Pattern test error: %s", e)
-        with container:
-            ui.label(f"Error testing pattern: {e}").classes("text-red-600 dark:text-red-400")
+    async def async_test():
+        """Run the test asynchronously."""
+        loop = asyncio.get_event_loop()
+        executor = ThreadPoolExecutor(max_workers=1)
+        try:
+            detection, diagnostics, trace, error = await loop.run_in_executor(executor, run_pattern_test)
+
+            container.clear()
+            with container:
+                if error:
+                    ui.label(error).classes("text-red-600 dark:text-red-400")
+                elif detection:
+                    _render_match_result(detection, trace, diagnostics)
+                else:
+                    _render_no_match(diagnostics, trace)
+
+        except Exception as e:
+            LOGGER.exception("Pattern test error: %s", e)
+            container.clear()
+            with container:
+                ui.label(f"Error testing pattern: {e}").classes("text-red-600 dark:text-red-400")
+        finally:
+            executor.shutdown(wait=False)
+
+    asyncio.create_task(async_test())
 
 
 def _render_match_result(

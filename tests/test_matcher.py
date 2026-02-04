@@ -111,6 +111,37 @@ def test_match_file_to_episode_warns_when_season_missing() -> None:
     assert "season not resolved" in message
 
 
+def test_season_selector_fallback_groups() -> None:
+    """Test that fallback_groups is used when primary group is None."""
+    # Pattern captures location in different positions (before or after 'GP')
+    # Primary group 'location' is for "France GP", fallback 'location2' is for "GP France"
+    pattern = PatternConfig(
+        regex=r"(?i)^(?:(?P<location>France|Japan)\s+)?GP(?:\s+(?P<location2>France|Japan))?\s+(?P<session>[A-Za-z]+)",
+        season_selector=SeasonSelector(mode="title", group="location", fallback_groups=["location2"]),
+        priority=10,
+    )
+
+    # Create show with seasons named after countries
+    france_ep = Episode(title="Race", summary=None, originally_available=None, index=1)
+    japan_ep = Episode(title="Race", summary=None, originally_available=None, index=1)
+    france_season = Season(key="france", title="France", summary=None, index=1, episodes=[france_ep])
+    japan_season = Season(key="japan", title="Japan", summary=None, index=2, episodes=[japan_ep])
+    show = Show(key="test", title="Test GP", summary=None, seasons=[france_season, japan_season])
+
+    sport = build_sport([pattern])
+    patterns = compile_patterns(sport)
+
+    # Test case 1: Location before "GP" - uses primary group
+    result1 = match_file_to_episode("France GP Race.mkv", sport, show, patterns)
+    assert result1 is not None
+    assert result1["season"].title == "France"
+
+    # Test case 2: Location after "GP" - uses fallback group
+    result2 = match_file_to_episode("GP Japan Race.mkv", sport, show, patterns)
+    assert result2 is not None
+    assert result2["season"].title == "Japan"
+
+
 def test_match_file_to_episode_suppresses_warnings_when_requested(caplog) -> None:
     pattern = PatternConfig(
         regex=r"(?i)^(?P<round>\d+)[._-]*(?P<session>[A-Z0-9]+)",

@@ -5836,6 +5836,25 @@ pattern_sets:
         season_dir_template: "{season_number:02d} {season_title}"
         filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
 
+      - description: Premier League teams-first trailing-date releases
+        # Example: EPL.Manchester.City.Vs.Chelsea.04.01.26.SkySportsPremierLeague.2160p.50fps.HDR.NowTV.ts
+        # Date format: DD.MM.YY (after teams)
+        regex: >-
+          (?i)^(?:EPL|English\.?Premier\.?League|Premier\.?League)\.(?P<matchup>(?P<home>[A-Za-z0-9&'-]+(?:\.[A-Za-z0-9&'-]+){0,5})\.(?P<separator>Vs|vs|VS|V|v)\.(?P<away>[A-Za-z0-9&'-]+(?:\.[A-Za-z0-9&'-]+){0,5}))\.(?P<day>\d{2})\.(?P<month>\d{2})\.(?P<year_short>\d{2})(?:\.(?:<suffix_token>|[^.]+))*\.(?P<extension><extension>)$
+        season_selector:
+          mode: key
+          value_template: "20{year_short}.{month}.{day}"
+          mapping: *premier_league_matchweek_map
+        episode_selector:
+          group: matchup
+          allow_fallback_to_title: true
+        metadata_filters:
+          team_alias_map: premier_league
+          fallback_matchup_season: true
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_number:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
   # ------------------------------------------------------------------
   # ISU Figure Skating (unified: Grand Prix, Europeans, Four Continents, Worlds)
   # ------------------------------------------------------------------
@@ -5874,6 +5893,7 @@ pattern_sets:
         season_selector:
           mode: title
           group: location
+          fallback_groups: [location2]  # Location can appear before or after "Grand Prix"
           # Matches captured location (France/China/Japan/etc.) against season aliases in TVSportsDB
         episode_selector:
           group: session

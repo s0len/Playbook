@@ -17,7 +17,7 @@ from nicegui import app, ui
 
 from .components.header import header
 from .log_handler import install_gui_log_handler
-from .pages import dashboard, logs, settings, sports
+from .pages import dashboard, logs, settings, sports, unmatched
 from .state import gui_state
 from .styles import setup_page_styles
 from .theme import apply_theme
@@ -57,6 +57,11 @@ def create_app() -> None:
     def sport_detail_route(sport_id: str) -> None:
         """Sport detail page with season/episode tracking."""
         _page_wrapper(lambda: sports.sport_detail_page(sport_id))
+
+    @ui.page("/unmatched")
+    def unmatched_page_route() -> None:
+        """Unmatched files management page."""
+        _page_wrapper(unmatched.unmatched_page)
 
     # API endpoints for programmatic access
     @app.get("/api/stats")
@@ -151,6 +156,7 @@ def run_with_gui(
     gui_state.config = app_config
     gui_state.config_path = config_path
     gui_state.processed_store = processor.processed_store
+    gui_state.unmatched_store = processor.unmatched_store
 
     # Set NiceGUI storage path to cache directory (avoids permission issues in containers)
     storage_path = app_config.settings.cache_dir / ".nicegui"
