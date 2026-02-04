@@ -25,14 +25,25 @@ DEFAULT_CATEGORIES = ["video"]
 
 def unmatched_page() -> None:
     """Render the unmatched files management page."""
-    # State for filters
-    state = {
-        "categories": list(DEFAULT_CATEGORIES),
-        "search_query": "",
-        "sport_filter": "",
-        "page": 0,
-        "page_size": 50,
-    }
+    # State for filters - use a class instance to allow mutation from nested functions
+    class State:
+        categories: list = None
+        search_query: str = ""
+        sport_filter: str = ""
+        page: int = 0
+        page_size: int = 50
+        results_container: ui.column = None
+
+    state = State()
+    state.categories = list(DEFAULT_CATEGORIES)
+
+    def refresh_results():
+        """Refresh the results after filter change."""
+        state.page = 0
+        if state.results_container:
+            state.results_container.clear()
+            with state.results_container:
+                _render_results_content(state)
 
     with ui.column().classes("w-full max-w-6xl mx-auto p-4 gap-6"):
         # Page title with refresh button
@@ -50,11 +61,12 @@ def unmatched_page() -> None:
 
         # Filters card
         with ui.card().classes("glass-card w-full"):
-            _filters_section(state)
+            _filters_section_v2(state, refresh_results)
 
         # Results container
-        results_container = ui.column().classes("w-full gap-4")
-        _render_results(results_container, state)
+        state.results_container = ui.column().classes("w-full gap-4")
+        with state.results_container:
+            _render_results_content(state)
 
 
 def _stats_overview() -> None:
@@ -100,92 +112,109 @@ def _stat_card(label: str, value: int, icon: str, color: str) -> None:
                 ui.label(label).classes("text-sm text-slate-500 dark:text-slate-400")
 
 
-def _filters_section(state: dict) -> None:
-    """Render the filters section."""
-    results_container = None
+def _filters_section_v2(state, on_filter_change) -> None:
+    """Render the filters section with reactive updates."""
+    # Container for category toggles that can be refreshed
+    toggle_container = None
 
-    def on_filter_change():
-        nonlocal results_container
-        state["page"] = 0
-        if results_container:
-            results_container.clear()
-            _render_results(results_container, state)
+    def refresh_toggles():
+        """Refresh toggle button states."""
+        nonlocal toggle_container
+        if toggle_container:
+            toggle_container.clear()
+            with toggle_container:
+                _render_category_toggles(state, on_filter_change, refresh_toggles)
 
     with ui.column().classes("w-full gap-4"):
         ui.label("Filters").classes("text-lg font-semibold text-slate-700 dark:text-slate-200")
 
-        # Category toggles
-        with ui.row().classes("gap-4 flex-wrap"):
-            ui.label("Categories:").classes("text-sm text-slate-600 dark:text-slate-400 self-center")
-
-            def make_toggle(category: str, label: str, icon: str):
-                is_active = category in state["categories"]
-
-                def toggle():
-                    if category in state["categories"]:
-                        state["categories"].remove(category)
-                    else:
-                        state["categories"].append(category)
-                    on_filter_change()
-
-                btn = ui.button(label, icon=icon, on_click=toggle)
-                if is_active:
-                    btn.props("color=primary")
-                else:
-                    btn.props("flat color=grey")
-                btn.classes("text-sm")
-
-            make_toggle("video", "Videos", "movie")
-            make_toggle("sample", "Samples", "content_cut")
-            make_toggle("metadata", "Metadata", "description")
-            make_toggle("archive", "Archives", "archive")
-            make_toggle("other", "Other", "folder")
+        # Category toggles container
+        toggle_container = ui.row().classes("gap-4 flex-wrap")
+        with toggle_container:
+            _render_category_toggles(state, on_filter_change, refresh_toggles)
 
         # Search and sport filter
         with ui.row().classes("w-full gap-4 flex-wrap"):
-            ui.input(
+            search_input = ui.input(
                 label="Search filename",
                 placeholder="e.g., Formula.1",
-                on_change=lambda e: (state.update({"search_query": e.value}), on_filter_change()),
             ).classes("flex-1 min-w-48")
+
+            # Use debounced search to avoid too many refreshes
+            def on_search_change(e):
+                state.search_query = e.value or ""
+                on_filter_change()
+
+            search_input.on("change", on_search_change)
 
             # Sport filter dropdown
             sport_options = ["All Sports"]
             if gui_state.config:
                 sport_options.extend([s.id for s in gui_state.config.sports if s.enabled])
 
+            def on_sport_change(e):
+                state.sport_filter = "" if e.value == "All Sports" else e.value
+                on_filter_change()
+
             ui.select(
                 sport_options,
                 value="All Sports",
                 label="Sport",
-                on_change=lambda e: (
-                    state.update({"sport_filter": "" if e.value == "All Sports" else e.value}),
-                    on_filter_change(),
-                ),
+                on_change=on_sport_change,
             ).classes("w-48")
 
-    # Store reference for updating
-    ui.timer(0.1, lambda: None, once=True)  # Trigger initial render
+
+def _render_category_toggles(state, on_filter_change, refresh_toggles) -> None:
+    """Render the category toggle buttons."""
+    ui.label("Categories:").classes("text-sm text-slate-600 dark:text-slate-400 self-center")
+
+    categories_config = [
+        ("video", "Videos", "movie"),
+        ("sample", "Samples", "content_cut"),
+        ("metadata", "Metadata", "description"),
+        ("archive", "Archives", "archive"),
+        ("other", "Other", "folder"),
+    ]
+
+    for category, label, icon in categories_config:
+        is_active = category in state.categories
+
+        def make_toggle_handler(cat):
+            def handler():
+                if cat in state.categories:
+                    state.categories.remove(cat)
+                else:
+                    state.categories.append(cat)
+                refresh_toggles()
+                on_filter_change()
+
+            return handler
+
+        btn = ui.button(label, icon=icon, on_click=make_toggle_handler(category))
+        if is_active:
+            btn.props("color=primary")
+        else:
+            btn.props("flat color=grey")
+        btn.classes("text-sm")
 
 
-def _render_results(container: ui.column, state: dict) -> None:
-    """Render the results list."""
+def _render_results_content(state) -> None:
+    """Render the results list content."""
     if not gui_state.unmatched_store:
-        with container:
-            ui.label("Unmatched file store not available").classes("text-slate-500 dark:text-slate-400 italic py-8")
+        ui.label("Unmatched file store not available").classes("text-slate-500 dark:text-slate-400 italic py-8")
         return
 
     try:
-        categories = state["categories"] if state["categories"] else None
-        search = state["search_query"] if state["search_query"] else None
-        sport = state["sport_filter"] if state["sport_filter"] else None
+        categories = state.categories if state.categories else None
+        search = state.search_query if state.search_query else None
+        sport = state.sport_filter if state.sport_filter else None
 
         records = gui_state.unmatched_store.get_all(
             categories=categories,
             search_query=search,
             sport_filter=sport,
-            limit=state["page_size"],
-            offset=state["page"] * state["page_size"],
+            limit=state.page_size,
+            offset=state.page * state.page_size,
         )
         total_count = gui_state.unmatched_store.get_count(
             categories=categories,
@@ -194,61 +223,67 @@ def _render_results(container: ui.column, state: dict) -> None:
         )
     except Exception as e:
         LOGGER.exception("Failed to get unmatched files: %s", e)
-        with container:
-            ui.label(f"Error loading unmatched files: {e}").classes("text-red-600 dark:text-red-400")
+        ui.label(f"Error loading unmatched files: {e}").classes("text-red-600 dark:text-red-400")
         return
 
-    with container:
-        # Results header
-        with ui.row().classes("w-full items-center justify-between"):
-            ui.label(f"Showing {len(records)} of {total_count} files").classes(
-                "text-sm text-slate-500 dark:text-slate-400"
-            )
+    def refresh_results():
+        if state.results_container:
+            state.results_container.clear()
+            with state.results_container:
+                _render_results_content(state)
 
-            # Pagination
-            if total_count > state["page_size"]:
-                total_pages = (total_count + state["page_size"] - 1) // state["page_size"]
-                with ui.row().classes("gap-2 items-center"):
-                    ui.button(
-                        icon="chevron_left",
-                        on_click=lambda: _change_page(state, -1, container),
-                    ).props("flat round dense").bind_enabled_from(state, "page", lambda p: p > 0)
+    # Results header
+    with ui.row().classes("w-full items-center justify-between"):
+        ui.label(f"Showing {len(records)} of {total_count} files").classes(
+            "text-sm text-slate-500 dark:text-slate-400"
+        )
 
-                    ui.label(f"Page {state['page'] + 1} of {total_pages}").classes(
-                        "text-sm text-slate-600 dark:text-slate-400"
-                    )
+        # Pagination
+        if total_count > state.page_size:
+            total_pages = (total_count + state.page_size - 1) // state.page_size
+            with ui.row().classes("gap-2 items-center"):
 
-                    ui.button(
-                        icon="chevron_right",
-                        on_click=lambda: _change_page(state, 1, container),
-                    ).props("flat round dense").bind_enabled_from(
-                        state, "page", lambda p: (p + 1) * state["page_size"] < total_count
-                    )
+                def go_prev():
+                    if state.page > 0:
+                        state.page -= 1
+                        refresh_results()
 
-        if not records:
-            with ui.card().classes("glass-card w-full p-8"):
-                with ui.column().classes("items-center gap-2"):
-                    ui.icon("check_circle").classes("text-green-500 text-4xl")
-                    ui.label("No unmatched files found").classes(
-                        "text-lg font-medium text-slate-700 dark:text-slate-300"
-                    )
-                    ui.label("Try adjusting your filters or run a scan").classes(
-                        "text-sm text-slate-500 dark:text-slate-400"
-                    )
-        else:
-            # File cards
-            for record in records:
-                _file_card(record, container, state)
+                def go_next():
+                    if (state.page + 1) * state.page_size < total_count:
+                        state.page += 1
+                        refresh_results()
+
+                ui.button(
+                    icon="chevron_left",
+                    on_click=go_prev,
+                ).props("flat round dense")
+
+                ui.label(f"Page {state.page + 1} of {total_pages}").classes(
+                    "text-sm text-slate-600 dark:text-slate-400"
+                )
+
+                ui.button(
+                    icon="chevron_right",
+                    on_click=go_next,
+                ).props("flat round dense")
+
+    if not records:
+        with ui.card().classes("glass-card w-full p-8"):
+            with ui.column().classes("items-center gap-2"):
+                ui.icon("check_circle").classes("text-green-500 text-4xl")
+                ui.label("No unmatched files found").classes(
+                    "text-lg font-medium text-slate-700 dark:text-slate-300"
+                )
+                ui.label("Try adjusting your filters or run a scan").classes(
+                    "text-sm text-slate-500 dark:text-slate-400"
+                )
+    else:
+        # File cards
+        for record in records:
+            _file_card(record, state, refresh_results)
 
 
-def _change_page(state: dict, delta: int, container: ui.column) -> None:
-    """Change the current page."""
-    state["page"] = max(0, state["page"] + delta)
-    container.clear()
-    _render_results(container, state)
-
-
-def _file_card(record, container: ui.column, state: dict) -> None:
+def _file_card(record, state, refresh_results) -> None:
     """Render a single file card."""
     from playbook.persistence import UnmatchedFileRecord
 
@@ -310,13 +345,13 @@ def _file_card(record, container: ui.column, state: dict) -> None:
                 ui.button(
                     "Match",
                     icon="link",
-                    on_click=lambda r=record: _show_manual_match_dialog(r, container, state),
+                    on_click=lambda r=record, rr=refresh_results: _show_manual_match_dialog_v2(r, rr),
                 ).props("flat dense color=primary").classes("text-sm")
 
                 ui.button(
                     "Hide",
                     icon="visibility_off",
-                    on_click=lambda r=record: _hide_file(r.source_path, container, state),
+                    on_click=lambda r=record, rr=refresh_results: _hide_file_v2(r.source_path, rr),
                 ).props("flat dense").classes("text-sm text-slate-500")
 
 
@@ -372,7 +407,7 @@ def _trigger_rescan() -> None:
         gui_state.set_processing(False)
 
 
-def _hide_file(source_path: str, container: ui.column, state: dict) -> None:
+def _hide_file_v2(source_path: str, refresh_results) -> None:
     """Hide a file from the unmatched list."""
     if not gui_state.unmatched_store:
         return
@@ -380,8 +415,7 @@ def _hide_file(source_path: str, container: ui.column, state: dict) -> None:
     try:
         gui_state.unmatched_store.hide_file(source_path)
         ui.notify("File hidden", type="info")
-        container.clear()
-        _render_results(container, state)
+        refresh_results()
     except Exception as e:
         LOGGER.exception("Failed to hide file: %s", e)
         ui.notify(f"Failed to hide file: {e}", type="negative")
@@ -551,8 +585,8 @@ def _render_suggestions(record) -> None:
                 ui.label(description).classes("text-sm text-slate-500 dark:text-slate-400")
 
 
-def _show_manual_match_dialog(record, container: ui.column, state: dict) -> None:
-    """Show manual match dialog."""
+def _show_manual_match_dialog_v2(record, refresh_results) -> None:
+    """Show manual match dialog (v2 with refresh callback)."""
     from playbook.persistence import UnmatchedFileRecord
 
     record: UnmatchedFileRecord
@@ -596,6 +630,7 @@ def _show_manual_match_dialog(record, container: ui.column, state: dict) -> None
                     load_episodes(dialog_state["season_index"])
         except Exception as e:
             LOGGER.exception("Failed to load show data: %s", e)
+            ui.notify(f"Failed to load sport data: {e}", type="negative")
 
     def load_episodes(season_index: int):
         """Load episodes for the selected season."""
@@ -619,18 +654,24 @@ def _show_manual_match_dialog(record, container: ui.column, state: dict) -> None
             season_select.value = season_select.options[0]
 
     def on_season_change(e):
-        if dialog_state["seasons"]:
-            idx = season_select.options.index(e.value)
-            dialog_state["season_index"] = dialog_state["seasons"][idx][0]
-            load_episodes(dialog_state["season_index"])
-            episode_select.options = [t for _, t in dialog_state["episodes"]]
-            if dialog_state["episodes"]:
-                episode_select.value = episode_select.options[0]
+        if dialog_state["seasons"] and e.value:
+            try:
+                idx = season_select.options.index(e.value)
+                dialog_state["season_index"] = dialog_state["seasons"][idx][0]
+                load_episodes(dialog_state["season_index"])
+                episode_select.options = [t for _, t in dialog_state["episodes"]]
+                if dialog_state["episodes"]:
+                    episode_select.value = episode_select.options[0]
+            except (ValueError, IndexError):
+                pass
 
     def on_episode_change(e):
-        if dialog_state["episodes"]:
-            idx = episode_select.options.index(e.value)
-            dialog_state["episode_index"] = dialog_state["episodes"][idx][0]
+        if dialog_state["episodes"] and e.value:
+            try:
+                idx = episode_select.options.index(e.value)
+                dialog_state["episode_index"] = dialog_state["episodes"][idx][0]
+            except (ValueError, IndexError):
+                pass
 
     def do_manual_match():
         """Execute the manual match."""
@@ -665,8 +706,7 @@ def _show_manual_match_dialog(record, container: ui.column, state: dict) -> None
             _execute_manual_match(record, sport, dialog_state["show"], season, episode)
             dialog.close()
             ui.notify("File matched successfully!", type="positive")
-            container.clear()
-            _render_results(container, state)
+            refresh_results()
         except Exception as e:
             LOGGER.exception("Manual match failed: %s", e)
             ui.notify(f"Match failed: {e}", type="negative")
@@ -718,7 +758,6 @@ def _show_manual_match_dialog(record, container: ui.column, state: dict) -> None
             # Preview
             with ui.column().classes("gap-1"):
                 ui.label("Destination Preview").classes("text-sm font-medium text-slate-600 dark:text-slate-400")
-                # This would show the computed destination path
                 ui.label("(Destination will be computed on match)").classes(
                     "text-sm text-slate-500 dark:text-slate-500 italic"
                 )
