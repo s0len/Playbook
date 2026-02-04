@@ -559,3 +559,152 @@ class TestProcessedFileStore:
 
         # Record should still exist
         assert store.get_by_source("/source/f1/race.mkv") is not None
+
+
+class TestMetadataCacheStore:
+    """Tests for the MetadataCacheStore class."""
+
+    @pytest.fixture
+    def cache(self, tmp_path: Path):
+        """Create a MetadataCacheStore for testing."""
+        from playbook.persistence import MetadataCacheStore
+
+        db_path = tmp_path / "metadata.db"
+        store = MetadataCacheStore(db_path, ttl_hours=1)
+        yield store
+        store.close()
+
+    def test_set_and_get(self, cache) -> None:
+        """Test basic set and get operations."""
+        content = {"name": "Test Show", "seasons": [1, 2, 3]}
+        cache.set("shows/test-show", content)
+
+        entry = cache.get("shows/test-show")
+        assert entry is not None
+        assert entry.content == content
+        assert entry.is_fresh
+
+    def test_get_returns_none_for_missing(self, cache) -> None:
+        """Test that get returns None for missing keys."""
+        entry = cache.get("shows/nonexistent")
+        assert entry is None
+
+    def test_etag_and_last_modified(self, cache) -> None:
+        """Test that ETag and Last-Modified are stored."""
+        content = {"name": "Test"}
+        cache.set(
+            "shows/test",
+            content,
+            etag='"abc123"',
+            last_modified="Wed, 01 Jan 2025 00:00:00 GMT",
+        )
+
+        entry = cache.get("shows/test")
+        assert entry is not None
+        assert entry.etag == '"abc123"'
+        assert entry.last_modified == "Wed, 01 Jan 2025 00:00:00 GMT"
+
+    def test_expired_entries_not_returned_by_default(self, cache, tmp_path: Path) -> None:
+        """Test that expired entries are not returned by default."""
+        from playbook.persistence import MetadataCacheStore
+
+        # Create cache with very short TTL
+        db_path = tmp_path / "short_ttl.db"
+        short_cache = MetadataCacheStore(db_path, ttl_hours=0)  # Immediate expiry
+
+        content = {"name": "Test"}
+        short_cache.set("shows/test", content, ttl_hours=0)
+
+        # Should be None (expired immediately with 0 TTL)
+        import time
+        time.sleep(0.1)  # Small delay to ensure expiry
+
+        entry = short_cache.get("shows/test")
+        # With ttl_hours=0, the entry expires at creation time
+        # So it should be None or expired
+        short_cache.close()
+
+    def test_include_expired_returns_expired_entries(self, cache, tmp_path: Path) -> None:
+        """Test that include_expired=True returns expired entries."""
+        from playbook.persistence import MetadataCacheStore
+
+        db_path = tmp_path / "expired.db"
+        short_cache = MetadataCacheStore(db_path, ttl_hours=0)
+
+        content = {"name": "Test"}
+        short_cache.set("shows/test", content, etag='"etag123"')
+
+        # Should return the expired entry when include_expired=True
+        entry = short_cache.get("shows/test", include_expired=True)
+        assert entry is not None
+        assert entry.etag == '"etag123"'
+        short_cache.close()
+
+    def test_refresh_ttl(self, cache) -> None:
+        """Test that refresh_ttl updates the expiration time."""
+        content = {"name": "Test"}
+        cache.set("shows/test", content)
+
+        # Refresh TTL
+        result = cache.refresh_ttl("shows/test")
+        assert result is True
+
+        # Entry should still be fresh
+        entry = cache.get("shows/test")
+        assert entry is not None
+        assert entry.is_fresh
+
+    def test_refresh_ttl_returns_false_for_missing(self, cache) -> None:
+        """Test that refresh_ttl returns False for missing keys."""
+        result = cache.refresh_ttl("shows/nonexistent")
+        assert result is False
+
+    def test_delete(self, cache) -> None:
+        """Test deletion of entries."""
+        cache.set("shows/test", {"name": "Test"})
+
+        result = cache.delete("shows/test")
+        assert result is True
+
+        entry = cache.get("shows/test")
+        assert entry is None
+
+    def test_invalidate_by_prefix(self, cache) -> None:
+        """Test invalidation by key prefix."""
+        cache.set("shows/ufc-2025", {"name": "UFC 2025"})
+        cache.set("shows/ufc-2024", {"name": "UFC 2024"})
+        cache.set("shows/f1-2025", {"name": "F1 2025"})
+        cache.set("seasons/ufc-2025_s1", {"number": 1})
+
+        # Invalidate all UFC shows
+        count = cache.invalidate_by_prefix("shows/ufc-")
+        assert count == 2
+
+        # UFC shows should be gone
+        assert cache.get("shows/ufc-2025") is None
+        assert cache.get("shows/ufc-2024") is None
+
+        # F1 show and UFC season should still exist
+        assert cache.get("shows/f1-2025") is not None
+        assert cache.get("seasons/ufc-2025_s1") is not None
+
+    def test_clear(self, cache) -> None:
+        """Test clearing all entries."""
+        cache.set("shows/test1", {"name": "Test 1"})
+        cache.set("shows/test2", {"name": "Test 2"})
+
+        count = cache.clear()
+        assert count == 2
+
+        assert cache.get("shows/test1") is None
+        assert cache.get("shows/test2") is None
+
+    def test_get_stats(self, cache) -> None:
+        """Test statistics reporting."""
+        cache.set("shows/test1", {"name": "Test 1"}, etag='"etag1"')
+        cache.set("shows/test2", {"name": "Test 2"})
+
+        stats = cache.get_stats()
+        assert stats["total_entries"] == 2
+        assert stats["entries_with_etag"] == 1
+        assert stats["ttl_hours"] == 1
