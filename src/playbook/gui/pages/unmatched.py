@@ -25,6 +25,7 @@ DEFAULT_CATEGORIES = ["video"]
 
 def unmatched_page() -> None:
     """Render the unmatched files management page."""
+
     # State for filters - use a class instance to allow mutation from nested functions
     class State:
         categories: list = None
@@ -243,9 +244,7 @@ def _render_results_content(state, refresh_results, refresh_page) -> None:
 
     # Results header
     with ui.row().classes("w-full items-center justify-between"):
-        ui.label(f"Showing {len(records)} of {total_count} files").classes(
-            "text-sm text-slate-500 dark:text-slate-400"
-        )
+        ui.label(f"Showing {len(records)} of {total_count} files").classes("text-sm text-slate-500 dark:text-slate-400")
 
         # Pagination
         if total_count > state.page_size:
@@ -280,9 +279,7 @@ def _render_results_content(state, refresh_results, refresh_page) -> None:
         with ui.card().classes("glass-card w-full p-8"):
             with ui.column().classes("items-center gap-2"):
                 ui.icon("check_circle").classes("text-green-500 text-4xl")
-                ui.label("No unmatched files found").classes(
-                    "text-lg font-medium text-slate-700 dark:text-slate-300"
-                )
+                ui.label("No unmatched files found").classes("text-lg font-medium text-slate-700 dark:text-slate-300")
                 ui.label("Try adjusting your filters or run a scan").classes(
                     "text-sm text-slate-500 dark:text-slate-400"
                 )
@@ -398,6 +395,8 @@ async def _trigger_rescan(refresh_callback=None) -> None:
     """Trigger a processing run to rescan files."""
     import asyncio
 
+    from nicegui import context
+
     if not gui_state.processor:
         ui.notify("Processor not available", type="warning")
         return
@@ -406,19 +405,25 @@ async def _trigger_rescan(refresh_callback=None) -> None:
         ui.notify("Scan already in progress", type="warning")
         return
 
+    # Capture client reference before async operation (for notifications after executor completes)
+    client = context.client
+
     ui.notify("Starting scan in background...", type="info")
     gui_state.set_processing(True)
 
     try:
         # Run process_all in a separate thread
         await asyncio.get_event_loop().run_in_executor(None, gui_state.processor.process_all)
-        ui.notify("Scan complete!", type="positive")
+        # Use captured client context for notification after async operation
+        with client:
+            ui.notify("Scan complete!", type="positive")
         # Refresh the page to show updated list
         if refresh_callback:
             refresh_callback()
     except Exception as e:
         LOGGER.exception("Scan failed: %s", e)
-        ui.notify(f"Scan failed: {e}", type="negative")
+        with client:
+            ui.notify(f"Scan failed: {e}", type="negative")
     finally:
         gui_state.set_processing(False)
 
@@ -693,6 +698,8 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
         """Execute the manual match."""
         import asyncio
 
+        from nicegui import context
+
         if dialog_state["season_index"] is None or dialog_state["episode_index"] is None:
             ui.notify("Please select a season and episode", type="warning")
             return
@@ -724,6 +731,9 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
             ui.notify("Season or episode not found", type="warning")
             return
 
+        # Capture client reference before closing dialog (for notifications after async task)
+        client = context.client
+
         # Close dialog immediately for better UX
         dialog.close()
         ui.notify("Processing match...", type="info")
@@ -741,11 +751,14 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
                 None,
                 lambda: _execute_manual_match(match_record, match_sport, match_show, match_season, match_episode),
             )
-            ui.notify("File matched successfully!", type="positive")
+            # Use captured client context for notification after dialog is closed
+            with client:
+                ui.notify("File matched successfully!", type="positive")
             refresh_page()
         except Exception as e:
             LOGGER.exception("Manual match failed: %s", e)
-            ui.notify(f"Match failed: {e}", type="negative")
+            with client:
+                ui.notify(f"Match failed: {e}", type="negative")
 
     with ui.dialog() as dialog, ui.card().classes("w-full max-w-2xl"):
         with ui.column().classes("w-full gap-4"):

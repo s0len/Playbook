@@ -165,12 +165,17 @@ def _save_changes(state: SettingsFormState) -> None:
     import asyncio
     from concurrent.futures import ThreadPoolExecutor
 
+    from nicegui import context
+
     if not state.config_path:
         ui.notify("No configuration file to save", type="warning")
         return
 
     ui.notify("Saving configuration...", type="info")
     config_path = state.config_path
+
+    # Capture client reference before async task (for notifications after executor completes)
+    client = context.client
 
     def do_save():
         """Synchronous save operation."""
@@ -205,16 +210,19 @@ def _save_changes(state: SettingsFormState) -> None:
         executor = ThreadPoolExecutor(max_workers=1)
         try:
             success, warning = await loop.run_in_executor(executor, do_save)
-            if success:
-                if warning:
-                    ui.notify(warning, type="warning")
+            # Use captured client context for notifications after async operation
+            with client:
+                if success:
+                    if warning:
+                        ui.notify(warning, type="warning")
+                    else:
+                        ui.notify("Configuration saved successfully", type="positive")
                 else:
-                    ui.notify("Configuration saved successfully", type="positive")
-            else:
-                ui.notify(warning or "Failed to save configuration", type="negative")
+                    ui.notify(warning or "Failed to save configuration", type="negative")
         except Exception as e:
             LOGGER.exception("Save failed: %s", e)
-            ui.notify(f"Save failed: {e}", type="negative")
+            with client:
+                ui.notify(f"Save failed: {e}", type="negative")
         finally:
             executor.shutdown(wait=False)
 

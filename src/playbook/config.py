@@ -135,10 +135,10 @@ class QualityScoring:
     frame_rate: dict[str, int] = field(
         default_factory=lambda: {
             "60": 100,  # Best for fast action
-            "50": 75,   # European broadcast standard
-            "30": 25,   # US web standard
-            "25": 0,    # Baseline PAL
-            "24": 0,    # Film standard
+            "50": 75,  # European broadcast standard
+            "30": 25,  # US web standard
+            "25": 0,  # Baseline PAL
+            "24": 0,  # Film standard
         }
     )
     # Codec efficiency scoring
@@ -311,6 +311,7 @@ class Settings:
     quality_profile: QualityProfile = field(default_factory=QualityProfile)  # Global quality profile
     disabled_sports: list[str] = field(default_factory=list)  # Sport IDs to exclude from defaults
     use_default_sports: bool = True  # Whether to auto-include default sports
+    force_reprocess: bool = False  # Bypass database check for processed files
 
 
 @dataclass
@@ -769,9 +770,7 @@ def _build_tvsportsdb_config(data: dict[str, Any]) -> TVSportsDBConfig:
     )
 
 
-def _parse_scoring_dict(
-    data: dict[str, Any], field_name: str, field_prefix: str
-) -> dict[str, int]:
+def _parse_scoring_dict(data: dict[str, Any], field_name: str, field_prefix: str) -> dict[str, int]:
     """Parse a scoring dictionary from YAML data."""
     raw = data.get(field_name, {}) or {}
     if not isinstance(raw, dict):
