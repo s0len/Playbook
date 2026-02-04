@@ -589,6 +589,11 @@ class Processor:
                 self._record_processed_file(match, event, quality_info, quality_score)
                 # Remove from unmatched store if it was previously there
                 self.unmatched_store.delete_by_source(str(match.source_path))
+                # Clean up old records if this was a replacement
+                if event.replaced:
+                    self.processed_store.delete_old_destination_records(
+                        str(match.destination_path), str(match.source_path)
+                    )
 
         return event
 
