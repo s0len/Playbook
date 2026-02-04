@@ -304,6 +304,31 @@ class ProcessedFileStore:
         row = cursor.fetchone()
         return self._row_to_record(row) if row else None
 
+    def check_processed_with_destination(self, source_path: str) -> tuple[bool, str | None]:
+        """Check if source is processed and destination still exists.
+
+        This method is used for early filtering in the processing pipeline to skip
+        files that have already been processed and whose destination still exists.
+
+        Args:
+            source_path: The source file path to check
+
+        Returns:
+            (True, dest_path) - source processed AND destination exists → skip
+            (False, dest_path) - source in DB but destination missing → re-process
+            (False, None) - source not in DB → normal processing
+        """
+        record = self.get_by_source(source_path)
+        if record is None:
+            return (False, None)
+
+        from pathlib import Path
+
+        if Path(record.destination_path).exists():
+            return (True, record.destination_path)
+
+        return (False, record.destination_path)
+
     def get_by_show(self, show_id: str) -> list[ProcessedFileRecord]:
         """Get all records for a show.
 

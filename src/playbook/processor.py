@@ -166,7 +166,11 @@ class Processor:
             all_source_files = list(self._gather_source_files(stats))
             filtered_source_files: list[Path] = []
             skipped_by_cache = 0
+            skipped_by_db = 0
+            reprocess_missing_dest = 0
+
             for source_path in all_source_files:
+                # Existing JSON cache check
                 if self.processed_cache.is_processed(source_path):
                     skipped_by_cache += 1
                     LOGGER.debug(
@@ -176,6 +180,30 @@ class Processor:
                         )
                     )
                     continue
+
+                # Early database check (unless force_reprocess)
+                if not self.config.settings.force_reprocess:
+                    is_processed, dest_path = self.processed_store.check_processed_with_destination(str(source_path))
+                    if is_processed:
+                        skipped_by_db += 1
+                        LOGGER.debug(
+                            self._format_log(
+                                "Skipping Via Database",
+                                {"Source": source_path, "Destination": dest_path},
+                            )
+                        )
+                        continue
+                    elif dest_path is not None:
+                        # Destination missing - clean up stale record and re-process
+                        reprocess_missing_dest += 1
+                        self.processed_store.delete_by_source(str(source_path))
+                        LOGGER.info(
+                            self._format_log(
+                                "Re-processing (destination missing)",
+                                {"Source": source_path, "Expected": dest_path},
+                            )
+                        )
+
                 filtered_source_files.append(source_path)
 
             file_count = len(filtered_source_files)
@@ -186,6 +214,8 @@ class Processor:
                         {
                             "Total": len(all_source_files),
                             "Skipped Via Cache": skipped_by_cache,
+                            "Skipped Via Database": skipped_by_db,
+                            "Re-processing (Missing Dest)": reprocess_missing_dest,
                         },
                     )
                 )

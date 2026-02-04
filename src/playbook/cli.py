@@ -178,6 +178,11 @@ def _add_run_subparser(subparsers) -> None:
         help="Clear the processed-file cache before running",
     )
     run_parser.add_argument(
+        "--force-reprocess",
+        action="store_true",
+        help="Bypass the processed-file database check and reprocess all files",
+    )
+    run_parser.add_argument(
         "--trace-matches",
         "--explain",
         dest="trace_matches",
@@ -402,6 +407,12 @@ def apply_runtime_overrides(config: AppConfig, args: argparse.Namespace) -> None
     if env_watch is not None:
         watch_enabled = env_watch
     config.settings.file_watcher.enabled = bool(watch_enabled)
+
+    force_reprocess = getattr(args, "force_reprocess", False)
+    env_force_reprocess = _env_bool("FORCE_REPROCESS")
+    if env_force_reprocess is not None:
+        force_reprocess = env_force_reprocess
+    config.settings.force_reprocess = bool(force_reprocess)
 
 
 def _execute_run(args: argparse.Namespace) -> int:

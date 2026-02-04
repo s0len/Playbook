@@ -429,3 +429,60 @@ class TestProcessedFileStore:
 
         assert db_path.exists()
         store.close()
+
+    def test_check_processed_with_destination_not_in_db(
+        self, store: ProcessedFileStore
+    ) -> None:
+        """Test that check_processed_with_destination returns (False, None) when source not in DB."""
+        is_processed, dest_path = store.check_processed_with_destination("/nonexistent/file.mkv")
+        assert is_processed is False
+        assert dest_path is None
+
+    def test_check_processed_with_destination_exists(
+        self, store: ProcessedFileStore, tmp_path: Path
+    ) -> None:
+        """Test that check_processed_with_destination returns (True, path) when destination exists."""
+        # Create a real destination file
+        dest_file = tmp_path / "dest" / "F1" / "Race.mkv"
+        dest_file.parent.mkdir(parents=True, exist_ok=True)
+        dest_file.write_text("test content")
+
+        # Record the file
+        record = ProcessedFileRecord(
+            source_path="/source/f1/race.mkv",
+            destination_path=str(dest_file),
+            sport_id="f1",
+            show_id="formula-1-2024",
+            season_index=0,
+            episode_index=5,
+            processed_at=datetime.now(),
+            status="linked",
+        )
+        store.record_processed(record)
+
+        # Check - should return True since destination exists
+        is_processed, dest_path = store.check_processed_with_destination("/source/f1/race.mkv")
+        assert is_processed is True
+        assert dest_path == str(dest_file)
+
+    def test_check_processed_with_destination_missing(
+        self, store: ProcessedFileStore
+    ) -> None:
+        """Test that check_processed_with_destination returns (False, path) when destination is missing."""
+        # Record a file with a non-existent destination
+        record = ProcessedFileRecord(
+            source_path="/source/f1/race.mkv",
+            destination_path="/dest/nonexistent/Race.mkv",
+            sport_id="f1",
+            show_id="formula-1-2024",
+            season_index=0,
+            episode_index=5,
+            processed_at=datetime.now(),
+            status="linked",
+        )
+        store.record_processed(record)
+
+        # Check - should return False with the destination path since it doesn't exist
+        is_processed, dest_path = store.check_processed_with_destination("/source/f1/race.mkv")
+        assert is_processed is False
+        assert dest_path == "/dest/nonexistent/Race.mkv"
