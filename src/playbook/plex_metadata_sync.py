@@ -131,7 +131,7 @@ def _resolve_asset_url(base_url: str, value: str | None) -> str | None:
 
 def _map_show_metadata(show: Show, base_url: str) -> MappedMetadata:
     """Extract Plex-compatible metadata from Show object."""
-    meta = show.metadata or {}
+    meta = show.metadata if isinstance(show.metadata, dict) else {}
     poster_raw = _first(meta, ("url_poster", "poster", "thumb", "cover"))
     background_raw = _first(meta, ("url_background", "background", "art", "fanart"))
 
@@ -161,7 +161,7 @@ def _map_show_metadata(show: Show, base_url: str) -> MappedMetadata:
 
 def _map_season_metadata(season: Season, base_url: str) -> MappedMetadata:
     """Extract Plex-compatible metadata from Season object."""
-    meta = season.metadata or {}
+    meta = season.metadata if isinstance(season.metadata, dict) else {}
     poster_raw = _first(meta, ("url_poster", "poster", "thumb", "cover"))
     background_raw = _first(meta, ("url_background", "background", "art", "fanart"))
 
@@ -191,7 +191,7 @@ def _map_season_metadata(season: Season, base_url: str) -> MappedMetadata:
 
 def _map_episode_metadata(episode: Episode, base_url: str) -> MappedMetadata:
     """Extract Plex-compatible metadata from Episode object."""
-    meta = episode.metadata or {}
+    meta = episode.metadata if isinstance(episode.metadata, dict) else {}
     poster_raw = _first(meta, ("url_poster", "poster", "thumb", "cover"))
     background_raw = _first(meta, ("url_background", "background", "art", "fanart"))
 
@@ -233,7 +233,7 @@ def _season_identifier(season: Season) -> str:
 
 def _episode_identifier(episode: Episode) -> str:
     """Generate a stable identifier for an episode."""
-    metadata = episode.metadata or {}
+    metadata = episode.metadata if isinstance(episode.metadata, dict) else {}
     for field in ("id", "guid", "episode_id", "uuid"):
         value = metadata.get(field)
         if value:
