@@ -320,19 +320,16 @@ def _file_card(record, state, refresh_results) -> None:
                     # Category badge
                     ui.badge(record.file_category, color=icon_color).classes("text-xs")
 
-                # Failure summary
+                # Failure summary - shows why the best match failed
                 if record.failure_summary:
                     with ui.row().classes("items-start gap-2 mt-2"):
                         ui.icon("warning").classes("text-amber-500 dark:text-amber-400 text-sm mt-0.5")
-                        ui.label(record.failure_summary).classes("text-sm text-slate-600 dark:text-slate-400 break-all")
-
-                # Best match info
-                if record.best_match_sport and record.best_match_score:
-                    score_pct = int(record.best_match_score * 100)
-                    with ui.row().classes("items-center gap-2 mt-1"):
-                        ui.label("Closest match:").classes("text-xs text-slate-500 dark:text-slate-400")
+                        ui.label(record.failure_summary).classes("text-sm text-slate-600 dark:text-slate-400")
+                elif record.best_match_sport:
+                    # Fallback: show best match sport if no failure summary
+                    with ui.row().classes("items-center gap-2 mt-2"):
+                        ui.label("Best match:").classes("text-xs text-slate-500 dark:text-slate-400")
                         ui.badge(record.best_match_sport, color="blue").classes("text-xs")
-                        ui.label(f"({score_pct}%)").classes("text-xs text-slate-500 dark:text-slate-400")
 
             # Action buttons
             with ui.column().classes("gap-2"):

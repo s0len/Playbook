@@ -607,6 +607,7 @@ class Processor:
         # Find the best match (closest to success)
         best_match_sport: str | None = None
         best_match_score: float | None = None
+        best_match_attempt: MatchAttempt | None = None
         for attempt in match_attempts:
             # Assign scores based on how far the match progressed
             score_map = {
@@ -621,14 +622,37 @@ class Processor:
             if best_match_score is None or score > best_match_score:
                 best_match_score = score
                 best_match_sport = attempt.sport_id
+                best_match_attempt = attempt
 
-        # Build failure summary from diagnostics
+        # Build failure summary from best match attempt (most useful info)
         failure_summary = ""
-        for _severity, message, sport_id in diagnostics[:3]:  # Limit to first 3
-            if failure_summary:
-                failure_summary += "; "
-            prefix = f"{sport_id}: " if sport_id else ""
-            failure_summary += f"{prefix}{message}"
+        if best_match_attempt:
+            # Show what went wrong with the closest match
+            status_labels = {
+                "episode-unresolved": "Episode not found",
+                "season-unresolved": "Season not found",
+                "regex-no-match": "Pattern didn't match",
+                "glob-excluded": "Excluded by file filter",
+                "no-match": "No match",
+            }
+            status_label = status_labels.get(best_match_attempt.status, best_match_attempt.status)
+            sport_name = best_match_attempt.sport_name or best_match_attempt.sport_id
+            failure_summary = f"{sport_name}: {status_label}"
+            # Add specific failure reason if available and informative
+            if best_match_attempt.failure_reason and best_match_attempt.status in (
+                "episode-unresolved",
+                "season-unresolved",
+            ):
+                # Extract the key part of the failure reason
+                reason = best_match_attempt.failure_reason
+                # Try to extract the normalized value that failed
+                if "normalized=" in reason:
+                    # Extract just the normalized value and candidates preview
+                    import re
+
+                    norm_match = re.search(r"normalized='([^']*)'", reason)
+                    if norm_match:
+                        failure_summary += f" (tried: '{norm_match.group(1)}')"
 
         record = UnmatchedFileRecord(
             source_path=str(source_path),
