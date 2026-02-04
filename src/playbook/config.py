@@ -327,6 +327,7 @@ def _build_season_selector(data: dict[str, Any]) -> SeasonSelector:
         mapping={str(k): int(v) for k, v in data.get("mapping", {}).items()},
         aliases={str(k): str(v) for k, v in data.get("aliases", {}).items()},
         value_template=str(data["value_template"]).strip() if data.get("value_template") else None,
+        fallback_groups=list(data.get("fallback_groups", [])),
     )
     return selector
 
