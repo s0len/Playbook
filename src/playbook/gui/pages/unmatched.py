@@ -415,6 +415,10 @@ async def _trigger_rescan(refresh_callback=None) -> None:
     try:
         # Run process_all in a separate thread
         await asyncio.get_event_loop().run_in_executor(None, gui_state.processor.process_all)
+        # Skip UI updates if client disconnected during async operation
+        if getattr(client, "_deleted", False):
+            LOGGER.debug("Skipping post-scan UI update - client disconnected")
+            return
         # Use safe_notify for notification after async operation (client may have disconnected)
         safe_notify(client, "Scan complete!", type="positive")
         # Refresh the page to show updated list
@@ -750,6 +754,10 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
                 None,
                 lambda: _execute_manual_match(match_record, match_sport, match_show, match_season, match_episode),
             )
+            # Skip UI updates if client disconnected during async operation
+            if getattr(client, "_deleted", False):
+                LOGGER.debug("Skipping post-match UI update - client disconnected")
+                return
             # Use safe_notify for notification after dialog is closed (client may have disconnected)
             safe_notify(client, "File matched successfully!", type="positive")
             refresh_page()
