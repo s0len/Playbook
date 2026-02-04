@@ -21,7 +21,15 @@ from .metadata import MetadataFingerprintStore
 from .metadata_loader import SportRuntime, load_sports
 from .models import ProcessingStats, SportFileMatch
 from .notifications import NotificationEvent, NotificationService
-from .persistence import ProcessedFileRecord, ProcessedFileStore
+from .persistence import (
+    MatchAttempt,
+    ProcessedFileRecord,
+    ProcessedFileStore,
+    UnmatchedFileRecord,
+    UnmatchedFileStore,
+    classify_file_category,
+    get_file_size_safe,
+)
 from .plex_metadata_sync import PlexMetadataSync, create_plex_sync_from_config
 from .post_run_triggers import run_plex_sync_if_needed, trigger_kometa_if_needed
 from .processing_state import ProcessingState
@@ -52,6 +60,7 @@ class Processor:
         self.processed_cache = ProcessedFileCache(self.config.settings.cache_dir)
         self.metadata_fingerprints = MetadataFingerprintStore(self.config.settings.cache_dir)
         self.processed_store = ProcessedFileStore(self.config.settings.cache_dir / "playbook.db")
+        self.unmatched_store = UnmatchedFileStore(self.config.settings.cache_dir / "playbook.db")
         self.trace_options = trace_options or TraceOptions()
         settings = self.config.settings
         self.notification_service = NotificationService(
@@ -185,7 +194,7 @@ class Processor:
                 task_id = progress.add_task("Processing", total=file_count)
                 for source_path in filtered_source_files:
                     is_sample_file = should_suppress_sample_ignored(source_path)
-                    handled, diagnostics = self._process_single_file(
+                    handled, diagnostics, match_attempts = self._process_single_file(
                         source_path,
                         runtimes,
                         stats,
@@ -198,6 +207,10 @@ class Processor:
                             detail = self._format_ignored_detail(source_path, diagnostics)
                             sport_id = next((sport for _, _, sport in diagnostics if sport), None)
                             stats.register_ignored(detail, sport_id=sport_id)
+
+                        # Record unmatched file for GUI tracking (skip in dry-run mode)
+                        if not self.config.settings.dry_run:
+                            self._record_unmatched_file(source_path, diagnostics, match_attempts)
                     progress.advance(task_id, 1)
 
             summary_counts = (stats.processed, stats.skipped, stats.ignored)
@@ -261,10 +274,19 @@ class Processor:
         stats: ProcessingStats,
         *,
         is_sample_file: bool = False,
-    ) -> tuple[bool, list[tuple[str, str, str | None]]]:
+    ) -> tuple[bool, list[tuple[str, str, str | None]], list[MatchAttempt]]:
+        """Process a single file against all matching sports.
+
+        Returns:
+            Tuple of (handled, diagnostics, match_attempts):
+            - handled: True if the file was successfully matched
+            - diagnostics: List of (severity, message, sport_id) tuples
+            - match_attempts: Detailed match attempt records for unmatched file tracking
+        """
         suffix = source_path.suffix.lower()
         matching_runtimes = [runtime for runtime in runtimes if suffix in runtime.extensions]
         ignored_reasons: list[tuple[str, str, str | None]] = []
+        match_attempts: list[MatchAttempt] = []
 
         if not matching_runtimes:
             message = f"No configured sport accepts extension '{suffix or '<no extension>'}'"
@@ -278,21 +300,29 @@ class Processor:
                     },
                 )
             )
-            return False, ignored_reasons
+            return False, ignored_reasons, match_attempts
 
         for runtime in matching_runtimes:
-            trace_context: dict[str, Any] | None = None
-            if self.trace_options.enabled:
-                trace_context = {
-                    "filename": str(source_path),
-                    "sport_id": runtime.sport.id,
-                    "sport_name": runtime.sport.name,
-                    "source_name": source_path.name,
-                }
+            # Always create trace_context for unmatched file tracking
+            trace_context: dict[str, Any] = {
+                "filename": str(source_path),
+                "sport_id": runtime.sport.id,
+                "sport_name": runtime.sport.name,
+                "source_name": source_path.name,
+            }
             if not matches_globs(source_path, runtime.sport):
                 patterns = runtime.sport.source_globs or ["*"]
                 message = f"Excluded by source_globs {patterns}"
                 ignored_reasons.append(("ignored", message, runtime.sport.id))
+                match_attempts.append(
+                    MatchAttempt(
+                        sport_id=runtime.sport.id,
+                        sport_name=runtime.sport.name,
+                        pattern_description=None,
+                        status="glob-excluded",
+                        failure_reason=message,
+                    )
+                )
                 LOGGER.debug(
                     self._format_log(
                         "Ignoring File For Sport",
@@ -303,7 +333,7 @@ class Processor:
                         },
                     )
                 )
-                if trace_context is not None:
+                if self.trace_options.enabled:
                     trace_context.update(
                         {
                             "status": "glob-excluded",
@@ -324,10 +354,9 @@ class Processor:
                 trace=trace_context,
                 suppress_warnings=is_sample_file,
             )
-            if trace_context is not None:
-                trace_context["diagnostics"] = [
-                    {"severity": severity, "message": message} for severity, message in detection_messages
-                ]
+            trace_context["diagnostics"] = [
+                {"severity": severity, "message": message} for severity, message in detection_messages
+            ]
             if detection:
                 season = detection["season"]
                 episode = detection["episode"]
@@ -373,21 +402,47 @@ class Processor:
                 )
 
                 event = self._handle_match(match, stats, captured_groups=groups)
-                if trace_context is not None:
-                    trace_context.setdefault("status", event.action if event else "matched")
-                    trace_context["destination"] = str(destination)
-                    trace_context["context"] = context
-                    trace_path = self._persist_trace(trace_context)
-                else:
-                    trace_path = None
+                trace_context.setdefault("status", event.action if event else "matched")
+                trace_context["destination"] = str(destination)
+                trace_context["context"] = context
+                trace_path = self._persist_trace(trace_context) if self.trace_options.enabled else None
                 if event:
                     if trace_path is not None:
                         event.trace_path = str(trace_path)
                     self.notification_service.notify(event)
-                return True, []
+                return True, [], []
 
             if not detection_messages:
                 detection_messages.append(("ignored", "No matching pattern resolved to an episode"))
+
+            # Build detailed match attempt record from trace context
+            trace_attempts = trace_context.get("attempts", [])
+            for attempt in trace_attempts:
+                captured_groups = attempt.get("groups", {})
+                # Filter out internal keys
+                captured_groups = {k: v for k, v in captured_groups.items() if not k.startswith("_")}
+                match_attempts.append(
+                    MatchAttempt(
+                        sport_id=runtime.sport.id,
+                        sport_name=runtime.sport.name,
+                        pattern_description=attempt.get("pattern"),
+                        status=attempt.get("status", "unknown"),
+                        captured_groups=captured_groups,
+                        failure_reason=attempt.get("message", ""),
+                    )
+                )
+
+            # If no attempts were recorded, create one from the diagnostics
+            if not trace_attempts and detection_messages:
+                match_attempts.append(
+                    MatchAttempt(
+                        sport_id=runtime.sport.id,
+                        sport_name=runtime.sport.name,
+                        pattern_description=None,
+                        status="no-match",
+                        failure_reason=detection_messages[0][1] if detection_messages else "",
+                    )
+                )
 
             for severity, message in detection_messages:
                 ignored_reasons.append((severity, message, runtime.sport.id))
@@ -412,11 +467,11 @@ class Processor:
                         f"{source_path.name}: {runtime.sport.id}: {message}",
                         sport_id=runtime.sport.id,
                     )
-            if trace_context is not None:
-                trace_context.setdefault("status", "ignored")
+            trace_context.setdefault("status", "ignored")
+            if self.trace_options.enabled:
                 self._persist_trace(trace_context)
 
-        return False, ignored_reasons
+        return False, ignored_reasons, match_attempts
 
     def _persist_trace(self, trace: dict[str, Any] | None) -> Path | None:
         return persist_trace(trace, self.trace_options, self.config.settings.cache_dir)
@@ -532,8 +587,63 @@ class Processor:
             # Record processed file in persistence store (skip in dry-run mode)
             if not settings.dry_run and event:
                 self._record_processed_file(match, event, quality_info, quality_score)
+                # Remove from unmatched store if it was previously there
+                self.unmatched_store.delete_by_source(str(match.source_path))
 
         return event
+
+    def _record_unmatched_file(
+        self,
+        source_path: Path,
+        diagnostics: list[tuple[str, str, str | None]],
+        match_attempts: list[MatchAttempt],
+    ) -> None:
+        """Record an unmatched file in the persistence store."""
+        now = datetime.now()
+
+        # Get attempted sports from match attempts
+        attempted_sports = list({attempt.sport_id for attempt in match_attempts})
+
+        # Find the best match (closest to success)
+        best_match_sport: str | None = None
+        best_match_score: float | None = None
+        for attempt in match_attempts:
+            # Assign scores based on how far the match progressed
+            score_map = {
+                "matched": 1.0,  # Shouldn't happen for unmatched
+                "episode-unresolved": 0.8,  # Got past season
+                "season-unresolved": 0.6,  # Got past regex
+                "regex-no-match": 0.2,  # Regex didn't match
+                "glob-excluded": 0.1,  # Excluded by glob
+                "no-match": 0.2,
+            }
+            score = score_map.get(attempt.status, 0.3)
+            if best_match_score is None or score > best_match_score:
+                best_match_score = score
+                best_match_sport = attempt.sport_id
+
+        # Build failure summary from diagnostics
+        failure_summary = ""
+        for _severity, message, sport_id in diagnostics[:3]:  # Limit to first 3
+            if failure_summary:
+                failure_summary += "; "
+            prefix = f"{sport_id}: " if sport_id else ""
+            failure_summary += f"{prefix}{message}"
+
+        record = UnmatchedFileRecord(
+            source_path=str(source_path),
+            filename=source_path.name,
+            first_seen=now,
+            last_seen=now,
+            file_size=get_file_size_safe(source_path),
+            file_category=classify_file_category(source_path.name),
+            attempted_sports=attempted_sports,
+            match_attempts=match_attempts,
+            best_match_sport=best_match_sport,
+            best_match_score=best_match_score,
+            failure_summary=failure_summary[:500],  # Limit length
+        )
+        self.unmatched_store.record_unmatched(record)
 
     def _record_processed_file(
         self,

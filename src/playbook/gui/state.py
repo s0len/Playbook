@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from playbook.config import AppConfig
     from playbook.notifications import NotificationEvent
-    from playbook.persistence import ProcessedFileStore
+    from playbook.persistence import ProcessedFileStore, UnmatchedFileStore
     from playbook.processor import Processor
 
 
@@ -54,6 +54,7 @@ class GUIState:
     config: AppConfig | None = None
     config_path: Path | None = None
     processed_store: ProcessedFileStore | None = None
+    unmatched_store: UnmatchedFileStore | None = None
 
     # Recent activity (ring buffer)
     recent_events: deque[NotificationEvent] = field(default_factory=lambda: deque(maxlen=100))
