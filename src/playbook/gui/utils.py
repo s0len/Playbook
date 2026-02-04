@@ -82,11 +82,12 @@ def safe_notify(
         position: Notification position
         **kwargs: Additional arguments passed to ui.notify
     """
+    # Check if client is deleted before attempting to use it
+    # NiceGUI uses _deleted (private attribute) to track deleted clients
+    if getattr(client, "_deleted", False):
+        LOGGER.debug("Skipping notification - client disconnected: %s", message)
+        return
     try:
-        # Check if client is deleted before attempting to use it
-        if hasattr(client, "is_deleted") and client.is_deleted:
-            LOGGER.debug("Skipping notification - client disconnected: %s", message)
-            return
         with client:
             ui.notify(message, type=type, position=position, **kwargs)
     except Exception:
