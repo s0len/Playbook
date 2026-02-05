@@ -62,22 +62,22 @@ LIGHT_PALETTE = ColorPalette(
     border_light="#f1f5f9",  # slate-100
 )
 
-# Dark mode palette (slate-based)
+# Dark mode palette (Playbook brand colors - dark navy with cyan accents)
 DARK_PALETTE = ColorPalette(
-    bg_primary="#0f172a",  # slate-900
-    bg_card="rgba(30, 41, 59, 0.8)",  # slate-800 with transparency for glassmorphism
-    bg_input="#1e293b",  # slate-800
+    bg_primary="#1a1f2e",  # Dark navy from icon.png
+    bg_card="rgba(26, 31, 46, 0.85)",  # Dark navy with transparency for glassmorphism
+    bg_input="#232939",  # Slightly lighter navy
     text_primary="#f8fafc",  # slate-50
     text_secondary="#cbd5e1",  # slate-300
     text_muted="#94a3b8",  # slate-400
-    accent="#60a5fa",  # blue-400
-    accent_hover="#3b82f6",  # blue-500
+    accent="#00d4d4",  # Cyan from icon.png
+    accent_hover="#00b8b8",  # Slightly darker cyan
     success="#4ade80",  # green-400
     warning="#fbbf24",  # amber-400
     error="#f87171",  # red-400
-    info="#22d3ee",  # cyan-400
-    border="#334155",  # slate-700
-    border_light="#1e293b",  # slate-800
+    info="#00d4d4",  # Cyan (matches accent)
+    border="#2d3548",  # Lighter navy border
+    border_light="#232939",  # Input background color
 )
 
 
@@ -164,11 +164,11 @@ def apply_theme(dark_mode_element: ui.dark_mode | None = None) -> None:
 class ThemeClasses:
     """Tailwind CSS class mappings for theming."""
 
-    # Background classes
-    BG_PRIMARY = "bg-slate-50 dark:bg-slate-900"
-    BG_CARD = "bg-white dark:bg-slate-800/80"
-    BG_INPUT = "bg-slate-100 dark:bg-slate-800"
-    BG_HEADER = "bg-slate-900"
+    # Background classes (dark mode uses Playbook brand navy)
+    BG_PRIMARY = "bg-slate-50 dark:bg-[#1a1f2e]"
+    BG_CARD = "bg-white dark:bg-[#232939]/80"
+    BG_INPUT = "bg-slate-100 dark:bg-[#232939]"
+    BG_HEADER = "bg-[#1a1f2e]"
 
     # Text classes
     TEXT_PRIMARY = "text-slate-900 dark:text-slate-50"
@@ -182,21 +182,21 @@ class ThemeClasses:
     # Card styling with glassmorphism
     GLASS_CARD = "glass-card"
 
-    # Status colors
+    # Status colors (info uses Playbook cyan accent)
     STATUS_SUCCESS = "text-green-600 dark:text-green-400"
     STATUS_WARNING = "text-amber-600 dark:text-amber-400"
     STATUS_ERROR = "text-red-600 dark:text-red-400"
-    STATUS_INFO = "text-cyan-600 dark:text-cyan-400"
+    STATUS_INFO = "text-cyan-600 dark:text-[#00d4d4]"
 
-    # Badge colors
+    # Badge colors (info badge uses Playbook cyan)
     BADGE_SUCCESS = "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
     BADGE_WARNING = "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
     BADGE_ERROR = "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"
-    BADGE_INFO = "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/50 dark:text-cyan-300"
-    BADGE_NEUTRAL = "bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300"
+    BADGE_INFO = "bg-cyan-100 text-cyan-800 dark:bg-[#00d4d4]/20 dark:text-[#00d4d4]"
+    BADGE_NEUTRAL = "bg-slate-100 text-slate-800 dark:bg-[#2d3548] dark:text-slate-300"
 
-    # Link colors
-    LINK = "text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+    # Link colors (uses Playbook cyan in dark mode)
+    LINK = "text-blue-600 dark:text-[#00d4d4] hover:text-blue-800 dark:hover:text-[#00b8b8]"
 
 
 # Export theme classes for easy import

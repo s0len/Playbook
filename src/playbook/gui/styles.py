@@ -24,14 +24,15 @@ PLAYBOOK_CSS = """
 }
 
 body.body--dark {
-    --bg-primary: #0f172a;
-    --bg-card: rgba(30, 41, 59, 0.85);
-    --bg-card-solid: #1e293b;
+    --bg-primary: #1a1f2e;
+    --bg-card: rgba(26, 31, 46, 0.85);
+    --bg-card-solid: #232939;
     --text-primary: #f8fafc;
     --text-secondary: #cbd5e1;
     --text-muted: #94a3b8;
-    --border-color: rgba(148, 163, 184, 0.1);
-    --shadow-color: rgba(0, 0, 0, 0.3);
+    --border-color: rgba(45, 53, 72, 0.5);
+    --shadow-color: rgba(0, 0, 0, 0.4);
+    --accent-color: #00d4d4;
 }
 
 /* ===== Theme Transitions ===== */
@@ -195,8 +196,9 @@ body.body--dark .status-chip-error {
 
 /* ===== Navigation Header ===== */
 .nav-header {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(135deg, #1a1f2e 0%, #232939 100%) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    border-bottom: 1px solid rgba(0, 212, 212, 0.1);
 }
 
 .nav-link {
@@ -252,7 +254,7 @@ body.body--dark .status-chip-error {
 }
 
 .modern-table tbody tr.cursor-pointer:hover {
-    background: rgba(59, 130, 246, 0.1);
+    background: rgba(0, 212, 212, 0.08);
 }
 
 /* Table header styling */
@@ -286,7 +288,7 @@ body.body--dark .q-table tbody tr:hover td {
 }
 
 body.body--dark .q-table tbody tr.cursor-pointer:hover td {
-    background: rgba(59, 130, 246, 0.15);
+    background: rgba(0, 212, 212, 0.12);
 }
 
 /* Table container in dark mode */
@@ -302,7 +304,7 @@ body.body--dark .q-table__container {
 
 /* ===== Log Viewer ===== */
 .log-container {
-    background: #0f172a !important;
+    background: #1a1f2e !important;
     border-radius: 12px;
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -351,8 +353,12 @@ body.body--dark ::-webkit-scrollbar-thumb {
 
 /* ===== Focus States ===== */
 *:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #00d4d4;
     outline-offset: 2px;
+}
+
+body.body--dark *:focus-visible {
+    outline-color: #00d4d4;
 }
 
 /* ===== Quasar Component Overrides for Dark Mode ===== */
@@ -388,8 +394,13 @@ a.text-blue-600 {
     color: #3b82f6;
 }
 
-body.body--dark a.text-blue-600 {
-    color: #60a5fa;
+body.body--dark a.text-blue-600,
+body.body--dark a {
+    color: #00d4d4;
+}
+
+body.body--dark a:hover {
+    color: #00b8b8;
 }
 
 /* ===== Settings Page Styles ===== */
@@ -412,8 +423,8 @@ body.body--dark a.text-blue-600 {
 }
 
 body.body--dark .settings-tab-active {
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
+    background: rgba(0, 212, 212, 0.15);
+    color: #00d4d4;
 }
 
 /* Settings form inputs */
