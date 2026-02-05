@@ -712,3 +712,86 @@ samples:
       - value: "NFL 19-01-2026 Divisional Kansas City Chiefs vs Baltimore Ravens 1080p.mkv"
         expect_season: "Divisional Playoffs"
         expect_episode: "Kansas City Chiefs at Baltimore Ravens"
+
+  - description: "WTA 2025 tournament and match samples"
+    sport:
+      id: "wta_2025"
+      name: "WTA 2025"
+      pattern_sets:
+        - wta
+    show:
+      key: "wta_2025"
+      title: "WTA 2025"
+      seasons:
+        - title: "Australian Open"
+          display_number: 1
+          episodes:
+            - title: "Donna Vekic vs Maria Sharapova"
+              aliases:
+                - "Donna Vekic (CRO) vs Maria Sharapova (RUS)"
+                - "Vekic vs Sharapova"
+            - title: "Aryna Sabalenka vs Elena Rybakina"
+              aliases:
+                - "Sabalenka vs Rybakina"
+                - "Sabalenka, Aryna vs Rybakina, Elena"
+        - title: "Adelaide"
+          display_number: 2
+          episodes:
+            - title: "Aryna Sabalenka vs Madison Keys"
+              aliases:
+                - "Sabalenka vs Keys"
+        - title: "Wuhan"
+          display_number: 3
+          episodes:
+            - title: "Aryna Sabalenka vs Elena Rybakina"
+              aliases:
+                - "Sabalenka, Aryna Vs Rybakina, Elena"
+                - "Sabalenka vs Rybakina"
+        - title: "WTA Finals"
+          display_number: 4
+          episodes:
+            - title: "Aryna Sabalenka vs Elena Rybakina"
+              aliases:
+                - "Sabalenka, Aryna Vs Rybakina, Elena"
+        - title: "Billie Jean King Cup"
+          display_number: 5
+          episodes:
+            - title: "Iga Swiatek vs Gabriela Lee"
+              aliases:
+                - "Swiatek, Iga Vs Lee, Gabriela"
+                - "Swiatek vs Lee"
+        - title: "Minimal"
+          display_number: 6
+          episodes:
+            - title: "Jessica Pegula vs Elena Rybakina"
+              aliases:
+                - "Pegula, Jessica vs Rybakina, Elena"
+    filenames:
+      # Grand Slam with country codes
+      - value: "WTA 2020 Australian Open R1 Donna Vekic (CRO) vs Maria Sharapova (RUS) 1080i25fps NOC.ts"
+        expect_season: "Australian Open"
+        expect_episode: "Donna Vekic vs Maria Sharapova"
+      # Dot-separated format
+      - value: "WTA.Australian.Open.2025.QF.Sabalenka.vs.Rybakina.1080p.WEB.mkv"
+        expect_season: "Australian Open"
+        expect_episode: "Aryna Sabalenka vs Elena Rybakina"
+      # Generic tournament format
+      - value: "WTA Adelaide 2025 Final Sabalenka vs Keys 15 01 1080p WEB.mkv"
+        expect_season: "Adelaide"
+        expect_episode: "Aryna Sabalenka vs Madison Keys"
+      # Pipe-delimited with level
+      - value: "WTA 1000 | Wuhan, China | Quarterfinals | Sabalenka, Aryna Vs Rybakina, Elena | 10/10/2025.mkv"
+        expect_season: "Wuhan"
+        expect_episode: "Aryna Sabalenka vs Elena Rybakina"
+      # WTA Finals pipe format
+      - value: "WTA Finals | Riyadh, Saudi Arab | Final | Sabalenka, Aryna Vs Rybakina, Elena | 08/11/2025.mkv"
+        expect_season: "WTA Finals"
+        expect_episode: "Aryna Sabalenka vs Elena Rybakina"
+      # Billie Jean King Cup
+      - value: "WTA | Billie Jean King Cup | Swiatek, Iga Vs Lee, Gabriela | 17/11/2025.mkv"
+        expect_season: "Billie Jean King Cup"
+        expect_episode: "Iga Swiatek vs Gabriela Lee"
+      # Minimal inverted format
+      - value: "Pegula, Jessica - Rybakina, Elena.mp4"
+        expect_season: "Minimal"
+        expect_episode: "Jessica Pegula vs Elena Rybakina"

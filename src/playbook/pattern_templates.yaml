@@ -6417,6 +6417,154 @@ pattern_sets:
         season_dir_template: "{season_number:02d} {season_title}"
         filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
 
+  # ------------------------------------------------------------------
+  # WTA (Women's Tennis Association)
+  # ------------------------------------------------------------------
+  # WTA filenames have highly variable formats:
+  #   - WTA 2020 Australian Open R1 Donna Vekic (CRO) vs Maria Sharapova (RUS) 1080i.ts
+  #   - Pegula, Jessica - Rybakina, Elena.mp4
+  #   - WTA | Billie Jean King Cup | Swiatek, Iga Vs Lee, Gabriela | 17/11/2025
+  #   - WTA 1000 | Wuhan, China | Quarterfinals | Sabalenka, Aryna Vs Rybakina, Elena | 10/10/2025
+  #   - WTA Finals | Riyadh, Saudi Arab | Final | Sabalenka, Aryna Vs Rybakina, Elena | 08/11/2025
+  #
+  # TheTVSportsDB structure for WTA:
+  #   - Seasons = Tournaments (Australian Open, WTA 1000 Wuhan, WTA Finals, etc.)
+  #   - Episodes = Individual matches as "Player1 vs Player2"
+  # ------------------------------------------------------------------
+  wta: &wta_patterns
+    default_source_globs:
+      - "WTA*"
+      - "wta*"
+      - "WTA *"
+      - "wta *"
+      - "WTA|*"
+      - "*WTA *"
+      - "*Billie Jean King*"
+      - "*billie jean king*"
+    patterns:
+      # Pattern 1: Standard WTA with Grand Slam/Tournament and year
+      # Example: WTA 2020 Australian Open R1 Donna Vekic (CRO) vs Maria Sharapova (RUS) 1080i25fps NOC.ts
+      # Example: WTA.2025.French.Open.QF.Swiatek.vs.Sabalenka.1080p.mkv
+      - description: WTA Grand Slam/Tournament with year
+        regex: >-
+          (?i)^WTA[\s._-]+(?P<year>\d{4})[\s._-]+(?P<tournament>Australian[\s._-]Open|French[\s._-]Open|Roland[\s._-]Garros|Wimbledon|US[\s._-]Open|WTA[\s._-]Finals?|Billie[\s._-]Jean[\s._-]King[\s._-]Cup|(?:WTA[\s._-])?(?:1000|500|250|125)[\s._-]*[A-Za-z]+(?:[\s._-]+[A-Za-z]+)*)[\s._-]+(?:R(?P<round_num>\d)|(?P<round_name>First[\s._-]Round|Second[\s._-]Round|Third[\s._-]Round|Fourth[\s._-]Round|R(?:ound[\s._-])?(?:of[\s._-])?(?:16|32|64|128)|Quarterfinal[s]?|QF|Semi[\s._-]?Final[s]?|SF|Final[s]?|F))[\s._-]+(?P<session>(?P<player1>[A-Za-z''À-ÖØ-öø-ÿ]+(?:[\s._-][A-Za-z''À-ÖØ-öø-ÿ]+)*)(?:[\s._-]+\([A-Z]{2,3}\))?[\s._-]+(?:vs?|VS?|V)[\s._-]+(?P<player2>[A-Za-z''À-ÖØ-öø-ÿ]+(?:[\s._-][A-Za-z''À-ÖØ-öø-ÿ]+)*)(?:[\s._-]+\([A-Z]{2,3}\))?)(?=[\s._-]+(?:\d{3,4}[pi]|1080|720|2160|4K|HDR|HEVC|H264|H265|x264|x265|WEB|HDTV|AMZN|PROPER|REPACK|EN|ENG|AAC|DDP|NOC|Tennis)|\.[A-Za-z0-9]+$|$)
+        season_selector:
+          mode: title
+          group: tournament
+        episode_selector:
+          group: session
+          allow_fallback_to_title: true
+        metadata_filters:
+          fallback_matchup_season: true
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_number:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
+      # Pattern 2: WTA pipe-delimited format with level
+      # Example: WTA 1000 | Wuhan, China | Quarterfinals | Sabalenka, Aryna Vs Rybakina, Elena | 10/10/2025
+      # Example: WTA 500 | Tokyo | Final | Osaka, Naomi Vs Gauff, Coco | 22/09/2025
+      - description: WTA pipe-delimited with level and location
+        regex: >-
+          (?i)^WTA[\s._-]*(?P<level>1000|500|250|125|Finals?)?\s*\|\s*(?P<tournament>[^|]+?)(?:,[\s._-]*[A-Za-z]+)?\s*\|\s*(?:(?P<round_name>First[\s._-]?Round|Second[\s._-]?Round|Third[\s._-]?Round|Fourth[\s._-]?Round|R(?:ound[\s._-]?)?(?:of[\s._-]?)?(?:16|32|64|128)|Quarterfinal[s]?|QF|Semi[\s._-]?Final[s]?|SF|Final[s]?|F)\s*\|)?\s*(?P<session>(?P<player1>[A-Za-z''À-ÖØ-öø-ÿ]+(?:,[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)?(?:[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)*)[\s._-]+(?:vs?|VS?|V|-)[\s._-]+(?P<player2>[A-Za-z''À-ÖØ-öø-ÿ]+(?:,[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)?(?:[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)*))\s*(?:\|\s*(?P<date>(?P<day>\d{1,2})[/._-](?P<month>\d{1,2})[/._-](?P<year>\d{4})))?\s*(?:\|.*)?(?:\.(?P<extension><extension>))?$
+        season_selector:
+          mode: title
+          group: tournament
+        episode_selector:
+          group: session
+          allow_fallback_to_title: true
+        metadata_filters:
+          fallback_matchup_season: true
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_number:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
+      # Pattern 3: WTA Finals/Special Events pipe format
+      # Example: WTA Finals | Riyadh, Saudi Arab | Final | Sabalenka, Aryna Vs Rybakina, Elena | 08/11/2025
+      - description: WTA Finals pipe-delimited format
+        regex: >-
+          (?i)^WTA[\s._-]+(?P<tournament>Finals?|Billie[\s._-]+Jean[\s._-]+King[\s._-]+Cup)\s*\|\s*(?P<location>[^|]+?)(?:,[\s._-]*[A-Za-z]+(?:[\s._-]+[A-Za-z]+)*)?\s*\|\s*(?:(?P<round_name>(?:Group[\s._-]+)?[A-Z]?[\s._-]?(?:Round[\s._-]+)?Robin|First[\s._-]?Round|Second[\s._-]?Round|Quarterfinal[s]?|QF|Semi[\s._-]?Final[s]?|SF|Final[s]?|F)\s*\|)?\s*(?P<session>(?P<player1>[A-Za-z''À-ÖØ-öø-ÿ]+(?:,[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)?(?:[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)*)[\s._-]+(?:vs?|VS?|V|-)[\s._-]+(?P<player2>[A-Za-z''À-ÖØ-öø-ÿ]+(?:,[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)?(?:[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)*))\s*(?:\|\s*(?P<date>(?P<day>\d{1,2})[/._-](?P<month>\d{1,2})[/._-](?P<year>\d{4})))?\s*(?:\|.*)?(?:\.(?P<extension><extension>))?$
+        season_selector:
+          mode: title
+          group: tournament
+        episode_selector:
+          group: session
+          allow_fallback_to_title: true
+        metadata_filters:
+          fallback_matchup_season: true
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_number:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
+      # Pattern 4: Billie Jean King Cup format
+      # Example: WTA | Billie Jean King Cup | Swiatek, Iga Vs Lee, Gabriela | 17/11/2025 | Tennis Channel (English) | WEB DL English | 1080p60FPS | BlackDevil
+      - description: WTA Billie Jean King Cup pipe format
+        regex: >-
+          (?i)^WTA\s*\|\s*(?P<tournament>Billie[\s._-]+Jean[\s._-]+King[\s._-]+Cup)\s*\|\s*(?P<session>(?P<player1>[A-Za-z''À-ÖØ-öø-ÿ]+(?:,[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)?(?:[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)*)[\s._-]+(?:vs?|VS?|V|-)[\s._-]+(?P<player2>[A-Za-z''À-ÖØ-öø-ÿ]+(?:,[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)?(?:[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)*))\s*(?:\|\s*(?P<date>(?P<day>\d{1,2})[/._-](?P<month>\d{1,2})[/._-](?P<year>\d{4})))?\s*(?:\|.*)?(?:\.(?P<extension><extension>))?$
+        season_selector:
+          mode: title
+          group: tournament
+        episode_selector:
+          group: session
+          allow_fallback_to_title: true
+        metadata_filters:
+          fallback_matchup_season: true
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_number:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
+      # Pattern 5: Dot-separated standard format
+      # Example: WTA.Australian.Open.2025.QF.Sabalenka.vs.Rybakina.1080p.WEB.mkv
+      - description: WTA dot-separated tournament format
+        regex: >-
+          (?i)^WTA\.(?P<tournament>Australian\.Open|French\.Open|Roland\.Garros|Wimbledon|US\.Open|WTA\.Finals?|Billie\.Jean\.King\.Cup|(?:WTA\.)?(?:1000|500|250|125)[._-]*[A-Za-z]+(?:\.[A-Za-z]+)*)\.(?P<year>\d{4})\.(?:R(?P<round_num>\d)|(?P<round_name>Quarterfinal[s]?|QF|Semifinal[s]?|SF|Final[s]?|F|R(?:ound)?(?:of)?(?:16|32|64|128)))\.(?P<session>(?P<player1>[A-Za-z''À-ÖØ-öø-ÿ]+(?:\.[A-Za-z''À-ÖØ-öø-ÿ]+)*)\.(?:vs\.?|v\.)(?P<player2>[A-Za-z''À-ÖØ-öø-ÿ]+(?:\.[A-Za-z''À-ÖØ-öø-ÿ]+)*))(?=\.(?:\d{3,4}[pi]|1080|720|2160|4K|HDR|HEVC|H264|H265|x264|x265|WEB|HDTV|AMZN|PROPER|REPACK))(?:\.[^.]+)*\.(?P<extension><extension>)$
+        season_selector:
+          mode: title
+          group: tournament
+        episode_selector:
+          group: session
+          allow_fallback_to_title: true
+        metadata_filters:
+          fallback_matchup_season: true
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_number:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
+      # Pattern 6: Minimal inverted name format (no WTA prefix)
+      # Example: Pegula, Jessica - Rybakina, Elena.mp4
+      # Example: Sabalenka, Aryna - Gauff, Coco.mkv
+      # This is a low-priority fallback pattern for minimal filenames
+      - description: WTA minimal inverted names format
+        priority: 200
+        regex: >-
+          (?i)^(?P<session>(?P<player1>[A-Za-z''À-ÖØ-öø-ÿ]+,[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+(?:[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)?)\s*[-–]\s*(?P<player2>[A-Za-z''À-ÖØ-öø-ÿ]+,[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+(?:[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)?))\.(?P<extension><extension>)$
+        season_selector:
+          mode: first
+        episode_selector:
+          group: session
+          allow_fallback_to_title: true
+        metadata_filters:
+          fallback_matchup_season: true
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_number:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
+      # Pattern 7: Generic WTA with date and matchup (space-separated)
+      # Example: WTA Adelaide 2025 Final Sabalenka vs Keys 15 01 1080p WEB.mkv
+      - description: WTA generic with tournament date matchup
+        regex: >-
+          (?i)^WTA[\s._-]+(?P<tournament>[A-Za-z]+(?:[\s._-]+[A-Za-z]+)?)[\s._-]+(?P<year>\d{4})[\s._-]+(?:(?P<round_name>First[\s._-]?Round|Second[\s._-]?Round|Third[\s._-]?Round|Fourth[\s._-]?Round|R(?:ound[\s._-]?)?(?:of[\s._-]?)?(?:16|32|64|128)|Quarterfinal[s]?|QF|Semi[\s._-]?Final[s]?|SF|Final[s]?|F)[\s._-]+)?(?P<session>(?P<player1>[A-Za-z''À-ÖØ-öø-ÿ]+(?:[\s._-][A-Za-z''À-ÖØ-öø-ÿ]+)?)[\s._-]+(?:vs?|VS?|V)[\s._-]+(?P<player2>[A-Za-z''À-ÖØ-öø-ÿ]+(?:[\s._-][A-Za-z''À-ÖØ-öø-ÿ]+)?))(?:[\s._-]+(?P<day>\d{1,2})[\s._-]+(?P<month>\d{1,2}))?(?:[\s._-]+(?:<suffix_token>|[A-Za-z0-9]+))*\.(?P<extension><extension>)$
+        season_selector:
+          mode: title
+          group: tournament
+        episode_selector:
+          group: session
+          allow_fallback_to_title: true
+        metadata_filters:
+          fallback_matchup_season: true
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_number:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
 # ==============================================================================
 # DEFAULT SPORTS
 # ==============================================================================
@@ -6607,4 +6755,16 @@ default_sports:
     variants:
       - year: 2025
         show_slug: "isu-figure-skating-2025-2026"
+
+  # ------------------------------------------------------------------
+  # Tennis
+  # ------------------------------------------------------------------
+  - id: wta
+    name: WTA
+    pattern_sets:
+      - wta
+    allow_unmatched: true  # Many filename formats exist; avoid noisy warnings
+    variants:
+      - year: 2025
+        show_slug: "wta-2025"
 
