@@ -169,11 +169,14 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
     # Build source glob info list
     source_glob_info = _build_source_glob_info(sport_config)
 
+    # For display, prefer show_slug, fall back to template
+    display_slug = sport_config.show_slug or sport_config.show_slug_template or ""
+
     # Create base detail
     detail = SportDetail(
         sport_id=sport_config.id,
         sport_name=sport_config.name,
-        show_slug=sport_config.show_slug,
+        show_slug=display_slug,
         enabled=sport_config.enabled,
         link_mode=sport_config.link_mode,
         source_globs=source_glob_info,
@@ -272,10 +275,13 @@ def get_sports_overview() -> list[SportOverview]:
 
         # Note: total_count is 0 here - we don't load metadata in the list view
         # to avoid blocking network requests. Full counts are shown in detail view.
+        # For display, prefer show_slug, fall back to template
+        display_slug = sport.show_slug or sport.show_slug_template or ""
+
         overview = SportOverview(
             sport_id=sport.id,
             sport_name=sport.name,
-            show_slug=sport.show_slug,
+            show_slug=display_slug,
             enabled=sport.enabled,
             link_mode=sport.link_mode,
             pattern_count=len(sport.patterns),
@@ -291,6 +297,8 @@ def get_sports_overview() -> list[SportOverview]:
 def _load_show_metadata(sport_config):
     """Load show metadata for a sport.
 
+    For dynamic sports (using show_slug_template), loads metadata for the current year.
+
     Args:
         sport_config: Sport configuration
 
@@ -301,6 +309,23 @@ def _load_show_metadata(sport_config):
         return None
 
     try:
+        # For dynamic sports, try loading metadata for the current year
+        if sport_config.show_slug_template and not sport_config.show_slug:
+            from datetime import datetime
+
+            from playbook.metadata_loader import DynamicMetadataLoader
+
+            loader = DynamicMetadataLoader(
+                gui_state.config.settings,
+                cache_dir=gui_state.config.settings.cache_dir,
+            )
+            try:
+                current_year = datetime.now().year
+                return loader.load_for_sport(sport_config, current_year)
+            finally:
+                loader.close()
+
+        # For static sports, use the regular loader
         from playbook.metadata_loader import load_sports
 
         result = load_sports(
