@@ -157,6 +157,8 @@ class TVSportsDBClient:
             TVSportsDBNotFoundError: If the show doesn't exist
             TVSportsDBError: On API errors
         """
+        from .models import ShowResponse
+
         # Check cache first (including expired entries for conditional requests)
         cached_entry = self.cache.get_show_entry(slug, include_expired=True)
 
@@ -164,8 +166,6 @@ class TVSportsDBClient:
             if cached_entry.is_fresh:
                 # Cache is still valid
                 LOGGER.debug("Using cached show (fresh): %s", slug)
-                from .models import ShowResponse
-
                 return ShowResponse.model_validate(cached_entry.content)
 
             # Cache expired - try conditional request
@@ -181,8 +181,6 @@ class TVSportsDBClient:
                 # 304 Not Modified - refresh TTL and use cached data
                 LOGGER.debug("Content unchanged (304), refreshing TTL: %s", slug)
                 self.cache.refresh_show_ttl(slug)
-                from .models import ShowResponse
-
                 return ShowResponse.model_validate(cached_entry.content)
         else:
             # No cached entry - make fresh request
@@ -224,6 +222,8 @@ class TVSportsDBClient:
             TVSportsDBNotFoundError: If the season doesn't exist
             TVSportsDBError: On API errors
         """
+        from .models import SeasonResponse
+
         # Check cache first (including expired entries for conditional requests)
         cached_entry = self.cache.get_season_entry(slug, number, include_expired=True)
 
@@ -231,8 +231,6 @@ class TVSportsDBClient:
             if cached_entry.is_fresh:
                 # Cache is still valid
                 LOGGER.debug("Using cached season (fresh): %s/season/%d", slug, number)
-                from .models import SeasonResponse
-
                 return SeasonResponse.model_validate(cached_entry.content)
 
             # Cache expired - try conditional request
@@ -248,8 +246,6 @@ class TVSportsDBClient:
                 # 304 Not Modified - refresh TTL and use cached data
                 LOGGER.debug("Content unchanged (304), refreshing TTL: %s/season/%d", slug, number)
                 self.cache.refresh_season_ttl(slug, number)
-                from .models import SeasonResponse
-
                 return SeasonResponse.model_validate(cached_entry.content)
         else:
             # No cached entry - make fresh request
