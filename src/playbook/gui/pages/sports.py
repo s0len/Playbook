@@ -15,11 +15,12 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from nicegui import ui
+from nicegui import context, ui
 
 from ..components import progress_bar, seasons_list, status_chip
 from ..data import get_sport_detail, get_sports_overview
 from ..state import gui_state
+from ..utils import safe_notify
 
 LOGGER = logging.getLogger(__name__)
 
@@ -541,6 +542,8 @@ def _bulk_action(action: str, sport_ids: list[str]) -> None:
 def _do_clear_history(sport_ids: list[str], dialog) -> None:
     """Execute the clear history action."""
     dialog.close()
+    # Capture client context before async operation
+    client = context.client
     ui.notify("Clearing history...", type="info")
 
     async def do_clear():
@@ -550,11 +553,12 @@ def _do_clear_history(sport_ids: list[str], dialog) -> None:
             deleted = await loop.run_in_executor(
                 executor, lambda: _bulk_clear_history_sync(sport_ids)
             )
-            ui.notify(f"Cleared {deleted} records from {len(sport_ids)} sports", type="positive")
-            ui.navigate.to("/sports")
+            safe_notify(client, f"Cleared {deleted} records from {len(sport_ids)} sports", type="positive")
+            with client:
+                ui.navigate.to("/sports")
         except Exception as e:
             LOGGER.exception("Clear history error: %s", e)
-            ui.notify(f"Error: {e}", type="negative")
+            safe_notify(client, f"Error: {e}", type="negative")
         finally:
             executor.shutdown(wait=False)
 
@@ -564,6 +568,8 @@ def _do_clear_history(sport_ids: list[str], dialog) -> None:
 def _do_reprocess(sport_ids: list[str], dialog) -> None:
     """Execute the reprocess action (clear history + run)."""
     dialog.close()
+    # Capture client context before async operation
+    client = context.client
 
     async def do_reprocess():
         # First clear history
@@ -571,31 +577,32 @@ def _do_reprocess(sport_ids: list[str], dialog) -> None:
         executor = ThreadPoolExecutor(max_workers=1)
 
         try:
-            ui.notify("Clearing history for selected sports...", type="info")
+            safe_notify(client, "Clearing history for selected sports...", type="info")
             deleted = await loop.run_in_executor(
                 executor, lambda: _bulk_clear_history_sync(sport_ids)
             )
-            ui.notify(f"Cleared {deleted} records", type="info")
+            safe_notify(client, f"Cleared {deleted} records", type="info")
 
             # Then trigger a full run
             if gui_state.processor and not gui_state.is_processing:
-                ui.notify("Starting processing run...", type="info")
+                safe_notify(client, "Starting processing run...", type="info")
                 gui_state.set_processing(True)
                 try:
                     stats = await loop.run_in_executor(None, gui_state.processor.process_all)
                     if stats.cancelled:
-                        ui.notify("Processing stopped", type="warning")
+                        safe_notify(client, "Processing stopped", type="warning")
                     else:
-                        ui.notify("Reprocessing complete", type="positive")
+                        safe_notify(client, "Reprocessing complete", type="positive")
                 finally:
                     gui_state.set_processing(False)
             else:
-                ui.notify("Processor busy or not available - run manually when ready", type="warning")
+                safe_notify(client, "Processor busy or not available - run manually when ready", type="warning")
 
-            ui.navigate.to("/sports")
+            with client:
+                ui.navigate.to("/sports")
         except Exception as e:
             LOGGER.exception("Reprocess error: %s", e)
-            ui.notify(f"Error: {e}", type="negative")
+            safe_notify(client, f"Error: {e}", type="negative")
         finally:
             executor.shutdown(wait=False)
 

@@ -95,12 +95,12 @@ def select_episode(
     trace_lookup_records: list[dict[str, str]] = []
     seen_tokens: set[str] = set()
 
-    def add_lookup(label: str, value: str | list[str] | None) -> None:
+    def add_lookup(label: str, value: str | list[str] | None, *, skip_truncation: bool = False) -> None:
         if not value:
             return
         if isinstance(value, list):
             for item in value:
-                add_lookup(label, item)
+                add_lookup(label, item, skip_truncation=skip_truncation)
             return
 
         variants: list[str] = []
@@ -121,9 +121,13 @@ def select_episode(
             push_variant(" ".join(split_variants))
             without_noise_words = " ".join(word for word in split_variants if _strip_noise(normalize_token(word)))
             push_variant(without_noise_words)
-            for index in range(1, len(split_variants)):
-                truncated = " ".join(split_variants[index:])
-                push_variant(truncated)
+            # Skip truncation for session labels - truncated variants like "prelims" from
+            # "early.prelims" can incorrectly match different episodes (e.g., "Prelims"
+            # instead of "Early Prelims")
+            if not skip_truncation:
+                for index in range(1, len(split_variants)):
+                    truncated = " ".join(split_variants[index:])
+                    push_variant(truncated)
 
         for variant in variants:
             normalized_variant = _strip_noise(normalize_token(variant))
@@ -140,7 +144,7 @@ def select_episode(
                     }
                 )
 
-    add_lookup("session", raw_value)
+    add_lookup("session", raw_value, skip_truncation=True)
 
     if normalized_without_part and normalized_without_part not in seen_tokens:
         lookup_attempts.append(("session_without_part", raw_value, normalized_without_part))
