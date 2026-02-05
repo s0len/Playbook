@@ -34,7 +34,7 @@ pattern_sets:
         # Example: Formula1.2026.Round00.Barcelona.Shakedown.Day.One.SKYF1UHD.WEBRiP.2160p
         # Example: Formula1.2026.Round00.Technical.Regulations.F1TV.WEB-DL.1080p (no location)
         regex: >-
-          (?i)^Formula\.?1\.(?P<year>\d{4})\.Round(?P<round>\d{2})(?:\.(?P<location>[^.]+(?:\.[^.]+)*?))?\.(?P<session>(?:Technical\.Regulations|Tech\.Regulations|Shakedown\.Day\.(?:One|Two|Three|Four|1|2|3|4)|Drivers\.Press\.Conference(?:\.Part\d+)?|Press\.Conference(?:\.Part\d+)?|Weekend\.Warm\.Up|Free\.Practice\.[1-3]|FP[1-3]|Sprint\.Qualifying|Sprint\.Shootout|Sprint\.Race|Sprint|Qualifying|Quali|Race|Pre[.-](?:Qualifying|Race|Sprint)(?:\.Show)?|Post[.-](?:Qualifying|Race|Sprint)(?:\.Show)?)(?:\.Part\d+)?)(?=\.(?:F1|SKYF1))
+          (?i)^Formula\.?1\.(?P<year>\d{4})\.Round(?P<round>\d{2})(?:\.(?P<location>[^.]+(?:\.[^.]+)*?))?\.(?P<session>(?:Technical\.Regulations|Tech\.Regulations|Shakedown\.Day\.(?:One|Two|Three|Four|1|2|3|4)|Drivers\.Press\.Conference(?:\.Part\d+)?|Press\.Conference(?:\.Part\d+)?|Weekend\.Warm[.-]Up|Free\.Practice\.[1-3]|FP[1-3]|Sprint\.Qualifying|Sprint\.Shootout|Sprint\.Race|Sprint|Qualifying|Quali|Race|Pre[.-](?:Qualifying|Race|Sprint)(?:\.Show)?|Post[.-](?:Qualifying|Race|Sprint)(?:\.Show)?)(?:\.Part\d+)?)(?=\.(?:F1|SKYF1))
         season_selector:
           mode: round           # Use captured round number to map metadata seasons.
           group: round
@@ -71,6 +71,7 @@ pattern_sets:
             - Press.Conference.Part2
           Weekend Warm Up:
             - Weekend.Warm.Up
+            - Weekend.Warm-Up
           Free Practice 1:
             - FP1
             - Free.Practice.1
@@ -1389,8 +1390,8 @@ pattern_sets:
         regex: >-
           (?i)^(?P<season_title>UFC\.(?P<season>\d{3})\.(?P<event>.+?))\.(?P<session>Early[._-]Prelims|Prelims|Main(?:[._-]Card|Card)|PPV|Pay(?:[._-]?Per(?:[._-]?View)?)|Fight(?:[._-]?BB)|SHREDDiE)(?:\.[^.]+)*\.(?:mkv|mp4|ts|m4v|avi)$
         season_selector:
-          mode: title
-          group: season_title
+          mode: round
+          group: season
         episode_selector:
           group: session
         session_aliases: &ufc_session_aliases
@@ -1422,8 +1423,8 @@ pattern_sets:
         regex: >-
           (?i)^(?P<season_title>UFC\s+(?P<season>\d{3})\s+(?P<event>.+?))\s+(?P<session>Early(?:\s+|[._-])Prelims|Prelims|Main(?:\s+|[._-])Card|MainCard|PPV|Pay(?:\s+|[._-])?Per(?:\s+|[._-])?View|Fight(?:\s+BB|[._-]?BB)|SHREDDiE)(?:\s+.+)?\.(?:mkv|mp4|ts|m4v|avi)$
         season_selector:
-          mode: title
-          group: season_title
+          mode: round
+          group: season
         episode_selector:
           group: session
         session_aliases: *ufc_session_aliases
@@ -1433,8 +1434,8 @@ pattern_sets:
         regex: >-
           (?i)^(?P<season_title>UFC\.(?P<season>\d{3})\.(?P<event>.+?))(?=\.(?:\d{3,4}p|[124]k|360p|480p|576p|web(?:[-._]?dl)?|web(?:[-._]?rip)?|web|hdtv|hdr|dv|uhd|ppv|pay(?:[._-]?per(?:[._-]?view)?)|fight(?:[._-]?bb)?|shreddie|verum|h264|x264|h265|x265|hevc|proper|repack|amzn|disney|espn|abc|cbs|fox|sky|bt|dazn|peacock|paramount|apple|max))(?:(?:\.[^.]+)+)\.(?:mkv|mp4|ts|m4v|avi)$
         season_selector:
-          mode: title
-          group: season_title
+          mode: round
+          group: season
         episode_selector:
           group: session
           default_value: "Main Card"
@@ -1444,8 +1445,8 @@ pattern_sets:
         regex: >-
           (?i)^(?P<season_title>UFC\s+(?P<season>\d{3})\s+(?P<event>.+?))(?=\s+(?:\d{3,4}p|[124]k|360p|480p|576p|web(?:[-._]?dl)?|web(?:[-._]?rip)?|web|hdtv|hdr|dv|uhd|ppv|pay(?:[._-]?per(?:[._-]?view)?)|fight(?:[._-]?bb)?|shreddie|verum|h264|x264|h265|x265|hevc|proper|repack|amzn|disney|espn|abc|cbs|fox|sky|bt|dazn|peacock|paramount|apple|max))(?:(?:\s+.+)+)\.(?:mkv|mp4|ts|m4v|avi)$
         season_selector:
-          mode: title
-          group: season_title
+          mode: round
+          group: season
         episode_selector:
           group: session
           default_value: "Main Card"
@@ -1455,8 +1456,8 @@ pattern_sets:
         regex: >-
           (?i)^(?P<season_title>UFC\.Fight\.Night\.(?P<season>\d{3})\.(?P<event>.+?))\.(?P<session>Early[._-]Prelims|Prelims|Main(?:[._-]Card|Card)|PPV|Pay(?:[._-]?Per(?:[._-]?View)?)|Fight(?:[._-]?BB)|SHREDDiE)(?:\.[^.]+)*\.(?:mkv|mp4|ts|m4v|avi)$
         season_selector:
-          mode: title
-          group: season_title
+          mode: round
+          group: season
         episode_selector:
           group: session
         session_aliases: *ufc_session_aliases
@@ -1466,8 +1467,8 @@ pattern_sets:
         regex: >-
           (?i)^(?P<season_title>UFC\s+Fight\s+Night\s+(?P<season>\d{3})\s+(?P<event>.+?))\s+(?P<session>Early(?:\s+|[._-])Prelims|Prelims|Main(?:\s+|[._-])Card|MainCard|PPV|Pay(?:\s+|[._-])?Per(?:\s+|[._-])?View|Fight(?:\s+BB|[._-]?BB)|SHREDDiE)(?:\s+.+)?\.(?:mkv|mp4|ts|m4v|avi)$
         season_selector:
-          mode: title
-          group: season_title
+          mode: round
+          group: season
         episode_selector:
           group: session
         session_aliases: *ufc_session_aliases
@@ -1477,8 +1478,8 @@ pattern_sets:
         regex: >-
           (?i)^(?P<season_title>UFC\.Fight\.Night\.(?P<season>\d{3})\.(?P<event>.+?))(?=\.(?:\d{3,4}p|[124]k|360p|480p|576p|web(?:[-._]?dl)?|web(?:[-._]?rip)?|web|hdtv|hdr|dv|uhd|ppv|pay(?:[._-]?per(?:[._-]?view)?)|fight(?:[._-]?bb)?|shreddie|verum|h264|x264|h265|x265|hevc|proper|repack|amzn|disney|espn|abc|cbs|fox|sky|bt|dazn|peacock|paramount|apple|max))(?:(?:\.[^.]+)+)\.(?:mkv|mp4|ts|m4v|avi)$
         season_selector:
-          mode: title
-          group: season_title
+          mode: round
+          group: season
         episode_selector:
           group: session
           default_value: "Main Card"
@@ -1488,8 +1489,8 @@ pattern_sets:
         regex: >-
           (?i)^(?P<season_title>UFC\s+Fight\s+Night\s+(?P<season>\d{3})\s+(?P<event>.+?))(?=\s+(?:\d{3,4}p|[124]k|360p|480p|576p|web(?:[-._]?dl)?|web(?:[-._]?rip)?|web|hdtv|hdr|dv|uhd|ppv|pay(?:[._-]?per(?:[._-]?view)?)|fight(?:[._-]?bb)?|shreddie|verum|h264|x264|h265|x265|hevc|proper|repack|amzn|disney|espn|abc|cbs|fox|sky|bt|dazn|peacock|paramount|apple|max))(?:(?:\s+.+)+)\.(?:mkv|mp4|ts|m4v|avi)$
         season_selector:
-          mode: title
-          group: season_title
+          mode: round
+          group: season
         episode_selector:
           group: session
           default_value: "Main Card"
@@ -1499,8 +1500,8 @@ pattern_sets:
         regex: >-
           (?i)^(?P<season_title>UFC\.On\.ESPN\.(?P<season>\d+)\.(?P<event>.+?))\.(?P<session>Early[._-]Prelims|Prelims|Main(?:[._-]Card|Card)|PPV|Pay(?:[._-]?Per(?:[._-]?View)?)|Fight(?:[._-]?BB)|SHREDDiE)(?:\.[^.]+)*\.(?:mkv|mp4|ts|m4v|avi)$
         season_selector:
-          mode: title
-          group: season_title
+          mode: round
+          group: season
         episode_selector:
           group: session
         session_aliases: *ufc_session_aliases
@@ -1510,8 +1511,8 @@ pattern_sets:
         regex: >-
           (?i)^(?P<season_title>UFC\s+On\s+ESPN\s+(?P<season>\d+)\s+(?P<event>.+?))\s+(?P<session>Early(?:\s+|[._-])Prelims|Prelims|Main(?:\s+|[._-])Card|MainCard|PPV|Pay(?:\s+|[._-])?Per(?:\s+|[._-])?View|Fight(?:\s+BB|[._-]?BB)|SHREDDiE)(?:\s+.+)?\.(?:mkv|mp4|ts|m4v|avi)$
         season_selector:
-          mode: title
-          group: season_title
+          mode: round
+          group: season
         episode_selector:
           group: session
         session_aliases: *ufc_session_aliases
@@ -1522,8 +1523,8 @@ pattern_sets:
         regex: >-
           (?i)^(?P<season_title>UFC\.On\.ESPN\.(?P<season>\d+)\.(?P<event>.+?))(?=\.(?:\d{3,4}p|[124]k|360p|480p|576p|web(?:[-._]?dl)?|web(?:[-._]?rip)?|web|hdtv|hdr|dv|uhd|verum|h264|x264|h265|x265|hevc|proper|repack|amzn|disney|espn|abc|cbs|fox|sky|bt|dazn|peacock|paramount|apple|max))(?:(?:\.[^.]+)+)\.(?:mkv|mp4|ts|m4v|avi)$
         season_selector:
-          mode: title
-          group: season_title
+          mode: round
+          group: season
         episode_selector:
           group: session
           default_value: "Main Card"
@@ -1533,8 +1534,8 @@ pattern_sets:
         regex: >-
           (?i)^(?P<season_title>UFC\s+On\s+ESPN\s+(?P<season>\d+)\s+(?P<event>.+?))(?=\s+(?:\d{3,4}p|[124]k|360p|480p|576p|web(?:[-._]?dl)?|web(?:[-._]?rip)?|web|hdtv|hdr|dv|uhd|verum|h264|x264|h265|x265|hevc|proper|repack|amzn|disney|espn|abc|cbs|fox|sky|bt|dazn|peacock|paramount|apple|max))(?:(?:\s+.+)+)\.(?:mkv|mp4|ts|m4v|avi)$
         season_selector:
-          mode: title
-          group: season_title
+          mode: round
+          group: season
         episode_selector:
           group: session
           default_value: "Main Card"
@@ -5966,11 +5967,25 @@ pattern_sets:
           mode: title
           group: location
           fallback_groups: [location2]  # Location can appear before or after "Grand Prix"
-          # Matches captured location (France/China/Japan/etc.) against season aliases in TVSportsDB
+          # Maps captured location/country to ISU Grand Prix event names used in TVSportsDB
           aliases:
-            "United State": "United States"
-            "USA": "United States"
-            "US": "United States"
+            # USA events → Skate America
+            "United State": "Skate America"
+            "United States": "Skate America"
+            "USA": "Skate America"
+            "US": "Skate America"
+            # France events → Internationaux de France
+            "France": "Internationaux de France"
+            # Canada events → Skate Canada International
+            "Canada": "Skate Canada International"
+            # Japan events → NHK Trophy
+            "Japan": "NHK Trophy"
+            # China events → Cup of China
+            "China": "Cup of China"
+            # Finland events → Grand Prix of Espoo (or similar)
+            "Finland": "Grand Prix of Espoo"
+            # Grand Prix Final
+            "Final": "Grand Prix Final"
         episode_selector:
           group: session
           allow_fallback_to_title: true
