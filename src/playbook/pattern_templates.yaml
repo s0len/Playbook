@@ -34,7 +34,7 @@ pattern_sets:
         # Example: Formula1.2026.Round00.Barcelona.Shakedown.Day.One.SKYF1UHD.WEBRiP.2160p
         # Example: Formula1.2026.Round00.Technical.Regulations.F1TV.WEB-DL.1080p (no location)
         regex: >-
-          (?i)^Formula\.?1\.(?P<year>\d{4})\.Round(?P<round>\d{2})(?:\.(?P<location>[^.]+(?:\.[^.]+)*?))?\.(?P<session>(?:Technical\.Regulations|Tech\.Regulations|Shakedown\.Day\.(?:One|Two|Three|Four|1|2|3|4)|Drivers\.Press\.Conference(?:\.Part\d+)?|Press\.Conference(?:\.Part\d+)?|Weekend\.Warm\.Up|Free\.Practice\.[1-3]|FP[1-3]|Sprint\.Qualifying|Sprint\.Shootout|Sprint\.Race|Sprint|Qualifying|Quali|Race|Pre\.(?:Qualifying|Race|Sprint)|Post\.(?:Qualifying|Race|Sprint))(?:\.Part\d+)?)(?=\.(?:F1|SKYF1))
+          (?i)^Formula\.?1\.(?P<year>\d{4})\.Round(?P<round>\d{2})(?:\.(?P<location>[^.]+(?:\.[^.]+)*?))?\.(?P<session>(?:Technical\.Regulations|Tech\.Regulations|Shakedown\.Day\.(?:One|Two|Three|Four|1|2|3|4)|Drivers\.Press\.Conference(?:\.Part\d+)?|Press\.Conference(?:\.Part\d+)?|Weekend\.Warm\.Up|Free\.Practice\.[1-3]|FP[1-3]|Sprint\.Qualifying|Sprint\.Shootout|Sprint\.Race|Sprint|Qualifying|Quali|Race|Pre[.-](?:Qualifying|Race|Sprint)(?:\.Show)?|Post[.-](?:Qualifying|Race|Sprint)(?:\.Show)?)(?:\.Part\d+)?)(?=\.(?:F1|SKYF1))
         season_selector:
           mode: round           # Use captured round number to map metadata seasons.
           group: round
@@ -93,16 +93,34 @@ pattern_sets:
             - Race
           Pre Qualifying Show:
             - Pre.Qualifying
+            - Pre-Qualifying
+            - Pre.Qualifying.Show
+            - Pre-Qualifying.Show
           Post Qualifying Show:
             - Post.Qualifying
+            - Post-Qualifying
+            - Post.Qualifying.Show
+            - Post-Qualifying.Show
           Pre Race Show:
             - Pre.Race
+            - Pre-Race
+            - Pre.Race.Show
+            - Pre-Race.Show
           Post Race Show:
             - Post.Race
-          Post Sprint Show:
-            - Post.Sprint
+            - Post-Race
+            - Post.Race.Show
+            - Post-Race.Show
           Pre Sprint Show:
             - Pre.Sprint
+            - Pre-Sprint
+            - Pre.Sprint.Show
+            - Pre-Sprint.Show
+          Post Sprint Show:
+            - Post.Sprint
+            - Post-Sprint
+            - Post.Sprint.Show
+            - Post-Sprint.Show
         destination_root_template: "{show_title}"
         season_dir_template: "{season_round:02d} {season_title}"
         filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
@@ -392,8 +410,10 @@ pattern_sets:
     default_source_globs:
       - "NHL.*"
       - "NHL *"
+      - "NHL-*"
       - "nhl.*"
       - "nhl *"
+      - "nhl-*"
     patterns:
       - description: NHL regular season spaced/dotted releases
         # Example: NHL RS 2025 New Jersey Devils vs Buffalo Sabres 28 11 720pEN60fps MSG.mkv
@@ -557,7 +577,7 @@ pattern_sets:
       - description: IndyCar Series MWR releases (dot separated)
         # Example: IndyCar.Series.2025.Round06.Indianapolis.500.Race.STAN.WEB-DL.1080p.h264.English-MWR
         regex: >-
-          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)IndyCar(?:\.Series)?\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<location>[^.]+(?:\.[^.]+)*?)\.(?P<session>Practice(?:\.(?:[1-6]|One|Two|Three|Four|Five|Six|Session))?|Qualifying(?:\.Day\.(?:1|2)|\.Session)?|Race|Carb\.Day)(?:\.[^.]+)*$
+          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)IndyCar(?:\.Series)?\.(?P<year>\d{4})\.Round(?P<round>\d{1,2})\.(?P<location>[^.]+(?:\.[^.]+)*?)\.(?P<session>Practice(?:\.(?:[1-6]|One|Two|Three|Four|Five|Six|Session))?|Qualifying(?:\.Day\.(?:1|2)|\.Session)?|Race|Carb\.Day)(?:\.[^.]+)*$
         season_selector:
           mode: round
           group: round
@@ -675,7 +695,7 @@ pattern_sets:
       - description: IndyCar Series MWR releases (space separated)
         # Example: IndyCar Series 2025 Round06 Indianapolis 500 Qualifying STAN WEB-DL 1080p h264 English-MWR
         regex: >-
-          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)IndyCar(?:\s+Series)?\s+(?P<year>\d{4})\s+Round(?P<round>\d{2})\s+(?P<location>.+?)\s+(?P<session>Practice(?:\s+(?:[1-6]|One|Two|Three|Four|Five|Six))?(?:\s+Session)?|Qualifying(?:\s+Day\s+(?:1|2)|\s+Session)?|Race|Carb\s*Day)(?=\s)
+          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)IndyCar(?:\s+Series)?\s+(?P<year>\d{4})\s+Round(?P<round>\d{1,2})\s+(?P<location>.+?)\s+(?P<session>Practice(?:\s+(?:[1-6]|One|Two|Three|Four|Five|Six))?(?:\s+Session)?|Qualifying(?:\s+Day\s+(?:1|2)|\s+Session)?|Race|Carb\s*Day)(?=\s)
         season_selector:
           mode: round
           group: round
@@ -1357,8 +1377,12 @@ pattern_sets:
     default_source_globs:
       - "UFC.*"
       - "UFC *"
+      - "UFC.On.ESPN.*"
+      - "UFC On ESPN *"
       - "ufc.*"
       - "ufc *"
+      - "ufc.on.espn.*"
+      - "ufc on espn *"
     patterns:
       - description: UFC numbered events (dot separated)
         # Example: UFC.298.Volkanovski.vs.Topuria.Main.Card.1080p.WEB.mkv
@@ -1463,6 +1487,51 @@ pattern_sets:
         priority: 200
         regex: >-
           (?i)^(?P<season_title>UFC\s+Fight\s+Night\s+(?P<season>\d{3})\s+(?P<event>.+?))(?=\s+(?:\d{3,4}p|[124]k|360p|480p|576p|web(?:[-._]?dl)?|web(?:[-._]?rip)?|web|hdtv|hdr|dv|uhd|ppv|pay(?:[._-]?per(?:[._-]?view)?)|fight(?:[._-]?bb)?|shreddie|verum|h264|x264|h265|x265|hevc|proper|repack|amzn|disney|espn|abc|cbs|fox|sky|bt|dazn|peacock|paramount|apple|max))(?:(?:\s+.+)+)\.(?:mkv|mp4|ts|m4v|avi)$
+        season_selector:
+          mode: title
+          group: season_title
+        episode_selector:
+          group: session
+          default_value: "Main Card"
+
+      - description: UFC On ESPN events (dot separated)
+        # Example: ufc.on.espn.73.royval.vs.kape.early.prelims.1080p.web.h264-verum.mkv
+        regex: >-
+          (?i)^(?P<season_title>UFC\.On\.ESPN\.(?P<season>\d+)\.(?P<event>.+?))\.(?P<session>Early[._-]Prelims|Prelims|Main(?:[._-]Card|Card)|PPV|Pay(?:[._-]?Per(?:[._-]?View)?)|Fight(?:[._-]?BB)|SHREDDiE)(?:\.[^.]+)*\.(?:mkv|mp4|ts|m4v|avi)$
+        season_selector:
+          mode: title
+          group: season_title
+        episode_selector:
+          group: session
+        session_aliases: *ufc_session_aliases
+
+      - description: UFC On ESPN events (space separated)
+        # Example: UFC On ESPN 73 Royval vs Kape Main Card 1080p WEB.mkv
+        regex: >-
+          (?i)^(?P<season_title>UFC\s+On\s+ESPN\s+(?P<season>\d+)\s+(?P<event>.+?))\s+(?P<session>Early(?:\s+|[._-])Prelims|Prelims|Main(?:\s+|[._-])Card|MainCard|PPV|Pay(?:\s+|[._-])?Per(?:\s+|[._-])?View|Fight(?:\s+BB|[._-]?BB)|SHREDDiE)(?:\s+.+)?\.(?:mkv|mp4|ts|m4v|avi)$
+        season_selector:
+          mode: title
+          group: season_title
+        episode_selector:
+          group: session
+        session_aliases: *ufc_session_aliases
+
+      - description: UFC On ESPN events (dot separated, no session tag)
+        priority: 200
+        # Example: ufc.on.espn.73.royval.vs.kape.1080p.web.h264-verum.mkv
+        regex: >-
+          (?i)^(?P<season_title>UFC\.On\.ESPN\.(?P<season>\d+)\.(?P<event>.+?))(?=\.(?:\d{3,4}p|[124]k|360p|480p|576p|web(?:[-._]?dl)?|web(?:[-._]?rip)?|web|hdtv|hdr|dv|uhd|verum|h264|x264|h265|x265|hevc|proper|repack|amzn|disney|espn|abc|cbs|fox|sky|bt|dazn|peacock|paramount|apple|max))(?:(?:\.[^.]+)+)\.(?:mkv|mp4|ts|m4v|avi)$
+        season_selector:
+          mode: title
+          group: season_title
+        episode_selector:
+          group: session
+          default_value: "Main Card"
+
+      - description: UFC On ESPN events (space separated, no session tag)
+        priority: 200
+        regex: >-
+          (?i)^(?P<season_title>UFC\s+On\s+ESPN\s+(?P<season>\d+)\s+(?P<event>.+?))(?=\s+(?:\d{3,4}p|[124]k|360p|480p|576p|web(?:[-._]?dl)?|web(?:[-._]?rip)?|web|hdtv|hdr|dv|uhd|verum|h264|x264|h265|x265|hevc|proper|repack|amzn|disney|espn|abc|cbs|fox|sky|bt|dazn|peacock|paramount|apple|max))(?:(?:\s+.+)+)\.(?:mkv|mp4|ts|m4v|avi)$
         season_selector:
           mode: title
           group: season_title
@@ -5898,6 +5967,10 @@ pattern_sets:
           group: location
           fallback_groups: [location2]  # Location can appear before or after "Grand Prix"
           # Matches captured location (France/China/Japan/etc.) against season aliases in TVSportsDB
+          aliases:
+            "United State": "United States"
+            "USA": "United States"
+            "US": "United States"
         episode_selector:
           group: session
           allow_fallback_to_title: true
@@ -6395,6 +6468,23 @@ pattern_sets:
         season_dir_template: "{season_number:02d} {season_title}"
         filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
 
+      - description: NFL regular season date-first with week number (DD-MM-YYYY)
+        # Example: NFL 07-12-2025 Week14 Houston Texans vs Arizona Cardinals 1080p WEB.mkv
+        # Example: NFL 07-12-2025 Week 14 Houston Texans vs Arizona Cardinals 1080p WEB.mkv
+        regex: >-
+          (?i)^NFL[\s._-]+(?P<day>\d{2})-(?P<month>\d{2})-(?P<year>\d{4})[\s._-]+Week[\s._-]?(?P<week>\d{1,2})[\s._-]+(?P<session>(?P<away><matchup_team>)[\s._-]+(?P<separator>vs\.?|v|at|@)[\s._-]+(?P<home><matchup_team>))(?:[\s._-]+(?:<suffix_token>|[A-Za-z0-9]+))*\.(?P<extension><extension>)$
+        season_selector:
+          mode: week
+          group: week
+        episode_selector:
+          group: session
+          allow_fallback_to_title: true
+        metadata_filters:
+          team_alias_map: nfl
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_number:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
       - description: NFL playoff date-first releases (DD-MM-YYYY format)
         # Example: NFL 25-01-2026 AFC Championship New England Patriots vs Denver Broncos 1080p60_EN_CBS.mkv
         # Example: NFL 25-01-2026 NFC Championship Los Angeles Rams vs Seattle Seahawks 1080p60_EN_FOX.mkv
@@ -6441,6 +6531,8 @@ pattern_sets:
       - "*WTA *"
       - "*Billie Jean King*"
       - "*billie jean king*"
+      - "*United Cup*"
+      - "*United.Cup*"
     patterns:
       # Pattern 1: Standard WTA with Grand Slam/Tournament and year
       # Example: WTA 2020 Australian Open R1 Donna Vekic (CRO) vs Maria Sharapova (RUS) 1080i25fps NOC.ts
@@ -6634,6 +6726,8 @@ default_sports:
         show_slug: "motogp-2024"
       - year: 2025
         show_slug: "motogp-2025"
+      - year: 2026
+        show_slug: "motogp-2026"
 
   - id: moto2
     name: Moto2
