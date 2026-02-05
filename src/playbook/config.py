@@ -292,6 +292,7 @@ class SportConfig:
     allow_unmatched: bool = False
     season_overrides: dict[str, dict[str, Any]] = field(default_factory=dict)  # Moved from MetadataConfig
     quality_profile: QualityProfile | None = None  # Per-sport quality profile override
+    variant_year: int | None = None  # Year from variant expansion (for year-based filtering)
 
 
 @dataclass
@@ -449,6 +450,11 @@ def _build_sport_config(
                 seen.add(glob)
                 effective_globs.append(glob)
 
+    # Get variant_year if this sport was expanded from a year-based variant
+    variant_year = data.get("variant_year")
+    if variant_year is not None:
+        variant_year = int(variant_year)
+
     return SportConfig(
         id=data["id"],
         name=data.get("name", data["id"]),
@@ -467,6 +473,7 @@ def _build_sport_config(
         allow_unmatched=bool(data.get("allow_unmatched", False)),
         season_overrides=season_overrides,
         quality_profile=quality_profile,
+        variant_year=variant_year,
     )
 
 
@@ -524,6 +531,10 @@ def _expand_sport_variants(sport_data: dict[str, Any]) -> list[dict[str, Any]]:
                 combined["name"] = f"{base_name} {variant_suffix}"
             else:
                 combined["name"] = base_name
+
+        # Store variant_year for year-based filtering during matching
+        if variant_year is not None:
+            combined["variant_year"] = int(variant_year)
 
         combined.pop("year", None)
         combined.pop("id_suffix", None)

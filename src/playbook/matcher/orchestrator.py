@@ -133,6 +133,26 @@ def match_file_to_episode(
 
         groups = {key: value for key, value in match.groupdict().items() if value is not None}
 
+        # Check if captured year matches sport's variant year (for year-based filtering)
+        # This prevents a 2026 file from being matched by a 2025 sport variant
+        if sport.variant_year is not None and "year" in groups:
+            try:
+                captured_year = int(groups["year"])
+                if captured_year != sport.variant_year:
+                    if trace_attempts is not None:
+                        trace_attempts.append(
+                            {
+                                "pattern": descriptor,
+                                "regex": pattern_runtime.config.regex,
+                                "status": "year-mismatch",
+                                "captured_year": captured_year,
+                                "variant_year": sport.variant_year,
+                            }
+                        )
+                    continue  # Skip this sport variant, let another variant handle it
+            except (ValueError, TypeError):
+                pass  # Non-numeric year, proceed normally
+
         # Ensure date_year is set if we have year/month/day groups
         if "date_year" not in groups and {"year", "month", "day"}.issubset(groups.keys()):
             groups["date_year"] = groups["year"]
