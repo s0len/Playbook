@@ -33,8 +33,9 @@ pattern_sets:
         # Example: Formula.1.2024.Round03.Melbourne.Albert.Park.Qualifying.F1TV-1080p
         # Example: Formula1.2026.Round00.Barcelona.Shakedown.Day.One.SKYF1UHD.WEBRiP.2160p
         # Example: Formula1.2026.Round00.Technical.Regulations.F1TV.WEB-DL.1080p (no location)
+        # Example: Formula1.2025.Round18.Singapore.Weekend.Warm-Up.PROPER.F1TV.WEB-DL.1080p.h264.English-MWR.mkv
         regex: >-
-          (?i)^Formula\.?1\.(?P<year>\d{4})\.Round(?P<round>\d{2})(?:\.(?P<location>[^.]+(?:\.[^.]+)*?))?\.(?P<session>(?:Technical\.Regulations|Tech\.Regulations|Shakedown\.Day\.(?:One|Two|Three|Four|1|2|3|4)|Drivers\.Press\.Conference(?:\.Part\d+)?|Press\.Conference(?:\.Part\d+)?|Weekend\.Warm[.-]Up|Free\.Practice\.[1-3]|FP[1-3]|Sprint\.Qualifying|Sprint\.Shootout|Sprint\.Race|Sprint|Qualifying|Quali|Race|Pre[.-](?:Qualifying|Race|Sprint)(?:\.Show)?|Post[.-](?:Qualifying|Race|Sprint)(?:\.Show)?)(?:\.Part\d+)?)(?=\.(?:F1|SKYF1))
+          (?i)^Formula\.?1\.(?P<year>\d{4})\.Round(?P<round>\d{2})(?:\.(?P<location>[^.]+(?:\.[^.]+)*?))?\.(?P<session>(?:Technical\.Regulations|Tech\.Regulations|Shakedown\.Day\.(?:One|Two|Three|Four|1|2|3|4)|Drivers\.Press\.Conference(?:\.Part\d+)?|Press\.Conference(?:\.Part\d+)?|Weekend\.Warm[.-]Up|Free\.Practice\.[1-3]|FP[1-3]|Sprint\.Qualifying|Sprint\.Shootout|Sprint\.Race|Sprint|Qualifying|Quali|Race|Pre[.-](?:Qualifying|Race|Sprint)(?:\.Show)?|Post[.-](?:Qualifying|Race|Sprint)(?:\.Show)?)(?:\.Part\d+)?)(?=\.(?:PROPER\.)?(?:REPACK\.)?(?:F1|SKYF1))
         season_selector:
           mode: round           # Use captured round number to map metadata seasons.
           group: round
@@ -128,8 +129,9 @@ pattern_sets:
 
       - description: Formula 1 F1Carreras releases
         # Example: Formula.1.S2024E02.Round04.Baku.Azerbaijan.Sprint.F1TV-1080p-F1Carreras.mkv
+        # Example: Formula1.S2024E73.Round14.Spa-Francorchamps.Race.F1TV.1080p.WEB-DL.AAC2.0.H.264-F1Carreras.mkv
         regex: >-
-          (?i)^Formula\.?1\.S(?P<year>\d{4})E\d+\.Round(?P<round>\d{2})\.(?P<location>[^.]+(?:\.[^.]+)*)\.(?P<session>[^.]+(?:\.[^.]+)*?)(?=\.F1TV).*?-F1Carreras\.(?:mkv|mp4|ts)$
+          (?i)^Formula\.?1\.S(?P<year>\d{4})E\d+\.Round(?P<round>\d{2})\.(?P<location>[^.]+(?:\.[^.]+)*?)\.(?P<session>Free\.Practice\.[1-3]|FP[1-3]|Sprint\.Qualifying|Sprint\.Shootout|Sprint\.Race|Sprint|Qualifying|Quali|Race|Pre[.-]Race(?:\.Show)?|Post[.-]Race(?:\.Show)?)(?=\.F1TV).*?-F1Carreras\.(?:mkv|mp4|ts)$
         season_selector:
           mode: round
           group: round

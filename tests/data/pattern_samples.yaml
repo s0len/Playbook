@@ -419,6 +419,58 @@ samples:
       - value: "formula1.2025.brazilian.grand.prix.sprint.qualifying.1080p.web.h264-verum.mkv"
         expect_episode: "Sprint Qualifying"
 
+  - description: "Formula 1 MWR releases with PROPER tag"
+    sport:
+      id: "formula1_mwr_proper"
+      name: "Formula 1 MWR PROPER"
+      pattern_sets:
+        - formula1
+    show:
+      key: "formula1_2025"
+      title: "Formula 1 2025"
+      seasons:
+        - title: "Round 18 Singapore Grand Prix"
+          round_number: 18
+          display_number: 18
+          episodes:
+            - title: "Weekend Warm Up"
+              aliases:
+                - "Weekend.Warm-Up"
+                - "Weekend.Warm.Up"
+    filenames:
+      - value: "Formula1.2025.Round18.Singapore.Weekend.Warm-Up.PROPER.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
+        expect_episode: "Weekend Warm Up"
+
+  - description: "Formula 1 F1Carreras releases"
+    sport:
+      id: "formula1_f1carreras"
+      name: "Formula 1 F1Carreras"
+      pattern_sets:
+        - formula1
+    show:
+      key: "formula1_2024"
+      title: "Formula 1 2024"
+      seasons:
+        - title: "Round 4 Azerbaijan Grand Prix"
+          round_number: 4
+          display_number: 4
+          episodes:
+            - title: "Sprint"
+              aliases:
+                - "Sprint Race"
+        - title: "Round 14 Belgian Grand Prix"
+          round_number: 14
+          display_number: 14
+          episodes:
+            - title: "Race"
+              aliases:
+                - "Grand Prix"
+    filenames:
+      - value: "Formula1.S2024E73.Round14.Spa-Francorchamps.Race.F1TV.1080p.WEB-DL.AAC2.0.H.264-F1Carreras.mkv"
+        expect_episode: "Race"
+      - value: "Formula.1.S2024E02.Round04.Baku.Azerbaijan.Sprint.F1TV-1080p-F1Carreras.mkv"
+        expect_episode: "Sprint"
+
   - description: "World Superbike PROPER and REPACK releases"
     sport:
       id: "wsbk_proper_samples"
