@@ -5972,25 +5972,27 @@ pattern_sets:
           mode: title
           group: location
           fallback_groups: [location2]  # Location can appear before or after "Grand Prix"
-          # Maps captured location/country to ISU Grand Prix event names used in TVSportsDB
+          # Maps captured location/country to partial-match-friendly values
+          # The season selector uses substring matching, so "France" matches "Grand Prix de France 2025"
+          # and "America" matches "Skate America 2025"
           aliases:
-            # USA events → Skate America
-            "United State": "Skate America"
-            "United States": "Skate America"
-            "USA": "Skate America"
-            "US": "Skate America"
-            # France events → Internationaux de France
-            "France": "Internationaux de France"
-            # Canada events → Skate Canada International
-            "Canada": "Skate Canada International"
-            # Japan events → NHK Trophy
-            "Japan": "NHK Trophy"
-            # China events → Cup of China
-            "China": "Cup of China"
-            # Finland events → Grand Prix of Espoo (or similar)
-            "Finland": "Grand Prix of Espoo"
+            # USA events → "America" partial matches "Skate America"
+            "United State": "America"
+            "United States": "America"
+            "USA": "America"
+            "US": "America"
+            # France events - keep as-is for partial match on "Grand Prix de France"
+            "France": "France"
+            # Canada events - keep as-is for partial match on "Skate Canada"
+            "Canada": "Canada"
+            # Japan events → "NHK" partial matches "NHK Trophy"
+            "Japan": "NHK"
+            # China events - keep as-is for partial match on "Cup of China"
+            "China": "China"
+            # Finland events → "Espoo" partial matches "Grand Prix Espoo"
+            "Finland": "Espoo"
             # Grand Prix Final
-            "Final": "Grand Prix Final"
+            "Final": "Final"
         episode_selector:
           group: session
           allow_fallback_to_title: true
