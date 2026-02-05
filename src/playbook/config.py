@@ -354,7 +354,8 @@ class KometaTriggerSettings:
 class SportConfig:
     id: str
     name: str
-    show_slug: str  # Required: TheTVSportsDB show slug (e.g., "formula-1-2026")
+    show_slug: str = ""  # TheTVSportsDB show slug (e.g., "formula-1-2026") - can be empty if using template
+    show_slug_template: str | None = None  # Dynamic slug with {year} placeholder (e.g., "formula-1-{year}")
     enabled: bool = True
     metadata: MetadataConfig | None = None  # Deprecated: kept for backwards compatibility during transition
     patterns: list[PatternConfig] = field(default_factory=list)
@@ -370,6 +371,21 @@ class SportConfig:
     season_overrides: dict[str, dict[str, Any]] = field(default_factory=dict)  # Moved from MetadataConfig
     quality_profile: QualityProfile | None = None  # Per-sport quality profile override
     variant_year: int | None = None  # Year from variant expansion (for year-based filtering)
+
+    def resolve_show_slug(self, year: int | None = None) -> str | None:
+        """Resolve the show slug, optionally substituting the year into the template.
+
+        Args:
+            year: Optional year to substitute into show_slug_template
+
+        Returns:
+            Resolved show slug, or None if template requires year but none provided
+        """
+        if self.show_slug_template and year is not None:
+            return self.show_slug_template.format(year=year)
+        if self.show_slug:
+            return self.show_slug
+        return None
 
 
 @dataclass
@@ -464,10 +480,11 @@ def _build_sport_config(
     global_link_mode: str,
     pattern_sets: dict[str, list[dict[str, Any]]],
 ) -> SportConfig:
-    # Handle show_slug - required for API-based metadata
-    show_slug = data.get("show_slug")
-    if not show_slug:
-        raise ValueError(f"Sport '{data.get('id')}' is missing required 'show_slug' field")
+    # Handle show_slug and show_slug_template - one must be present
+    show_slug = data.get("show_slug", "")
+    show_slug_template = data.get("show_slug_template")
+    if not show_slug and not show_slug_template:
+        raise ValueError(f"Sport '{data.get('id')}' must have either 'show_slug' or 'show_slug_template'")
 
     # Build legacy metadata config if present (for backwards compatibility during transition)
     metadata: MetadataConfig | None = None
@@ -536,7 +553,8 @@ def _build_sport_config(
     return SportConfig(
         id=data["id"],
         name=data.get("name", data["id"]),
-        show_slug=str(show_slug),
+        show_slug=str(show_slug) if show_slug else "",
+        show_slug_template=str(show_slug_template) if show_slug_template else None,
         enabled=bool(data.get("enabled", True)),
         metadata=metadata,
         patterns=patterns,
@@ -572,6 +590,9 @@ def _deep_update(target: dict[str, Any], updates: dict[str, Any]) -> dict[str, A
 
 def _expand_sport_variants(sport_data: dict[str, Any]) -> list[dict[str, Any]]:
     variants: list[dict[str, Any]] = sport_data.get("variants", [])
+
+    # If show_slug_template is present and no variants defined, return single dynamic sport
+    # (year will be resolved dynamically during matching)
     if not variants:
         return [sport_data]
 
@@ -581,6 +602,9 @@ def _expand_sport_variants(sport_data: dict[str, Any]) -> list[dict[str, Any]]:
     base_id = base.get("id")
     if not base_id:
         raise ValueError("Sport entries with variants must define a base 'id'")
+
+    # Check if base has a show_slug_template (for auto-resolving variant slugs)
+    base_template = base.get("show_slug_template")
 
     for variant in variants:
         combined = deepcopy(base)
@@ -609,6 +633,10 @@ def _expand_sport_variants(sport_data: dict[str, Any]) -> list[dict[str, Any]]:
                 combined["name"] = f"{base_name} {variant_suffix}"
             else:
                 combined["name"] = base_name
+
+        # If variant has year and base has template, auto-resolve show_slug
+        if variant_year is not None and base_template and "show_slug" not in variant:
+            combined["show_slug"] = base_template.format(year=variant_year)
 
         # Store variant_year for year-based filtering during matching
         if variant_year is not None:

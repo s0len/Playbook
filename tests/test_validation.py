@@ -1741,7 +1741,7 @@ class TestValidateSemantics:
         assert len(duplicate_errors) == 0
 
     def test_missing_show_slug_without_variants(self):
-        """Test error when sport has no show_slug and no variants."""
+        """Test error when sport has no show_slug, show_slug_template, or variants."""
         config = {
             "sports": [
                 {
@@ -1756,7 +1756,7 @@ class TestValidateSemantics:
         slug_errors = [e for e in report.errors if e.code == "show-slug-missing"]
         assert len(slug_errors) == 1
         assert slug_errors[0].path == "sports[0].show_slug"
-        assert "show_slug or variants" in slug_errors[0].message
+        assert "show_slug" in slug_errors[0].message
 
     def test_no_error_when_sport_has_metadata(self):
         """Test no error when sport has metadata block."""
@@ -1792,8 +1792,41 @@ class TestValidateSemantics:
         report = ValidationReport()
         _validate_semantics(config, report)
 
-        slug_errors = [e for e in report.errors if "show_slug or variants" in e.message]
+        slug_errors = [e for e in report.errors if e.code == "show-slug-missing"]
         assert len(slug_errors) == 0
+
+    def test_no_error_when_sport_has_show_slug_template(self):
+        """Test no error when sport has show_slug_template instead of show_slug."""
+        config = {
+            "sports": [
+                {
+                    "id": "dynamic-sport",
+                    "show_slug_template": "sport-{year}"
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        slug_errors = [e for e in report.errors if e.code == "show-slug-missing"]
+        assert len(slug_errors) == 0
+
+    def test_show_slug_template_blank_detection(self):
+        """Test that blank show_slug_template is detected."""
+        config = {
+            "sports": [
+                {
+                    "id": "blank-template-sport",
+                    "show_slug_template": "   "
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        slug_errors = [e for e in report.errors if e.code == "show-slug-blank"]
+        assert len(slug_errors) == 1
+        assert "show_slug_template" in slug_errors[0].path
 
     def test_show_slug_blank_detection(self):
         """Test that blank show_slug is detected."""

@@ -6698,19 +6698,11 @@ default_sports:
     name: Formula 1
     pattern_sets:
       - formula1
-    variants:
-      - year: 2025
-        show_slug: "formula-1-2025"
-        season_overrides:
-          Pre-Season Testing:
-            season_number: 0
-            round: 0
-      - year: 2026
-        show_slug: "formula-1-2026"
-        season_overrides:
-          Pre-Season Testing:
-            season_number: 0
-            round: 0
+    show_slug_template: "formula-1-{year}"
+    season_overrides:
+      Pre-Season Testing:
+        season_number: 0
+        round: 0
 
   - id: formula_e
     name: Formula E
@@ -6726,65 +6718,37 @@ default_sports:
     name: NTT IndyCar Series
     pattern_sets:
       - indycar
-    variants:
-      - year: 2025
-        show_slug: "ntt-indycar-series-2025"
-      - year: 2026
-        show_slug: "ntt-indycar-series-2026"
+    show_slug_template: "ntt-indycar-series-{year}"
 
   - id: motogp
     name: MotoGP
     pattern_sets:
       - motogp
-    variants:
-      - year: 2023
-        show_slug: "motogp-2023"
-      - year: 2024
-        show_slug: "motogp-2024"
-      - year: 2025
-        show_slug: "motogp-2025"
-      - year: 2026
-        show_slug: "motogp-2026"
+    show_slug_template: "motogp-{year}"
 
   - id: moto2
     name: Moto2
     pattern_sets:
       - moto2
-    variants:
-      - year: 2025
-        show_slug: "moto2-2025"
+    show_slug_template: "moto2-{year}"
 
   - id: moto3
     name: Moto3
     pattern_sets:
       - moto3
-    variants:
-      - year: 2025
-        show_slug: "moto3-2025"
+    show_slug_template: "moto3-{year}"
 
   - id: world_superbike
     name: World Superbike
     pattern_sets:
       - world_superbike
-    variants:
-      - year: 2023
-        show_slug: "world-superbike-2023"
-      - year: 2024
-        show_slug: "world-superbike-2024"
-      - year: 2025
-        show_slug: "world-superbike-2025"
+    show_slug_template: "world-superbike-{year}"
 
   - id: world_supersport
     name: World Supersport
     pattern_sets:
       - world_supersport
-    variants:
-      - year: 2023
-        show_slug: "world-supersport-2023"
-      - year: 2024
-        show_slug: "world-supersport-2024"
-      - year: 2025
-        show_slug: "world-supersport-2025"
+    show_slug_template: "world-supersport-{year}"
 
   - id: isle_of_man_tt
     name: Isle of Man TT
@@ -6802,11 +6766,7 @@ default_sports:
     name: UFC
     pattern_sets:
       - ufc
-    variants:
-      - year: 2024
-        show_slug: "ufc-2024"
-      - year: 2025
-        show_slug: "ufc-2025"
+    show_slug_template: "ufc-{year}"
 
   # ------------------------------------------------------------------
   # North American Leagues

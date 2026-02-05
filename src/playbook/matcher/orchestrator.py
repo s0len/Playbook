@@ -3,12 +3,17 @@
 This module provides the main entry points for the matcher package:
 - compile_patterns: Compile pattern configs into PatternRuntime objects
 - match_file_to_episode: Match a filename to an episode
+
+For sports with show_slug_template (dynamic year support), the show parameter
+can be None and a metadata_loader callback is used to fetch metadata on-demand
+when a year is captured from the filename.
 """
 
 from __future__ import annotations
 
 import logging
-from typing import Any
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from ..config import SportConfig
 from ..models import Episode, Season, Show
@@ -19,6 +24,11 @@ from .episode_selector import find_episode_across_seasons, select_episode
 from .season_selector import select_season
 from .session_resolver import build_session_lookup
 from .structured import structured_match
+
+if TYPE_CHECKING:
+    # Type alias for the dynamic metadata loader callback
+    # Takes (sport, year) and returns Show or None
+    MetadataLoaderCallback = Callable[[SportConfig, int], Show | None]
 
 LOGGER = logging.getLogger(__name__)
 
@@ -50,12 +60,13 @@ def compile_patterns(sport: SportConfig) -> list[PatternRuntime]:
 def match_file_to_episode(
     filename: str,
     sport: SportConfig,
-    show: Show,
+    show: Show | None,
     patterns: list[PatternRuntime],
     *,
     diagnostics: list[tuple[str, str]] | None = None,
     trace: dict[str, Any] | None = None,
     suppress_warnings: bool = False,
+    metadata_loader: MetadataLoaderCallback | None = None,
 ) -> dict[str, object] | None:
     """Match a filename to an episode in a show.
 
@@ -65,11 +76,13 @@ def match_file_to_episode(
     Args:
         filename: Filename to match (without path)
         sport: Sport configuration
-        show: Show to match against
+        show: Show to match against (can be None for dynamic sports)
         patterns: List of compiled PatternRuntime objects
         diagnostics: Optional list to collect diagnostic messages
         trace: Optional trace dict for debugging
         suppress_warnings: If True, suppress warning-level logs
+        metadata_loader: Optional callback to load metadata for dynamic sports.
+            Takes (sport, year) and returns Show or None.
 
     Returns:
         Match dict with season, episode, pattern, groups - or None if no match
@@ -101,16 +114,21 @@ def match_file_to_episode(
             titles.append("...")
         return ", ".join(titles) if titles else "none"
 
-    # Try structured matching first (for team sports)
-    structured_result = structured_match(
-        filename,
-        sport,
-        show,
-        diagnostics=diagnostics,
-        trace=trace,
-    )
-    if structured_result:
-        return structured_result
+    # Track if we're in dynamic mode (show loaded on-demand)
+    effective_show = show
+    is_dynamic = show is None and sport.show_slug_template is not None
+
+    # Try structured matching first (for team sports) - skip if no show loaded yet
+    if effective_show is not None:
+        structured_result = structured_match(
+            filename,
+            sport,
+            effective_show,
+            diagnostics=diagnostics,
+            trace=trace,
+        )
+        if structured_result:
+            return structured_result
 
     # Pattern-based matching
     for pattern_runtime in patterns:
@@ -133,7 +151,7 @@ def match_file_to_episode(
 
         groups = {key: value for key, value in match.groupdict().items() if value is not None}
 
-        # Check if captured year matches sport's variant year (for year-based filtering)
+        # For static sports: check if captured year matches sport's variant year
         # This prevents a 2026 file from being matched by a 2025 sport variant
         if sport.variant_year is not None and "year" in groups:
             try:
@@ -153,12 +171,58 @@ def match_file_to_episode(
             except (ValueError, TypeError):
                 pass  # Non-numeric year, proceed normally
 
+        # For dynamic sports: load metadata using captured year
+        if is_dynamic and "year" in groups and metadata_loader is not None:
+            try:
+                captured_year = int(groups["year"])
+                effective_show = metadata_loader(sport, captured_year)
+                if effective_show is None:
+                    if trace_attempts is not None:
+                        trace_attempts.append(
+                            {
+                                "pattern": descriptor,
+                                "regex": pattern_runtime.config.regex,
+                                "status": "metadata-not-found",
+                                "captured_year": captured_year,
+                                "show_slug": sport.resolve_show_slug(captured_year),
+                            }
+                        )
+                    continue  # Metadata not available for this year
+                if trace is not None:
+                    trace["dynamic_year"] = captured_year
+                    trace["resolved_show_slug"] = sport.resolve_show_slug(captured_year)
+            except (ValueError, TypeError):
+                # Non-numeric year, can't load dynamically
+                if trace_attempts is not None:
+                    trace_attempts.append(
+                        {
+                            "pattern": descriptor,
+                            "regex": pattern_runtime.config.regex,
+                            "status": "invalid-year",
+                            "captured_value": groups.get("year"),
+                        }
+                    )
+                continue
+
+        # If we still don't have a show at this point, we can't continue
+        if effective_show is None:
+            if trace_attempts is not None:
+                trace_attempts.append(
+                    {
+                        "pattern": descriptor,
+                        "regex": pattern_runtime.config.regex,
+                        "status": "no-metadata",
+                        "reason": "No show metadata available and no year captured for dynamic loading",
+                    }
+                )
+            continue
+
         # Ensure date_year is set if we have year/month/day groups
         if "date_year" not in groups and {"year", "month", "day"}.issubset(groups.keys()):
             groups["date_year"] = groups["year"]
 
         fallback_by_matchup = bool(pattern_runtime.config.metadata_filters.get("fallback_matchup_season"))
-        season = select_season(show, pattern_runtime.config.season_selector, groups)
+        season = select_season(effective_show, pattern_runtime.config.season_selector, groups)
         episode: Episode | None = None
         episode_trace: dict[str, Any] | None = None
 
@@ -166,7 +230,7 @@ def match_file_to_episode(
         if not season and fallback_by_matchup:
             fallback = find_episode_across_seasons(
                 pattern_runtime.config,
-                show,
+                effective_show,
                 groups,
                 trace_enabled=trace is not None,
             )
@@ -283,6 +347,7 @@ def match_file_to_episode(
             "episode": episode,
             "pattern": pattern_runtime,
             "groups": groups,
+            "show": effective_show,  # Include show for dynamic sports
         }
 
         if trace_attempts is not None:

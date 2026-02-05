@@ -17,7 +17,7 @@ from .logging_utils import render_fields_block
 from .match_handler import handle_match
 from .matcher import PatternRuntime, match_file_to_episode
 from .metadata import MetadataFingerprintStore
-from .metadata_loader import SportRuntime, load_sports
+from .metadata_loader import DynamicMetadataLoader, SportRuntime, load_sports
 from .models import ProcessingStats, SportFileMatch
 from .notifications import NotificationEvent, NotificationService
 from .persistence import (
@@ -70,6 +70,9 @@ class Processor:
         )
         self._kometa_trigger = build_kometa_trigger(settings.kometa_trigger)
         self._plex_sync: PlexMetadataSync | None = create_plex_sync_from_config(config)
+
+        # Dynamic metadata loader for sports with show_slug_template
+        self._dynamic_loader = DynamicMetadataLoader(settings, settings.cache_dir)
 
         # Mutable processing state (reset between runs)
         self._state = ProcessingState()
@@ -435,6 +438,7 @@ class Processor:
                 diagnostics=detection_messages,
                 trace=trace_context,
                 suppress_warnings=is_sample_file,
+                metadata_loader=self._dynamic_loader.get_show_for_year if runtime.is_dynamic else None,
             )
             trace_context["diagnostics"] = [
                 {"severity": severity, "message": message} for severity, message in detection_messages
@@ -444,6 +448,8 @@ class Processor:
                 episode = detection["episode"]
                 pattern = detection["pattern"]
                 groups = detection["groups"]
+                # For dynamic sports, use the show from detection; otherwise use runtime.show
+                effective_show = detection.get("show") or runtime.show
 
                 context = self._build_context(runtime, source_path, season, episode, groups)
                 try:
@@ -475,7 +481,7 @@ class Processor:
                 match = SportFileMatch(
                     source_path=source_path,
                     destination_path=destination,
-                    show=runtime.show,
+                    show=effective_show,
                     season=season,
                     episode=episode,
                     pattern=pattern,
