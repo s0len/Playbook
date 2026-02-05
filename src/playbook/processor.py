@@ -72,6 +72,33 @@ class Processor:
 
         # Mutable processing state (reset between runs)
         self._state = ProcessingState()
+        self._enable_notifications = enable_notifications
+
+    def reload_services(self, new_config: AppConfig) -> None:
+        """Reload services after configuration changes.
+
+        This should be called when settings are modified (e.g., via GUI)
+        to rebuild the notification service and other configurable components.
+
+        Args:
+            new_config: The updated AppConfig
+        """
+        self.config = new_config
+        settings = new_config.settings
+
+        # Rebuild notification service with new settings
+        self.notification_service = NotificationService(
+            settings.notifications,
+            cache_dir=settings.cache_dir,
+            destination_dir=settings.destination_dir,
+            enabled=self._enable_notifications,
+        )
+
+        # Rebuild other configurable services
+        self._kometa_trigger = build_kometa_trigger(settings.kometa_trigger)
+        self._plex_sync = create_plex_sync_from_config(new_config)
+
+        LOGGER.info("Reloaded processor services after configuration change")
 
     # Backwards-compatible property accessors for tests
     @property
