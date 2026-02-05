@@ -73,6 +73,7 @@ class Processor:
         # Mutable processing state (reset between runs)
         self._state = ProcessingState()
         self._enable_notifications = enable_notifications
+        self._cancel_requested = False
 
     def reload_services(self, new_config: AppConfig) -> None:
         """Reload services after configuration changes.
@@ -99,6 +100,24 @@ class Processor:
         self._plex_sync = create_plex_sync_from_config(new_config)
 
         LOGGER.info("Reloaded processor services after configuration change")
+
+    def request_cancel(self) -> None:
+        """Request cancellation of the current processing run.
+
+        This sets a flag that is checked during the processing loop.
+        The current file will complete, but no more files will be processed.
+        """
+        self._cancel_requested = True
+        LOGGER.info("Cancellation requested - stopping after current file")
+
+    def reset_cancel(self) -> None:
+        """Reset the cancellation flag for a new run."""
+        self._cancel_requested = False
+
+    @property
+    def is_cancel_requested(self) -> bool:
+        """Check if cancellation has been requested."""
+        return self._cancel_requested
 
     # Backwards-compatible property accessors for tests
     @property
@@ -166,8 +185,9 @@ class Processor:
         )
 
     def process_all(self) -> ProcessingStats:
-        # Reset state for new run (preserves previous_summary for deduplication)
+        # Reset state and cancellation flag for new run
         self._state.reset()
+        self.reset_cancel()
         runtimes = self._load_sports()
 
         if self._state.metadata_changed_sports:
@@ -240,6 +260,17 @@ class Processor:
             with Progress(disable=not LOGGER.isEnabledFor(logging.INFO)) as progress:
                 task_id = progress.add_task("Processing", total=file_count)
                 for source_path in filtered_source_files:
+                    # Check for cancellation request
+                    if self._cancel_requested:
+                        LOGGER.info(
+                            self._format_log(
+                                "Processing Cancelled",
+                                {"Completed": stats.processed, "Remaining": file_count - stats.processed - stats.skipped - stats.ignored},
+                            )
+                        )
+                        stats.cancelled = True
+                        break
+
                     is_sample_file = should_suppress_sample_ignored(source_path)
                     handled, diagnostics, match_attempts = self._process_single_file(
                         source_path,

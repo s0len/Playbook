@@ -98,12 +98,33 @@ def _quick_actions_card() -> None:
         ui.label("Quick Actions").classes("text-xl font-semibold text-slate-700 dark:text-slate-200 mb-3")
 
         with ui.column().classes("w-full gap-2"):
-            # Run Now button
-            ui.button(
+            # Run/Stop button (dynamic based on processing state)
+            run_button = ui.button(
                 "Run Now",
                 icon="play_arrow",
                 on_click=_trigger_run,
             ).classes("w-full").props("color=primary")
+
+            stop_button = ui.button(
+                "Stop Processing",
+                icon="stop",
+                on_click=_stop_processing,
+            ).classes("w-full").props("color=negative")
+            stop_button.set_visibility(False)
+
+            def update_buttons() -> None:
+                try:
+                    if gui_state.is_processing:
+                        run_button.set_visibility(False)
+                        stop_button.set_visibility(True)
+                    else:
+                        run_button.set_visibility(True)
+                        stop_button.set_visibility(False)
+                except (RuntimeError, KeyError):
+                    pass
+
+            safe_timer(0.5, update_buttons)
+            update_buttons()
 
             # Clear Cache button
             ui.button(
@@ -206,13 +227,24 @@ async def _trigger_run() -> None:
 
     try:
         # Run processor in background
-        await asyncio.get_event_loop().run_in_executor(None, gui_state.processor.process_all)
-        _safe_notify("Processing complete", type="positive")
+        stats = await asyncio.get_event_loop().run_in_executor(None, gui_state.processor.process_all)
+        if stats.cancelled:
+            _safe_notify("Processing stopped", type="warning")
+        else:
+            _safe_notify("Processing complete", type="positive")
     except Exception as e:
         LOGGER.exception("Processing error: %s", e)
         _safe_notify(f"Processing error: {e}", type="negative")
     finally:
         gui_state.set_processing(False)
+
+
+def _stop_processing() -> None:
+    """Stop the current processing run."""
+    if gui_state.request_cancel():
+        _safe_notify("Stopping processing after current file...", type="warning")
+    else:
+        _safe_notify("No processing run to stop", type="info")
 
 
 async def _clear_cache() -> None:
