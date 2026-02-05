@@ -1,210 +1,117 @@
 ######################################################################
 # Playbook Sample Configuration
 ######################################################################
-# This annotated example is designed to be copied to `playbook.yaml`
-# and tweaked for your environment.
+# All supported sports are ENABLED BY DEFAULT - just configure your
+# directories and integrations, then run!
 #
-# KEY FEATURE: All supported sports are ENABLED BY DEFAULT!
-# You don't need to define any sports - Playbook comes with built-in
-# support for Formula 1, MotoGP, UFC, NFL, NBA, NHL, Premier League,
-# Champions League, and more. Just configure your directories and go!
+# Built-in sports: Formula 1, MotoGP, UFC, NFL, NBA, NHL, Premier League,
+# Champions League, Figure Skating, IndyCar, Moto2/3, WSBK, WTA, and more.
 #
-# To customize:
-#   * Use `disabled_sports` to turn off sports you don't want
-#   * Use the `sports` section to override specific sport settings
-#   * Use `use_default_sports: false` to disable all defaults and
-#     define only the sports you want manually
-#
-# Tips:
-#   * Strings like ${SOURCE_DIR:-/data/source} can be overridden via env vars
-#   * Templates such as "{season_number:02d}" use Python's format syntax
+# To disable specific sports: add them to `disabled_sports`
+# To customize a sport: add it to `sports` with your overrides
 ######################################################################
 
 settings:
-  ####################################################################
-  # REQUIRED DIRECTORIES
-  ####################################################################
-  source_dir: ${SOURCE_DIR:-/data/source}       # Where Playbook looks for newly downloaded media files
-  destination_dir: ${DESTINATION_DIR:-/data/destination} # Destination root for organized media
-  cache_dir: ${CACHE_DIR:-/var/cache/playbook}  # Location for metadata caches and temp state
+  # Required directories
+  source_dir: ${SOURCE_DIR:-/data/source}
+  destination_dir: ${DESTINATION_DIR:-/data/destination}
+  cache_dir: ${CACHE_DIR:-/var/cache/playbook}
 
-  ####################################################################
-  # EXECUTION BEHAVIOUR
-  ####################################################################
-  dry_run: false          # When true, identify matches and log actions without touching the filesystem
-  skip_existing: true     # When true, leave destinations alone unless a better source is detected
-  link_mode: hardlink     # Global default for linking: hardlink | copy | symlink
+  # Execution behavior
+  dry_run: false
+  skip_existing: true
+  link_mode: hardlink  # hardlink | copy | symlink
 
-  ####################################################################
-  # DEFAULT SPORTS (NEW IN 2.7.0)
-  ####################################################################
-  # All TVSportsDB-supported sports are enabled by default. Playbook
-  # automatically handles Formula 1, MotoGP, UFC, NFL, NBA, NHL,
-  # Premier League, Champions League, Figure Skating, and more.
-  #
-  # Source globs are computed automatically from pattern templates,
-  # so new patterns added in updates will work immediately.
-
-  use_default_sports: true  # Set to false to disable all defaults
-
-  # Disable specific sports you don't want (by base ID):
+  # Disable specific sports by ID (all enabled by default)
   disabled_sports: []
-    # - formula_e       # Uncomment to disable Formula E
-    # - moto2           # Uncomment to disable Moto2
-    # - moto3           # Uncomment to disable Moto3
-    # - figure_skating_grand_prix
+    # - formula_e
+    # - moto2
+    # - indycar
 
   ####################################################################
-  # QUALITY MANAGEMENT (OPTIONAL)
+  # INTEGRATIONS - Media server connections
   ####################################################################
-  # Score-based upgrade system for replacing files with higher quality releases.
-  # When enabled, Playbook computes a quality score for each file based on
-  # resolution, source, release group, frame rate, and other attributes.
-  #
-  # SCORING: Total = resolution + source + release_group + frame_rate + bonuses
-  # CUTOFF: Stop upgrading when the existing file reaches this score
-  # MIN_SCORE: Reject files below this threshold
-  # PROPER/REPACK: Always upgrade regardless of cutoff (corrected releases)
-  quality_profile:
-    enabled: false        # Set to true to enable quality-based upgrades
-    scoring:
-      resolution:         # Resolution scores (higher = better)
-        2160p: 400
-        1080p: 300
-        720p: 200
-        576p: 150
-        480p: 100
-      source:             # Source type scores (higher = better)
-        bluray: 100
-        webdl: 90
-        webrip: 70
-        hdtv: 50
-        sdtv: 30
-        dvdrip: 40
-      frame_rate:         # Frame rate scores (critical for sports)
-        "60": 100         # 60fps ideal for fast action
-        "50": 75          # 50fps (PAL regions)
-        "30": 25
-        "25": 0
-        "24": 0
-      release_group:      # Preferred release groups (add your favorites)
-        # mwr: 50         # Uncomment and add groups you prefer
-        # verum: 40
-        # nightninjas: 30
-      proper_bonus: 50    # Bonus points for PROPER releases
-      repack_bonus: 50    # Bonus points for REPACK releases
-      hdr_bonus: 25       # Bonus points for HDR content
-    cutoff: 350           # Stop upgrading at this score (null = no limit)
-    min_score: 100        # Reject files below this score (null = no minimum)
-
-  ####################################################################
-  # NOTIFICATIONS (OPTIONAL)
-  ####################################################################
-  # Notifications are for alerting you about events (Discord, Slack, etc.)
-  # For media server integrations (Plex, Autoscan), see the 'integrations'
-  # section below.
-  notifications:
-    batch_daily: false    # When true, send one message per sport/day
-    summary_mode: false   # When true, send one summary notification per scan
-    flush_time: "00:00"   # Local HH:MM boundary for the batching day rollover
-    mentions:             # Optional: ping specific Discord roles/users per sport
-      premier_league: "<@&123456789012345678>"
-      formula1: "<@&222333444555666777>"
-      # default: "@here"  # Fallback mention when a sport ID isn't listed
-    targets:              # Define at least one target
-      - type: discord
-        webhook_env: DISCORD_WEBHOOK_URL
-        mentions:
-          formula1: "<@&222333444555666777>"
-      # Webhook for custom integrations
-      # - type: webhook
-      #   url: https://example.com/webhook
-      #   method: POST
-      # Email notifications
-      # - type: email
-      #   smtp_host: smtp.example.com
-      #   smtp_port: 587
-      #   from: playbook@example.com
-      #   to: user@example.com
-
-  ####################################################################
-  # INTEGRATIONS (NEW IN 2.10.0)
-  ####################################################################
-  # Integrations are for media server interactions (Plex library scans,
-  # metadata sync, Autoscan triggers). Configure your connection once
-  # and enable the features you want.
   integrations:
-    # Plex integration - configure your Plex server connection and features
     plex:
+      # Connection (can use env vars: PLEX_URL, PLEX_TOKEN, PLEX_LIBRARY_NAME)
       url: ${PLEX_URL:-http://plex:32400}
       token: ${PLEX_TOKEN:-}
-      library_id: ${PLEX_LIBRARY_ID:-}      # Plex library section ID
-      library_name: ${PLEX_LIBRARY_NAME:-Sports}  # Or library name (if ID not known)
+      library_name: ${PLEX_LIBRARY_NAME:-Sports}
 
-      # Metadata sync: Push titles, summaries, and posters from TheTVSportsDB to Plex
+      # Sync metadata (titles, summaries, posters) from TheTVSportsDB to Plex
       metadata_sync:
         enabled: false
         timeout: 15
-        force: false        # Force update even if fingerprint unchanged
-        dry_run: false      # Log changes without applying
-        sports: []          # Filter to specific sport IDs (empty = all)
-        scan_wait: 5        # Seconds to wait for Plex scan before syncing
+        scan_wait: 5
 
-      # Scan on activity: Trigger partial Plex library scans when files are linked
+      # Trigger Plex library scan when files are linked
       scan_on_activity:
         enabled: false
-        rewrite:            # Path rewriting if Plex sees different paths
-          - from: ${DESTINATION_DIR:-/data/destination}
-            to: /mnt/plex/media
+        rewrite: []  # Path mapping if Plex sees different paths
+          # - from: /data/destination
+          #   to: /mnt/plex/media
 
-    # Autoscan integration - trigger Autoscan instead of direct Plex API
+    # Alternative: Use Autoscan instead of direct Plex API
     autoscan:
       enabled: false
       url: ${AUTOSCAN_URL:-http://autoscan:3030}
-      trigger: manual       # Autoscan trigger endpoint
+      trigger: manual
       username: ${AUTOSCAN_USERNAME:-}
       password: ${AUTOSCAN_PASSWORD:-}
-      verify_ssl: true
-      timeout: 10
-      rewrite:
-        - from: ${DESTINATION_DIR:-/data/destination}
-          to: /mnt/unionfs/Media
+      rewrite: []
 
   ####################################################################
-  # FILESYSTEM WATCHER (OPTIONAL)
+  # NOTIFICATIONS - Alerts for new files
+  ####################################################################
+  notifications:
+    summary_mode: false  # One summary per scan instead of per-file
+    targets:
+      - type: discord
+        webhook_env: DISCORD_WEBHOOK_URL  # Or use webhook_url directly
+        # mentions:
+        #   formula1: "<@&123456789>"
+      # - type: slack
+      #   webhook_url: https://hooks.slack.com/...
+      # - type: webhook
+      #   url: https://example.com/webhook
+
+  ####################################################################
+  # QUALITY PROFILE - Score-based upgrades (optional)
+  ####################################################################
+  quality_profile:
+    enabled: false
+    scoring:
+      resolution:
+        2160p: 400
+        1080p: 300
+        720p: 200
+      source:
+        webdl: 90
+        webrip: 70
+        hdtv: 50
+      frame_rate:
+        "60": 100
+        "50": 75
+      release_group: {}
+        # mwr: 50
+        # verum: 40
+      proper_bonus: 50
+      repack_bonus: 50
+    # cutoff: 350     # Stop upgrading at this score
+    # min_score: 100  # Reject files below this score
+
+  ####################################################################
+  # FILE WATCHER - React to filesystem events (optional)
   ####################################################################
   file_watcher:
-    enabled: false        # When true, Playbook stays running and reacts to filesystem events
-    paths: []             # Directories to watch; defaults to source_dir when empty
-    include: []           # Optional glob filters (e.g. "*.mkv")
+    enabled: false
     ignore:
       - "*.part"
       - "*.tmp"
     debounce_seconds: 5
-    reconcile_interval: 900
 
   ####################################################################
-  # KOMETA CRONJOB TRIGGER (OPTIONAL)
-  ####################################################################
-  kometa_trigger:
-    enabled: false
-    mode: kubernetes         # kubernetes | docker
-    namespace: media
-    cronjob_name: kometa-sport
-    job_name_prefix: kometa-sport-triggered-by-playbook
-    docker:
-      binary: docker
-      image: kometateam/kometa
-      config_path: /absolute/path/to/kometa/config
-      container_path: /config
-      volume_mode: rw
-      libraries: "Sports|TV Shows - 4K"
-      extra_args: []
-      remove_container: true
-      interactive: false
-
-  ####################################################################
-  # DEFAULT DESTINATION TEMPLATES
+  # DESTINATION TEMPLATES
   ####################################################################
   destination:
     root_template: "{show_title}"
@@ -212,94 +119,25 @@ settings:
     episode_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
 
 
-  ####################################################################
-  # LEGACY CONFIG (DEPRECATED - use integrations section instead)
-  ####################################################################
-  # The following sections are deprecated but still supported for
-  # backwards compatibility. They will be removed in a future version.
-  #
-  # plex_metadata_sync:    # DEPRECATED: use integrations.plex.metadata_sync
-  #   enabled: false
-  #   url: ${PLEX_URL:-http://plex:32400}
-  #   token: ${PLEX_TOKEN:-}
-  #   library_id: ${PLEX_LIBRARY_ID:-}
-  #   library_name: ${PLEX_LIBRARY_NAME:-TV Shows}
-  #
-  # notifications.targets with type: autoscan or plex_scan still work,
-  # but now inherit defaults from the integrations section.
-
-
 ######################################################################
-# Pattern Sets - reusable filename matchers grouped by sport
+# SPORTS - Override defaults or add custom sports (optional)
 ######################################################################
-# Built-in pattern templates load automatically from `pattern_templates.yaml`.
-# You don't need to define anything here unless adding custom patterns.
-#
-# Available built-in sets: formula1, formula_e, indycar, motogp, moto2,
-# moto3, world_superbike, world_supersport, isle_of_man_tt, ufc, nfl,
-# nba, nhl, premier_league, uefa_champions_league, figure_skating_grand_prix
-
-pattern_sets: {}
-  # Add custom pattern sets if needed:
-  # my_custom_sport:
-  #   - description: Custom matcher
-  #     regex: >-
-  #       (?i)^Example\.(?P<year>\d{4})\.(?P<session>.+)$
-  #     season_selector:
-  #       mode: round
-  #       group: year
-  #     episode_selector:
-  #       group: session
-
-
-######################################################################
-# Sports - Override default settings or add custom sports
-######################################################################
-# Most users don't need to define anything here! All supported sports
-# are enabled by default with the correct source_globs, pattern_sets,
-# and TVSportsDB show_slugs.
-#
-# Use this section only to:
-#   1. Override settings for a specific sport (e.g., custom quality profile)
-#   2. Add a custom sport not in the defaults
-#   3. Replace a default sport with different variants/slugs
-#
-# To disable a sport, use `disabled_sports` in settings instead.
-######################################################################
+# Most users don't need this! All sports auto-load from pattern_templates.yaml
+# Use only to: override settings, add custom sports, or replace defaults
 
 sports: []
-  # Example: Override F1 with custom quality preferences
+  # Example: Override F1 quality preferences
   # - id: formula1
-  #   name: Formula 1
-  #   pattern_sets:
-  #     - formula1
   #   quality_profile:
   #     enabled: true
   #     scoring:
   #       release_group:
   #         mwr: 100
   #         smcgill1969: 80
-  #         verum: 60
-  #     cutoff: 600
-  #   variants:
-  #     - year: 2025
-  #       show_slug: "formula-1-2025"
-  #       season_overrides:
-  #         Pre-Season Testing:
-  #           season_number: 0
-  #           round: 0
-  #     - year: 2026
-  #       show_slug: "formula-1-2026"
-  #       season_overrides:
-  #         Pre-Season Testing:
-  #           season_number: 0
-  #           round: 0
 
-  # Example: Add a custom sport not in defaults
-  # - id: my_custom_sport
-  #   name: My Custom Sport
-  #   show_slug: "my-custom-sport-2025"
-  #   source_globs:
-  #     - "MyCustomSport.*"
-  #   pattern_sets:
-  #     - my_custom_sport  # Reference pattern set defined above
+  # Example: Add a custom sport
+  # - id: my_sport
+  #   name: My Sport
+  #   show_slug: "my-sport-2025"
+  #   source_globs: ["MySport.*"]
+  #   pattern_sets: [my_sport]
