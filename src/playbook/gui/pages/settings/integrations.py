@@ -1,7 +1,8 @@
 """
 Integrations settings tab for the Settings page.
 
-Handles Plex integration settings.
+Handles Plex and Autoscan integration settings using the new
+settings.integrations structure.
 """
 
 from __future__ import annotations
@@ -39,227 +40,359 @@ def integrations_tab(state: SettingsFormState) -> None:
         state: Settings form state
     """
     with ui.column().classes("w-full gap-6"):
-        # Plex Library Scan Section
-        _render_plex_scan_section(state)
-
-        # Plex Metadata Sync Section
+        # Plex Integration Section
         _render_plex_section(state)
 
-
-def _has_plex_scan_target(state: SettingsFormState) -> bool:
-    """Check if a plex_scan notification target exists."""
-    targets = state.get_value("settings.notifications.targets", []) or []
-    return any(t.get("type") in ("plex_scan", "plex") for t in targets if isinstance(t, dict))
-
-
-def _get_plex_scan_target(state: SettingsFormState) -> dict | None:
-    """Get the plex_scan notification target if it exists."""
-    targets = state.get_value("settings.notifications.targets", []) or []
-    for t in targets:
-        if isinstance(t, dict) and t.get("type") in ("plex_scan", "plex"):
-            return t
-    return None
-
-
-def _add_plex_scan_target(state: SettingsFormState) -> None:
-    """Add a plex_scan notification target."""
-    targets = state.get_value("settings.notifications.targets", []) or []
-    if not isinstance(targets, list):
-        targets = []
-
-    # Don't add if already exists
-    if _has_plex_scan_target(state):
-        return
-
-    # Add new plex_scan target (uses env vars by default)
-    targets.append({"type": "plex_scan", "enabled": True})
-    state.set_value("settings.notifications.targets", targets)
-
-
-def _remove_plex_scan_target(state: SettingsFormState) -> None:
-    """Remove the plex_scan notification target."""
-    targets = state.get_value("settings.notifications.targets", []) or []
-    if not isinstance(targets, list):
-        return
-
-    # Filter out plex_scan targets
-    new_targets = [t for t in targets if not (isinstance(t, dict) and t.get("type") in ("plex_scan", "plex"))]
-    state.set_value("settings.notifications.targets", new_targets)
-
-
-def _render_plex_scan_section(state: SettingsFormState) -> None:
-    """Render Plex library scan settings."""
-    with settings_card(
-        "Plex Library Scan",
-        icon="refresh",
-        description="Trigger Plex to scan for new files",
-    ):
-        # Check for env vars
-        has_plex_env = any(os.environ.get(v) for v in ["PLEX_URL", "PLEX_TOKEN"])
-        scan_enabled = _has_plex_scan_target(state)
-
-        def on_scan_toggle(enabled: bool) -> None:
-            if enabled:
-                _add_plex_scan_target(state)
-            else:
-                _remove_plex_scan_target(state)
-
-        with ui.row().classes("w-full items-center justify-between"):
-            with ui.column().classes("gap-1"):
-                ui.label("Enable Plex Scan").classes("text-sm font-medium text-slate-700 dark:text-slate-200")
-                ui.label("Trigger partial library scan when files are linked").classes(
-                    "text-xs text-slate-500 dark:text-slate-400"
-                )
-            ui.switch(value=scan_enabled, on_change=lambda e: on_scan_toggle(e.value))
-
-        if has_plex_env:
-            with ui.row().classes("w-full items-center gap-2 p-2 rounded bg-green-50 dark:bg-green-900/20 mt-2"):
-                ui.icon("check_circle").classes("text-green-500")
-                ui.label("Will use PLEX_URL and PLEX_TOKEN from environment").classes(
-                    "text-sm text-green-700 dark:text-green-300"
-                )
-        elif not scan_enabled:
-            with ui.row().classes("w-full items-center gap-2 p-2 rounded bg-amber-50 dark:bg-amber-900/20 mt-2"):
-                ui.icon("warning").classes("text-amber-500")
-                ui.label("Set PLEX_URL and PLEX_TOKEN environment variables, or configure in Notifications").classes(
-                    "text-sm text-amber-700 dark:text-amber-300"
-                )
+        # Autoscan Integration Section
+        _render_autoscan_section(state)
 
 
 def _render_plex_section(state: SettingsFormState) -> None:
-    """Render Plex metadata sync settings."""
-    # Container for dynamic content that depends on enabled state
+    """Render Plex integration settings."""
     container = ui.column().classes("w-full gap-6")
 
     def render_plex_content() -> None:
         """Render the plex section content."""
         container.clear()
-        plex_enabled = state.get_value("settings.plex_metadata_sync.enabled", False)
 
         with container:
             with settings_card(
-                "Plex Metadata Sync",
+                "Plex Integration",
                 icon="live_tv",
-                description="Sync metadata to your Plex library",
+                description="Connect to your Plex server for library scans and metadata sync",
             ):
-
-                def on_enable_change(enabled: bool) -> None:
-                    # Re-render to update disabled states
-                    render_plex_content()
-
-                settings_toggle(
-                    state,
-                    "settings.plex_metadata_sync.enabled",
-                    "Enable Plex Sync",
-                    description="Automatically update Plex metadata after processing files",
-                    on_change=on_enable_change,
-                )
-
                 # Check for env vars
                 has_plex_env = any(os.environ.get(v) for v in ["PLEX_URL", "PLEX_TOKEN"])
-                if has_plex_env and not state.get_value("settings.plex_metadata_sync.url"):
-                    with ui.row().classes("w-full items-center gap-2 p-2 rounded bg-blue-50 dark:bg-blue-900/20"):
+                if has_plex_env:
+                    with ui.row().classes("w-full items-center gap-2 p-2 rounded bg-blue-50 dark:bg-blue-900/20 mb-4"):
                         ui.icon("info").classes("text-blue-500")
                         ui.label("Plex settings detected from environment variables").classes(
                             "text-sm text-blue-700 dark:text-blue-300"
                         )
 
-                with ui.column().classes("w-full gap-4 mt-4"):
+                # Connection Settings
+                ui.label("Connection Settings").classes("text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2")
+
+                with ui.column().classes("w-full gap-4"):
                     with ui.row().classes("w-full gap-4"):
                         settings_input(
                             state,
-                            "settings.plex_metadata_sync.url",
+                            "settings.integrations.plex.url",
                             "Plex URL",
                             description="URL of your Plex server",
                             placeholder=_get_env_placeholder("PLEX_URL", "http://localhost:32400"),
-                            disabled=not plex_enabled,
                             width="flex-1",
                         )
                         settings_input(
                             state,
-                            "settings.plex_metadata_sync.token",
+                            "settings.integrations.plex.token",
                             "Plex Token",
                             description="Your Plex authentication token",
                             placeholder=_get_env_placeholder("PLEX_TOKEN", "xxxxxxxxxxxx", mask=True),
                             input_type="password",
-                            disabled=not plex_enabled,
                             width="w-48",
                         )
 
                     with ui.row().classes("w-full gap-4"):
                         settings_input(
                             state,
-                            "settings.plex_metadata_sync.library_id",
+                            "settings.integrations.plex.library_id",
                             "Library ID",
-                            description="Numeric ID of the library to sync",
+                            description="Numeric ID of the library",
                             placeholder=_get_env_placeholder("PLEX_LIBRARY_ID", "1"),
-                            disabled=not plex_enabled,
                             width="w-32",
                         )
                         settings_input(
                             state,
-                            "settings.plex_metadata_sync.library_name",
+                            "settings.integrations.plex.library_name",
                             "Library Name",
-                            description="Alternative: use library name instead of ID",
+                            description="Or use library name instead of ID",
                             placeholder=_get_env_placeholder("PLEX_LIBRARY_NAME", "Sports"),
-                            disabled=not plex_enabled,
                             width="flex-1",
                         )
 
-                    with ui.row().classes("w-full gap-4"):
-                        settings_input(
-                            state,
-                            "settings.plex_metadata_sync.timeout",
-                            "Timeout (seconds)",
-                            description="API request timeout",
-                            input_type="number",
-                            placeholder="15",
-                            disabled=not plex_enabled,
-                            width="w-32",
-                        )
-                        settings_input(
-                            state,
-                            "settings.plex_metadata_sync.scan_wait",
-                            "Scan Wait (seconds)",
-                            description="Wait time after triggering scan",
-                            input_type="number",
-                            placeholder="5",
-                            disabled=not plex_enabled,
-                            width="w-32",
-                        )
+            # Scan on Activity Section
+            _render_plex_scan_section(state, render_plex_content)
 
-                    with ui.row().classes("w-full gap-4"):
-                        settings_toggle(
-                            state,
-                            "settings.plex_metadata_sync.force",
-                            "Force Sync",
-                            description="Update all metadata, not just new items",
-                            disabled=not plex_enabled,
-                        )
-                        settings_toggle(
-                            state,
-                            "settings.plex_metadata_sync.dry_run",
-                            "Dry Run",
-                            description="Preview changes without applying",
-                            disabled=not plex_enabled,
-                        )
-                        settings_toggle(
-                            state,
-                            "settings.plex_metadata_sync.lock_poster_fields",
-                            "Lock Poster Fields",
-                            description="Prevent Plex from overwriting posters",
-                            disabled=not plex_enabled,
-                        )
+            # Metadata Sync Section
+            _render_plex_metadata_sync_section(state, render_plex_content)
 
-                    # Sports filter
-                    list_editor(
+    render_plex_content()
+
+
+def _render_plex_scan_section(state: SettingsFormState, refresh_callback) -> None:
+    """Render Plex library scan on activity settings."""
+    scan_enabled = state.get_value("settings.integrations.plex.scan_on_activity.enabled", False)
+
+    with settings_card(
+        "Library Scan on Activity",
+        icon="refresh",
+        description="Trigger Plex to scan for new files when they are linked",
+    ):
+
+        def on_scan_toggle(enabled: bool) -> None:
+            refresh_callback()
+
+        settings_toggle(
+            state,
+            "settings.integrations.plex.scan_on_activity.enabled",
+            "Enable Scan on Activity",
+            description="Automatically trigger partial library scans when files are processed",
+            on_change=on_scan_toggle,
+        )
+
+        if scan_enabled:
+            ui.separator().classes("my-4")
+            ui.label("Path Rewriting").classes("text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2")
+            ui.label("Map paths if Plex sees files at different paths than Playbook").classes(
+                "text-xs text-slate-500 dark:text-slate-400 mb-2"
+            )
+
+            _render_rewrite_rules(state, "settings.integrations.plex.scan_on_activity.rewrite")
+
+
+def _render_plex_metadata_sync_section(state: SettingsFormState, refresh_callback) -> None:
+    """Render Plex metadata sync settings."""
+    sync_enabled = state.get_value("settings.integrations.plex.metadata_sync.enabled", False)
+
+    with settings_card(
+        "Metadata Sync",
+        icon="cloud_sync",
+        description="Push titles, summaries, and posters from TheTVSportsDB to Plex",
+    ):
+
+        def on_sync_toggle(enabled: bool) -> None:
+            refresh_callback()
+
+        settings_toggle(
+            state,
+            "settings.integrations.plex.metadata_sync.enabled",
+            "Enable Metadata Sync",
+            description="Automatically sync metadata after processing files",
+            on_change=on_sync_toggle,
+        )
+
+        if sync_enabled:
+            ui.separator().classes("my-4")
+
+            with ui.column().classes("w-full gap-4"):
+                with ui.row().classes("w-full gap-4"):
+                    settings_input(
                         state,
-                        "settings.plex_metadata_sync.sports",
-                        "Sports Filter",
-                        description="Only sync these sports (empty = all sports)",
-                        placeholder="f1",
-                        disabled=not plex_enabled,
+                        "settings.integrations.plex.metadata_sync.timeout",
+                        "Timeout (seconds)",
+                        description="API request timeout",
+                        input_type="number",
+                        placeholder="15",
+                        width="w-32",
+                    )
+                    settings_input(
+                        state,
+                        "settings.integrations.plex.metadata_sync.scan_wait",
+                        "Scan Wait (seconds)",
+                        description="Wait for Plex to scan before syncing",
+                        input_type="number",
+                        placeholder="5",
+                        width="w-32",
                     )
 
-    # Initial render
-    render_plex_content()
+                with ui.row().classes("w-full gap-4"):
+                    settings_toggle(
+                        state,
+                        "settings.integrations.plex.metadata_sync.force",
+                        "Force Sync",
+                        description="Update all metadata, not just changed items",
+                    )
+                    settings_toggle(
+                        state,
+                        "settings.integrations.plex.metadata_sync.dry_run",
+                        "Dry Run",
+                        description="Preview changes without applying",
+                    )
+                    settings_toggle(
+                        state,
+                        "settings.integrations.plex.metadata_sync.lock_poster_fields",
+                        "Lock Poster Fields",
+                        description="Prevent Plex from overwriting posters",
+                    )
+
+                # Sports filter
+                list_editor(
+                    state,
+                    "settings.integrations.plex.metadata_sync.sports",
+                    "Sports Filter",
+                    description="Only sync these sports (empty = all sports)",
+                    placeholder="formula1",
+                )
+
+
+def _render_autoscan_section(state: SettingsFormState) -> None:
+    """Render Autoscan integration settings."""
+    container = ui.column().classes("w-full gap-6")
+
+    def render_autoscan_content() -> None:
+        """Render the autoscan section content."""
+        container.clear()
+        autoscan_enabled = state.get_value("settings.integrations.autoscan.enabled", False)
+
+        with container:
+            with settings_card(
+                "Autoscan Integration",
+                icon="radar",
+                description="Use Autoscan for more efficient library scanning",
+            ):
+
+                def on_enable_change(enabled: bool) -> None:
+                    render_autoscan_content()
+
+                settings_toggle(
+                    state,
+                    "settings.integrations.autoscan.enabled",
+                    "Enable Autoscan",
+                    description="Use Autoscan instead of direct Plex API for library scans",
+                    on_change=on_enable_change,
+                )
+
+                if autoscan_enabled:
+                    ui.separator().classes("my-4")
+
+                    with ui.column().classes("w-full gap-4"):
+                        with ui.row().classes("w-full gap-4"):
+                            settings_input(
+                                state,
+                                "settings.integrations.autoscan.url",
+                                "Autoscan URL",
+                                description="URL of your Autoscan server",
+                                placeholder="http://localhost:3030",
+                                width="flex-1",
+                            )
+                            settings_input(
+                                state,
+                                "settings.integrations.autoscan.trigger",
+                                "Trigger Endpoint",
+                                description="Trigger type (manual, sonarr, etc.)",
+                                placeholder="manual",
+                                width="w-32",
+                            )
+
+                        with ui.row().classes("w-full gap-4"):
+                            settings_input(
+                                state,
+                                "settings.integrations.autoscan.username",
+                                "Username",
+                                description="Basic auth username (optional)",
+                                placeholder="",
+                                width="flex-1",
+                            )
+                            settings_input(
+                                state,
+                                "settings.integrations.autoscan.password",
+                                "Password",
+                                description="Basic auth password (optional)",
+                                placeholder="",
+                                input_type="password",
+                                width="flex-1",
+                            )
+
+                        with ui.row().classes("w-full gap-4"):
+                            settings_input(
+                                state,
+                                "settings.integrations.autoscan.timeout",
+                                "Timeout (seconds)",
+                                description="Request timeout",
+                                input_type="number",
+                                placeholder="10",
+                                width="w-32",
+                            )
+                            settings_toggle(
+                                state,
+                                "settings.integrations.autoscan.verify_ssl",
+                                "Verify SSL",
+                                description="Verify SSL certificates",
+                            )
+
+                        ui.separator().classes("my-2")
+                        ui.label("Path Rewriting").classes(
+                            "text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2"
+                        )
+                        ui.label("Map paths if Autoscan sees files at different paths than Playbook").classes(
+                            "text-xs text-slate-500 dark:text-slate-400 mb-2"
+                        )
+
+                        _render_rewrite_rules(state, "settings.integrations.autoscan.rewrite")
+
+    render_autoscan_content()
+
+
+def _render_rewrite_rules(state: SettingsFormState, path: str) -> None:
+    """Render path rewrite rules editor.
+
+    Args:
+        state: Settings form state
+        path: Config path for the rewrite list (e.g., settings.integrations.plex.scan_on_activity.rewrite)
+    """
+    rules = state.get_value(path, []) or []
+    if not isinstance(rules, list):
+        rules = []
+
+    rules_container = ui.column().classes("w-full gap-2")
+
+    def refresh_rules() -> None:
+        """Refresh the rules display."""
+        rules_container.clear()
+        current_rules = state.get_value(path, []) or []
+
+        with rules_container:
+            for idx, rule in enumerate(current_rules):
+                if not isinstance(rule, dict):
+                    continue
+                from_val = rule.get("from", "")
+                to_val = rule.get("to", "")
+
+                with ui.row().classes("w-full items-center gap-2"):
+                    from_input = (
+                        ui.input(value=from_val, placeholder="/data/destination")
+                        .classes("flex-1")
+                        .props("dense outlined")
+                    )
+                    ui.icon("arrow_forward").classes("text-slate-400")
+                    to_input = (
+                        ui.input(value=to_val, placeholder="/mnt/plex/media").classes("flex-1").props("dense outlined")
+                    )
+
+                    def make_update_handler(index: int, from_inp, to_inp):
+                        def update_rule(_) -> None:
+                            current = state.get_value(path, []) or []
+                            if index < len(current):
+                                current[index] = {"from": from_inp.value, "to": to_inp.value}
+                                state.set_value(path, current)
+
+                        return update_rule
+
+                    from_input.on("blur", make_update_handler(idx, from_input, to_input))
+                    to_input.on("blur", make_update_handler(idx, from_input, to_input))
+
+                    def make_delete_handler(index: int):
+                        def delete_rule() -> None:
+                            current = state.get_value(path, []) or []
+                            if index < len(current):
+                                current.pop(index)
+                                state.set_value(path, current)
+                                refresh_rules()
+
+                        return delete_rule
+
+                    ui.button(icon="delete", on_click=make_delete_handler(idx)).props("flat dense").classes(
+                        "text-red-500"
+                    )
+
+            # Add new rule button
+            def add_rule() -> None:
+                current = state.get_value(path, []) or []
+                current.append({"from": "", "to": ""})
+                state.set_value(path, current)
+                refresh_rules()
+
+            ui.button("Add Rewrite Rule", icon="add", on_click=add_rule).props("flat dense").classes("mt-2")
+
+    refresh_rules()

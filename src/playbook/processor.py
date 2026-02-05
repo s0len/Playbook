@@ -66,6 +66,7 @@ class Processor:
             cache_dir=settings.cache_dir,
             destination_dir=settings.destination_dir,
             enabled=enable_notifications,
+            integrations=settings.integrations,
         )
         self._kometa_trigger = build_kometa_trigger(settings.kometa_trigger)
         self._plex_sync: PlexMetadataSync | None = create_plex_sync_from_config(config)
@@ -93,6 +94,7 @@ class Processor:
             cache_dir=settings.cache_dir,
             destination_dir=settings.destination_dir,
             enabled=self._enable_notifications,
+            integrations=settings.integrations,
         )
 
         # Rebuild other configurable services
@@ -265,7 +267,10 @@ class Processor:
                         LOGGER.info(
                             self._format_log(
                                 "Processing Cancelled",
-                                {"Completed": stats.processed, "Remaining": file_count - stats.processed - stats.skipped - stats.ignored},
+                                {
+                                    "Completed": stats.processed,
+                                    "Remaining": file_count - stats.processed - stats.skipped - stats.ignored,
+                                },
                             )
                         )
                         stats.cancelled = True
