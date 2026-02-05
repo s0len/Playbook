@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from .config import Settings
     from .matcher import PatternRuntime
     from .metadata_loader import SportRuntime
-    from .models import Episode, Season
+    from .models import Episode, Season, Show
 
 
 def build_match_context(
@@ -29,6 +29,7 @@ def build_match_context(
     episode: Episode,
     groups: dict[str, Any],
     source_dir: Path,
+    show: Show | None = None,
 ) -> dict[str, Any]:
     """Build template context from match information.
 
@@ -39,6 +40,7 @@ def build_match_context(
         episode: The matched episode
         groups: Regex capture groups from pattern matching
         source_dir: Base source directory for relative path calculation
+        show: Optional show override (used for dynamic sports where show is loaded per-file)
 
     Returns:
         Dictionary containing all template variables for rendering
@@ -47,7 +49,10 @@ def build_match_context(
         This function returns a dict for backwards compatibility.
         Internally it uses MatchContext for type safety.
     """
-    show = runtime.show
+    # Use provided show or fall back to runtime.show
+    show = show or runtime.show
+    if show is None:
+        raise ValueError(f"No show metadata available for sport {runtime.sport.id}")
     sport = runtime.sport
 
     # Calculate derived values

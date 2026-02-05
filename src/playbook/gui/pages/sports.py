@@ -5,18 +5,22 @@ Displays configured sports with match progress and provides:
 - List view with progress tracking
 - Detail view with season/episode breakdown
 - Pattern tester tool
+- Bulk actions for selected sports
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from nicegui import ui
+from nicegui import context, ui
 
 from ..components import progress_bar, seasons_list, status_chip
 from ..data import get_sport_detail, get_sports_overview
 from ..state import gui_state
+from ..utils import safe_notify
 
 LOGGER = logging.getLogger(__name__)
 
@@ -144,15 +148,18 @@ def _toggle_sport_enabled_sync(sport_id: str, enabled: bool) -> bool:
         content = config_path.read_text(encoding="utf-8")
         config = yaml.safe_load(content) or {}
 
-        # Find and update the sport
-        sports = config.get("sports", [])
-        for sport in sports:
-            if sport.get("id") == sport_id:
-                sport["enabled"] = enabled
-                break
+        settings = config.get("settings", {})
+        disabled_sports = set(settings.get("disabled_sports", []) or [])
+
+        if enabled:
+            # Remove from disabled list
+            disabled_sports.discard(sport_id)
         else:
-            LOGGER.warning("Sport %s not found in config", sport_id)
-            return False
+            # Add to disabled list
+            disabled_sports.add(sport_id)
+
+        settings["disabled_sports"] = sorted(disabled_sports)
+        config["settings"] = settings
 
         # Write back
         config_path.write_text(yaml.dump(config, default_flow_style=False, allow_unicode=True, sort_keys=False))
@@ -160,9 +167,9 @@ def _toggle_sport_enabled_sync(sport_id: str, enabled: bool) -> bool:
 
         # Reload config in processor
         if gui_state.processor:
-            from playbook.config import AppConfig
+            from playbook.config import load_config
 
-            gui_state.config = AppConfig.load(config_path)
+            gui_state.config = load_config(config_path)
             gui_state.processor.config = gui_state.config
 
         return True
@@ -171,16 +178,14 @@ def _toggle_sport_enabled_sync(sport_id: str, enabled: bool) -> bool:
         return False
 
 
-def _toggle_sport_enabled(sport_id: str, enabled: bool, callback=None) -> None:
+def _toggle_sport_enabled(sport_id: str, enabled: bool, sport_name: str = "") -> None:
     """Toggle a sport's enabled status asynchronously.
 
     Args:
         sport_id: The sport identifier
         enabled: New enabled state
-        callback: Optional callback(success: bool) to call after completion
+        sport_name: Display name for notifications
     """
-    import asyncio
-    from concurrent.futures import ThreadPoolExecutor
 
     async def async_toggle():
         loop = asyncio.get_event_loop()
@@ -189,21 +194,137 @@ def _toggle_sport_enabled(sport_id: str, enabled: bool, callback=None) -> None:
             success = await loop.run_in_executor(
                 executor, lambda: _toggle_sport_enabled_sync(sport_id, enabled)
             )
-            if callback:
-                callback(success)
+            if success:
+                ui.notify(
+                    f"{sport_name or sport_id} {'enabled' if enabled else 'disabled'}",
+                    type="positive",
+                )
+                ui.navigate.to("/sports")
+            else:
+                ui.notify("Failed to update sport status", type="negative")
+        except Exception as e:
+            LOGGER.exception("Toggle sport async failed: %s", e)
+            ui.notify("Failed to update sport status", type="negative")
         finally:
             executor.shutdown(wait=False)
 
     asyncio.create_task(async_toggle())
 
 
+def _bulk_toggle_sports_sync(sport_ids: list[str], enabled: bool) -> bool:
+    """Toggle multiple sports' enabled status at once.
+
+    Args:
+        sport_ids: List of sport identifiers
+        enabled: New enabled state
+
+    Returns:
+        True if successful, False otherwise
+    """
+    from pathlib import Path
+
+    import yaml
+
+    if not gui_state.config_path:
+        LOGGER.error("No config path available")
+        return False
+
+    try:
+        config_path = Path(gui_state.config_path)
+        content = config_path.read_text(encoding="utf-8")
+        config = yaml.safe_load(content) or {}
+
+        settings = config.get("settings", {})
+        disabled_sports = set(settings.get("disabled_sports", []) or [])
+
+        for sport_id in sport_ids:
+            if enabled:
+                disabled_sports.discard(sport_id)
+            else:
+                disabled_sports.add(sport_id)
+
+        settings["disabled_sports"] = sorted(disabled_sports)
+        config["settings"] = settings
+
+        config_path.write_text(yaml.dump(config, default_flow_style=False, allow_unicode=True, sort_keys=False))
+        LOGGER.info("Bulk updated %d sports enabled=%s", len(sport_ids), enabled)
+
+        # Reload config
+        if gui_state.processor:
+            from playbook.config import AppConfig
+
+            gui_state.config = AppConfig.load(config_path)
+            gui_state.processor.config = gui_state.config
+
+        return True
+    except Exception as e:
+        LOGGER.exception("Failed to bulk toggle sports: %s", e)
+        return False
+
+
+def _bulk_clear_history_sync(sport_ids: list[str]) -> int:
+    """Clear processed records for multiple sports.
+
+    Args:
+        sport_ids: List of sport identifiers
+
+    Returns:
+        Total number of records deleted
+    """
+    if not gui_state.processed_store:
+        return 0
+
+    total_deleted = 0
+    for sport_id in sport_ids:
+        try:
+            deleted = gui_state.processed_store.delete_by_sport(sport_id)
+            total_deleted += deleted
+            LOGGER.info("Cleared %d records for sport %s", deleted, sport_id)
+        except Exception as e:
+            LOGGER.warning("Failed to clear records for %s: %s", sport_id, e)
+
+    return total_deleted
+
+
 def _sports_table() -> None:
-    """Create the sports overview table with progress."""
+    """Create the sports overview table with progress and bulk actions."""
     overviews = get_sports_overview()
 
     if not overviews:
         ui.label("No sports configured").classes("text-slate-500 dark:text-slate-400 italic py-4")
         return
+
+    # State for tracking selected rows
+    selection_state = {"selected": []}
+
+    # Action bar (hidden by default, shown above table when items selected)
+    action_bar = ui.row().classes("w-full items-center gap-2 p-3 mb-4 bg-slate-100 dark:bg-slate-800 rounded-lg")
+    action_bar.set_visibility(False)
+
+    with action_bar:
+        selection_label = ui.label("0 selected").classes("font-medium text-slate-700 dark:text-slate-200 mr-4")
+
+        ui.button("Enable", icon="check_circle", on_click=lambda: _bulk_action("enable", selection_state["selected"])).props(
+            "flat dense color=positive"
+        )
+        ui.button("Disable", icon="cancel", on_click=lambda: _bulk_action("disable", selection_state["selected"])).props(
+            "flat dense color=warning"
+        )
+
+        ui.separator().props("vertical").classes("mx-2")
+
+        ui.button("Clear History", icon="delete_sweep", on_click=lambda: _bulk_action("clear_history", selection_state["selected"])).props(
+            "flat dense color=negative"
+        )
+        ui.button("Reprocess", icon="refresh", on_click=lambda: _bulk_action("reprocess", selection_state["selected"])).props(
+            "flat dense color=info"
+        )
+
+        ui.space()
+
+        clear_btn = ui.button("Clear Selection", icon="close", on_click=lambda: table.run_method("clearSelection")).props(
+            "flat dense"
+        ).classes("text-slate-500")
 
     # Create table with custom rendering
     columns = [
@@ -233,7 +354,7 @@ def _sports_table() -> None:
         columns=columns,
         rows=rows,
         row_key="id",
-        selection="single",
+        selection="multiple",  # Enable multi-select
     ).classes("w-full modern-table")
 
     # Status toggle slot
@@ -260,15 +381,8 @@ def _sports_table() -> None:
         current_status = row.get("status")
         new_enabled = current_status != "Enabled"
 
-        def on_complete(success: bool):
-            if success:
-                ui.notify(f"{sport_name} {'enabled' if new_enabled else 'disabled'}", type="positive")
-                ui.navigate.to("/sports")  # Refresh
-            else:
-                ui.notify("Failed to update sport status", type="negative")
-
         ui.notify(f"Updating {sport_name}...", type="info")
-        _toggle_sport_enabled(sport_id, new_enabled, callback=on_complete)
+        _toggle_sport_enabled(sport_id, new_enabled, sport_name=sport_name)
 
     table.on("toggle_status", on_toggle_status)
 
@@ -314,8 +428,185 @@ def _sports_table() -> None:
         """,
     )
 
-    # Row click handler
+    # Row click handler (navigate to detail, but not when clicking checkbox)
     table.on("row-click", lambda e: ui.navigate.to(f"/sports/{e.args[1]['id']}"))
+
+    # Track selection changes
+    def on_selection(e) -> None:
+        selection_state["selected"] = [row["id"] for row in e.args["rows"]] if e.args else []
+        update_action_bar()
+
+    table.on("selection", on_selection)
+
+    def update_action_bar() -> None:
+        """Update action bar visibility and selection count."""
+        count = len(selection_state["selected"])
+        if count > 0:
+            action_bar.set_visibility(True)
+            selection_label.text = f"{count} selected"
+        else:
+            action_bar.set_visibility(False)
+
+
+def _bulk_action(action: str, sport_ids: list[str]) -> None:
+    """Execute a bulk action on selected sports.
+
+    Args:
+        action: The action to perform (enable, disable, clear_history, reprocess)
+        sport_ids: List of sport IDs to act on
+    """
+    if not sport_ids:
+        ui.notify("No sports selected", type="warning")
+        return
+
+    count = len(sport_ids)
+
+    if action == "enable":
+        ui.notify(f"Enabling {count} sports...", type="info")
+
+        async def do_enable():
+            loop = asyncio.get_event_loop()
+            executor = ThreadPoolExecutor(max_workers=1)
+            try:
+                success = await loop.run_in_executor(
+                    executor, lambda: _bulk_toggle_sports_sync(sport_ids, True)
+                )
+                if success:
+                    ui.notify(f"Enabled {count} sports", type="positive")
+                    ui.navigate.to("/sports")
+                else:
+                    ui.notify("Failed to enable sports", type="negative")
+            finally:
+                executor.shutdown(wait=False)
+
+        asyncio.create_task(do_enable())
+
+    elif action == "disable":
+        ui.notify(f"Disabling {count} sports...", type="info")
+
+        async def do_disable():
+            loop = asyncio.get_event_loop()
+            executor = ThreadPoolExecutor(max_workers=1)
+            try:
+                success = await loop.run_in_executor(
+                    executor, lambda: _bulk_toggle_sports_sync(sport_ids, False)
+                )
+                if success:
+                    ui.notify(f"Disabled {count} sports", type="positive")
+                    ui.navigate.to("/sports")
+                else:
+                    ui.notify("Failed to disable sports", type="negative")
+            finally:
+                executor.shutdown(wait=False)
+
+        asyncio.create_task(do_disable())
+
+    elif action == "clear_history":
+        # Confirm before clearing
+        with ui.dialog() as dialog, ui.card().classes("p-4"):
+            ui.label(f"Clear history for {count} sports?").classes("text-lg font-semibold mb-2")
+            ui.label("This will delete all processed file records for these sports.").classes(
+                "text-slate-600 dark:text-slate-400 mb-4"
+            )
+            ui.label("Files will be re-matched on the next processing run.").classes(
+                "text-sm text-slate-500 dark:text-slate-500 mb-4"
+            )
+
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Clear History", on_click=lambda: _do_clear_history(sport_ids, dialog)).props(
+                    "color=negative"
+                )
+
+        dialog.open()
+
+    elif action == "reprocess":
+        # Clear history then trigger run
+        with ui.dialog() as dialog, ui.card().classes("p-4"):
+            ui.label(f"Reprocess {count} sports?").classes("text-lg font-semibold mb-2")
+            ui.label("This will:").classes("text-slate-600 dark:text-slate-400")
+            with ui.column().classes("ml-4 mb-4"):
+                ui.label("1. Clear processed history for selected sports").classes("text-sm text-slate-500")
+                ui.label("2. Run a full processing scan").classes("text-sm text-slate-500")
+            ui.label("Selected sports will be re-matched from scratch.").classes(
+                "text-sm text-slate-500 dark:text-slate-500 mb-4"
+            )
+
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Reprocess", on_click=lambda: _do_reprocess(sport_ids, dialog)).props("color=primary")
+
+        dialog.open()
+
+
+def _do_clear_history(sport_ids: list[str], dialog) -> None:
+    """Execute the clear history action."""
+    dialog.close()
+    # Capture client context before async operation
+    client = context.client
+    ui.notify("Clearing history...", type="info")
+
+    async def do_clear():
+        loop = asyncio.get_event_loop()
+        executor = ThreadPoolExecutor(max_workers=1)
+        try:
+            deleted = await loop.run_in_executor(
+                executor, lambda: _bulk_clear_history_sync(sport_ids)
+            )
+            safe_notify(client, f"Cleared {deleted} records from {len(sport_ids)} sports", type="positive")
+            with client:
+                ui.navigate.to("/sports")
+        except Exception as e:
+            LOGGER.exception("Clear history error: %s", e)
+            safe_notify(client, f"Error: {e}", type="negative")
+        finally:
+            executor.shutdown(wait=False)
+
+    asyncio.create_task(do_clear())
+
+
+def _do_reprocess(sport_ids: list[str], dialog) -> None:
+    """Execute the reprocess action (clear history + run)."""
+    dialog.close()
+    # Capture client context before async operation
+    client = context.client
+
+    async def do_reprocess():
+        # First clear history
+        loop = asyncio.get_event_loop()
+        executor = ThreadPoolExecutor(max_workers=1)
+
+        try:
+            safe_notify(client, "Clearing history for selected sports...", type="info")
+            deleted = await loop.run_in_executor(
+                executor, lambda: _bulk_clear_history_sync(sport_ids)
+            )
+            safe_notify(client, f"Cleared {deleted} records", type="info")
+
+            # Then trigger a full run
+            if gui_state.processor and not gui_state.is_processing:
+                safe_notify(client, "Starting processing run...", type="info")
+                gui_state.set_processing(True)
+                try:
+                    stats = await loop.run_in_executor(None, gui_state.processor.process_all)
+                    if stats.cancelled:
+                        safe_notify(client, "Processing stopped", type="warning")
+                    else:
+                        safe_notify(client, "Reprocessing complete", type="positive")
+                finally:
+                    gui_state.set_processing(False)
+            else:
+                safe_notify(client, "Processor busy or not available - run manually when ready", type="warning")
+
+            with client:
+                ui.navigate.to("/sports")
+        except Exception as e:
+            LOGGER.exception("Reprocess error: %s", e)
+            safe_notify(client, f"Error: {e}", type="negative")
+        finally:
+            executor.shutdown(wait=False)
+
+    asyncio.create_task(do_reprocess())
 
 
 def _source_globs_card(sport_id: str, detail: Any) -> None:
@@ -402,8 +693,6 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
 
     def save_changes() -> None:
         """Save changes to the config file."""
-        import asyncio
-        from concurrent.futures import ThreadPoolExecutor
 
         if not gui_state.config or not gui_state.config_path:
             ui.notify("Cannot save: config not loaded", type="negative")
@@ -649,9 +938,6 @@ def _pattern_tester() -> None:
 
 def _test_pattern(filename: str, sport_id: str, container: ui.column) -> None:
     """Test a filename against sport patterns."""
-    import asyncio
-    from concurrent.futures import ThreadPoolExecutor
-
     container.clear()
 
     if not filename or not sport_id:

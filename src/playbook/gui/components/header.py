@@ -11,8 +11,8 @@ from nicegui import ui
 from ..state import gui_state
 from ..theme import is_dark_mode, set_theme_preference
 
-# Logo path relative to package
-LOGO_PATH = Path(__file__).parent.parent.parent.parent.parent / "docs" / "assets" / "logo.png"
+# Logo path - use icon.png from project root
+LOGO_PATH = Path(__file__).parent.parent.parent.parent.parent / "icon.png"
 
 
 def header(dark_mode: ui.dark_mode | None = None) -> None:

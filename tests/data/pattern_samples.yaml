@@ -46,23 +46,26 @@ samples:
       key: "ufc"
       title: "Ultimate Fighting Championship"
       seasons:
-        - key: "1"
+        - key: "321"
           title: "UFC 321 Aspinall vs Gane"
-          round_number: 1
+          round_number: 321
+          display_number: 321
           episodes:
             - title: "Early Prelims"
             - title: "Prelims"
             - title: "Main Card"
-        - key: "2"
+        - key: "284"
           title: "UFC 284 Volkanovski vs Makhachev"
-          round_number: 2
+          round_number: 284
+          display_number: 284
           episodes:
             - title: "Early Prelims"
             - title: "Prelims"
             - title: "Main Card"
-        - key: "3"
+        - key: "265"
           title: "UFC 265 Lewis vs Gane"
-          round_number: 3
+          round_number: 265
+          display_number: 265
           episodes:
             - title: "Early Prelims"
             - title: "Prelims"
@@ -110,17 +113,20 @@ samples:
       title: "UFC 2025"
       seasons:
         - title: "UFC Fight Night 263 Garcia vs Onama"
-          round_number: 1
+          round_number: 263
+          display_number: 263
           episodes:
             - title: "Prelims"
             - title: "Main Card"
         - title: "UFC Fight Night 262 de Ridder vs Allen"
-          round_number: 2
+          round_number: 262
+          display_number: 262
           episodes:
             - title: "Prelims"
             - title: "Main Card"
         - title: "UFC Fight Night 265 Tsarukyan vs Hooker"
-          round_number: 3
+          round_number: 265
+          display_number: 265
           episodes:
             - title: "Prelims"
             - title: "Main Card"
@@ -412,6 +418,94 @@ samples:
         expect_episode: "Race"
       - value: "formula1.2025.brazilian.grand.prix.sprint.qualifying.1080p.web.h264-verum.mkv"
         expect_episode: "Sprint Qualifying"
+
+  - description: "Formula 1 MWR releases with PROPER tag"
+    sport:
+      id: "formula1_mwr_proper"
+      name: "Formula 1 MWR PROPER"
+      pattern_sets:
+        - formula1
+    show:
+      key: "formula1_2025"
+      title: "Formula 1 2025"
+      seasons:
+        - title: "Round 18 Singapore Grand Prix"
+          round_number: 18
+          display_number: 18
+          episodes:
+            - title: "Weekend Warm Up"
+              aliases:
+                - "Weekend.Warm-Up"
+                - "Weekend.Warm.Up"
+    filenames:
+      - value: "Formula1.2025.Round18.Singapore.Weekend.Warm-Up.PROPER.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
+        expect_episode: "Weekend Warm Up"
+
+  - description: "Formula 1 F1Carreras releases"
+    sport:
+      id: "formula1_f1carreras"
+      name: "Formula 1 F1Carreras"
+      pattern_sets:
+        - formula1
+    show:
+      key: "formula1_2024"
+      title: "Formula 1 2024"
+      seasons:
+        - title: "Round 4 Azerbaijan Grand Prix"
+          round_number: 4
+          display_number: 4
+          episodes:
+            - title: "Sprint"
+              aliases:
+                - "Sprint Race"
+        - title: "Round 14 Belgian Grand Prix"
+          round_number: 14
+          display_number: 14
+          episodes:
+            - title: "Race"
+              aliases:
+                - "Grand Prix"
+    filenames:
+      - value: "Formula1.S2024E73.Round14.Spa-Francorchamps.Race.F1TV.1080p.WEB-DL.AAC2.0.H.264-F1Carreras.mkv"
+        expect_episode: "Race"
+      - value: "Formula.1.S2024E02.Round04.Baku.Azerbaijan.Sprint.F1TV-1080p-F1Carreras.mkv"
+        expect_episode: "Sprint"
+
+  - description: "Formula 1 spaced MWR releases with multi-word locations (USA COTA, USA Las Vegas)"
+    sport:
+      id: "formula1_spaced_multiword"
+      name: "Formula 1 Spaced Multi-word Location"
+      pattern_sets:
+        - formula1
+    show:
+      key: "formula1_2025"
+      title: "Formula 1 2025"
+      seasons:
+        - title: "Round 19 United States Grand Prix"
+          round_number: 19
+          display_number: 19
+          episodes:
+            - title: "Drivers Press Conference"
+            - title: "Sprint Qualifying"
+            - title: "Qualifying"
+            - title: "Race"
+        - title: "Round 22 Las Vegas Grand Prix"
+          round_number: 22
+          display_number: 22
+          episodes:
+            - title: "Drivers Press Conference"
+            - title: "Race"
+    filenames:
+      - value: "Formula1 2025 Round19 USA COTA Sprint Qualifying F1LIVE F1TV WEB-DL 1080p h264 English-MWR.mkv"
+        expect_episode: "Sprint Qualifying"
+      - value: "Formula1 2025 Round19 USA COTA Race F1LIVE F1TV WEB-DL 1080p h264 English-MWR.mkv"
+        expect_episode: "Race"
+      - value: "Formula1 2025 Round19 USA COTA Qualifying F1LIVE F1TV WEB-DL 1080p h264 English-MWR.mkv"
+        expect_episode: "Qualifying"
+      - value: "Formula1 2025 Round19 USA COTA Drivers Press Conference F1TV WEB-DL 1080p h264 English-MWR.mkv"
+        expect_episode: "Drivers Press Conference"
+      - value: "Formula1 2025 Round22 USA Las Vegas Drivers Press Conference F1TV WEB-DL 1080p h264 English-MWR.mkv"
+        expect_episode: "Drivers Press Conference"
 
   - description: "World Superbike PROPER and REPACK releases"
     sport:

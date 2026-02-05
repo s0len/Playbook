@@ -982,18 +982,16 @@ class TestConfigSchemaSettings:
 class TestConfigSchemaSports:
     """Tests for CONFIG_SCHEMA validation of sports array and nested structures."""
 
-    def test_sports_field_is_required(self):
-        """Test that sports field is required in config."""
+    def test_sports_field_is_optional(self):
+        """Test that sports field is optional in config (auto-loads from pattern_templates.yaml)."""
         config = {
             "settings": {
                 "source_dir": "/source",
             }
         }
         report = validate_config_data(config)
-        assert report.is_valid is False
-        # Find error related to sports field
-        sports_errors = [e for e in report.errors if "sports" in e.path or "<root>" in e.path]
-        assert len(sports_errors) >= 1
+        # sports is optional since it auto-loads from pattern_templates.yaml
+        assert report.is_valid is True
 
     def test_sports_must_be_array(self):
         """Test that sports field must be an array."""
@@ -1743,7 +1741,7 @@ class TestValidateSemantics:
         assert len(duplicate_errors) == 0
 
     def test_missing_show_slug_without_variants(self):
-        """Test error when sport has no show_slug and no variants."""
+        """Test error when sport has no show_slug, show_slug_template, or variants."""
         config = {
             "sports": [
                 {
@@ -1758,7 +1756,7 @@ class TestValidateSemantics:
         slug_errors = [e for e in report.errors if e.code == "show-slug-missing"]
         assert len(slug_errors) == 1
         assert slug_errors[0].path == "sports[0].show_slug"
-        assert "show_slug or variants" in slug_errors[0].message
+        assert "show_slug" in slug_errors[0].message
 
     def test_no_error_when_sport_has_metadata(self):
         """Test no error when sport has metadata block."""
@@ -1794,8 +1792,41 @@ class TestValidateSemantics:
         report = ValidationReport()
         _validate_semantics(config, report)
 
-        slug_errors = [e for e in report.errors if "show_slug or variants" in e.message]
+        slug_errors = [e for e in report.errors if e.code == "show-slug-missing"]
         assert len(slug_errors) == 0
+
+    def test_no_error_when_sport_has_show_slug_template(self):
+        """Test no error when sport has show_slug_template instead of show_slug."""
+        config = {
+            "sports": [
+                {
+                    "id": "dynamic-sport",
+                    "show_slug_template": "sport-{year}"
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        slug_errors = [e for e in report.errors if e.code == "show-slug-missing"]
+        assert len(slug_errors) == 0
+
+    def test_show_slug_template_blank_detection(self):
+        """Test that blank show_slug_template is detected."""
+        config = {
+            "sports": [
+                {
+                    "id": "blank-template-sport",
+                    "show_slug_template": "   "
+                }
+            ]
+        }
+        report = ValidationReport()
+        _validate_semantics(config, report)
+
+        slug_errors = [e for e in report.errors if e.code == "show-slug-blank"]
+        assert len(slug_errors) == 1
+        assert "show_slug_template" in slug_errors[0].path
 
     def test_show_slug_blank_detection(self):
         """Test that blank show_slug is detected."""
@@ -2297,8 +2328,8 @@ class TestValidateConfigDataIntegration:
         pattern_errors = [e for e in report.errors if e.code == "pattern-set"]
         assert len(pattern_errors) >= 1
 
-    def test_missing_required_field_error(self):
-        """Test that missing required 'sports' field produces error."""
+    def test_sports_field_is_optional_integration(self):
+        """Test that missing 'sports' field is valid (auto-loads from pattern_templates.yaml)."""
         config = {
             "settings": {
                 "source_dir": "/source"
@@ -2306,11 +2337,8 @@ class TestValidateConfigDataIntegration:
         }
         report = validate_config_data(config)
 
-        assert report.is_valid is False
-        assert len(report.errors) >= 1
-
-        required_errors = [e for e in report.errors if "sports" in e.path.lower() or "<root>" in e.path]
-        assert len(required_errors) >= 1
+        # sports is optional since it auto-loads from pattern_templates.yaml
+        assert report.is_valid is True
 
     def test_complex_valid_config_with_all_features(self):
         """Test complex configuration with all features enabled."""

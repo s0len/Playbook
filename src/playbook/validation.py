@@ -155,7 +155,7 @@ CONFIG_SCHEMA: dict[str, Any] = {
             "items": {"$ref": "#/definitions/sport"},
         },
     },
-    "required": ["sports"],
+    "required": [],  # sports auto-load from pattern_templates.yaml
     "additionalProperties": True,
     "definitions": {
         "season_selector": {
@@ -217,6 +217,7 @@ CONFIG_SCHEMA: dict[str, Any] = {
                 "name": {"type": "string"},
                 "enabled": {"type": "boolean"},
                 "show_slug": {"type": "string", "minLength": 1},
+                "show_slug_template": {"type": "string", "minLength": 1},
                 "pattern_sets": {
                     "type": "array",
                     "items": {"type": "string", "minLength": 1},
@@ -457,14 +458,16 @@ def _validate_semantics(data: dict[str, Any], report: ValidationReport) -> None:
             else:
                 seen_ids[sport_id] = index
         show_slug = sport.get("show_slug")
+        show_slug_template = sport.get("show_slug_template")
         variants = sport.get("variants") or []
 
-        if not show_slug and not variants:
+        # Sport must have show_slug, show_slug_template, or variants with show_slug
+        if not show_slug and not show_slug_template and not variants:
             report.errors.append(
                 ValidationIssue(
                     severity="error",
                     path=f"sports[{index}].show_slug",
-                    message="Sport must define show_slug or variants with show_slug",
+                    message="Sport must define show_slug, show_slug_template, or variants with show_slug",
                     code="show-slug-missing",
                 )
             )
@@ -474,6 +477,15 @@ def _validate_semantics(data: dict[str, Any], report: ValidationReport) -> None:
                     severity="error",
                     path=f"sports[{index}].show_slug",
                     message="show_slug must not be blank",
+                    code="show-slug-blank",
+                )
+            )
+        elif show_slug_template and isinstance(show_slug_template, str) and not show_slug_template.strip():
+            report.errors.append(
+                ValidationIssue(
+                    severity="error",
+                    path=f"sports[{index}].show_slug_template",
+                    message="show_slug_template must not be blank",
                     code="show-slug-blank",
                 )
             )
@@ -491,16 +503,17 @@ def _validate_semantics(data: dict[str, Any], report: ValidationReport) -> None:
                     )
                     continue
                 variant_show_slug = variant.get("show_slug")
-                if not variant_show_slug:
+                # Variants need show_slug unless base sport has show_slug_template
+                if not variant_show_slug and not show_slug_template:
                     report.errors.append(
                         ValidationIssue(
                             severity="error",
                             path=f"sports[{index}].variants[{variant_index}].show_slug",
-                            message="Variant must provide a show_slug",
+                            message="Variant must provide a show_slug (or base sport must have show_slug_template)",
                             code="show-slug-missing",
                         )
                     )
-                elif isinstance(variant_show_slug, str) and not variant_show_slug.strip():
+                elif variant_show_slug and isinstance(variant_show_slug, str) and not variant_show_slug.strip():
                     report.errors.append(
                         ValidationIssue(
                             severity="error",
