@@ -451,7 +451,7 @@ class Processor:
                 # For dynamic sports, use the show from detection; otherwise use runtime.show
                 effective_show = detection.get("show") or runtime.show
 
-                context = self._build_context(runtime, source_path, season, episode, groups)
+                context = self._build_context(runtime, source_path, season, episode, groups, effective_show)
                 try:
                     destination = self._build_destination(runtime, pattern, context)
                 except ValueError as exc:
@@ -609,7 +609,7 @@ class Processor:
             kometa_fired=self._state.kometa_trigger_fired,
         )
 
-    def _build_context(self, runtime: SportRuntime, source_path: Path, season, episode, groups) -> dict[str, object]:
+    def _build_context(self, runtime: SportRuntime, source_path: Path, season, episode, groups, show=None) -> dict[str, object]:
         return build_match_context(
             runtime=runtime,
             source_path=source_path,
@@ -617,6 +617,7 @@ class Processor:
             episode=episode,
             groups=groups,
             source_dir=self.config.settings.source_dir,
+            show=show,
         )
 
     def _build_destination(self, runtime: SportRuntime, pattern: PatternRuntime, context: dict[str, object]) -> Path:

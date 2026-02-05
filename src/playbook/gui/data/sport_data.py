@@ -323,7 +323,7 @@ def _load_show_metadata(sport_config):
                 current_year = datetime.now().year
                 # Try current year first, then previous year as fallback
                 for year in [current_year, current_year - 1]:
-                    show = loader.load_for_sport(sport_config, year)
+                    show = loader.get_show_for_year(sport_config, year)
                     if show:
                         return show
                 return None
