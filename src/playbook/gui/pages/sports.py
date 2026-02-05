@@ -177,13 +177,13 @@ def _toggle_sport_enabled_sync(sport_id: str, enabled: bool) -> bool:
         return False
 
 
-def _toggle_sport_enabled(sport_id: str, enabled: bool, callback=None) -> None:
+def _toggle_sport_enabled(sport_id: str, enabled: bool, sport_name: str = "") -> None:
     """Toggle a sport's enabled status asynchronously.
 
     Args:
         sport_id: The sport identifier
         enabled: New enabled state
-        callback: Optional callback(success: bool) to call after completion
+        sport_name: Display name for notifications
     """
 
     async def async_toggle():
@@ -193,8 +193,17 @@ def _toggle_sport_enabled(sport_id: str, enabled: bool, callback=None) -> None:
             success = await loop.run_in_executor(
                 executor, lambda: _toggle_sport_enabled_sync(sport_id, enabled)
             )
-            if callback:
-                callback(success)
+            if success:
+                ui.notify(
+                    f"{sport_name or sport_id} {'enabled' if enabled else 'disabled'}",
+                    type="positive",
+                )
+                ui.navigate.to("/sports")
+            else:
+                ui.notify("Failed to update sport status", type="negative")
+        except Exception as e:
+            LOGGER.exception("Toggle sport async failed: %s", e)
+            ui.notify("Failed to update sport status", type="negative")
         finally:
             executor.shutdown(wait=False)
 
@@ -371,15 +380,8 @@ def _sports_table() -> None:
         current_status = row.get("status")
         new_enabled = current_status != "Enabled"
 
-        def on_complete(success: bool):
-            if success:
-                ui.notify(f"{sport_name} {'enabled' if new_enabled else 'disabled'}", type="positive")
-                ui.navigate.to("/sports")  # Refresh
-            else:
-                ui.notify("Failed to update sport status", type="negative")
-
         ui.notify(f"Updating {sport_name}...", type="info")
-        _toggle_sport_enabled(sport_id, new_enabled, callback=on_complete)
+        _toggle_sport_enabled(sport_id, new_enabled, sport_name=sport_name)
 
     table.on("toggle_status", on_toggle_status)
 
