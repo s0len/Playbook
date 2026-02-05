@@ -42,6 +42,17 @@ def advanced_tab(state: SettingsFormState) -> None:
 
 def _render_yaml_editor(state: SettingsFormState) -> None:
     """Render the raw YAML editor."""
+    # Add custom CSS to override Quasar's default textarea height
+    ui.add_css("""
+        .yaml-editor .q-field__control {
+            height: 70vh !important;
+            min-height: 500px !important;
+        }
+        .yaml-editor .q-field__native {
+            height: 100% !important;
+        }
+    """)
+
     with settings_card(
         "YAML Editor",
         icon="code",
@@ -51,8 +62,7 @@ def _render_yaml_editor(state: SettingsFormState) -> None:
 
         editor = (
             ui.textarea(value=yaml_text)
-            .classes("w-full font-mono text-sm")
-            .style("height: 600px !important; min-height: 600px !important;")
+            .classes("w-full font-mono text-sm yaml-editor")
             .props("outlined")
         )
 
