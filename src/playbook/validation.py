@@ -155,7 +155,7 @@ CONFIG_SCHEMA: dict[str, Any] = {
             "items": {"$ref": "#/definitions/sport"},
         },
     },
-    "required": ["sports"],
+    "required": [],  # sports auto-load from pattern_templates.yaml
     "additionalProperties": True,
     "definitions": {
         "season_selector": {
