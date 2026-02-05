@@ -460,7 +460,7 @@ pattern_sets:
       - description: Formula E MWR releases (dot separated)
         # Example: FormulaE.2025.Round16.Great.Britain.Race.STAN.WEB-DL.1080p.h264.English-MWR
         regex: >-
-          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)Formula[.\s]?E\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<location>[^.]+(?:\.[^.]+)*)\.(?P<session>FP[1-4]|Free\.Practice(?:\.One|\.Two|\.Three|\.Four)?|Practice(?:\.One|\.Two|\.Three|\.Four)?|Qualifying|Quali|Race|E-?Prix|Shakedown|Warm\.?(?:Up)|Test)
+          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)Formula[.\s]?E\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<location>[^.]+(?:\.[^.]+)*)\.(?P<session>FP[1-4]|Free\.Practice(?:\.One|\.Two|\.Three|\.Four)?|Practice(?:\.One|\.Two|\.Three|\.Four)?|Qualifying|Quali|Race|E-?Prix|Shakedown|Warm\.?(?:Up)|Test|Preview\.Show)
         season_selector:
           mode: round
           group: round
@@ -518,13 +518,16 @@ pattern_sets:
           Practice:
             - Practice
             - Practice.Session
+          Preview Show:
+            - Preview.Show
+            - PreviewShow
         destination_root_template: "{show_title}"
         season_dir_template: "{season_round:02d} {season_title}"
         filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
       - description: Formula E MWR releases (space separated)
         # Example: FormulaE 2025 Round16 Great Britain Race STAN WEB-DL 1080p h264 English-MWR
         regex: >-
-          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)FormulaE\s+(?P<year>\d{4})\s+Round(?P<round>\d{2})\s+(?P<location>.+?)\s+(?P<session>FP[1-4]|Free\s+Practice(?:\s+One|\s+Two|\s+Three|\s+Four)?|Practice(?:\s+One|\s+Two|\s+Three|\s+Four)?|Qualifying|Quali|Race|E-?Prix|Shakedown|Warm\s*(?:Up)?|Test)(?=\s)
+          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)FormulaE\s+(?P<year>\d{4})\s+Round(?P<round>\d{2})\s+(?P<location>.+?)\s+(?P<session>FP[1-4]|Free\s+Practice(?:\s+One|\s+Two|\s+Three|\s+Four)?|Practice(?:\s+One|\s+Two|\s+Three|\s+Four)?|Qualifying|Quali|Race|E-?Prix|Shakedown|Warm\s*(?:Up)?|Test|Preview\s+Show)(?=\s)
         season_selector:
           mode: round
           group: round
