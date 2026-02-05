@@ -145,8 +145,11 @@ pattern_sets:
 
       - description: Formula 1 spaced MWR releases
         # Example: Formula1 2024 Round05 Miami Sprint Race F1TV 1080p
+        # Example: Formula1 2025 Round19 USA COTA Sprint Qualifying F1LIVE F1TV WEB-DL 1080p
+        # Example: Formula1 2025 Round22 USA Las Vegas Drivers Press Conference F1TV WEB-DL 1080p
+        # Note: Location can be multi-word (USA COTA, USA Las Vegas), pattern stops at session keywords
         regex: >-
-          (?i)^Formula1\s+(?P<year>\d{4})\s+Round(?P<round>\d{2})\s+(?P<location>[^\s]+)\s+(?P<session>.+?(?:\s+Part\d+)?)\s*(?=\s+F1(?:TV|LIVE))
+          (?i)^Formula1\s+(?P<year>\d{4})\s+Round(?P<round>\d{2})\s+(?P<location>.+?)\s+(?P<session>(?:Drivers\s+Press\s+Conference|Weekend\s+Warm[.\s-]?Up|Free\s+Practice\s+[1-3]|FP[1-3]|Sprint\s+Qualifying|Sprint\s+Shootout|Sprint\s+Race|Sprint|Qualifying|Quali|Race|Pre[.\s-]?(?:Qualifying|Race|Sprint)(?:\s+Show)?|Post[.\s-]?(?:Qualifying|Race|Sprint)(?:\s+Show)?)(?:\s+Part\s*\d+)?)\s*(?=\s+F1(?:TV|LIVE))
         season_selector:
           mode: round
           group: round
