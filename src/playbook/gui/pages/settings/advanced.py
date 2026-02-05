@@ -234,18 +234,43 @@ def _validate_yaml(yaml_text: str) -> None:
 
 
 def _apply_yaml_changes(state: SettingsFormState, yaml_text: str) -> None:
-    """Apply YAML changes to form state."""
+    """Apply YAML changes and save to disk."""
     try:
         data = yaml.safe_load(yaml_text)
         if data is None:
             ui.notify("Cannot apply empty configuration", type="warning")
             return
 
-        state.load_from_dict(data, state.config_path)
-        ui.notify("Changes applied to form", type="positive")
+        if not state.config_path:
+            ui.notify("No configuration file path", type="negative")
+            return
+
+        # Create backup before saving
+        backup_dir = state.config_path.parent / "backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = backup_dir / f"{state.config_path.stem}_{timestamp}.yaml"
+        if state.config_path.exists():
+            import shutil
+            shutil.copy2(state.config_path, backup_path)
+
+        # Write YAML directly to disk (preserves user formatting)
+        state.config_path.write_text(yaml_text, encoding="utf-8")
+
+        # Reload processor config
+        from ...state import gui_state
+        if gui_state.processor:
+            from playbook.config import load_config
+            gui_state.config = load_config(state.config_path)
+            gui_state.processor.config = gui_state.config
+
+        ui.notify("Configuration saved", type="positive")
         ui.navigate.to("/config")  # Refresh page
     except yaml.YAMLError as e:
         ui.notify(f"Invalid YAML: {e}", type="negative")
+    except Exception as e:
+        ui.notify(f"Failed to save: {e}", type="negative")
 
 
 def _list_backups(config_path: Path | None) -> list[Path]:
