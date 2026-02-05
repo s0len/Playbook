@@ -52,7 +52,7 @@ def _render_yaml_editor(state: SettingsFormState) -> None:
         editor = (
             ui.textarea(value=yaml_text)
             .classes("w-full font-mono text-sm")
-            .style("height: 400px; max-height: 50vh;")
+            .style("height: 70vh; min-height: 500px; max-height: 800px;")
             .props("outlined")
         )
 

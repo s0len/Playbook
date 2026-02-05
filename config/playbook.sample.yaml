@@ -100,6 +100,9 @@ settings:
   ####################################################################
   # NOTIFICATIONS (OPTIONAL)
   ####################################################################
+  # Notifications are for alerting you about events (Discord, Slack, etc.)
+  # For media server integrations (Plex, Autoscan), see the 'integrations'
+  # section below.
   notifications:
     batch_daily: false    # When true, send one message per sport/day
     summary_mode: false   # When true, send one summary notification per scan
@@ -113,14 +116,59 @@ settings:
         webhook_env: DISCORD_WEBHOOK_URL
         mentions:
           formula1: "<@&222333444555666777>"
-      - type: autoscan
-        url: ${AUTOSCAN_URL:-http://autoscan:3030}
-        trigger: manual
-        username: ${AUTOSCAN_USERNAME:-}
-        password: ${AUTOSCAN_PASSWORD:-}
-        rewrite:
+      # Webhook for custom integrations
+      # - type: webhook
+      #   url: https://example.com/webhook
+      #   method: POST
+      # Email notifications
+      # - type: email
+      #   smtp_host: smtp.example.com
+      #   smtp_port: 587
+      #   from: playbook@example.com
+      #   to: user@example.com
+
+  ####################################################################
+  # INTEGRATIONS (NEW IN 2.10.0)
+  ####################################################################
+  # Integrations are for media server interactions (Plex library scans,
+  # metadata sync, Autoscan triggers). Configure your connection once
+  # and enable the features you want.
+  integrations:
+    # Plex integration - configure your Plex server connection and features
+    plex:
+      url: ${PLEX_URL:-http://plex:32400}
+      token: ${PLEX_TOKEN:-}
+      library_id: ${PLEX_LIBRARY_ID:-}      # Plex library section ID
+      library_name: ${PLEX_LIBRARY_NAME:-Sports}  # Or library name (if ID not known)
+
+      # Metadata sync: Push titles, summaries, and posters from TheTVSportsDB to Plex
+      metadata_sync:
+        enabled: false
+        timeout: 15
+        force: false        # Force update even if fingerprint unchanged
+        dry_run: false      # Log changes without applying
+        sports: []          # Filter to specific sport IDs (empty = all)
+        scan_wait: 5        # Seconds to wait for Plex scan before syncing
+
+      # Scan on activity: Trigger partial Plex library scans when files are linked
+      scan_on_activity:
+        enabled: false
+        rewrite:            # Path rewriting if Plex sees different paths
           - from: ${DESTINATION_DIR:-/data/destination}
-            to: /mnt/unionfs/Media
+            to: /mnt/plex/media
+
+    # Autoscan integration - trigger Autoscan instead of direct Plex API
+    autoscan:
+      enabled: false
+      url: ${AUTOSCAN_URL:-http://autoscan:3030}
+      trigger: manual       # Autoscan trigger endpoint
+      username: ${AUTOSCAN_USERNAME:-}
+      password: ${AUTOSCAN_PASSWORD:-}
+      verify_ssl: true
+      timeout: 10
+      rewrite:
+        - from: ${DESTINATION_DIR:-/data/destination}
+          to: /mnt/unionfs/Media
 
   ####################################################################
   # FILESYSTEM WATCHER (OPTIONAL)
@@ -156,27 +204,29 @@ settings:
       interactive: false
 
   ####################################################################
-  # PLEX METADATA SYNC (OPTIONAL)
-  ####################################################################
-  plex_metadata_sync:
-    enabled: false
-    url: ${PLEX_URL:-http://plex:32400}
-    token: ${PLEX_TOKEN:-}
-    library_id: ${PLEX_LIBRARY_ID:-}
-    library_name: ${PLEX_LIBRARY_NAME:-TV Shows}
-    timeout: ${PLEX_TIMEOUT:-15}
-    force: ${PLEX_FORCE:-false}
-    dry_run: ${PLEX_SYNC_DRY_RUN:-false}
-    sports: []
-    scan_wait: ${PLEX_SCAN_WAIT:-5}
-
-  ####################################################################
   # DEFAULT DESTINATION TEMPLATES
   ####################################################################
   destination:
     root_template: "{show_title}"
     season_dir_template: "{season_number:02d} {season_title}"
     episode_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
+
+  ####################################################################
+  # LEGACY CONFIG (DEPRECATED - use integrations section instead)
+  ####################################################################
+  # The following sections are deprecated but still supported for
+  # backwards compatibility. They will be removed in a future version.
+  #
+  # plex_metadata_sync:    # DEPRECATED: use integrations.plex.metadata_sync
+  #   enabled: false
+  #   url: ${PLEX_URL:-http://plex:32400}
+  #   token: ${PLEX_TOKEN:-}
+  #   library_id: ${PLEX_LIBRARY_ID:-}
+  #   library_name: ${PLEX_LIBRARY_NAME:-TV Shows}
+  #
+  # notifications.targets with type: autoscan or plex_scan still work,
+  # but now inherit defaults from the integrations section.
 
 
 ######################################################################

@@ -45,7 +45,84 @@ class TVSportsDBConfig:
 
 
 @dataclass
+class PlexScanOnActivitySettings:
+    """Settings for triggering Plex library scans on file activity."""
+
+    enabled: bool = False
+    rewrite: list[dict[str, str]] = field(default_factory=list)
+
+
+@dataclass
+class PlexMetadataSyncSettings:
+    """Settings for Plex metadata sync (titles, summaries, posters)."""
+
+    enabled: bool = False
+    timeout: float = 15.0
+    force: bool = False
+    dry_run: bool = False
+    sports: list[str] = field(default_factory=list)
+    scan_wait: float = 5.0  # Seconds to wait after triggering library scan
+    lock_poster_fields: bool = False  # Whether to lock poster fields to prevent updates
+
+
+@dataclass
+class PlexIntegration:
+    """Consolidated Plex integration settings.
+
+    This dataclass holds all Plex-related configuration including:
+    - Connection settings (url, token)
+    - Library identification (library_id, library_name)
+    - Metadata sync settings (for pushing titles/posters from TheTVSportsDB)
+    - Scan on activity settings (for triggering library scans on file changes)
+    """
+
+    url: str | None = None
+    token: str | None = None
+    library_id: str | None = None
+    library_name: str | None = None
+    metadata_sync: PlexMetadataSyncSettings = field(default_factory=PlexMetadataSyncSettings)
+    scan_on_activity: PlexScanOnActivitySettings = field(default_factory=PlexScanOnActivitySettings)
+
+
+@dataclass
+class AutoscanIntegration:
+    """Autoscan integration settings.
+
+    Autoscan is a third-party tool that can trigger Plex/Emby/Jellyfin
+    library scans more efficiently than direct API calls.
+    """
+
+    enabled: bool = False
+    url: str | None = None
+    trigger: str = "manual"
+    username: str | None = None
+    password: str | None = None
+    verify_ssl: bool = True
+    timeout: float = 10.0
+    rewrite: list[dict[str, str]] = field(default_factory=list)
+
+
+@dataclass
+class IntegrationsSettings:
+    """Container for all external integrations (Plex, Autoscan).
+
+    This separates "integrations" (services that interact with media servers)
+    from "notifications" (alerting users about events).
+    """
+
+    plex: PlexIntegration = field(default_factory=PlexIntegration)
+    autoscan: AutoscanIntegration = field(default_factory=AutoscanIntegration)
+
+
+@dataclass
 class PlexSyncSettings:
+    """Legacy Plex sync settings (for backwards compatibility).
+
+    DEPRECATED: Use settings.integrations.plex instead.
+    This dataclass is kept for backwards compatibility with configs using
+    the old plex_metadata_sync section at the settings root.
+    """
+
     enabled: bool = False
     url: str | None = None
     token: str | None = None
@@ -307,7 +384,8 @@ class Settings:
     notifications: NotificationSettings = field(default_factory=NotificationSettings)
     file_watcher: WatcherSettings = field(default_factory=WatcherSettings)
     kometa_trigger: KometaTriggerSettings = field(default_factory=KometaTriggerSettings)
-    plex_sync: PlexSyncSettings = field(default_factory=PlexSyncSettings)
+    plex_sync: PlexSyncSettings = field(default_factory=PlexSyncSettings)  # Legacy, use integrations.plex
+    integrations: IntegrationsSettings = field(default_factory=IntegrationsSettings)  # New unified integrations
     tvsportsdb: TVSportsDBConfig = field(default_factory=TVSportsDBConfig)
     quality_profile: QualityProfile = field(default_factory=QualityProfile)  # Global quality profile
     disabled_sports: list[str] = field(default_factory=list)  # Sport IDs to exclude from defaults
@@ -943,6 +1021,208 @@ def _merge_quality_profile(
     )
 
 
+LOGGER = None  # Lazy-loaded to avoid circular imports
+
+
+def _get_logger():
+    """Get logger instance (lazy-loaded to avoid circular imports)."""
+    global LOGGER
+    if LOGGER is None:
+        import logging
+
+        LOGGER = logging.getLogger(__name__)
+    return LOGGER
+
+
+def _build_rewrite_list(value: Any, field_name: str) -> list[dict[str, str]]:
+    """Parse a rewrite list from config data."""
+    if not value:
+        return []
+    entries = value
+    if isinstance(entries, dict):
+        entries = [entries]
+    if not isinstance(entries, list):
+        raise ValueError(f"'{field_name}' must be a list of {{from: ..., to: ...}} mappings")
+    result: list[dict[str, str]] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        from_value = str(entry.get("from") or "").strip()
+        to_value = str(entry.get("to") or "").strip()
+        if from_value and to_value:
+            result.append({"from": from_value, "to": to_value})
+    return result
+
+
+def _build_plex_scan_on_activity(data: dict[str, Any]) -> PlexScanOnActivitySettings:
+    """Build Plex scan-on-activity settings."""
+    if not data:
+        return PlexScanOnActivitySettings()
+    if not isinstance(data, dict):
+        raise ValueError("'integrations.plex.scan_on_activity' must be a mapping when specified")
+
+    return PlexScanOnActivitySettings(
+        enabled=bool(data.get("enabled", False)),
+        rewrite=_build_rewrite_list(data.get("rewrite"), "integrations.plex.scan_on_activity.rewrite"),
+    )
+
+
+def _build_plex_metadata_sync_settings(data: dict[str, Any]) -> PlexMetadataSyncSettings:
+    """Build Plex metadata sync settings from new integrations.plex.metadata_sync section."""
+    if not data:
+        return PlexMetadataSyncSettings()
+    if not isinstance(data, dict):
+        raise ValueError("'integrations.plex.metadata_sync' must be a mapping when specified")
+
+    timeout_raw = data.get("timeout", 15.0)
+    try:
+        timeout = float(timeout_raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("'integrations.plex.metadata_sync.timeout' must be a number") from exc
+
+    scan_wait_raw = data.get("scan_wait", 5.0)
+    try:
+        scan_wait = float(scan_wait_raw)
+    except (TypeError, ValueError):
+        scan_wait = 5.0
+
+    sports = _ensure_string_list(data.get("sports"), field_name="integrations.plex.metadata_sync.sports")
+
+    return PlexMetadataSyncSettings(
+        enabled=bool(data.get("enabled", False)),
+        timeout=timeout,
+        force=bool(data.get("force", False)),
+        dry_run=bool(data.get("dry_run", False)),
+        sports=sports,
+        scan_wait=scan_wait,
+        lock_poster_fields=bool(data.get("lock_poster_fields", False)),
+    )
+
+
+def _build_plex_integration(data: dict[str, Any], legacy_plex_sync: dict[str, Any] | None = None) -> PlexIntegration:
+    """Build Plex integration settings.
+
+    Supports both:
+    - New structure: integrations.plex with metadata_sync and scan_on_activity
+    - Legacy structure: plex_metadata_sync at settings root (backwards compat)
+    """
+    if not data and not legacy_plex_sync:
+        return PlexIntegration()
+
+    logger = _get_logger()
+
+    # Use new integrations.plex data if present
+    plex_raw = data or {}
+    if not isinstance(plex_raw, dict):
+        raise ValueError("'integrations.plex' must be a mapping when specified")
+
+    # Check for legacy plex_metadata_sync config
+    if legacy_plex_sync and not plex_raw:
+        logger.warning(
+            "DEPRECATED: 'settings.plex_metadata_sync' is deprecated. "
+            "Please move to 'settings.integrations.plex'. See documentation for migration guide."
+        )
+        # Convert legacy format to new structure
+        url = legacy_plex_sync.get("url")
+        token = legacy_plex_sync.get("token")
+        library_id = legacy_plex_sync.get("library_id")
+        library_name = legacy_plex_sync.get("library_name")
+
+        return PlexIntegration(
+            url=str(url).strip() if url else None,
+            token=str(token).strip() if token else None,
+            library_id=str(library_id).strip() if library_id else None,
+            library_name=str(library_name).strip() if library_name else None,
+            metadata_sync=PlexMetadataSyncSettings(
+                enabled=bool(legacy_plex_sync.get("enabled", False)),
+                timeout=float(legacy_plex_sync.get("timeout", 15.0)),
+                force=bool(legacy_plex_sync.get("force", False)),
+                dry_run=bool(legacy_plex_sync.get("dry_run", False)),
+                sports=_ensure_string_list(legacy_plex_sync.get("sports"), field_name="plex_metadata_sync.sports"),
+                scan_wait=float(legacy_plex_sync.get("scan_wait", 5.0)),
+                lock_poster_fields=bool(legacy_plex_sync.get("lock_poster_fields", False)),
+            ),
+            scan_on_activity=PlexScanOnActivitySettings(enabled=False),
+        )
+
+    # Helper to clean string values
+    def _clean_str(value: Any) -> str | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text or None
+
+    url = _clean_str(plex_raw.get("url"))
+    token = _clean_str(plex_raw.get("token"))
+    library_id = _clean_str(plex_raw.get("library_id"))
+    library_name = _clean_str(plex_raw.get("library_name"))
+
+    # Validate URL if provided (skip if it looks like an unexpanded env var)
+    if url and not url.startswith("${") and not validate_url(url):
+        raise ValueError(f"'integrations.plex.url' must be a valid http/https URL, got: {url}")
+
+    metadata_sync = _build_plex_metadata_sync_settings(plex_raw.get("metadata_sync", {}) or {})
+    scan_on_activity = _build_plex_scan_on_activity(plex_raw.get("scan_on_activity", {}) or {})
+
+    return PlexIntegration(
+        url=url,
+        token=token,
+        library_id=library_id,
+        library_name=library_name,
+        metadata_sync=metadata_sync,
+        scan_on_activity=scan_on_activity,
+    )
+
+
+def _build_autoscan_integration(data: dict[str, Any]) -> AutoscanIntegration:
+    """Build Autoscan integration settings."""
+    if not data:
+        return AutoscanIntegration()
+    if not isinstance(data, dict):
+        raise ValueError("'integrations.autoscan' must be a mapping when specified")
+
+    url = data.get("url")
+    if url:
+        url = str(url).strip() or None
+
+    timeout_raw = data.get("timeout", 10.0)
+    try:
+        timeout = float(timeout_raw)
+    except (TypeError, ValueError):
+        timeout = 10.0
+
+    return AutoscanIntegration(
+        enabled=bool(data.get("enabled", False)),
+        url=url,
+        trigger=str(data.get("trigger", "manual")).strip() or "manual",
+        username=str(data.get("username")).strip() if data.get("username") else None,
+        password=str(data.get("password")).strip() if data.get("password") else None,
+        verify_ssl=bool(data.get("verify_ssl", True)),
+        timeout=timeout,
+        rewrite=_build_rewrite_list(data.get("rewrite"), "integrations.autoscan.rewrite"),
+    )
+
+
+def _build_integrations(data: dict[str, Any], legacy_plex_sync: dict[str, Any] | None = None) -> IntegrationsSettings:
+    """Build integrations settings from config data.
+
+    Args:
+        data: The integrations section from config
+        legacy_plex_sync: Legacy plex_metadata_sync section (for backwards compat)
+    """
+    if not data and not legacy_plex_sync:
+        return IntegrationsSettings()
+
+    integrations_raw = data or {}
+    if not isinstance(integrations_raw, dict):
+        raise ValueError("'integrations' must be a mapping when specified")
+
+    plex = _build_plex_integration(integrations_raw.get("plex", {}) or {}, legacy_plex_sync)
+    autoscan = _build_autoscan_integration(integrations_raw.get("autoscan", {}) or {})
+
+    return IntegrationsSettings(plex=plex, autoscan=autoscan)
+
+
 def _build_settings(data: dict[str, Any]) -> Settings:
     destination_defaults = DestinationTemplates(
         root_template=data.get("destination", {}).get("root_template", "{show_title}"),
@@ -1025,7 +1305,17 @@ def _build_settings(data: dict[str, Any]) -> Settings:
     cache_dir = Path(data.get("cache_dir", "/data/cache")).expanduser()
     watcher_settings = _build_watcher_settings(data.get("file_watcher", {}) or {})
     kometa_trigger = _build_kometa_trigger_settings(data.get("kometa_trigger", {}) or {})
-    plex_sync = _build_plex_sync_settings(data.get("plex_metadata_sync", {}) or {})
+
+    # Parse legacy plex_metadata_sync (for backwards compatibility)
+    legacy_plex_sync_raw = data.get("plex_metadata_sync", {}) or {}
+    plex_sync = _build_plex_sync_settings(legacy_plex_sync_raw)
+
+    # Parse new integrations section (with legacy fallback)
+    integrations = _build_integrations(
+        data.get("integrations", {}) or {},
+        legacy_plex_sync=legacy_plex_sync_raw if legacy_plex_sync_raw else None,
+    )
+
     tvsportsdb = _build_tvsportsdb_config(data.get("tvsportsdb", {}) or {})
     quality_profile = _build_quality_profile(data.get("quality_profile", {}) or {})
 
@@ -1050,6 +1340,7 @@ def _build_settings(data: dict[str, Any]) -> Settings:
         file_watcher=watcher_settings,
         kometa_trigger=kometa_trigger,
         plex_sync=plex_sync,
+        integrations=integrations,
         tvsportsdb=tvsportsdb,
         quality_profile=quality_profile,
         disabled_sports=disabled_sports,

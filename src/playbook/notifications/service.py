@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ..config import NotificationSettings
+from ..config import IntegrationsSettings, NotificationSettings
 from .autoscan import AutoscanTarget
 from .discord import DiscordTarget
 from .email import EmailTarget
@@ -93,9 +93,11 @@ class NotificationService:
         cache_dir: Path,
         destination_dir: Path,
         enabled: bool = True,
+        integrations: IntegrationsSettings | None = None,
     ) -> None:
         self._settings = settings
         self._enabled = enabled
+        self._integrations = integrations or IntegrationsSettings()
         self._targets = self._build_targets(
             settings.targets,
             cache_dir,
@@ -233,6 +235,10 @@ class NotificationService:
         targets: list[NotificationTarget] = []
         configs = list(targets_raw)
 
+        # Track if we've created Plex/Autoscan targets from explicit config
+        has_explicit_plex = False
+        has_explicit_autoscan = False
+
         for entry in configs:
             target_type = entry.get("type", "").lower()
             is_enabled = entry.get("enabled", True)
@@ -270,18 +276,22 @@ class NotificationService:
                 else:
                     LOGGER.warning("Skipped webhook target because url was not provided.")
             elif target_type == "autoscan":
-                url = entry.get("url")
+                has_explicit_autoscan = True
+                # Merge integrations.autoscan settings as defaults
+                merged_config = self._merge_autoscan_config(entry)
+                url = merged_config.get("url")
                 if url:
-                    target = AutoscanTarget(entry, destination_dir=destination_dir)
+                    target = AutoscanTarget(merged_config, destination_dir=destination_dir)
                 else:
                     LOGGER.warning("Skipped Autoscan target because url was not provided.")
             elif target_type in ("plex_scan", "plex"):
-                # PlexScanTarget handles env var fallbacks internally
-                target = PlexScanTarget(entry, destination_dir=destination_dir)
+                has_explicit_plex = True
+                # Merge integrations.plex settings as defaults
+                merged_config = self._merge_plex_scan_config(entry)
+                target = PlexScanTarget(merged_config, destination_dir=destination_dir)
                 if not target.enabled():
                     LOGGER.warning(
-                        "Plex scan target disabled: url/token not found in config or env vars "
-                        "(PLEX_URL, PLEX_TOKEN)"
+                        "Plex scan target disabled: url/token not found in config or env vars (PLEX_URL, PLEX_TOKEN)"
                     )
                     target = None
             elif target_type == "email":
@@ -294,7 +304,126 @@ class NotificationService:
                 target.set_enabled(is_enabled)
                 targets.append(target)
 
+        # Auto-create targets from integrations if not explicitly configured
+        targets.extend(
+            self._auto_create_integration_targets(
+                cache_dir,
+                destination_dir,
+                has_explicit_plex,
+                has_explicit_autoscan,
+            )
+        )
+
         return targets
+
+    def _merge_plex_scan_config(self, target_config: dict[str, Any]) -> dict[str, Any]:
+        """Merge integrations.plex settings as defaults for plex_scan target.
+
+        Values in target_config take precedence over integrations settings.
+        """
+        plex = self._integrations.plex
+        merged: dict[str, Any] = {}
+
+        # Set defaults from integrations.plex (connection settings)
+        if plex.url:
+            merged["url"] = plex.url
+        if plex.token:
+            merged["token"] = plex.token
+        if plex.library_id:
+            merged["library_id"] = plex.library_id
+        if plex.library_name:
+            merged["library_name"] = plex.library_name
+
+        # Set defaults from integrations.plex.scan_on_activity (feature-specific)
+        if plex.scan_on_activity.rewrite:
+            merged["rewrite"] = plex.scan_on_activity.rewrite
+
+        # Target-specific values override integrations defaults
+        merged.update(target_config)
+
+        return merged
+
+    def _merge_autoscan_config(self, target_config: dict[str, Any]) -> dict[str, Any]:
+        """Merge integrations.autoscan settings as defaults for autoscan target.
+
+        Values in target_config take precedence over integrations settings.
+        """
+        autoscan = self._integrations.autoscan
+        merged: dict[str, Any] = {}
+
+        # Set defaults from integrations.autoscan
+        if autoscan.url:
+            merged["url"] = autoscan.url
+        if autoscan.trigger:
+            merged["trigger"] = autoscan.trigger
+        if autoscan.username:
+            merged["username"] = autoscan.username
+        if autoscan.password:
+            merged["password"] = autoscan.password
+        merged["verify_ssl"] = autoscan.verify_ssl
+        merged["timeout"] = autoscan.timeout
+        if autoscan.rewrite:
+            merged["rewrite"] = autoscan.rewrite
+
+        # Target-specific values override integrations defaults
+        merged.update(target_config)
+
+        return merged
+
+    def _auto_create_integration_targets(
+        self,
+        cache_dir: Path,
+        destination_dir: Path,
+        has_explicit_plex: bool,
+        has_explicit_autoscan: bool,
+    ) -> list[NotificationTarget]:
+        """Auto-create targets from integrations when scan_on_activity/enabled is true.
+
+        This allows users to configure integrations in one place and have them
+        automatically trigger on file activity without duplicating config in
+        notifications.targets.
+        """
+        auto_targets: list[NotificationTarget] = []
+
+        # Auto-create Plex scan target if scan_on_activity.enabled and no explicit target
+        plex = self._integrations.plex
+        if plex.scan_on_activity.enabled and not has_explicit_plex:
+            config = {
+                "type": "plex_scan",
+                "url": plex.url,
+                "token": plex.token,
+                "library_id": plex.library_id,
+                "library_name": plex.library_name,
+                "rewrite": plex.scan_on_activity.rewrite,
+            }
+            target = PlexScanTarget(config, destination_dir=destination_dir)
+            if target.enabled():
+                auto_targets.append(target)
+                LOGGER.debug("Auto-created Plex scan target from integrations.plex.scan_on_activity")
+            else:
+                LOGGER.debug("Plex scan_on_activity enabled but target not functional (missing url/token/library)")
+
+        # Auto-create Autoscan target if enabled and no explicit target
+        autoscan = self._integrations.autoscan
+        if autoscan.enabled and not has_explicit_autoscan:
+            if autoscan.url:
+                config = {
+                    "type": "autoscan",
+                    "url": autoscan.url,
+                    "trigger": autoscan.trigger,
+                    "username": autoscan.username,
+                    "password": autoscan.password,
+                    "verify_ssl": autoscan.verify_ssl,
+                    "timeout": autoscan.timeout,
+                    "rewrite": autoscan.rewrite,
+                }
+                target = AutoscanTarget(config, destination_dir=destination_dir)
+                auto_targets.append(target)
+                LOGGER.debug("Auto-created Autoscan target from integrations.autoscan")
+            else:
+                LOGGER.debug("Autoscan enabled but url not configured")
+
+        return auto_targets
 
     def _discord_webhook_from(self, entry: dict[str, Any]) -> str | None:
         webhook = entry.get("webhook_url")

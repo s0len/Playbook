@@ -60,6 +60,7 @@ class ProcessingStats:
     processed: int = 0
     skipped: int = 0
     ignored: int = 0
+    cancelled: bool = False
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     skipped_details: list[str] = field(default_factory=list)

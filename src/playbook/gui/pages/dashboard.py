@@ -98,12 +98,40 @@ def _quick_actions_card() -> None:
         ui.label("Quick Actions").classes("text-xl font-semibold text-slate-700 dark:text-slate-200 mb-3")
 
         with ui.column().classes("w-full gap-2"):
-            # Run Now button
-            ui.button(
+            # Run/Stop button (dynamic based on processing state)
+            run_button = ui.button(
                 "Run Now",
                 icon="play_arrow",
                 on_click=_trigger_run,
             ).classes("w-full").props("color=primary")
+
+            stop_button = ui.button(
+                "Stop Processing",
+                icon="stop",
+                on_click=_stop_processing,
+            ).classes("w-full").props("color=negative")
+            stop_button.set_visibility(False)
+
+            # Track last state to avoid unnecessary updates that cause flickering
+            last_processing_state = [None]
+
+            def update_buttons() -> None:
+                try:
+                    current_state = gui_state.is_processing
+                    # Only update if state actually changed
+                    if current_state != last_processing_state[0]:
+                        last_processing_state[0] = current_state
+                        if current_state:
+                            run_button.set_visibility(False)
+                            stop_button.set_visibility(True)
+                        else:
+                            run_button.set_visibility(True)
+                            stop_button.set_visibility(False)
+                except (RuntimeError, KeyError):
+                    pass
+
+            safe_timer(0.5, update_buttons)
+            update_buttons()
 
             # Clear Cache button
             ui.button(
@@ -131,14 +159,20 @@ def _status_card() -> None:
                 status_icon = ui.icon("circle").classes("text-sm")
                 status_label = ui.label("Idle").classes("text-slate-700 dark:text-slate-300")
 
+                # Track last state to avoid unnecessary updates
+                last_status = [None]
+
                 def update_status() -> None:
                     try:
-                        if gui_state.is_processing:
-                            status_icon.classes(replace="text-green-500 animate-pulse text-sm")
-                            status_label.text = "Processing..."
-                        else:
-                            status_icon.classes(replace="text-slate-400 text-sm")
-                            status_label.text = "Idle"
+                        current = gui_state.is_processing
+                        if current != last_status[0]:
+                            last_status[0] = current
+                            if current:
+                                status_icon.classes(replace="text-green-500 animate-pulse text-sm")
+                                status_label.text = "Processing..."
+                            else:
+                                status_icon.classes(replace="text-slate-400 text-sm")
+                                status_label.text = "Idle"
                     except (RuntimeError, KeyError):
                         # Client disconnected - timer will be cleaned up
                         pass
@@ -151,12 +185,17 @@ def _status_card() -> None:
                 ui.icon("schedule").classes("text-lg")
                 last_run_label = ui.label("Never")
 
+                last_run_value = [None]
+
                 def update_last_run() -> None:
                     try:
-                        if gui_state.last_run_at:
-                            last_run_label.text = gui_state.last_run_at.strftime("%Y-%m-%d %H:%M:%S")
-                        else:
-                            last_run_label.text = "Never"
+                        current = gui_state.last_run_at
+                        if current != last_run_value[0]:
+                            last_run_value[0] = current
+                            if current:
+                                last_run_label.text = current.strftime("%Y-%m-%d %H:%M:%S")
+                            else:
+                                last_run_label.text = "Never"
                     except (RuntimeError, KeyError):
                         # Client disconnected - timer will be cleaned up
                         pass
@@ -169,9 +208,14 @@ def _status_card() -> None:
                 ui.icon("replay").classes("text-lg")
                 run_count_label = ui.label("0 runs")
 
+                last_run_count = [None]
+
                 def update_run_count() -> None:
                     try:
-                        run_count_label.text = f"{gui_state.run_count} runs"
+                        current = gui_state.run_count
+                        if current != last_run_count[0]:
+                            last_run_count[0] = current
+                            run_count_label.text = f"{current} runs"
                     except (RuntimeError, KeyError):
                         # Client disconnected - timer will be cleaned up
                         pass
@@ -206,13 +250,24 @@ async def _trigger_run() -> None:
 
     try:
         # Run processor in background
-        await asyncio.get_event_loop().run_in_executor(None, gui_state.processor.process_all)
-        _safe_notify("Processing complete", type="positive")
+        stats = await asyncio.get_event_loop().run_in_executor(None, gui_state.processor.process_all)
+        if stats.cancelled:
+            _safe_notify("Processing stopped", type="warning")
+        else:
+            _safe_notify("Processing complete", type="positive")
     except Exception as e:
         LOGGER.exception("Processing error: %s", e)
         _safe_notify(f"Processing error: {e}", type="negative")
     finally:
         gui_state.set_processing(False)
+
+
+def _stop_processing() -> None:
+    """Stop the current processing run."""
+    if gui_state.request_cancel():
+        _safe_notify("Stopping processing after current file...", type="warning")
+    else:
+        _safe_notify("No processing run to stop", type="info")
 
 
 async def _clear_cache() -> None:

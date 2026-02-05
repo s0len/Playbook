@@ -508,17 +508,30 @@ class PlexMetadataSync:
         self.sports_filter = sports_filter
 
         # Resolve settings from config + env vars + explicit params
-        plex_cfg = config.settings.plex_sync
+        # Prefer new integrations.plex structure, fall back to legacy plex_sync
+        plex_integration = config.settings.integrations.plex
+        plex_sync_cfg = plex_integration.metadata_sync
+        legacy_cfg = config.settings.plex_sync
 
-        self.plex_url = plex_url or os.getenv("PLEX_URL") or plex_cfg.url
-        self.plex_token = plex_token or os.getenv("PLEX_TOKEN") or plex_cfg.token
-        self.library_id = library_id or os.getenv("PLEX_LIBRARY_ID") or plex_cfg.library_id
-        self.library_name = library_name or os.getenv("PLEX_LIBRARY_NAME") or plex_cfg.library_name
+        # Connection settings: integrations.plex > env vars > legacy plex_sync
+        self.plex_url = plex_url or os.getenv("PLEX_URL") or plex_integration.url or legacy_cfg.url
+        self.plex_token = plex_token or os.getenv("PLEX_TOKEN") or plex_integration.token or legacy_cfg.token
+        self.library_id = (
+            library_id or os.getenv("PLEX_LIBRARY_ID") or plex_integration.library_id or legacy_cfg.library_id
+        )
+        self.library_name = (
+            library_name or os.getenv("PLEX_LIBRARY_NAME") or plex_integration.library_name or legacy_cfg.library_name
+        )
 
+        # Metadata sync settings: prefer new structure, fall back to legacy
         env_timeout = os.getenv("PLEX_TIMEOUT")
-        self.timeout = float(env_timeout) if env_timeout else (timeout or plex_cfg.timeout)
+        default_timeout = plex_sync_cfg.timeout if plex_sync_cfg.timeout != 15.0 else legacy_cfg.timeout
+        self.timeout = float(env_timeout) if env_timeout else (timeout or default_timeout)
+
         self.rate_limit_delay = rate_limit_delay
-        self.scan_wait = scan_wait if scan_wait is not None else plex_cfg.scan_wait
+
+        default_scan_wait = plex_sync_cfg.scan_wait if plex_sync_cfg.scan_wait != 5.0 else legacy_cfg.scan_wait
+        self.scan_wait = scan_wait if scan_wait is not None else default_scan_wait
 
         self._client: PlexClient | None = None
         self._library_id_resolved: str | None = None
@@ -616,7 +629,7 @@ class PlexMetadataSync:
             if not self.library_id and not self.library_name:
                 raise PlexApiError(
                     "Provide a Plex library id or name "
-                    "(settings.plex_metadata_sync.library_id/library_name or env PLEX_LIBRARY_ID/PLEX_LIBRARY_NAME)"
+                    "(settings.integrations.plex.library_id/library_name or env PLEX_LIBRARY_ID/PLEX_LIBRARY_NAME)"
                 )
             self._library_id_resolved = self.client.find_library(
                 library_id=self.library_id,
@@ -1083,25 +1096,63 @@ def create_plex_sync_from_config(config: AppConfig) -> PlexMetadataSync | None:
     """Create a PlexMetadataSync instance from config with env var overrides.
 
     Returns None if sync is disabled.
-    """
-    plex_cfg = config.settings.plex_sync
 
-    # Check if enabled
+    Prefers new integrations.plex.metadata_sync structure, falls back to
+    legacy plex_sync for backwards compatibility.
+    """
+    # Get settings from both new and legacy config paths
+    plex_integration = config.settings.integrations.plex
+    metadata_sync_cfg = plex_integration.metadata_sync
+    legacy_cfg = config.settings.plex_sync
+
+    # Check if enabled (prefer new structure, fall back to legacy)
     env_enabled = env_bool("PLEX_SYNC_ENABLED")
-    enabled = plex_cfg.enabled if env_enabled is None else env_enabled
+    if env_enabled is not None:
+        enabled = env_enabled
+    elif metadata_sync_cfg.enabled:
+        enabled = True
+    else:
+        enabled = legacy_cfg.enabled
+
     if not enabled:
         return None
 
-    # Resolve settings
+    # Resolve settings (prefer new structure, fall back to legacy)
     env_force = env_bool("PLEX_FORCE")
     env_dry_run = env_bool("PLEX_SYNC_DRY_RUN")
     env_sports = env_list("PLEX_SPORTS")
 
+    # Determine force setting
+    if env_force is not None:
+        force = env_force
+    elif metadata_sync_cfg.force:
+        force = True
+    else:
+        force = legacy_cfg.force
+
+    # Determine dry_run setting
+    if env_dry_run is not None:
+        dry_run = env_dry_run
+    elif metadata_sync_cfg.dry_run:
+        dry_run = True
+    else:
+        dry_run = legacy_cfg.dry_run
+
+    # Determine sports filter
+    if env_sports is not None:
+        sports_filter = env_sports
+    elif metadata_sync_cfg.sports:
+        sports_filter = metadata_sync_cfg.sports
+    elif legacy_cfg.sports:
+        sports_filter = legacy_cfg.sports
+    else:
+        sports_filter = None
+
     return PlexMetadataSync(
         config=config,
-        force=plex_cfg.force if env_force is None else env_force,
-        dry_run=plex_cfg.dry_run if env_dry_run is None else env_dry_run,
-        sports_filter=env_sports if env_sports is not None else (plex_cfg.sports or None),
+        force=force,
+        dry_run=dry_run,
+        sports_filter=sports_filter,
     )
 
 
@@ -1137,7 +1188,10 @@ def main() -> int:
 
     sync = create_plex_sync_from_config(config)
     if sync is None:
-        LOGGER.info("Plex metadata sync is disabled; set settings.plex_metadata_sync.enabled or PLEX_SYNC_ENABLED=true")
+        LOGGER.info(
+            "Plex metadata sync is disabled; set settings.integrations.plex.metadata_sync.enabled "
+            "or PLEX_SYNC_ENABLED=true"
+        )
         return 0
 
     try:

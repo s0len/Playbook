@@ -94,6 +94,17 @@ class GUIState:
             self.run_count += 1
         self._notify_update("status", {"is_processing": is_processing})
 
+    def request_cancel(self) -> bool:
+        """Request cancellation of the current processing run.
+
+        Returns:
+            True if cancellation was requested, False if no processing is active.
+        """
+        if not self.is_processing or not self.processor:
+            return False
+        self.processor.request_cancel()
+        return True
+
     def register_update_callback(self, callback: Any) -> None:
         """Register a callback to be notified of state changes."""
         if callback not in self._update_callbacks:
