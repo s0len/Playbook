@@ -172,7 +172,7 @@ def episode_cache_key(match: SportFileMatch) -> str:
         A string cache key for the episode.
     """
     episode = match.episode
-    metadata = episode.metadata or {}
+    metadata = episode.metadata if isinstance(episode.metadata, dict) else {}
     for field in ("id", "guid", "episode_id", "uuid"):
         value = metadata.get(field)
         if value:

@@ -102,7 +102,7 @@ def _season_identifier(season: Season) -> str:
 
 def _episode_identifier(episode: Episode) -> str:
     """Generate a stable identifier for an episode."""
-    metadata = episode.metadata or {}
+    metadata = episode.metadata if isinstance(episode.metadata, dict) else {}
     for field in ("id", "guid", "episode_id", "uuid"):
         value = metadata.get(field)
         if value:
