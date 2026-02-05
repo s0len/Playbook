@@ -287,6 +287,35 @@ def _sports_table() -> None:
     # State for tracking selected rows
     selection_state = {"selected": []}
 
+    # Action bar (hidden by default, shown above table when items selected)
+    action_bar = ui.row().classes("w-full items-center gap-2 p-3 mb-4 bg-slate-100 dark:bg-slate-800 rounded-lg")
+    action_bar.set_visibility(False)
+
+    with action_bar:
+        selection_label = ui.label("0 selected").classes("font-medium text-slate-700 dark:text-slate-200 mr-4")
+
+        ui.button("Enable", icon="check_circle", on_click=lambda: _bulk_action("enable", selection_state["selected"])).props(
+            "flat dense color=positive"
+        )
+        ui.button("Disable", icon="cancel", on_click=lambda: _bulk_action("disable", selection_state["selected"])).props(
+            "flat dense color=warning"
+        )
+
+        ui.separator().props("vertical").classes("mx-2")
+
+        ui.button("Clear History", icon="delete_sweep", on_click=lambda: _bulk_action("clear_history", selection_state["selected"])).props(
+            "flat dense color=negative"
+        )
+        ui.button("Reprocess", icon="refresh", on_click=lambda: _bulk_action("reprocess", selection_state["selected"])).props(
+            "flat dense color=info"
+        )
+
+        ui.space()
+
+        clear_btn = ui.button("Clear Selection", icon="close", on_click=lambda: table.run_method("clearSelection")).props(
+            "flat dense"
+        ).classes("text-slate-500")
+
     # Create table with custom rendering
     columns = [
         {"name": "status", "label": "Status", "field": "status", "align": "center"},
@@ -405,57 +434,6 @@ def _sports_table() -> None:
         update_action_bar()
 
     table.on("selection", on_selection)
-
-    # Floating action bar (hidden by default)
-    action_bar = ui.card().classes(
-        "fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 "
-        "bg-slate-800 dark:bg-slate-700 shadow-xl rounded-full"
-    )
-    action_bar.set_visibility(False)
-
-    with action_bar:
-        with ui.row().classes("items-center gap-4"):
-            selection_label = ui.label("0 selected").classes("text-white font-medium")
-
-            ui.separator().classes("bg-slate-600").props("vertical")
-
-            # Enable button
-            ui.button(
-                "Enable",
-                icon="check_circle",
-                on_click=lambda: _bulk_action("enable", selection_state["selected"]),
-            ).props("flat dense color=positive").classes("text-white")
-
-            # Disable button
-            ui.button(
-                "Disable",
-                icon="cancel",
-                on_click=lambda: _bulk_action("disable", selection_state["selected"]),
-            ).props("flat dense color=warning").classes("text-white")
-
-            ui.separator().classes("bg-slate-600").props("vertical")
-
-            # Clear History button
-            ui.button(
-                "Clear History",
-                icon="delete_sweep",
-                on_click=lambda: _bulk_action("clear_history", selection_state["selected"]),
-            ).props("flat dense color=negative").classes("text-white")
-
-            # Reprocess button
-            ui.button(
-                "Reprocess",
-                icon="refresh",
-                on_click=lambda: _bulk_action("reprocess", selection_state["selected"]),
-            ).props("flat dense color=info").classes("text-white")
-
-            ui.separator().classes("bg-slate-600").props("vertical")
-
-            # Clear selection button
-            ui.button(
-                icon="close",
-                on_click=lambda: table.set_value({"selected": []}),
-            ).props("flat round dense").classes("text-slate-400")
 
     def update_action_bar() -> None:
         """Update action bar visibility and selection count."""
