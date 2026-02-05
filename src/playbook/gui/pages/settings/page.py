@@ -199,7 +199,10 @@ def _save_changes(state: SettingsFormState) -> None:
 
                 new_config = load_config(config_path)
                 gui_state.config = new_config
-                LOGGER.info("Reloaded configuration after save")
+
+                # Reload processor services (notifications, triggers, etc.)
+                gui_state.processor.reload_services(new_config)
+                LOGGER.info("Reloaded configuration and services after save")
             except Exception as e:
                 LOGGER.warning("Failed to reload configuration: %s", e)
                 return True, "Configuration saved but reload failed. Restart may be needed."
