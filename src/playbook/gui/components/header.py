@@ -96,14 +96,20 @@ def _status_indicator() -> None:
         status_icon = ui.icon("circle").classes("text-sm")
         status_label = ui.label("Idle").classes("text-xs text-slate-300")
 
+        # Track last state to avoid unnecessary updates that cause flickering
+        last_status = [None]
+
         def update_status() -> None:
             try:
-                if gui_state.is_processing:
-                    status_icon.classes(replace="text-green-400 animate-pulse text-sm")
-                    status_label.text = "Processing"
-                else:
-                    status_icon.classes(replace="text-slate-400 text-sm")
-                    status_label.text = "Idle"
+                current = gui_state.is_processing
+                if current != last_status[0]:
+                    last_status[0] = current
+                    if current:
+                        status_icon.classes(replace="text-green-400 animate-pulse text-sm")
+                        status_label.text = "Processing"
+                    else:
+                        status_icon.classes(replace="text-slate-400 text-sm")
+                        status_label.text = "Idle"
             except (RuntimeError, KeyError):
                 pass
 

@@ -112,14 +112,21 @@ def _quick_actions_card() -> None:
             ).classes("w-full").props("color=negative")
             stop_button.set_visibility(False)
 
+            # Track last state to avoid unnecessary updates that cause flickering
+            last_processing_state = [None]
+
             def update_buttons() -> None:
                 try:
-                    if gui_state.is_processing:
-                        run_button.set_visibility(False)
-                        stop_button.set_visibility(True)
-                    else:
-                        run_button.set_visibility(True)
-                        stop_button.set_visibility(False)
+                    current_state = gui_state.is_processing
+                    # Only update if state actually changed
+                    if current_state != last_processing_state[0]:
+                        last_processing_state[0] = current_state
+                        if current_state:
+                            run_button.set_visibility(False)
+                            stop_button.set_visibility(True)
+                        else:
+                            run_button.set_visibility(True)
+                            stop_button.set_visibility(False)
                 except (RuntimeError, KeyError):
                     pass
 
@@ -152,14 +159,20 @@ def _status_card() -> None:
                 status_icon = ui.icon("circle").classes("text-sm")
                 status_label = ui.label("Idle").classes("text-slate-700 dark:text-slate-300")
 
+                # Track last state to avoid unnecessary updates
+                last_status = [None]
+
                 def update_status() -> None:
                     try:
-                        if gui_state.is_processing:
-                            status_icon.classes(replace="text-green-500 animate-pulse text-sm")
-                            status_label.text = "Processing..."
-                        else:
-                            status_icon.classes(replace="text-slate-400 text-sm")
-                            status_label.text = "Idle"
+                        current = gui_state.is_processing
+                        if current != last_status[0]:
+                            last_status[0] = current
+                            if current:
+                                status_icon.classes(replace="text-green-500 animate-pulse text-sm")
+                                status_label.text = "Processing..."
+                            else:
+                                status_icon.classes(replace="text-slate-400 text-sm")
+                                status_label.text = "Idle"
                     except (RuntimeError, KeyError):
                         # Client disconnected - timer will be cleaned up
                         pass
@@ -172,12 +185,17 @@ def _status_card() -> None:
                 ui.icon("schedule").classes("text-lg")
                 last_run_label = ui.label("Never")
 
+                last_run_value = [None]
+
                 def update_last_run() -> None:
                     try:
-                        if gui_state.last_run_at:
-                            last_run_label.text = gui_state.last_run_at.strftime("%Y-%m-%d %H:%M:%S")
-                        else:
-                            last_run_label.text = "Never"
+                        current = gui_state.last_run_at
+                        if current != last_run_value[0]:
+                            last_run_value[0] = current
+                            if current:
+                                last_run_label.text = current.strftime("%Y-%m-%d %H:%M:%S")
+                            else:
+                                last_run_label.text = "Never"
                     except (RuntimeError, KeyError):
                         # Client disconnected - timer will be cleaned up
                         pass
@@ -190,9 +208,14 @@ def _status_card() -> None:
                 ui.icon("replay").classes("text-lg")
                 run_count_label = ui.label("0 runs")
 
+                last_run_count = [None]
+
                 def update_run_count() -> None:
                     try:
-                        run_count_label.text = f"{gui_state.run_count} runs"
+                        current = gui_state.run_count
+                        if current != last_run_count[0]:
+                            last_run_count[0] = current
+                            run_count_label.text = f"{current} runs"
                     except (RuntimeError, KeyError):
                         # Client disconnected - timer will be cleaned up
                         pass
