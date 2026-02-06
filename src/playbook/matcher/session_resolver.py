@@ -76,12 +76,18 @@ def build_session_lookup(pattern: PatternConfig, season: Season) -> SessionLooku
     """
     index = SessionLookupIndex()
 
-    # Add episode titles and aliases
+    # Add episode titles first (these take priority)
     for episode in season.episodes:
         normalized = normalize_token(episode.title)
         index.add(normalized, episode.title)
+
+    # Add episode aliases (don't overwrite existing entries, e.g. if "Early Prelims"
+    # is both an episode title AND an alias of "Prelims", the title wins)
+    for episode in season.episodes:
         for alias in episode.aliases:
-            index.add(normalize_token(alias), episode.title)
+            normalized_alias = normalize_token(alias)
+            if index.get_direct(normalized_alias) is None:
+                index.add(normalized_alias, episode.title)
 
     # Add pattern-specific session aliases
     for canonical, aliases in pattern.session_aliases.items():
