@@ -291,5 +291,18 @@ async def _clear_cache() -> None:
 
 
 async def _refresh_metadata() -> None:
-    """Trigger metadata refresh."""
-    _safe_notify("Metadata refresh will happen on next run", type="info")
+    """Invalidate metadata cache so fresh data is fetched on next run."""
+    if not gui_state.processor:
+        _safe_notify("Processor not initialized", type="warning")
+        return
+
+    _safe_notify("Refreshing metadata...", type="info")
+
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, gui_state.processor.clear_metadata_cache
+        )
+        _safe_notify("Metadata cache cleared — run a scan to fetch fresh data", type="positive")
+    except Exception as e:
+        LOGGER.exception("Error refreshing metadata: %s", e)
+        _safe_notify(f"Error refreshing metadata: {e}", type="negative")
