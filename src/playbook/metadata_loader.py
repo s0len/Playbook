@@ -168,6 +168,14 @@ class DynamicMetadataLoader:
             return None
         return self.load_show(show_slug, sport.season_overrides)
 
+    def invalidate_cache(self) -> None:
+        """Invalidate all cached metadata (in-memory and SQLite)."""
+        with self._lock:
+            self._cache.clear()
+            self._failed_slugs.clear()
+        if self._client is not None:
+            self._client.invalidate_cache()
+
     def close(self) -> None:
         """Close the API client."""
         if self._client is not None:

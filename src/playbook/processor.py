@@ -171,6 +171,11 @@ class Processor:
 
         return result.runtimes
 
+    def clear_metadata_cache(self) -> None:
+        """Clear the TVSportsDB metadata cache (both in-memory and SQLite)."""
+        self._dynamic_loader.invalidate_cache()
+        LOGGER.info(self._format_log("Metadata Cache Cleared", {}))
+
     def clear_processed_cache(self) -> None:
         if self.config.settings.dry_run:
             LOGGER.debug(
