@@ -6774,6 +6774,8 @@ default_sports:
     # UFC filenames don't contain years (just event numbers like UFC 318),
     # so we use explicit variants. Files match based on event title in metadata.
     variants:
+      - year: 2023
+        show_slug: "ufc-2023"
       - year: 2024
         show_slug: "ufc-2024"
       - year: 2025
