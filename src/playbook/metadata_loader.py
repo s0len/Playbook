@@ -173,8 +173,10 @@ class DynamicMetadataLoader:
         with self._lock:
             self._cache.clear()
             self._failed_slugs.clear()
-        if self._client is not None:
-            self._client.invalidate_cache()
+        # Ensure the client exists so we can clear the shared SQLite cache.
+        # Static sports (like UFC variants) share the same cache DB file.
+        client = self._get_client()
+        client.invalidate_cache()
 
     def close(self) -> None:
         """Close the API client."""
