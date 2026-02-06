@@ -6771,7 +6771,15 @@ default_sports:
     name: UFC
     pattern_sets:
       - ufc
-    show_slug_template: "ufc-{year}"
+    # UFC filenames don't contain years (just event numbers like UFC 318),
+    # so we use explicit variants. Files match based on event title in metadata.
+    variants:
+      - year: 2024
+        show_slug: "ufc-2024"
+      - year: 2025
+        show_slug: "ufc-2025"
+      - year: 2026
+        show_slug: "ufc-2026"
 
   # ------------------------------------------------------------------
   # North American Leagues
@@ -6828,8 +6836,11 @@ default_sports:
     name: ISU Figure Skating
     pattern_sets:
       - isu_figure_skating
+    # Show spans 2025-2026 season, so both years point to same slug
     variants:
       - year: 2025
+        show_slug: "isu-figure-skating-2025-2026"
+      - year: 2026
         show_slug: "isu-figure-skating-2025-2026"
 
   # ------------------------------------------------------------------
