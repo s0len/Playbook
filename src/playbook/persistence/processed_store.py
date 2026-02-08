@@ -6,6 +6,7 @@ enabling GUI visualization and manual file management capabilities.
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 import threading
 from dataclasses import dataclass
@@ -15,6 +16,8 @@ from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+LOGGER = logging.getLogger(__name__)
 
 # Valid status values for processed files
 ProcessingStatus = Literal["linked", "copied", "symlinked", "skipped", "error"]
@@ -107,17 +110,40 @@ class ProcessedFileStore:
 
         Uses thread-local storage to maintain separate connections per thread,
         which is required by SQLite.
+
+        If corrupted WAL/SHM lock files are detected (e.g. after SIGKILL),
+        they are removed and the connection is retried once.
         """
         if not hasattr(self._local, "connection") or self._local.connection is None:
             self._db_path.parent.mkdir(parents=True, exist_ok=True)
-            self._local.connection = sqlite3.connect(
-                self._db_path,
-                detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
-            )
-            # Enable WAL mode for better concurrency
-            self._local.connection.execute("PRAGMA journal_mode=WAL")
-            self._local.connection.row_factory = sqlite3.Row
+            try:
+                self._local.connection = self._open_connection()
+            except sqlite3.OperationalError as exc:
+                if "locking protocol" in str(exc):
+                    LOGGER.warning("Corrupted SQLite lock files detected, recovering: %s", self._db_path)
+                    self._remove_lock_files()
+                    self._local.connection = self._open_connection()
+                else:
+                    raise
         return self._local.connection
+
+    def _open_connection(self) -> sqlite3.Connection:
+        """Open a new SQLite connection with WAL mode enabled."""
+        conn = sqlite3.connect(
+            self._db_path,
+            detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
+        )
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    def _remove_lock_files(self) -> None:
+        """Remove SQLite WAL/SHM lock files that may be corrupted."""
+        for suffix in ("-shm", "-wal"):
+            lock_file = Path(str(self._db_path) + suffix)
+            if lock_file.exists():
+                lock_file.unlink()
+                LOGGER.info("Removed corrupted lock file: %s", lock_file)
 
     def _init_db(self) -> None:
         """Initialize database schema."""

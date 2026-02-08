@@ -105,17 +105,41 @@ class MetadataCacheStore:
         self._init_schema()
 
     def _get_connection(self) -> sqlite3.Connection:
-        """Get a thread-local database connection."""
+        """Get a thread-local database connection.
+
+        If corrupted WAL/SHM lock files are detected (e.g. after SIGKILL),
+        they are removed and the connection is retried once.
+        """
         if not hasattr(self._local, "connection") or self._local.connection is None:
-            self._local.connection = sqlite3.connect(
-                str(self.db_path),
-                detect_types=sqlite3.PARSE_DECLTYPES,
-                check_same_thread=False,
-            )
-            self._local.connection.row_factory = sqlite3.Row
-            # Enable WAL mode for better concurrency
-            self._local.connection.execute("PRAGMA journal_mode=WAL")
+            try:
+                self._local.connection = self._open_connection()
+            except sqlite3.OperationalError as exc:
+                if "locking protocol" in str(exc):
+                    LOGGER.warning("Corrupted SQLite lock files detected, recovering: %s", self.db_path)
+                    self._remove_lock_files()
+                    self._local.connection = self._open_connection()
+                else:
+                    raise
         return self._local.connection
+
+    def _open_connection(self) -> sqlite3.Connection:
+        """Open a new SQLite connection with WAL mode enabled."""
+        conn = sqlite3.connect(
+            str(self.db_path),
+            detect_types=sqlite3.PARSE_DECLTYPES,
+            check_same_thread=False,
+        )
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        return conn
+
+    def _remove_lock_files(self) -> None:
+        """Remove SQLite WAL/SHM lock files that may be corrupted."""
+        for suffix in ("-shm", "-wal"):
+            lock_file = Path(str(self.db_path) + suffix)
+            if lock_file.exists():
+                lock_file.unlink()
+                LOGGER.info("Removed corrupted lock file: %s", lock_file)
 
     def _init_schema(self) -> None:
         """Initialize the database schema."""
