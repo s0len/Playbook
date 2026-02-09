@@ -126,7 +126,7 @@ def _resolve_asset_url(base_url: str, value: str | None) -> str | None:
     # Otherwise, base_url is a file path; get its directory
     # Handle bare domain URLs (no path component after scheme://host)
     scheme_end = base_url.find("://")
-    if scheme_end >= 0 and "/" not in base_url[scheme_end + 3:]:
+    if scheme_end >= 0 and "/" not in base_url[scheme_end + 3 :]:
         return urljoin(base_url + "/", value)
 
     base_dir = base_url.rsplit("/", 1)[0] + "/"

@@ -242,9 +242,9 @@ def select_episode(
                 # Return the closest match by date
                 return min(
                     date_matched,
-                    key=lambda ep: abs((parsed_date - ep.originally_available).days)
-                    if ep.originally_available
-                    else 999,
+                    key=lambda ep: (
+                        abs((parsed_date - ep.originally_available).days) if ep.originally_available else 999
+                    ),
                 )
             # No date-matching episodes found - this is likely a mismatch
             # Only return a match if there's exactly one candidate (no ambiguity)

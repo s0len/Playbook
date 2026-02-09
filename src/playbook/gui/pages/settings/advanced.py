@@ -60,11 +60,7 @@ def _render_yaml_editor(state: SettingsFormState) -> None:
     ):
         yaml_text = state.to_yaml()
 
-        editor = (
-            ui.textarea(value=yaml_text)
-            .classes("w-full font-mono text-sm yaml-editor")
-            .props("outlined")
-        )
+        editor = ui.textarea(value=yaml_text).classes("w-full font-mono text-sm yaml-editor").props("outlined")
 
         with ui.row().classes("w-full items-center justify-between mt-4"):
             with ui.row().classes("gap-2"):
@@ -249,10 +245,12 @@ def _apply_yaml_changes(state: SettingsFormState, yaml_text: str) -> None:
         backup_dir = state.config_path.parent / "backups"
         backup_dir.mkdir(parents=True, exist_ok=True)
         from datetime import datetime
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_path = backup_dir / f"{state.config_path.stem}_{timestamp}.yaml"
         if state.config_path.exists():
             import shutil
+
             shutil.copy2(state.config_path, backup_path)
 
         # Write YAML directly to disk (preserves user formatting)
@@ -260,8 +258,10 @@ def _apply_yaml_changes(state: SettingsFormState, yaml_text: str) -> None:
 
         # Reload processor config
         from ...state import gui_state
+
         if gui_state.processor:
             from playbook.config import load_config
+
             gui_state.config = load_config(state.config_path)
             gui_state.processor.config = gui_state.config
 
