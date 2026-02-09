@@ -179,7 +179,7 @@ def test_run_examples_flag_shows_extended_content(tmp_path, monkeypatch) -> None
 
     with mock.patch("playbook.cli.CONSOLE") as mock_console:
         # Mock console to capture output
-        mock_console.print = lambda *args, **kwargs: output.write(str(args[0]) + "\n")
+        mock_console.print = lambda *args, **kwargs: output.write((str(args[0]) if args else "") + "\n")
 
         result = cli.main(["run", "--examples", "--config", str(config_path)])
 
@@ -203,7 +203,7 @@ def test_validate_config_examples_flag_shows_extended_content(tmp_path, monkeypa
     output = io.StringIO()
 
     with mock.patch("playbook.cli.CONSOLE") as mock_console:
-        mock_console.print = lambda *args, **kwargs: output.write(str(args[0]) + "\n")
+        mock_console.print = lambda *args, **kwargs: output.write((str(args[0]) if args else "") + "\n")
 
         result = cli.main(["validate-config", "--examples", "--config", str(config_path)])
 
@@ -224,7 +224,7 @@ def test_kometa_trigger_examples_flag_shows_extended_content(tmp_path, monkeypat
     output = io.StringIO()
 
     with mock.patch("playbook.cli.CONSOLE") as mock_console:
-        mock_console.print = lambda *args, **kwargs: output.write(str(args[0]) + "\n")
+        mock_console.print = lambda *args, **kwargs: output.write((str(args[0]) if args else "") + "\n")
 
         result = cli.main(["kometa-trigger", "--examples", "--config", str(config_path)])
 

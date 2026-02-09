@@ -2181,8 +2181,8 @@ class TestNBADotSeparatedFormat:
 
         show = Show(key="nba", title="NBA", summary=None, seasons=[season])
 
-        # Build alias lookup
-        alias_lookup = _build_team_alias_lookup(show, {})
+        # Build alias lookup using the NBA base alias map
+        alias_lookup = _build_team_alias_lookup(show, get_team_alias_map("nba"))
 
         # Create structured name as if parsed from "NBA.RS.2024.Denver.Nuggets.vs.LA.Clippers.22.12.mkv"
         structured = StructuredName(

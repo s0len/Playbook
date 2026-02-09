@@ -94,8 +94,23 @@ class RichHelpFormatter(argparse.HelpFormatter):
             Formatted help string
         """
         # Check if output is a TTY - if not, fall back to standard formatting
+        # but still append custom sections as plain text
         if not self.console.is_terminal:
-            return super().format_help()
+            help_text = super().format_help()
+            if self._examples:
+                help_text += "\nExamples:\n"
+                for i, (desc, cmd) in enumerate(self._examples, 1):
+                    help_text += f"  {i}. {desc}\n     $ {cmd}\n\n"
+                help_text += "  Run with --examples to see more comprehensive usage examples\n"
+            if self._env_vars:
+                help_text += "\nEnvironment Variables:\n"
+                for var_name, description in self._env_vars:
+                    help_text += f"  {var_name:30s}  {description}\n"
+            if self._tips:
+                help_text += "\nTips:\n"
+                for tip in self._tips:
+                    help_text += f"  - {tip}\n"
+            return help_text
 
         # Build the help output using Rich
         help_parts: list[str] = []

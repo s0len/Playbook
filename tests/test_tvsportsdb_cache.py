@@ -93,17 +93,14 @@ class TestTVSportsDBCache:
         )
         cache.save_show("test-show", show)
 
-        # Manually modify the cache file to have an old timestamp
-        cache_file = tmp_path / "cache" / "shows" / "test-show.json"
-        with cache_file.open("r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        # Set cached_at to 2 hours ago
+        # Directly update the SQLite expires_at to be in the past
         old_time = datetime.now(UTC) - timedelta(hours=2)
-        data["cached_at"] = old_time.isoformat(timespec="seconds")
-
-        with cache_file.open("w", encoding="utf-8") as f:
-            json.dump(data, f)
+        conn = cache._store._get_connection()
+        conn.execute(
+            "UPDATE metadata_cache SET expires_at = ? WHERE key = ?",
+            (old_time.isoformat(), "shows/test-show"),
+        )
+        conn.commit()
 
         # Should return None due to expiry
         assert cache.get_show("test-show") is None
@@ -119,16 +116,14 @@ class TestTVSportsDBCache:
         )
         cache.save_show("test-show", show)
 
-        # Manually set cached_at to 6 hours ago (within 12 hour TTL)
-        cache_file = tmp_path / "cache" / "shows" / "test-show.json"
-        with cache_file.open("r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        recent_time = datetime.now(UTC) - timedelta(hours=6)
-        data["cached_at"] = recent_time.isoformat(timespec="seconds")
-
-        with cache_file.open("w", encoding="utf-8") as f:
-            json.dump(data, f)
+        # Set expires_at to 6 hours from now (within 12 hour TTL)
+        future_time = datetime.now(UTC) + timedelta(hours=6)
+        conn = cache._store._get_connection()
+        conn.execute(
+            "UPDATE metadata_cache SET expires_at = ? WHERE key = ?",
+            (future_time.isoformat(), "shows/test-show"),
+        )
+        conn.commit()
 
         # Should still return the show
         retrieved = cache.get_show("test-show")
@@ -179,31 +174,42 @@ class TestTVSportsDBCache:
         assert cache.get_show("test-show") is None
         assert cache.get_season("test-show", 1) is None
 
-    def test_corrupted_cache_file_returns_none(self, tmp_path) -> None:
-        """Test that corrupted cache files are handled gracefully."""
+    def test_corrupted_cache_content_returns_none(self, tmp_path) -> None:
+        """Test that corrupted/unparseable cache content is handled gracefully."""
         cache = TVSportsDBCache(tmp_path / "cache", ttl_hours=12)
 
-        # Create a corrupted cache file
-        cache_file = tmp_path / "cache" / "shows" / "broken.json"
-        cache_file.parent.mkdir(parents=True, exist_ok=True)
-        cache_file.write_text("not valid json{{{")
+        # Insert valid JSON but with completely wrong structure for a ShowResponse
+        conn = cache._store._get_connection()
+        now = datetime.now(UTC)
+        expires = now + timedelta(hours=12)
+        conn.execute(
+            "INSERT OR REPLACE INTO metadata_cache (key, content, etag, last_modified, fetched_at, expires_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            ("shows/broken", json.dumps({"garbage": True, "not_a_show": [1, 2, 3]}), None, None, now.isoformat(), expires.isoformat()),
+        )
+        conn.commit()
 
         assert cache.get_show("broken") is None
 
-    def test_cache_without_cached_at_returns_none(self, tmp_path) -> None:
-        """Test that cache file without cached_at timestamp is invalid."""
+    def test_invalid_model_content_returns_none(self, tmp_path) -> None:
+        """Test that content that doesn't match the model schema returns None."""
         cache = TVSportsDBCache(tmp_path / "cache", ttl_hours=12)
 
-        # Create cache file without cached_at
-        cache_file = tmp_path / "cache" / "shows" / "no-timestamp.json"
-        cache_file.parent.mkdir(parents=True, exist_ok=True)
-        with cache_file.open("w", encoding="utf-8") as f:
-            json.dump({"content": {"id": 1, "slug": "test", "title": "Test", "sort_title": "Test"}}, f)
+        # Insert valid JSON but with wrong structure
+        conn = cache._store._get_connection()
+        now = datetime.now(UTC)
+        expires = now + timedelta(hours=12)
+        conn.execute(
+            "INSERT OR REPLACE INTO metadata_cache (key, content, etag, last_modified, fetched_at, expires_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            ("shows/bad-model", json.dumps({"wrong_field": True}), None, None, now.isoformat(), expires.isoformat()),
+        )
+        conn.commit()
 
-        assert cache.get_show("no-timestamp") is None
+        assert cache.get_show("bad-model") is None
 
-    def test_cache_path_sanitizes_key(self, tmp_path) -> None:
-        """Test that cache paths handle special characters."""
+    def test_cache_key_with_special_characters(self, tmp_path) -> None:
+        """Test that cache keys with special characters work correctly."""
         cache = TVSportsDBCache(tmp_path / "cache", ttl_hours=12)
         show = ShowResponse(
             id=1,
@@ -213,11 +219,7 @@ class TestTVSportsDBCache:
         )
         cache.save_show("show/with/slashes", show)
 
-        # The path should have slashes replaced
-        expected_path = tmp_path / "cache" / "shows" / "show_with_slashes.json"
-        assert expected_path.exists()
-
-        # And retrieval should still work
+        # Retrieval should work with the same key
         retrieved = cache.get_show("show/with/slashes")
         assert retrieved is not None
         assert retrieved.slug == "show/with/slashes"

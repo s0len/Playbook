@@ -73,11 +73,13 @@ class TestTVSportsDBClient:
         mock_response_show.status_code = 200
         mock_response_show.json.return_value = show_data
         mock_response_show.raise_for_status = MagicMock()
+        mock_response_show.headers = {}
 
         mock_response_season = MagicMock()
         mock_response_season.status_code = 200
         mock_response_season.json.return_value = season_data
         mock_response_season.raise_for_status = MagicMock()
+        mock_response_season.headers = {}
 
         mock_httpx_client.request.side_effect = [mock_response_show, mock_response_season]
 
@@ -144,6 +146,7 @@ class TestTVSportsDBClient:
         mock_response.status_code = 200
         mock_response.json.return_value = season_data
         mock_response.raise_for_status = MagicMock()
+        mock_response.headers = {}
         mock_httpx_client.request.return_value = mock_response
 
         season = client.get_season("formula-1-2026", 1)
@@ -169,6 +172,7 @@ class TestTVSportsDBClient:
         mock_response.status_code = 200
         mock_response.json.return_value = aliases_data
         mock_response.raise_for_status = MagicMock()
+        mock_response.headers = {}
         mock_httpx_client.request.return_value = mock_response
 
         aliases = client.get_team_aliases("nba-2025")
@@ -325,6 +329,7 @@ class TestRetryLogic:
             "seasons": [],
         }
         success_response.raise_for_status = MagicMock()
+        success_response.headers = {}
 
         mock_httpx_client.request.side_effect = [rate_limit_response, success_response]
 
@@ -338,14 +343,16 @@ class TestRetryLogic:
     def test_retry_on_request_error(self, mock_sleep, client, mock_httpx_client) -> None:
         """Test retry on network error."""
         # First two calls fail, third succeeds
+        success_mock = MagicMock(
+            status_code=200,
+            json=lambda: {"id": 1, "slug": "test", "title": "Test", "sort_title": "Test", "seasons": []},
+            raise_for_status=MagicMock(),
+        )
+        success_mock.headers = {}
         mock_httpx_client.request.side_effect = [
             httpx.RequestError("Connection failed"),
             httpx.RequestError("Connection failed"),
-            MagicMock(
-                status_code=200,
-                json=lambda: {"id": 1, "slug": "test", "title": "Test", "sort_title": "Test", "seasons": []},
-                raise_for_status=MagicMock(),
-            ),
+            success_mock,
         ]
 
         show = client.get_show("test", include_episodes=False)
