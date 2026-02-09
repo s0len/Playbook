@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import io
-import sys
 from pathlib import Path
 from unittest import mock
 

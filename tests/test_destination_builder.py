@@ -536,7 +536,7 @@ class TestBuildDestination:
         assert destination.is_relative_to(settings.destination_dir)
         # Path should not contain colons (except Windows drive letter)
         path_str = str(destination)
-        if not path_str[1:2] == ":":  # Skip Windows drive letter
+        if path_str[1:2] != ":":  # Skip Windows drive letter
             assert ":" not in path_str
 
     def test_prevents_path_traversal(self) -> None:

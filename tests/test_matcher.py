@@ -11,10 +11,10 @@ from playbook.config import (
     SportConfig,
 )
 from playbook.matcher import (
+    _DEFAULT_GENERIC_SESSION_ALIASES,
     _build_session_lookup,
     _build_team_alias_lookup,
     _dates_within_proximity,
-    _DEFAULT_GENERIC_SESSION_ALIASES,
     _location_matches_title,
     _parse_date_from_groups,
     _parse_date_string,
@@ -1869,7 +1869,6 @@ def test_generic_session_aliases_are_configured() -> None:
 
 def test_generic_session_lookup_resolves_common_terms() -> None:
     """Test that generic session lookup correctly resolves common motorsport terms."""
-    from playbook.session_index import SessionLookupIndex
     from playbook.utils import normalize_token
 
     # Build a lookup index with generic session aliases
