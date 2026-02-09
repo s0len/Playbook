@@ -125,6 +125,41 @@ _NBA_TEAM_SYNONYMS: dict[str, Iterable[str]] = {
     "Washington Wizards": ["Wizards", "Washington", "WAS"],
 }
 
+_NFL_TEAM_SYNONYMS: dict[str, Iterable[str]] = {
+    "Arizona Cardinals": ["Cardinals", "Arizona", "ARI"],
+    "Atlanta Falcons": ["Falcons", "Atlanta", "ATL"],
+    "Baltimore Ravens": ["Ravens", "Baltimore", "BAL"],
+    "Buffalo Bills": ["Bills", "Buffalo", "BUF"],
+    "Carolina Panthers": ["Panthers", "Carolina", "CAR"],
+    "Chicago Bears": ["Bears", "Chicago", "CHI"],
+    "Cincinnati Bengals": ["Bengals", "Cincinnati", "CIN"],
+    "Cleveland Browns": ["Browns", "Cleveland", "CLE"],
+    "Dallas Cowboys": ["Cowboys", "Dallas", "DAL"],
+    "Denver Broncos": ["Broncos", "Denver", "DEN"],
+    "Detroit Lions": ["Lions", "Detroit", "DET"],
+    "Green Bay Packers": ["Packers", "Green Bay", "GB"],
+    "Houston Texans": ["Texans", "Houston", "HOU"],
+    "Indianapolis Colts": ["Colts", "Indianapolis", "Indy", "IND"],
+    "Jacksonville Jaguars": ["Jaguars", "Jags", "Jacksonville", "JAX"],
+    "Kansas City Chiefs": ["Chiefs", "Kansas City", "KC"],
+    "Las Vegas Raiders": ["Raiders", "Las Vegas", "LV"],
+    "Los Angeles Chargers": ["Chargers", "LA Chargers", "LAC"],
+    "Los Angeles Rams": ["Rams", "LA Rams", "LAR"],
+    "Miami Dolphins": ["Dolphins", "Miami", "MIA"],
+    "Minnesota Vikings": ["Vikings", "Minnesota", "MIN"],
+    "New England Patriots": ["Patriots", "NE", "Pats", "New England"],
+    "New Orleans Saints": ["Saints", "New Orleans", "NO"],
+    "New York Giants": ["Giants", "NY Giants", "NYG"],
+    "New York Jets": ["Jets", "NY Jets", "NYJ"],
+    "Philadelphia Eagles": ["Eagles", "Philadelphia", "Philly", "PHI"],
+    "Pittsburgh Steelers": ["Steelers", "Pittsburgh", "PIT"],
+    "San Francisco 49ers": ["49ers", "Niners", "San Francisco", "SF"],
+    "Seattle Seahawks": ["Seahawks", "SEA", "Seattle"],
+    "Tampa Bay Buccaneers": ["Buccaneers", "Bucs", "Tampa Bay", "Tampa", "TB"],
+    "Tennessee Titans": ["Titans", "Tennessee", "TEN"],
+    "Washington Commanders": ["Commanders", "Washington", "WAS"],
+}
+
 _UEFA_CHAMPIONS_LEAGUE_TEAM_SYNONYMS: dict[str, Iterable[str]] = {
     # Spanish clubs
     "Real Madrid": ["Real", "RM", "RMA", "Los Blancos", "Madrid"],
@@ -218,6 +253,7 @@ _UEFA_CHAMPIONS_LEAGUE_TEAM_SYNONYMS: dict[str, Iterable[str]] = {
 
 
 _TEAM_ALIAS_MAPS: dict[str, dict[str, str]] = {
+    "nfl": _build_alias_map(_NFL_TEAM_SYNONYMS),
     "nhl": _build_alias_map(_NHL_TEAM_SYNONYMS),
     "nba": _build_alias_map(_NBA_TEAM_SYNONYMS),
     "premier_league": _build_alias_map(_EPL_TEAM_SYNONYMS),

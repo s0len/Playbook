@@ -6529,6 +6529,28 @@ pattern_sets:
         season_dir_template: "{season_number:02d} {season_title}"
         filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
 
+      - description: NFL playoff YYYY.MM.DD dot-separated date format
+        # Example: NFL.2026.02.08.Super.Bowl.LX.Seattle.Seahawks.Vs.New.England.Patriots.1080p.HDTV.H264-DARKSPORT.mkv
+        # Example: NFL.2026.01.25.AFC.Championship.New.England.Patriots.Vs.Denver.Broncos.720p.mkv
+        regex: >-
+          (?i)^NFL[\s._-]+(?P<year>\d{4})[\s._-]+(?P<month>\d{2})[\s._-]+(?P<day>\d{2})[\s._-]+(?:(?:AFC|NFC)[\s._-]+)?(?P<round>Championship|Wild[\s._-]*Card|Divisional|Super[\s._-]*Bowl)(?:[\s._-]+[IVXLCDM]+)?[\s._-]+(?P<session>(?P<away><matchup_team>)[\s._-]+(?:vs\.?|v|at|@)[\s._-]+(?P<home><matchup_team>))(?:[\s._-]+(?:<suffix_token>|[A-Za-z0-9]+))*\.(?P<extension><extension>)$
+        season_selector:
+          mode: title
+          group: round
+          aliases:
+            Championship: "Conference Championships"
+            "Wild Card": "Wild Card Weekend"
+            Divisional: "Divisional Playoffs"
+            "Super Bowl": "Super Bowl"
+        episode_selector:
+          group: session
+          allow_fallback_to_title: true
+        metadata_filters:
+          team_alias_map: nfl
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_number:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
   # ------------------------------------------------------------------
   # WTA (Women's Tennis Association)
   # ------------------------------------------------------------------
@@ -6790,9 +6812,7 @@ default_sports:
     name: NFL
     pattern_sets:
       - nfl
-    variants:
-      - year: 2025
-        show_slug: "nfl-2025"
+    show_slug_template: "nfl-{year}"
 
   - id: nba
     name: NBA
