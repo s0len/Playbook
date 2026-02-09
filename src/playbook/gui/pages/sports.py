@@ -322,7 +322,7 @@ def _sports_table() -> None:
 
         ui.space()
 
-        clear_btn = ui.button("Clear Selection", icon="close", on_click=lambda: table.run_method("clearSelection")).props(
+        ui.button("Clear Selection", icon="close", on_click=lambda: table.run_method("clearSelection")).props(
             "flat dense"
         ).classes("text-slate-500")
 
