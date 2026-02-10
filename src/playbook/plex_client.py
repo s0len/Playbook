@@ -128,7 +128,7 @@ class PlexSyncStats:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class SearchResult:
     """Capture search diagnostics for debugging failed lookups."""
 

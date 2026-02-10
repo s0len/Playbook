@@ -143,12 +143,16 @@ def build_destination(
         or settings.default_destination.episode_template
     )
 
-    root_component = sanitize_component(render_template(destination_root_template, context))
+    root_rendered = render_template(destination_root_template, context)
+    root_parts = [sanitize_component(seg) for seg in root_rendered.split("/") if seg]
     season_component = sanitize_component(render_template(season_template, context))
     episode_filename = render_template(episode_template, context)
     episode_component = sanitize_component(episode_filename)
 
-    destination = settings.destination_dir / root_component / season_component / episode_component
+    destination = settings.destination_dir
+    for part in root_parts:
+        destination = destination / part
+    destination = destination / season_component / episode_component
 
     base_dir = settings.destination_dir.resolve()
     destination_resolved = destination.resolve(strict=False)

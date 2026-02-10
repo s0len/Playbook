@@ -191,9 +191,7 @@ def _toggle_sport_enabled(sport_id: str, enabled: bool, sport_name: str = "") ->
         loop = asyncio.get_event_loop()
         executor = ThreadPoolExecutor(max_workers=1)
         try:
-            success = await loop.run_in_executor(
-                executor, lambda: _toggle_sport_enabled_sync(sport_id, enabled)
-            )
+            success = await loop.run_in_executor(executor, lambda: _toggle_sport_enabled_sync(sport_id, enabled))
             if success:
                 ui.notify(
                     f"{sport_name or sport_id} {'enabled' if enabled else 'disabled'}",
@@ -304,25 +302,27 @@ def _sports_table() -> None:
     with action_bar:
         selection_label = ui.label("0 selected").classes("font-medium text-slate-700 dark:text-slate-200 mr-4")
 
-        ui.button("Enable", icon="check_circle", on_click=lambda: _bulk_action("enable", selection_state["selected"])).props(
-            "flat dense color=positive"
-        )
-        ui.button("Disable", icon="cancel", on_click=lambda: _bulk_action("disable", selection_state["selected"])).props(
-            "flat dense color=warning"
-        )
+        ui.button(
+            "Enable", icon="check_circle", on_click=lambda: _bulk_action("enable", selection_state["selected"])
+        ).props("flat dense color=positive")
+        ui.button(
+            "Disable", icon="cancel", on_click=lambda: _bulk_action("disable", selection_state["selected"])
+        ).props("flat dense color=warning")
 
         ui.separator().props("vertical").classes("mx-2")
 
-        ui.button("Clear History", icon="delete_sweep", on_click=lambda: _bulk_action("clear_history", selection_state["selected"])).props(
-            "flat dense color=negative"
-        )
-        ui.button("Reprocess", icon="refresh", on_click=lambda: _bulk_action("reprocess", selection_state["selected"])).props(
-            "flat dense color=info"
-        )
+        ui.button(
+            "Clear History",
+            icon="delete_sweep",
+            on_click=lambda: _bulk_action("clear_history", selection_state["selected"]),
+        ).props("flat dense color=negative")
+        ui.button(
+            "Reprocess", icon="refresh", on_click=lambda: _bulk_action("reprocess", selection_state["selected"])
+        ).props("flat dense color=info")
 
         ui.space()
 
-        clear_btn = ui.button("Clear Selection", icon="close", on_click=lambda: table.run_method("clearSelection")).props(
+        ui.button("Clear Selection", icon="close", on_click=lambda: table.run_method("clearSelection")).props(
             "flat dense"
         ).classes("text-slate-500")
 
@@ -468,9 +468,7 @@ def _bulk_action(action: str, sport_ids: list[str]) -> None:
             loop = asyncio.get_event_loop()
             executor = ThreadPoolExecutor(max_workers=1)
             try:
-                success = await loop.run_in_executor(
-                    executor, lambda: _bulk_toggle_sports_sync(sport_ids, True)
-                )
+                success = await loop.run_in_executor(executor, lambda: _bulk_toggle_sports_sync(sport_ids, True))
                 if success:
                     ui.notify(f"Enabled {count} sports", type="positive")
                     ui.navigate.to("/sports")
@@ -488,9 +486,7 @@ def _bulk_action(action: str, sport_ids: list[str]) -> None:
             loop = asyncio.get_event_loop()
             executor = ThreadPoolExecutor(max_workers=1)
             try:
-                success = await loop.run_in_executor(
-                    executor, lambda: _bulk_toggle_sports_sync(sport_ids, False)
-                )
+                success = await loop.run_in_executor(executor, lambda: _bulk_toggle_sports_sync(sport_ids, False))
                 if success:
                     ui.notify(f"Disabled {count} sports", type="positive")
                     ui.navigate.to("/sports")
@@ -550,9 +546,7 @@ def _do_clear_history(sport_ids: list[str], dialog) -> None:
         loop = asyncio.get_event_loop()
         executor = ThreadPoolExecutor(max_workers=1)
         try:
-            deleted = await loop.run_in_executor(
-                executor, lambda: _bulk_clear_history_sync(sport_ids)
-            )
+            deleted = await loop.run_in_executor(executor, lambda: _bulk_clear_history_sync(sport_ids))
             safe_notify(client, f"Cleared {deleted} records from {len(sport_ids)} sports", type="positive")
             with client:
                 ui.navigate.to("/sports")
@@ -578,9 +572,7 @@ def _do_reprocess(sport_ids: list[str], dialog) -> None:
 
         try:
             safe_notify(client, "Clearing history for selected sports...", type="info")
-            deleted = await loop.run_in_executor(
-                executor, lambda: _bulk_clear_history_sync(sport_ids)
-            )
+            deleted = await loop.run_in_executor(executor, lambda: _bulk_clear_history_sync(sport_ids))
             safe_notify(client, f"Cleared {deleted} records", type="info")
 
             # Then trigger a full run
@@ -780,9 +772,7 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
                         ui.badge("default", color="blue").classes("flex-none")
 
             # Custom globs section
-            ui.label("Custom Patterns").classes(
-                "text-sm font-semibold text-slate-600 dark:text-slate-400 mt-4 mb-2"
-            )
+            ui.label("Custom Patterns").classes("text-sm font-semibold text-slate-600 dark:text-slate-400 mt-4 mb-2")
             ui.label("Your own patterns - only in your config").classes(
                 "text-xs text-slate-500 dark:text-slate-500 mb-2"
             )
@@ -816,9 +806,7 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
                             on_click=lambda _, p=pattern: remove_custom_glob(p),
                         ).props("flat round dense size=sm").classes("text-red-500")
             else:
-                ui.label("No custom patterns added yet").classes(
-                    "text-sm text-slate-400 dark:text-slate-500 italic"
-                )
+                ui.label("No custom patterns added yet").classes("text-sm text-slate-400 dark:text-slate-500 italic")
 
             # Add new pattern input
             with ui.row().classes("w-full items-end gap-2 mt-4"):
@@ -833,9 +821,9 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
             # Save button (shown when modified)
             if state["modified"]:
                 with ui.row().classes("w-full justify-end mt-4"):
-                    ui.button("Save Changes", icon="save", on_click=save_changes).props(
-                        "color=primary"
-                    ).classes("animate-pulse")
+                    ui.button("Save Changes", icon="save", on_click=save_changes).props("color=primary").classes(
+                        "animate-pulse"
+                    )
 
     # Render the card
     with ui.card().classes("glass-card w-full"):

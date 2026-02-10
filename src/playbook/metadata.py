@@ -376,20 +376,7 @@ def compute_show_fingerprint(
     if cached_fingerprint is not None and cached_fingerprint.content_hash == content_hash:
         return cached_fingerprint
 
-    # Compute full fingerprint
-    fingerprint_payload = {
-        "show_slug": show_slug,
-        "metadata": show.metadata,
-    }
-    serialized = json.dumps(
-        fingerprint_payload,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-        default=_json_default,
-    )
-    digest = hash_text(serialized)
-
+    # Compute per-season and per-episode hashes first, then include in digest
     season_hashes: dict[str, str] = {}
     episode_hashes: dict[str, dict[str, str]] = {}
 
@@ -437,6 +424,22 @@ def compute_show_fingerprint(
             episode_key = _episode_identifier(episode)
             episode_hash_map[episode_key] = hash_text(episode_serialized)
         episode_hashes[season_key] = episode_hash_map
+
+    # Compute digest including show metadata AND season/episode hashes
+    fingerprint_payload = {
+        "show_slug": show_slug,
+        "metadata": show.metadata,
+        "season_hashes": season_hashes,
+        "episode_hashes": episode_hashes,
+    }
+    serialized = json.dumps(
+        fingerprint_payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=_json_default,
+    )
+    digest = hash_text(serialized)
 
     return ShowFingerprint(
         digest=digest,

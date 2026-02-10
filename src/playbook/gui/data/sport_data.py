@@ -358,30 +358,31 @@ def _build_source_glob_info(sport_config) -> list[SourceGlobInfo]:
     """
     from playbook.pattern_templates import get_default_source_globs
 
-    # Get default globs from pattern templates
-    default_globs = set(get_default_source_globs(sport_config.pattern_set_names))
     disabled_globs = set(sport_config.disabled_source_globs)
-    extra_globs = set(sport_config.extra_source_globs)
 
     result: list[SourceGlobInfo] = []
 
     # Add default globs first
     for pattern in get_default_source_globs(sport_config.pattern_set_names):
         if pattern not in {g.pattern for g in result}:  # Avoid duplicates
-            result.append(SourceGlobInfo(
-                pattern=pattern,
-                is_default=True,
-                is_disabled=pattern in disabled_globs,
-            ))
+            result.append(
+                SourceGlobInfo(
+                    pattern=pattern,
+                    is_default=True,
+                    is_disabled=pattern in disabled_globs,
+                )
+            )
 
     # Add extra (custom) globs
     for pattern in sport_config.extra_source_globs:
         if pattern not in {g.pattern for g in result}:  # Avoid duplicates
-            result.append(SourceGlobInfo(
-                pattern=pattern,
-                is_default=False,
-                is_disabled=pattern in disabled_globs,
-            ))
+            result.append(
+                SourceGlobInfo(
+                    pattern=pattern,
+                    is_default=False,
+                    is_disabled=pattern in disabled_globs,
+                )
+            )
 
     return result
 

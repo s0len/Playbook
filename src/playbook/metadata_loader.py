@@ -410,9 +410,7 @@ def load_sports(
                 pad_top=True,
             )
         )
-        runtimes.append(
-            SportRuntime(sport=sport, show=None, patterns=patterns, extensions=extensions, is_dynamic=True)
-        )
+        runtimes.append(SportRuntime(sport=sport, show=None, patterns=patterns, extensions=extensions, is_dynamic=True))
 
     # Log metadata fetch statistics (DEBUG level - not useful at INFO)
     if fetch_stats.has_activity():

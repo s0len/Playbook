@@ -99,17 +99,25 @@ def _quick_actions_card() -> None:
 
         with ui.column().classes("w-full gap-2"):
             # Run/Stop button (dynamic based on processing state)
-            run_button = ui.button(
-                "Run Now",
-                icon="play_arrow",
-                on_click=_trigger_run,
-            ).classes("w-full").props("color=primary")
+            run_button = (
+                ui.button(
+                    "Run Now",
+                    icon="play_arrow",
+                    on_click=_trigger_run,
+                )
+                .classes("w-full")
+                .props("color=primary")
+            )
 
-            stop_button = ui.button(
-                "Stop Processing",
-                icon="stop",
-                on_click=_stop_processing,
-            ).classes("w-full").props("color=negative")
+            stop_button = (
+                ui.button(
+                    "Stop Processing",
+                    icon="stop",
+                    on_click=_stop_processing,
+                )
+                .classes("w-full")
+                .props("color=negative")
+            )
             stop_button.set_visibility(False)
 
             # Track last state to avoid unnecessary updates that cause flickering
@@ -280,9 +288,7 @@ async def _clear_cache() -> None:
 
     try:
         # Run cache clear in background to avoid blocking
-        await asyncio.get_event_loop().run_in_executor(
-            None, gui_state.processor.clear_processed_cache
-        )
+        await asyncio.get_event_loop().run_in_executor(None, gui_state.processor.clear_processed_cache)
         gui_state.recent_events.clear()
         _safe_notify("Cache cleared", type="positive")
     except Exception as e:
@@ -299,9 +305,7 @@ async def _refresh_metadata() -> None:
     _safe_notify("Refreshing metadata...", type="info")
 
     try:
-        await asyncio.get_event_loop().run_in_executor(
-            None, gui_state.processor.clear_metadata_cache
-        )
+        await asyncio.get_event_loop().run_in_executor(None, gui_state.processor.clear_metadata_cache)
         _safe_notify("Metadata cache cleared — run a scan to fetch fresh data", type="positive")
     except Exception as e:
         LOGGER.exception("Error refreshing metadata: %s", e)

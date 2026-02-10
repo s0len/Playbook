@@ -4,8 +4,6 @@ import datetime as dt
 from pathlib import Path
 from unittest.mock import Mock
 
-import pytest
-
 from playbook.config import PatternConfig
 from playbook.destination_builder import (
     build_destination,
@@ -538,11 +536,11 @@ class TestBuildDestination:
         assert destination.is_relative_to(settings.destination_dir)
         # Path should not contain colons (except Windows drive letter)
         path_str = str(destination)
-        if not path_str[1:2] == ":":  # Skip Windows drive letter
+        if path_str[1:2] != ":":  # Skip Windows drive letter
             assert ":" not in path_str
 
     def test_prevents_path_traversal(self) -> None:
-        """Test that path traversal attempts raise ValueError."""
+        """Test that path traversal attempts are sanitized to stay within dest."""
         sport = Mock()
         sport.destination = Mock()
         sport.destination.root_template = None
@@ -573,13 +571,15 @@ class TestBuildDestination:
             "extension": "txt",
         }
 
-        with pytest.raises(ValueError, match="escapes destination_dir"):
-            build_destination(
-                runtime=runtime,
-                pattern=pattern,
-                context=context,
-                settings=settings,
-            )
+        # Sanitization neutralises ".." segments, keeping path within dest
+        destination = build_destination(
+            runtime=runtime,
+            pattern=pattern,
+            context=context,
+            settings=settings,
+        )
+        assert destination.is_relative_to(settings.destination_dir)
+        assert ".." not in destination.parts
 
     def test_creates_nested_directory_structure(self) -> None:
         """Test that destination path includes nested directory structure."""

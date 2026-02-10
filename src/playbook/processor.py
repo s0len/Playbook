@@ -614,7 +614,9 @@ class Processor:
             kometa_fired=self._state.kometa_trigger_fired,
         )
 
-    def _build_context(self, runtime: SportRuntime, source_path: Path, season, episode, groups, show=None) -> dict[str, object]:
+    def _build_context(
+        self, runtime: SportRuntime, source_path: Path, season, episode, groups, show=None
+    ) -> dict[str, object]:
         return build_match_context(
             runtime=runtime,
             source_path=source_path,

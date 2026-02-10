@@ -73,6 +73,7 @@ PARTIAL_DATE_FORMATS = (
     "%d-%m",
     "%d.%m",
     "%d/%m",
+    "%d_%m",
 )
 
 

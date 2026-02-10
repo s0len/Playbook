@@ -807,6 +807,54 @@ samples:
         expect_season: "Divisional Playoffs"
         expect_episode: "Kansas City Chiefs at Baltimore Ravens"
 
+  - description: "NFL 2026 Playoff YYYY.MM.DD dot-separated samples"
+    sport:
+      id: "nfl_playoffs_dot"
+      name: "NFL Playoffs Dot Format"
+      pattern_sets:
+        - nfl
+    show:
+      key: "nfl_2026"
+      title: "NFL 2026"
+      seasons:
+        - title: "Wild Card Weekend"
+          display_number: 19
+          episodes:
+            - title: "Buffalo Bills at Houston Texans"
+              aliases:
+                - "Buffalo Bills vs Houston Texans"
+        - title: "Divisional Playoffs"
+          display_number: 20
+          episodes:
+            - title: "Kansas City Chiefs at Baltimore Ravens"
+              aliases:
+                - "Kansas City Chiefs vs Baltimore Ravens"
+        - title: "Conference Championships"
+          display_number: 21
+          episodes:
+            - title: "New England Patriots at Denver Broncos"
+              aliases:
+                - "New England Patriots vs Denver Broncos"
+        - title: "Super Bowl"
+          display_number: 22
+          episodes:
+            - title: "Seattle Seahawks at New England Patriots"
+              aliases:
+                - "Seattle Seahawks vs New England Patriots"
+    filenames:
+      - value: "NFL.2026.02.08.Super.Bowl.LX.Seattle.Seahawks.Vs.New.England.Patriots.1080p.HDTV.H264-DARKSPORT.mkv"
+        expect_season: "Super Bowl"
+        expect_episode: "Seattle Seahawks at New England Patriots"
+      - value: "NFL.2026.01.25.AFC.Championship.New.England.Patriots.Vs.Denver.Broncos.720p.WEB.mkv"
+        expect_season: "Conference Championships"
+        expect_episode: "New England Patriots at Denver Broncos"
+      - value: "NFL.2026.01.18.Wild.Card.Buffalo.Bills.Vs.Houston.Texans.1080p.mkv"
+        expect_season: "Wild Card Weekend"
+        expect_episode: "Buffalo Bills at Houston Texans"
+      - value: "NFL.2026.01.19.Divisional.Kansas.City.Chiefs.Vs.Baltimore.Ravens.720p.HDTV.mkv"
+        expect_season: "Divisional Playoffs"
+        expect_episode: "Kansas City Chiefs at Baltimore Ravens"
+
   - description: "WTA 2025 tournament and match samples"
     sport:
       id: "wta_2025"

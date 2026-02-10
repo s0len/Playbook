@@ -67,8 +67,18 @@ NOTIFICATION_TYPES = {
         "fields": [
             {"key": "url", "label": "Plex URL", "type": "text", "placeholder": "Uses PLEX_URL env if empty"},
             {"key": "token", "label": "Plex Token", "type": "password", "placeholder": "Uses PLEX_TOKEN env if empty"},
-            {"key": "library_name", "label": "Library Name", "type": "text", "placeholder": "Uses PLEX_LIBRARY_NAME env if empty"},
-            {"key": "library_id", "label": "Library ID", "type": "text", "placeholder": "Uses PLEX_LIBRARY_ID env if empty"},
+            {
+                "key": "library_name",
+                "label": "Library Name",
+                "type": "text",
+                "placeholder": "Uses PLEX_LIBRARY_NAME env if empty",
+            },
+            {
+                "key": "library_id",
+                "label": "Library ID",
+                "type": "text",
+                "placeholder": "Uses PLEX_LIBRARY_ID env if empty",
+            },
         ],
     },
 }
