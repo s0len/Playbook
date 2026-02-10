@@ -6812,7 +6812,13 @@ default_sports:
     name: NFL
     pattern_sets:
       - nfl
-    show_slug_template: "nfl-{year}"
+    # NFL season spans two calendar years (Sept-Feb), so both years
+    # must point to the same show slug for the season.
+    variants:
+      - year: 2025
+        show_slug: "nfl-2025"
+      - year: 2026
+        show_slug: "nfl-2025"
 
   - id: nba
     name: NBA
