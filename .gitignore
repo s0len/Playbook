@@ -37,3 +37,6 @@ site/
 .auto-claude/
 .auto-claude-security.json
 .auto-claude-status
+
+# Playbook cache (accidentally created inside repo)
+${CACHE_DIR:-/var/cache/playbook}/
