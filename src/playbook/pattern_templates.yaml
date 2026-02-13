@@ -525,12 +525,13 @@ pattern_sets:
       - description: Formula E MWR releases (dot separated)
         # Example: FormulaE.2025.Round16.Great.Britain.Race.STAN.WEB-DL.1080p.h264.English-MWR
         regex: >-
-          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)Formula[.\s]?E\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<location>[^.]+(?:\.[^.]+)*)\.(?P<session>FP[1-4]|Free\.Practice(?:\.One|\.Two|\.Three|\.Four)?|Practice(?:\.One|\.Two|\.Three|\.Four)?|Qualifying|Quali|Race|E-?Prix|Shakedown|Warm\.?(?:Up)|Test|Preview\.Show)
+          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)Formula[.\s]?E\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
         season_selector:
           mode: round
           group: round
         episode_selector:
           group: session
+          truncate_session: true
           allow_fallback_to_title: true
         session_aliases: &formula_e_session_aliases
           Free Practice 1:
@@ -592,12 +593,13 @@ pattern_sets:
       - description: Formula E MWR releases (space separated)
         # Example: FormulaE 2025 Round16 Great Britain Race STAN WEB-DL 1080p h264 English-MWR
         regex: >-
-          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)FormulaE\s+(?P<year>\d{4})\s+Round(?P<round>\d{2})\s+(?P<location>.+?)\s+(?P<session>FP[1-4]|Free\s+Practice(?:\s+One|\s+Two|\s+Three|\s+Four)?|Practice(?:\s+One|\s+Two|\s+Three|\s+Four)?|Qualifying|Quali|Race|E-?Prix|Shakedown|Warm\s*(?:Up)?|Test|Preview\s+Show)(?=\s)
+          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)FormulaE\s+(?P<year>\d{4})\s+Round(?P<round>\d{2})\s+(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN)\b)[-A-Za-z0-9]+(?:\s+(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN)\b)[-A-Za-z0-9]+)*)
         season_selector:
           mode: round
           group: round
         episode_selector:
           group: session
+          truncate_session: true
           allow_fallback_to_title: true
         session_aliases: *formula_e_session_aliases
         destination_root_template: "{show_title}"
@@ -767,12 +769,13 @@ pattern_sets:
         # Example: MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.One.WEB-DL.1080p.H264.English-DNU.mkv
         # Example: MotoGP.2026.Round00.Season.Launch.WEB-DL.1080p.H264.English-DNU.mkv
         regex: >-
-          (?i)^(?=.*-\s*DNU\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?:(?P<location>[^.]+(?:\.[^.]+)*)\.)?(?P<session>After\.The\.Flag\.Day\.(?:One|Two|Three|Four)|After\.The\.Flag|Season\.Launch|FP[1-4]|Practice(?:\.One|\.Two|\.Three|\.Four)?|Q[a-z]+(?:\.Q[1-3]|\.One|\.Two|\.Three)?|Warm\.?Up|Sprint|Race)(?:\.[^.]+)*$
+          (?i)^(?=.*-\s*DNU\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
         season_selector:
           mode: round
           group: round
         episode_selector:
           group: session
+          truncate_session: true
         session_aliases: &motogp_session_aliases
           Practice One:
             - Practice.One
@@ -921,12 +924,13 @@ pattern_sets:
         # Example: MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.Three.WEB-DL.1080p.H264.English-MWR.mkv
         # Example: MotoGP.2026.Round00.Season.Launch.WEB-DL.1080p.H264.English-MWR.mkv
         regex: >-
-          (?i)^(?=.*-MWR\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?:(?P<location>[^.]+(?:\.[^.]+)*)\.)?(?P<session>After\.The\.Flag\.Day\.(?:One|Two|Three|Four)|After\.The\.Flag|Season\.Launch|FP[1-4]|Practice(?:\.One|\.Two|\.Three|\.Four)?|Q[a-z]+(?:\.Q[1-3]|\.One|\.Two|\.Three)?|Warm\.?Up|Sprint|Race)(?:\.[^.]+)*$
+          (?i)^(?=.*-MWR\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
         season_selector:
           mode: round
           group: round
         episode_selector:
           group: session
+          truncate_session: true
         session_aliases: *motogp_session_aliases
         destination_root_template: "{show_title}"
         season_dir_template: "{season_round:02d} {season_title}"
