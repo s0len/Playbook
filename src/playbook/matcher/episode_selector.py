@@ -144,7 +144,7 @@ def select_episode(
                     }
                 )
 
-    add_lookup("session", raw_value, skip_truncation=True)
+    add_lookup("session", raw_value, skip_truncation=not pattern_config.episode_selector.truncate_session)
 
     if normalized_without_part and normalized_without_part not in seen_tokens:
         lookup_attempts.append(("session_without_part", raw_value, normalized_without_part))

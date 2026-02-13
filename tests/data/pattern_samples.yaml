@@ -507,6 +507,116 @@ samples:
       - value: "Formula1 2025 Round22 USA Las Vegas Drivers Press Conference F1TV WEB-DL 1080p h264 English-MWR.mkv"
         expect_episode: "Drivers Press Conference"
 
+  - description: "Formula 1 pre-season test content (open session capture)"
+    sport:
+      id: "formula1_preseason_open"
+      name: "Formula 1 Pre-season Open"
+      pattern_sets:
+        - formula1
+    show:
+      key: "formula1_2026"
+      title: "Formula 1 2026"
+      seasons:
+        - title: "Pre-Season Testing"
+          round_number: 0
+          display_number: 0
+          episodes:
+            - title: "Test One Day One"
+            - title: "Test One Day Two"
+            - title: "Test One Day Two Tech Talk"
+            - title: "Test One Day One Wrap-Up Show"
+              aliases:
+                - "Test.One.Day.One.Wrap-Up.Show"
+            - title: "After The Flag"
+            - title: "Season Launch"
+            - title: "Shakedown Day One"
+    filenames:
+      - value: "Formula1.2026.Round00.Bahrain.Test.One.Day.One.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
+        expect_episode: "Test One Day One"
+      - value: "Formula1.2026.Round00.Bahrain.Test.One.Day.Two.Tech.Talk.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
+        expect_episode: "Test One Day Two Tech Talk"
+      - value: "Formula1.2026.Round00.Bahrain.Test.One.Day.One.Wrap-Up.Show.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
+        expect_episode: "Test One Day One Wrap-Up Show"
+      - value: "Formula1.2026.Round00.Bahrain.After.The.Flag.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
+        expect_episode: "After The Flag"
+      - value: "Formula1.2026.Round00.Season.Launch.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
+        expect_episode: "Season Launch"
+      - value: "Formula1.2026.Round00.Barcelona.Shakedown.Day.One.SKYF1UHD.WEBRiP.2160p.h265.English-MWR.mkv"
+        expect_episode: "Shakedown Day One"
+
+  - description: "Formula 1 open capture with regular sessions and shows"
+    sport:
+      id: "formula1_open_regular"
+      name: "Formula 1 Open Regular"
+      pattern_sets:
+        - formula1
+    show:
+      key: "formula1_2025_open"
+      title: "Formula 1 2025"
+      seasons:
+        - title: "Round 5 Miami Grand Prix"
+          round_number: 5
+          display_number: 5
+          episodes:
+            - title: "Free Practice 1"
+              aliases:
+                - "FP1"
+            - title: "Qualifying"
+            - title: "Race"
+            - title: "Pre Race Show"
+              aliases:
+                - "Pre-Race.Show"
+                - "Pre-Race Show"
+            - title: "Post Qualifying Show"
+              aliases:
+                - "Post-Qualifying.Show"
+                - "Post-Qualifying Show"
+            - title: "Weekend Warm Up"
+              aliases:
+                - "Weekend.Warm-Up"
+    filenames:
+      - value: "Formula1.2025.Round05.Miami.FP1.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
+        expect_episode: "Free Practice 1"
+      - value: "Formula1.2025.Round05.Miami.Race.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
+        expect_episode: "Race"
+      - value: "Formula1.2025.Round05.Miami.Qualifying.PROPER.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
+        expect_episode: "Qualifying"
+      - value: "Formula1.2025.Round05.Miami.Pre-Race.Show.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
+        expect_episode: "Pre Race Show"
+      - value: "Formula1.2025.Round05.Miami.Post-Qualifying.Show.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
+        expect_episode: "Post Qualifying Show"
+      - value: "Formula1.2025.Round05.Miami.Weekend.Warm-Up.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
+        expect_episode: "Weekend Warm Up"
+
+  - description: "Formula 1 spaced open capture with multi-word locations"
+    sport:
+      id: "formula1_spaced_open"
+      name: "Formula 1 Spaced Open"
+      pattern_sets:
+        - formula1
+    show:
+      key: "formula1_2025_spaced_open"
+      title: "Formula 1 2025"
+      seasons:
+        - title: "Round 22 Las Vegas Grand Prix"
+          round_number: 22
+          display_number: 22
+          episodes:
+            - title: "Free Practice 1"
+              aliases:
+                - "FP1"
+            - title: "Race"
+            - title: "Post Qualifying Show"
+              aliases:
+                - "Post-Qualifying Show"
+    filenames:
+      - value: "Formula1 2025 Round22 USA Las Vegas FP1 F1TV WEB-DL 1080p h264 English-MWR.mkv"
+        expect_episode: "Free Practice 1"
+      - value: "Formula1 2025 Round22 USA Las Vegas Race F1TV WEB-DL 1080p h264 English-MWR.mkv"
+        expect_episode: "Race"
+      - value: "Formula1 2025 Round22 USA Las Vegas Post-Qualifying Show F1TV WEB-DL 1080p h264 English-MWR.mkv"
+        expect_episode: "Post Qualifying Show"
+
   - description: "World Superbike PROPER and REPACK releases"
     sport:
       id: "wsbk_proper_samples"
