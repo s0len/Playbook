@@ -213,6 +213,7 @@ def _start_watcher_thread(processor: Processor, app_config: AppConfig) -> thread
         LOGGER.info("Starting file watcher in background thread")
         try:
             watcher = FileWatcherLoop(processor, app_config.settings.file_watcher)
+            gui_state.watcher = watcher
 
             # Wrap process_all to update GUI state
             original_process_all = processor.process_all

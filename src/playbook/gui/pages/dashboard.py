@@ -253,6 +253,9 @@ async def _trigger_run() -> None:
         _safe_notify("Processing already in progress", type="info")
         return
 
+    # Resume watcher if it was paused by a previous cancel
+    gui_state.resume_watcher()
+
     _safe_notify("Starting processing run...", type="info")
     gui_state.set_processing(True)
 
