@@ -22,7 +22,7 @@ class TVSportsDBAdapter:
         Returns:
             Playbook Show dataclass
         """
-        seasons = [self.to_season(s, idx + 1) for idx, s in enumerate(sorted(response.seasons, key=lambda x: x.number))]
+        seasons = [self.to_season(s, s.number) for s in sorted(response.seasons, key=lambda x: x.number)]
         return Show(
             key=response.slug,
             title=response.title,
@@ -44,7 +44,7 @@ class TVSportsDBAdapter:
 
         Args:
             response: API season response
-            index: Sequential index (1-based) of the season
+            index: Season number from the API (preserves 0 for pre-season)
 
         Returns:
             Playbook Season dataclass
