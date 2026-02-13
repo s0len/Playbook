@@ -38,7 +38,7 @@ class EpisodeSelector:
 
 @dataclass
 class TVSportsDBConfig:
-    """Configuration for TheTVSportsDB API cache and timeout settings."""
+    """Configuration for TVSportsDB API cache and timeout settings."""
 
     base_url: str = "http://localhost:8000"
     ttl_hours: int = 2
@@ -73,7 +73,7 @@ class PlexIntegration:
     This dataclass holds all Plex-related configuration including:
     - Connection settings (url, token)
     - Library identification (library_id, library_name)
-    - Metadata sync settings (for pushing titles/posters from TheTVSportsDB)
+    - Metadata sync settings (for pushing titles/posters from TVSportsDB)
     - Scan on activity settings (for triggering library scans on file changes)
     """
 
@@ -355,7 +355,7 @@ class KometaTriggerSettings:
 class SportConfig:
     id: str
     name: str
-    show_slug: str = ""  # TheTVSportsDB show slug (e.g., "formula-1-2026") - can be empty if using template
+    show_slug: str = ""  # TVSportsDB show slug (e.g., "formula-1-2026") - can be empty if using template
     show_slug_template: str | None = None  # Dynamic slug with {year} placeholder (e.g., "formula-1-{year}")
     enabled: bool = True
     metadata: MetadataConfig | None = None  # Deprecated: kept for backwards compatibility during transition

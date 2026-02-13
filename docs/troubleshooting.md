@@ -8,7 +8,7 @@ Run into snags? Start with the quick triage grid below, then follow the deeper d
 |---------|--------------|---------------------|
 | CLI finishes instantly, nothing processed | `source_dir` not mounted/readable or `source_globs` too strict | Run `python -m playbook.cli --config ... --dry-run --verbose` and inspect `playbook.log` for "skipped" entries |
 | Metadata looks stale / missing events | Cached API responses past TTL or wrong `show_slug` | Delete `CACHE_DIR/tvsportsdb/*` or lower `tvsportsdb.ttl_hours`, then rerun with `--dry-run` |
-| Show not found in TheTVSportsDB | Invalid `show_slug` or show doesn't exist yet | Verify the slug exists in TheTVSportsDB; check API connectivity |
+| Show not found in TVSportsDB | Invalid `show_slug` or show doesn't exist yet | Verify the slug exists in TVSportsDB; check API connectivity |
 | Hardlinks fail / files missing | Cross-filesystem moves or SMB/NFS target | Set `link_mode: copy` (global or per sport) and ensure destination mount permissions |
 | Kometa/Autoscan never triggers | `settings.kometa_trigger.enabled` false or Autoscan rewrites wrong | Run `python -m playbook.cli kometa-trigger ...` to test; review notification targets for correct rewrites |
 | Watcher never fires | `watchdog` missing or paths misconfigured | Check container logs for "watchdog unavailable", confirm `file_watcher.paths` exist, or fall back to batch mode |
@@ -50,7 +50,7 @@ Validation Errors: 3 error(s) detected
 │        with show_slug                              │
 │        (show-slug-missing)                         │
 │        💡 Add 'show_slug' field referencing a      │
-│           show in TheTVSportsDB                    │
+│           show in TVSportsDB                    │
 │                                                    │
 │  L11   sports[0].id                                │
 │        Duplicate sport ID: 'demo'                  │
@@ -84,7 +84,7 @@ Fix suggestions are context-aware and provide specific guidance based on the err
 
 - **Missing fields:** Tell you exactly which required field to add
   ```
-  💡 Add 'show_slug' field referencing a show in TheTVSportsDB
+  💡 Add 'show_slug' field referencing a show in TVSportsDB
   ```
 
 - **Invalid values:** Suggest valid alternatives or corrections

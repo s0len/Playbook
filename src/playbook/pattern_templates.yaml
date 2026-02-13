@@ -6642,7 +6642,7 @@ pattern_sets:
   #   - WTA 1000 | Wuhan, China | Quarterfinals | Sabalenka, Aryna Vs Rybakina, Elena | 10/10/2025
   #   - WTA Finals | Riyadh, Saudi Arab | Final | Sabalenka, Aryna Vs Rybakina, Elena | 08/11/2025
   #
-  # TheTVSportsDB structure for WTA:
+  # TVSportsDB structure for WTA:
   #   - Seasons = Tournaments (Australian Open, WTA 1000 Wuhan, WTA Finals, etc.)
   #   - Episodes = Individual matches as "Player1 vs Player2"
   # ------------------------------------------------------------------

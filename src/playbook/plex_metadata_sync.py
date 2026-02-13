@@ -1,7 +1,7 @@
-"""Plex metadata sync - push metadata from TheTVSportsDB API to Plex.
+"""Plex metadata sync - push metadata from TVSportsDB API to Plex.
 
 This module syncs show/season/episode metadata (titles, sort titles, summaries,
-dates, posters, backgrounds) from the TheTVSportsDB API to Plex.
+dates, posters, backgrounds) from the TVSportsDB API to Plex.
 
 Shows and seasons are updated on first run or when metadata changes.
 Episodes are updated when their content changes (fingerprint-based detection).
@@ -563,7 +563,7 @@ class PlexMetadataSync:
         return self._tvsportsdb_adapter
 
     def _load_show(self, sport: SportConfig) -> Show | None:
-        """Load show metadata from TheTVSportsDB API.
+        """Load show metadata from TVSportsDB API.
 
         Args:
             sport: Sport configuration with show_slug
@@ -588,10 +588,10 @@ class PlexMetadataSync:
 
             return show
         except TVSportsDBNotFoundError:
-            LOGGER.warning("Show not found in TheTVSportsDB: %s", sport.show_slug)
+            LOGGER.warning("Show not found in TVSportsDB: %s", sport.show_slug)
             return None
         except TVSportsDBError as exc:
-            LOGGER.error("Failed to fetch show from TheTVSportsDB: %s - %s", sport.show_slug, exc)
+            LOGGER.error("Failed to fetch show from TVSportsDB: %s - %s", sport.show_slug, exc)
             return None
 
     @property
@@ -786,7 +786,7 @@ class PlexMetadataSync:
         LOGGER.debug("Syncing sport: %s (%s)", sport.id, sport.name)
 
         # First, check if the show exists in Plex using the sport name as a hint.
-        # This avoids unnecessary TheTVSportsDB API calls for shows the user doesn't have.
+        # This avoids unnecessary TVSportsDB API calls for shows the user doesn't have.
         search_result = self.client.search_show(library_id, sport.name)
         stats.api_calls += 1
 
@@ -801,7 +801,7 @@ class PlexMetadataSync:
             stats.shows_not_in_plex += 1
             return
 
-        # Show exists in Plex - now load metadata from TheTVSportsDB API
+        # Show exists in Plex - now load metadata from TVSportsDB API
         show = self._load_show(sport)
         if show is None:
             stats.errors.append(f"Failed to load metadata for sport: {sport.id} ({sport.show_slug})")

@@ -6,7 +6,7 @@ Playbook focuses on filesystem organization and leaves downloading, metadata enr
 
 | Integration | Purpose | Quick link |
 |-------------|---------|------------|
-| Plex Metadata Sync | Pushes show/season/episode metadata from TheTVSportsDB directly to Plex. | [Plex Metadata Sync](#plex-metadata-sync) |
+| Plex Metadata Sync | Pushes show/season/episode metadata from TVSportsDB directly to Plex. | [Plex Metadata Sync](#plex-metadata-sync) |
 | Kometa | Applies metadata feeds so Plex gets canonical titles/artwork. | [Kometa Metadata](#kometa-metadata) |
 | Kometa trigger | Automatically re-runs Kometa whenever Playbook links new files. | [Kometa Triggering](#kometa-triggering) |
 | Autobrr | Automates torrent intake so Playbook always has fresh downloads to normalize. | [Autobrr Automation](#autobrr-download-automation) |
@@ -14,12 +14,12 @@ Playbook focuses on filesystem organization and leaves downloading, metadata enr
 
 ## Plex Metadata Sync
 
-Playbook can push show, season, and episode metadata directly from TheTVSportsDB to Plex. This includes:
+Playbook can push show, season, and episode metadata directly from TVSportsDB to Plex. This includes:
 
 - **Titles and sort titles** - Preserves original casing (e.g., "NTT IndyCar Series" instead of Plex's normalized "Ntt Indycar Series")
 - **Summaries** - Episode and season descriptions
 - **Dates** - Originally available dates for proper episode ordering
-- **Artwork** - Posters and backgrounds from TheTVSportsDB
+- **Artwork** - Posters and backgrounds from TVSportsDB
 
 ### Configuration
 
@@ -64,7 +64,7 @@ settings:
 
 Plex Metadata Sync and Kometa serve complementary purposes:
 
-- **Plex Metadata Sync** - Pushes TheTVSportsDB metadata (titles, summaries, artwork) to Plex
+- **Plex Metadata Sync** - Pushes TVSportsDB metadata (titles, summaries, artwork) to Plex
 - **Kometa** - Creates collections, applies overlays, and handles advanced library management
 
 You can use both together: Plex Metadata Sync keeps episode data fresh, while Kometa handles collections and visual customizations.
@@ -97,7 +97,7 @@ libraries:
 2. Use a single Kometa library (e.g., `Sport`) to collect all sports series; Kometa handles per-show organization via the YAML metadata.
 3. Schedule Kometa normally (cron, k8s CronJob) so it still refreshes on its own, then layer Playbook triggers for instant updates.
 
-> **Note:** Playbook now fetches metadata from TheTVSportsDB API, not YAML files. Kometa can still use YAML feeds for its own metadata operations—they're maintained in parallel.
+> **Note:** Playbook now fetches metadata from TVSportsDB API, not YAML files. Kometa can still use YAML feeds for its own metadata operations—they're maintained in parallel.
 
 ### Kometa Triggering from Playbook {#kometa-triggering}
 

@@ -1,4 +1,4 @@
-"""HTTP client for TheTVSportsDB REST API."""
+"""HTTP client for TVSportsDB REST API."""
 
 from __future__ import annotations
 
@@ -23,8 +23,8 @@ if TYPE_CHECKING:
 
 LOGGER = logging.getLogger(__name__)
 
-# TheTVSportsDB API endpoint (hardcoded - not configurable)
-API_BASE_URL = "https://thetvsportsdb-api.uniflix.vip/api/v1"
+# TVSportsDB API endpoint (hardcoded - not configurable)
+API_BASE_URL = "https://tvsportsdb-api.uniflix.vip/api/v1"
 
 MAX_RETRIES = 3
 RETRY_BACKOFF = 1.0
@@ -39,7 +39,7 @@ class TVSportsDBNotFoundError(TVSportsDBError):
 
 
 class TVSportsDBClient:
-    """HTTP client for TheTVSportsDB REST API.
+    """HTTP client for TVSportsDB REST API.
 
     Provides methods to fetch shows, seasons, episodes, and team aliases
     with automatic caching, conditional requests, and retry logic.

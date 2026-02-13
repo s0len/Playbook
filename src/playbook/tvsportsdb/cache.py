@@ -1,4 +1,4 @@
-"""SQLite-backed response caching for TheTVSportsDB API."""
+"""SQLite-backed response caching for TVSportsDB API."""
 
 from __future__ import annotations
 

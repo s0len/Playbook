@@ -8,7 +8,7 @@ This guide walks you through installing Playbook, configuring your first sport, 
 
 1. **A config file** (`playbook.yaml`) with your directory paths
 2. **Three directories**: source (downloads), destination (Plex library), and cache (metadata storage)
-3. **Network access** to TheTVSportsDB API (metadata source for show/season/episode information)
+3. **Network access** to TVSportsDB API (metadata source for show/season/episode information)
 
 Playbook automatically processes Formula 1, MotoGP, UFC, NFL, NBA, NHL, Premier League, Champions League, Figure Skating, and more. No need to configure individual sports unless you want to customize or disable them.
 
@@ -322,7 +322,7 @@ Look for:
 - **Matched files**: Confirm the pattern matched expected downloads
 - **Destination paths**: Verify the Plex folder structure looks correct
 - **Skipped files**: Understand why some files weren't processed
-- **API responses**: Check that TheTVSportsDB metadata loaded successfully
+- **API responses**: Check that TVSportsDB metadata loaded successfully
 
 ### 3. Review Logs
 

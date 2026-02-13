@@ -1,4 +1,4 @@
-"""Tests for TheTVSportsDB API response models."""
+"""Tests for TVSportsDB API response models."""
 
 from __future__ import annotations
 

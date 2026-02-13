@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class TVSportsDBAdapter:
-    """Converts TheTVSportsDB API responses to Playbook dataclass models."""
+    """Converts TVSportsDB API responses to Playbook dataclass models."""
 
     def to_show(self, response: ShowResponse) -> Show:
         """Convert ShowResponse to Show model.
