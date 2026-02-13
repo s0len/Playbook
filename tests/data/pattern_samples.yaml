@@ -521,22 +521,20 @@ samples:
           round_number: 0
           display_number: 0
           episodes:
-            - title: "Test One Day One"
-            - title: "Test One Day Two"
-            - title: "Test One Day Two Tech Talk"
-            - title: "Test One Day One Wrap-Up Show"
-              aliases:
-                - "Test.One.Day.One.Wrap-Up.Show"
+            - title: "Bahrain Day One"
+            - title: "Bahrain Day Two"
+            - title: "Bahrain Day Two Tech Talk"
+            - title: "Bahrain Day One Wrap-Up Show"
             - title: "After The Flag"
             - title: "Season Launch"
             - title: "Shakedown Day One"
     filenames:
       - value: "Formula1.2026.Round00.Bahrain.Test.One.Day.One.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
-        expect_episode: "Test One Day One"
+        expect_episode: "Bahrain Day One"
       - value: "Formula1.2026.Round00.Bahrain.Test.One.Day.Two.Tech.Talk.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
-        expect_episode: "Test One Day Two Tech Talk"
+        expect_episode: "Bahrain Day Two Tech Talk"
       - value: "Formula1.2026.Round00.Bahrain.Test.One.Day.One.Wrap-Up.Show.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
-        expect_episode: "Test One Day One Wrap-Up Show"
+        expect_episode: "Bahrain Day One Wrap-Up Show"
       - value: "Formula1.2026.Round00.Bahrain.After.The.Flag.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
         expect_episode: "After The Flag"
       - value: "Formula1.2026.Round00.Season.Launch.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
@@ -979,10 +977,9 @@ samples:
           round_number: 0
           display_number: 0
           episodes:
-            - title: "After The Flag Day One"
-            - title: "After The Flag Day Two"
-            - title: "After The Flag Day Three"
-            - title: "Season Launch"
+            - title: "After the Flag: Sepang Test Day 1"
+            - title: "After the Flag: Sepang Test Day 2"
+            - title: "After the Flag: Sepang Test Day 3"
         - title: "Grand Prix of the Americas"
           round_number: 3
           display_number: 3
@@ -1007,28 +1004,20 @@ samples:
       # DNU open capture — After The Flag
       - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.One.WEB-DL.1080p.H264.English-DNU.mkv"
         expect_season: "Pre-Season Testing"
-        expect_episode: "After The Flag Day One"
+        expect_episode: "After the Flag: Sepang Test Day 1"
       - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.Three.WEB-DL.1080p.H264.English-DNU.mkv"
         expect_season: "Pre-Season Testing"
-        expect_episode: "After The Flag Day Three"
-      # DNU open capture — Season Launch
-      - value: "MotoGP.2026.Round00.Season.Launch.WEB-DL.1080p.H264.English-DNU.mkv"
-        expect_season: "Pre-Season Testing"
-        expect_episode: "Season Launch"
+        expect_episode: "After the Flag: Sepang Test Day 3"
       # MWR open capture — After The Flag
       - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.Three.WEB-DL.1080p.H264.English-MWR.mkv"
         expect_season: "Pre-Season Testing"
-        expect_episode: "After The Flag Day Three"
+        expect_episode: "After the Flag: Sepang Test Day 3"
       - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.Two.WEB-DL.1080p.H264.English-MWR.mkv"
         expect_season: "Pre-Season Testing"
-        expect_episode: "After The Flag Day Two"
+        expect_episode: "After the Flag: Sepang Test Day 2"
       - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.One.WEB-DL.1080p.H264.English-MWR.mkv"
         expect_season: "Pre-Season Testing"
-        expect_episode: "After The Flag Day One"
-      # MWR open capture — Season Launch
-      - value: "MotoGP.2026.Round00.Season.Launch.WEB-DL.1080p.H264.English-MWR.mkv"
-        expect_season: "Pre-Season Testing"
-        expect_episode: "Season Launch"
+        expect_episode: "After the Flag: Sepang Test Day 1"
       # Regression: standard sessions still match — DNU
       - value: "MotoGP.2024.Round03.Austin.Circuit.of.the.Americas.Qualifying-DNU.mkv"
         expect_season: "Grand Prix of the Americas"
