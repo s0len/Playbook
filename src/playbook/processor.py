@@ -503,6 +503,9 @@ class Processor:
                     if trace_path is not None:
                         event.trace_path = str(trace_path)
                     self.notification_service.notify(event)
+                # Clean up stale unmatched record if file matched (even if skipped for quality)
+                if not self.config.settings.dry_run:
+                    self.unmatched_store.delete_by_source(str(source_path))
                 return True, [], []
 
             if not detection_messages:
