@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from playbook.notifications import NotificationEvent
     from playbook.persistence import ProcessedFileStore, UnmatchedFileStore
     from playbook.processor import Processor
+    from playbook.watcher import FileWatcherLoop
 
 
 @dataclass
@@ -49,8 +50,9 @@ class GUIState:
         run_count: Number of processing runs since startup
     """
 
-    # Reference to processor (set at startup)
+    # Reference to processor and watcher (set at startup)
     processor: Processor | None = None
+    watcher: FileWatcherLoop | None = None
     config: AppConfig | None = None
     config_path: Path | None = None
     processed_store: ProcessedFileStore | None = None
@@ -97,13 +99,23 @@ class GUIState:
     def request_cancel(self) -> bool:
         """Request cancellation of the current processing run.
 
+        Also pauses the file watcher (if active) to prevent it from
+        immediately starting a new run after the current one is cancelled.
+
         Returns:
             True if cancellation was requested, False if no processing is active.
         """
         if not self.is_processing or not self.processor:
             return False
         self.processor.request_cancel()
+        if self.watcher:
+            self.watcher.pause()
         return True
+
+    def resume_watcher(self) -> None:
+        """Resume the file watcher after it was paused by a cancel request."""
+        if self.watcher and self.watcher.paused:
+            self.watcher.resume()
 
     def register_update_callback(self, callback: Any) -> None:
         """Register a callback to be notified of state changes."""

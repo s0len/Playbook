@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import fnmatch
 import logging
+import threading
 import time
 from collections.abc import Sequence
 from pathlib import Path
@@ -33,6 +34,7 @@ class _FileChangeHandler(FileSystemEventHandler):  # type: ignore[misc]
         self._queue = queue
         self._include = list(include)
         self._ignore = list(ignore)
+        self.suppressed = False
 
     def on_created(self, event) -> None:  # type: ignore[override]
         if getattr(event, "is_directory", False):
@@ -50,6 +52,8 @@ class _FileChangeHandler(FileSystemEventHandler):  # type: ignore[misc]
         self._emit(Path(event.dest_path))
 
     def _emit(self, path: Path) -> None:
+        if self.suppressed:
+            return
         if not self._matches(path):
             return
         self._queue.put(path)
@@ -84,6 +88,25 @@ class FileWatcherLoop:
         self._roots = self._resolve_roots()
         for root in self._roots:
             self._observer.schedule(self._handler, str(root), recursive=True)
+        self._paused = False
+        self._pause_lock = threading.Lock()
+
+    @property
+    def paused(self) -> bool:
+        """Whether the watcher loop is paused (will not start new runs)."""
+        return self._paused
+
+    def pause(self) -> None:
+        """Pause the watcher — no new processing runs will be triggered."""
+        with self._pause_lock:
+            self._paused = True
+        LOGGER.info("Filesystem watcher paused")
+
+    def resume(self) -> None:
+        """Resume the watcher — processing runs will be triggered again."""
+        with self._pause_lock:
+            self._paused = False
+        LOGGER.info("Filesystem watcher resumed")
 
     def run_forever(self) -> None:
         if not self._roots:
@@ -106,15 +129,20 @@ class FileWatcherLoop:
                     pass
 
                 now = time.monotonic()
+
+                # Skip triggers while paused — keep collecting but don't act
+                if self._paused:
+                    continue
+
                 if pending and (now - last_run) >= self._settings.debounce_seconds:
                     self._run_processor(pending)
                     pending.clear()
-                    last_run = now
+                    last_run = time.monotonic()
 
                 if next_reconcile is not None and now >= next_reconcile:
                     LOGGER.debug("Filesystem watcher reconcile triggered; running a full scan.")
-                    self._processor.process_all()
-                    next_reconcile = now + reconcile_interval
+                    self._run_guarded(self._processor.process_all)
+                    next_reconcile = time.monotonic() + reconcile_interval
         finally:
             self._observer.stop()
             self._observer.join(timeout=5)
@@ -126,7 +154,34 @@ class FileWatcherLoop:
             len(pending),
             f" near {sample}" if sample else "",
         )
-        self._processor.process_all()
+        self._run_guarded(self._processor.process_all)
+
+    def _run_guarded(self, func):
+        """Run a processor function with event suppression to prevent self-triggering loops.
+
+        During processing, the scanner reads files/directories which generates
+        inotify events. Without suppression, these events would re-trigger
+        processing in an infinite loop.
+        """
+        self._handler.suppressed = True
+        try:
+            func()
+        finally:
+            self._handler.suppressed = False
+            # Drain any events that snuck in during the suppression window
+            self._drain_queue()
+
+    def _drain_queue(self) -> None:
+        """Discard all pending events from the queue."""
+        drained = 0
+        while True:
+            try:
+                self._queue.get_nowait()
+                drained += 1
+            except Empty:
+                break
+        if drained:
+            LOGGER.debug("Drained %d self-triggered filesystem events after processing run", drained)
 
     def _resolve_roots(self) -> list[Path]:
         roots = self._settings.paths or []

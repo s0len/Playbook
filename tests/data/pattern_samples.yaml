@@ -855,6 +855,38 @@ samples:
         expect_season: "Divisional Playoffs"
         expect_episode: "Kansas City Chiefs at Baltimore Ravens"
 
+  - description: "MotoGP 2026 pre-season and 2025 race MWR/DNU samples"
+    sport:
+      id: "motogp_preseason"
+      name: "MotoGP Pre-Season"
+      pattern_sets:
+        - motogp
+    show:
+      key: "motogp_2026"
+      title: "MotoGP 2026"
+      seasons:
+        - title: "Pre-Season Testing"
+          round_number: 0
+          display_number: 0
+          episodes:
+            - title: "After The Flag Day One"
+            - title: "After The Flag Day Two"
+            - title: "After The Flag Day Three"
+            - title: "Season Launch"
+    filenames:
+      - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.Three.WEB-DL.1080p.H264.English-MWR.mkv"
+        expect_season: "Pre-Season Testing"
+        expect_episode: "After The Flag Day Three"
+      - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.Two.WEB-DL.1080p.H264.English-MWR.mkv"
+        expect_season: "Pre-Season Testing"
+        expect_episode: "After The Flag Day Two"
+      - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.One.WEB-DL.1080p.H264.English-MWR.mkv"
+        expect_season: "Pre-Season Testing"
+        expect_episode: "After The Flag Day One"
+      - value: "MotoGP.2026.Round00.Season.Launch.WEB-DL.1080p.H264.English-MWR.mkv"
+        expect_season: "Pre-Season Testing"
+        expect_episode: "Season Launch"
+
   - description: "WTA 2025 tournament and match samples"
     sport:
       id: "wta_2025"
