@@ -33,6 +33,7 @@ class EpisodeSelector:
     group: str = "session"
     allow_fallback_to_title: bool = True
     default_value: str | None = None
+    truncate_session: bool = False
 
 
 @dataclass
@@ -433,6 +434,7 @@ def _build_episode_selector(data: dict[str, Any]) -> EpisodeSelector:
         group=data.get("group", "session"),
         allow_fallback_to_title=bool(data.get("allow_fallback_to_title", True)),
         default_value=(str(data["default_value"]).strip() if data.get("default_value") else None),
+        truncate_session=bool(data.get("truncate_session", False)),
     )
 
 

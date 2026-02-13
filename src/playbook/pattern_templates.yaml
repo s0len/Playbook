@@ -34,14 +34,19 @@ pattern_sets:
         # Example: Formula1.2026.Round00.Barcelona.Shakedown.Day.One.SKYF1UHD.WEBRiP.2160p
         # Example: Formula1.2026.Round00.Technical.Regulations.F1TV.WEB-DL.1080p (no location)
         # Example: Formula1.2025.Round18.Singapore.Weekend.Warm-Up.PROPER.F1TV.WEB-DL.1080p.h264.English-MWR.mkv
+        # Example: Formula1.2026.Round00.Bahrain.Test.One.Day.Two.Tech.Talk.F1TV.WEB-DL.1080p
+        # Example: Formula1.2026.Round00.Bahrain.Test.One.Day.One.Wrap-Up.Show.F1TV.WEB-DL.1080p
+        # Uses open session capture: everything between Round## and release tags is captured,
+        # then progressive truncation strips location prefixes during episode matching.
         regex: >-
-          (?i)^Formula\.?1\.(?P<year>\d{4})\.Round(?P<round>\d{2})(?:\.(?P<location>[^.]+(?:\.[^.]+)*?))?\.(?P<session>(?:Technical\.Regulations|Tech\.Regulations|Shakedown\.Day\.(?:One|Two|Three|Four|1|2|3|4)|Drivers\.Press\.Conference(?:\.Part\d+)?|Press\.Conference(?:\.Part\d+)?|Weekend\.Warm[.-]Up|Free\.Practice\.[1-3]|FP[1-3]|Sprint\.Qualifying|Sprint\.Shootout|Sprint\.Race|Sprint|Qualifying|Quali|Race|Pre[.-](?:Qualifying|Race|Sprint)(?:\.Show)?|Post[.-](?:Qualifying|Race|Sprint)(?:\.Show)?)(?:\.Part\d+)?)(?=\.(?:PROPER\.)?(?:REPACK\.)?(?:F1|SKYF1))
+          (?i)^Formula\.?1\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:F1LIVE|F1TV|SKYF1|SKYF1UHD|PROPER|REPACK|WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|DNU|AAC|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:F1LIVE|F1TV|SKYF1|SKYF1UHD|PROPER|REPACK|WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|DNU|AAC|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
         season_selector:
           mode: round           # Use captured round number to map metadata seasons.
           group: round
           offset: 0
         episode_selector:
           group: session        # Normalize the session name via aliases below.
+          truncate_session: true
         session_aliases: &formula1_session_aliases
           # Pre-season testing episodes
           Technical Regulations:
@@ -56,6 +61,39 @@ pattern_sets:
           Shakedown Day Three:
             - Shakedown.Day.Three
             - Shakedown.Day.3
+          Test One Day One:
+            - Test.One.Day.One
+            - Test One Day One
+          Test One Day Two:
+            - Test.One.Day.Two
+            - Test One Day Two
+          Test One Day Three:
+            - Test.One.Day.Three
+            - Test One Day Three
+          Test One Day One Tech Talk:
+            - Test.One.Day.One.Tech.Talk
+            - Test One Day One Tech Talk
+          Test One Day Two Tech Talk:
+            - Test.One.Day.Two.Tech.Talk
+            - Test One Day Two Tech Talk
+          Test One Day Three Tech Talk:
+            - Test.One.Day.Three.Tech.Talk
+            - Test One Day Three Tech Talk
+          Test One Day One Wrap-Up Show:
+            - Test.One.Day.One.Wrap-Up.Show
+            - Test One Day One Wrap-Up Show
+          Test One Day Two Wrap-Up Show:
+            - Test.One.Day.Two.Wrap-Up.Show
+            - Test One Day Two Wrap-Up Show
+          Test One Day Three Wrap-Up Show:
+            - Test.One.Day.Three.Wrap-Up.Show
+            - Test One Day Three Wrap-Up Show
+          After The Flag:
+            - After.The.Flag
+            - After The Flag
+          Season Launch:
+            - Season.Launch
+            - Season Launch
           # Regular race weekend episodes
           Drivers Press Conference:
             - Drivers.Press.Conference
@@ -147,15 +185,16 @@ pattern_sets:
         # Example: Formula1 2024 Round05 Miami Sprint Race F1TV 1080p
         # Example: Formula1 2025 Round19 USA COTA Sprint Qualifying F1LIVE F1TV WEB-DL 1080p
         # Example: Formula1 2025 Round22 USA Las Vegas Drivers Press Conference F1TV WEB-DL 1080p
-        # Note: Location can be multi-word (USA COTA, USA Las Vegas), pattern stops at session keywords
+        # Uses open session capture with progressive truncation to handle multi-word locations
         regex: >-
-          (?i)^Formula1\s+(?P<year>\d{4})\s+Round(?P<round>\d{2})\s+(?P<location>.+?)\s+(?P<session>(?:Drivers\s+Press\s+Conference|Weekend\s+Warm[.\s-]?Up|Free\s+Practice\s+[1-3]|FP[1-3]|Sprint\s+Qualifying|Sprint\s+Shootout|Sprint\s+Race|Sprint|Qualifying|Quali|Race|Pre[.\s-]?(?:Qualifying|Race|Sprint)(?:\s+Show)?|Post[.\s-]?(?:Qualifying|Race|Sprint)(?:\s+Show)?)(?:\s+Part\s*\d+)?)\s*(?=\s+F1(?:TV|LIVE))
+          (?i)^Formula1\s+(?P<year>\d{4})\s+Round(?P<round>\d{2})\s+(?P<session>(?!(?:F1LIVE|F1TV|SKYF1|SKYF1UHD|PROPER|REPACK|WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|DNU|AAC)\b)[-A-Za-z0-9]+(?:\s+(?!(?:F1LIVE|F1TV|SKYF1|SKYF1UHD|PROPER|REPACK|WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|DNU|AAC)\b)[-A-Za-z0-9]+)*)
         season_selector:
           mode: round
           group: round
           offset: 0
         episode_selector:
           group: session
+          truncate_session: true
         session_aliases: *formula1_session_aliases
         destination_root_template: "{show_title}"
         season_dir_template: "{season_round:02d} {season_title}"
