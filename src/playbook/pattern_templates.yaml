@@ -61,12 +61,12 @@ pattern_sets:
           Shakedown Day Three:
             - Shakedown.Day.Three
             - Shakedown.Day.3
-          Bahrain Day One:
+          Bahrain Test Day One:
             - Test.One.Day.One
             - Test One Day One
             - Day.One
             - Day One
-          Bahrain Day Two:
+          Bahrain Test Day Two:
             - Test.One.Day.Two
             - Test One Day Two
             - Day.Two
@@ -76,11 +76,11 @@ pattern_sets:
             - Test One Day Three
             - Day.Three
             - Day Three
-          Bahrain Day One Tech Talk:
+          Bahrain Test Day One Tech Talk:
             - Test.One.Day.One.Tech.Talk
             - Test One Day One Tech Talk
             - Day.One.Tech.Talk
-          Bahrain Day Two Tech Talk:
+          Bahrain Test Day Two Tech Talk:
             - Test.One.Day.Two.Tech.Talk
             - Test One Day Two Tech Talk
             - Day.Two.Tech.Talk
@@ -88,11 +88,11 @@ pattern_sets:
             - Test.One.Day.Three.Tech.Talk
             - Test One Day Three Tech Talk
             - Day.Three.Tech.Talk
-          Bahrain Day One Wrap-Up Show:
+          Bahrain Test Day One Wrap-Up Show:
             - Test.One.Day.One.Wrap-Up.Show
             - Test One Day One Wrap-Up Show
             - Day.One.Wrap-Up.Show
-          Bahrain Day Two Wrap-Up Show:
+          Bahrain Test Day Two Wrap-Up Show:
             - Test.One.Day.Two.Wrap-Up.Show
             - Test One Day Two Wrap-Up Show
             - Day.Two.Wrap-Up.Show

@@ -521,20 +521,20 @@ samples:
           round_number: 0
           display_number: 0
           episodes:
-            - title: "Bahrain Day One"
-            - title: "Bahrain Day Two"
-            - title: "Bahrain Day Two Tech Talk"
-            - title: "Bahrain Day One Wrap-Up Show"
+            - title: "Bahrain Test Day One"
+            - title: "Bahrain Test Day Two"
+            - title: "Bahrain Test Day Two Tech Talk"
+            - title: "Bahrain Test Day One Wrap-Up Show"
             - title: "After The Flag"
             - title: "Season Launch"
             - title: "Shakedown Day One"
     filenames:
       - value: "Formula1.2026.Round00.Bahrain.Test.One.Day.One.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
-        expect_episode: "Bahrain Day One"
+        expect_episode: "Bahrain Test Day One"
       - value: "Formula1.2026.Round00.Bahrain.Test.One.Day.Two.Tech.Talk.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
-        expect_episode: "Bahrain Day Two Tech Talk"
+        expect_episode: "Bahrain Test Day Two Tech Talk"
       - value: "Formula1.2026.Round00.Bahrain.Test.One.Day.One.Wrap-Up.Show.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
-        expect_episode: "Bahrain Day One Wrap-Up Show"
+        expect_episode: "Bahrain Test Day One Wrap-Up Show"
       - value: "Formula1.2026.Round00.Bahrain.After.The.Flag.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
         expect_episode: "After The Flag"
       - value: "Formula1.2026.Round00.Season.Launch.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
