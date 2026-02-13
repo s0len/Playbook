@@ -6826,7 +6826,7 @@ default_sports:
     name: NTT IndyCar Series
     pattern_sets:
       - indycar
-    show_slug_template: "ntt-indycar-series-{year}"
+    show_slug_template: "indycar-series-{year}"
 
   - id: motogp
     name: MotoGP
