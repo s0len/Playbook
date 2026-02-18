@@ -1,7 +1,7 @@
 """
 Sport data provider for the Playbook GUI.
 
-Combines metadata from TheTVSportsDB with processed file records
+Combines metadata from TVSportsDB with processed file records
 to provide match status tracking for the Sports page.
 """
 

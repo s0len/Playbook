@@ -61,33 +61,45 @@ pattern_sets:
           Shakedown Day Three:
             - Shakedown.Day.Three
             - Shakedown.Day.3
-          Test One Day One:
+          Bahrain Test Day One:
             - Test.One.Day.One
             - Test One Day One
-          Test One Day Two:
+            - Day.One
+            - Day One
+          Bahrain Test Day Two:
             - Test.One.Day.Two
             - Test One Day Two
-          Test One Day Three:
+            - Day.Two
+            - Day Two
+          Bahrain Test Day Three:
             - Test.One.Day.Three
             - Test One Day Three
-          Test One Day One Tech Talk:
+            - Day.Three
+            - Day Three
+          Bahrain Test Day One Tech Talk:
             - Test.One.Day.One.Tech.Talk
             - Test One Day One Tech Talk
-          Test One Day Two Tech Talk:
+            - Day.One.Tech.Talk
+          Bahrain Test Day Two Tech Talk:
             - Test.One.Day.Two.Tech.Talk
             - Test One Day Two Tech Talk
-          Test One Day Three Tech Talk:
+            - Day.Two.Tech.Talk
+          Bahrain Test Day Three Tech Talk:
             - Test.One.Day.Three.Tech.Talk
             - Test One Day Three Tech Talk
-          Test One Day One Wrap-Up Show:
+            - Day.Three.Tech.Talk
+          Bahrain Test Day One Wrap-Up Show:
             - Test.One.Day.One.Wrap-Up.Show
             - Test One Day One Wrap-Up Show
-          Test One Day Two Wrap-Up Show:
+            - Day.One.Wrap-Up.Show
+          Bahrain Test Day Two Wrap-Up Show:
             - Test.One.Day.Two.Wrap-Up.Show
             - Test One Day Two Wrap-Up Show
-          Test One Day Three Wrap-Up Show:
+            - Day.Two.Wrap-Up.Show
+          Bahrain Test Day Three Wrap-Up Show:
             - Test.One.Day.Three.Wrap-Up.Show
             - Test One Day Three Wrap-Up Show
+            - Day.Three.Wrap-Up.Show
           After The Flag:
             - After.The.Flag
             - After The Flag
@@ -525,12 +537,13 @@ pattern_sets:
       - description: Formula E MWR releases (dot separated)
         # Example: FormulaE.2025.Round16.Great.Britain.Race.STAN.WEB-DL.1080p.h264.English-MWR
         regex: >-
-          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)Formula[.\s]?E\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<location>[^.]+(?:\.[^.]+)*)\.(?P<session>FP[1-4]|Free\.Practice(?:\.One|\.Two|\.Three|\.Four)?|Practice(?:\.One|\.Two|\.Three|\.Four)?|Qualifying|Quali|Race|E-?Prix|Shakedown|Warm\.?(?:Up)|Test|Preview\.Show)
+          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)Formula[.\s]?E\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
         season_selector:
           mode: round
           group: round
         episode_selector:
           group: session
+          truncate_session: true
           allow_fallback_to_title: true
         session_aliases: &formula_e_session_aliases
           Free Practice 1:
@@ -592,12 +605,13 @@ pattern_sets:
       - description: Formula E MWR releases (space separated)
         # Example: FormulaE 2025 Round16 Great Britain Race STAN WEB-DL 1080p h264 English-MWR
         regex: >-
-          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)FormulaE\s+(?P<year>\d{4})\s+Round(?P<round>\d{2})\s+(?P<location>.+?)\s+(?P<session>FP[1-4]|Free\s+Practice(?:\s+One|\s+Two|\s+Three|\s+Four)?|Practice(?:\s+One|\s+Two|\s+Three|\s+Four)?|Qualifying|Quali|Race|E-?Prix|Shakedown|Warm\s*(?:Up)?|Test|Preview\s+Show)(?=\s)
+          (?i)^(?=.*-MWR(?:\.(?:mkv|mp4|ts))?$)FormulaE\s+(?P<year>\d{4})\s+Round(?P<round>\d{2})\s+(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN)\b)[-A-Za-z0-9]+(?:\s+(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN)\b)[-A-Za-z0-9]+)*)
         season_selector:
           mode: round
           group: round
         episode_selector:
           group: session
+          truncate_session: true
           allow_fallback_to_title: true
         session_aliases: *formula_e_session_aliases
         destination_root_template: "{show_title}"
@@ -767,12 +781,13 @@ pattern_sets:
         # Example: MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.One.WEB-DL.1080p.H264.English-DNU.mkv
         # Example: MotoGP.2026.Round00.Season.Launch.WEB-DL.1080p.H264.English-DNU.mkv
         regex: >-
-          (?i)^(?=.*-\s*DNU\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?:(?P<location>[^.]+(?:\.[^.]+)*)\.)?(?P<session>After\.The\.Flag\.Day\.(?:One|Two|Three|Four)|After\.The\.Flag|Season\.Launch|FP[1-4]|Practice(?:\.One|\.Two|\.Three|\.Four)?|Q[a-z]+(?:\.Q[1-3]|\.One|\.Two|\.Three)?|Warm\.?Up|Sprint|Race)(?:\.[^.]+)*$
+          (?i)^(?=.*-\s*DNU\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
         season_selector:
           mode: round
           group: round
         episode_selector:
           group: session
+          truncate_session: true
         session_aliases: &motogp_session_aliases
           Practice One:
             - Practice.One
@@ -851,14 +866,24 @@ pattern_sets:
             - Qualifying Nr.3
             - MotoGP Qualifying Nr. 3
             - MotoGP Qualifying Nr.3
-          After The Flag Day One:
+          "After the Flag: Sepang Test Day 1":
             - After.The.Flag.Day.One
-          After The Flag Day Two:
+            - After.The.Flag.Day.1
+            - After The Flag Day One
+            - After The Flag Day 1
+          "After the Flag: Sepang Test Day 2":
             - After.The.Flag.Day.Two
-          After The Flag Day Three:
+            - After.The.Flag.Day.2
+            - After The Flag Day Two
+            - After The Flag Day 2
+          "After the Flag: Sepang Test Day 3":
             - After.The.Flag.Day.Three
+            - After.The.Flag.Day.3
+            - After The Flag Day Three
+            - After The Flag Day 3
           After The Flag Day Four:
             - After.The.Flag.Day.Four
+            - After.The.Flag.Day.4
           After The Flag:
             - After.The.Flag
           Season Launch:
@@ -921,12 +946,13 @@ pattern_sets:
         # Example: MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.Three.WEB-DL.1080p.H264.English-MWR.mkv
         # Example: MotoGP.2026.Round00.Season.Launch.WEB-DL.1080p.H264.English-MWR.mkv
         regex: >-
-          (?i)^(?=.*-MWR\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?:(?P<location>[^.]+(?:\.[^.]+)*)\.)?(?P<session>After\.The\.Flag\.Day\.(?:One|Two|Three|Four)|After\.The\.Flag|Season\.Launch|FP[1-4]|Practice(?:\.One|\.Two|\.Three|\.Four)?|Q[a-z]+(?:\.Q[1-3]|\.One|\.Two|\.Three)?|Warm\.?Up|Sprint|Race)(?:\.[^.]+)*$
+          (?i)^(?=.*-MWR\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
         season_selector:
           mode: round
           group: round
         episode_selector:
           group: session
+          truncate_session: true
         session_aliases: *motogp_session_aliases
         destination_root_template: "{show_title}"
         season_dir_template: "{season_round:02d} {season_title}"
@@ -6616,7 +6642,7 @@ pattern_sets:
   #   - WTA 1000 | Wuhan, China | Quarterfinals | Sabalenka, Aryna Vs Rybakina, Elena | 10/10/2025
   #   - WTA Finals | Riyadh, Saudi Arab | Final | Sabalenka, Aryna Vs Rybakina, Elena | 08/11/2025
   #
-  # TheTVSportsDB structure for WTA:
+  # TVSportsDB structure for WTA:
   #   - Seasons = Tournaments (Australian Open, WTA 1000 Wuhan, WTA Finals, etc.)
   #   - Episodes = Individual matches as "Player1 vs Player2"
   # ------------------------------------------------------------------
@@ -6800,7 +6826,7 @@ default_sports:
     name: NTT IndyCar Series
     pattern_sets:
       - indycar
-    show_slug_template: "ntt-indycar-series-{year}"
+    show_slug_template: "indycar-series-{year}"
 
   - id: motogp
     name: MotoGP

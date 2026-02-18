@@ -1,7 +1,7 @@
-"""TheTVSportsDB API client package.
+"""TVSportsDB API client package.
 
 This package provides a client for fetching sports metadata from the
-TheTVSportsDB REST API, replacing the previous YAML-based metadata system.
+TVSportsDB REST API, replacing the previous YAML-based metadata system.
 """
 
 from __future__ import annotations

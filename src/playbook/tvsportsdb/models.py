@@ -1,4 +1,4 @@
-"""Pydantic models for TheTVSportsDB API responses."""
+"""Pydantic models for TVSportsDB API responses."""
 
 from __future__ import annotations
 

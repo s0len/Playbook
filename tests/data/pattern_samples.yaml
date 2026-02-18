@@ -521,22 +521,20 @@ samples:
           round_number: 0
           display_number: 0
           episodes:
-            - title: "Test One Day One"
-            - title: "Test One Day Two"
-            - title: "Test One Day Two Tech Talk"
-            - title: "Test One Day One Wrap-Up Show"
-              aliases:
-                - "Test.One.Day.One.Wrap-Up.Show"
+            - title: "Bahrain Test Day One"
+            - title: "Bahrain Test Day Two"
+            - title: "Bahrain Test Day Two Tech Talk"
+            - title: "Bahrain Test Day One Wrap-Up Show"
             - title: "After The Flag"
             - title: "Season Launch"
             - title: "Shakedown Day One"
     filenames:
       - value: "Formula1.2026.Round00.Bahrain.Test.One.Day.One.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
-        expect_episode: "Test One Day One"
+        expect_episode: "Bahrain Test Day One"
       - value: "Formula1.2026.Round00.Bahrain.Test.One.Day.Two.Tech.Talk.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
-        expect_episode: "Test One Day Two Tech Talk"
+        expect_episode: "Bahrain Test Day Two Tech Talk"
       - value: "Formula1.2026.Round00.Bahrain.Test.One.Day.One.Wrap-Up.Show.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
-        expect_episode: "Test One Day One Wrap-Up Show"
+        expect_episode: "Bahrain Test Day One Wrap-Up Show"
       - value: "Formula1.2026.Round00.Bahrain.After.The.Flag.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
         expect_episode: "After The Flag"
       - value: "Formula1.2026.Round00.Season.Launch.F1TV.WEB-DL.1080p.h264.English-MWR.mkv"
@@ -965,10 +963,10 @@ samples:
         expect_season: "Divisional Playoffs"
         expect_episode: "Kansas City Chiefs at Baltimore Ravens"
 
-  - description: "MotoGP 2026 pre-season and 2025 race MWR/DNU samples"
+  - description: "MotoGP open session capture — DNU and MWR with regression tests"
     sport:
-      id: "motogp_preseason"
-      name: "MotoGP Pre-Season"
+      id: "motogp_open_capture"
+      name: "MotoGP Open Capture"
       pattern_sets:
         - motogp
     show:
@@ -979,23 +977,106 @@ samples:
           round_number: 0
           display_number: 0
           episodes:
-            - title: "After The Flag Day One"
-            - title: "After The Flag Day Two"
-            - title: "After The Flag Day Three"
-            - title: "Season Launch"
+            - title: "After the Flag: Sepang Test Day 1"
+            - title: "After the Flag: Sepang Test Day 2"
+            - title: "After the Flag: Sepang Test Day 3"
+        - title: "Grand Prix of the Americas"
+          round_number: 3
+          display_number: 3
+          episodes:
+            - title: "Qualifying"
+              aliases: ["qualifying"]
+        - title: "Spanish Grand Prix"
+          round_number: 5
+          display_number: 5
+          episodes:
+            - title: "Qualifying"
+              aliases: ["qualifying"]
+        - title: "Thai Grand Prix"
+          round_number: 1
+          display_number: 1
+          episodes:
+            - title: "Sprint"
+              aliases: ["sprint"]
+            - title: "Race"
+              aliases: ["race"]
     filenames:
+      # DNU open capture — After The Flag
+      - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.One.WEB-DL.1080p.H264.English-DNU.mkv"
+        expect_season: "Pre-Season Testing"
+        expect_episode: "After the Flag: Sepang Test Day 1"
+      - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.Three.WEB-DL.1080p.H264.English-DNU.mkv"
+        expect_season: "Pre-Season Testing"
+        expect_episode: "After the Flag: Sepang Test Day 3"
+      # MWR open capture — After The Flag
       - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.Three.WEB-DL.1080p.H264.English-MWR.mkv"
         expect_season: "Pre-Season Testing"
-        expect_episode: "After The Flag Day Three"
+        expect_episode: "After the Flag: Sepang Test Day 3"
       - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.Two.WEB-DL.1080p.H264.English-MWR.mkv"
         expect_season: "Pre-Season Testing"
-        expect_episode: "After The Flag Day Two"
+        expect_episode: "After the Flag: Sepang Test Day 2"
       - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.One.WEB-DL.1080p.H264.English-MWR.mkv"
         expect_season: "Pre-Season Testing"
-        expect_episode: "After The Flag Day One"
-      - value: "MotoGP.2026.Round00.Season.Launch.WEB-DL.1080p.H264.English-MWR.mkv"
-        expect_season: "Pre-Season Testing"
-        expect_episode: "Season Launch"
+        expect_episode: "After the Flag: Sepang Test Day 1"
+      # Regression: standard sessions still match — DNU
+      - value: "MotoGP.2024.Round03.Austin.Circuit.of.the.Americas.Qualifying-DNU.mkv"
+        expect_season: "Grand Prix of the Americas"
+        expect_episode: "Qualifying"
+      - value: "MotoGP.2025.Round01.Thailand.Race-DNU.mkv"
+        expect_season: "Thai Grand Prix"
+        expect_episode: "Race"
+      # Regression: standard sessions still match — MWR
+      - value: "MotoGP.2024.Round05.Jerez.Qualifying-MWR.mp4"
+        expect_season: "Spanish Grand Prix"
+        expect_episode: "Qualifying"
+      - value: "MotoGP.2025.Round01.Thailand.Sprint-MWR.mkv"
+        expect_season: "Thai Grand Prix"
+        expect_episode: "Sprint"
+
+  - description: "Formula E open session capture — MWR dot and space separated"
+    sport:
+      id: "formula_e_open_capture"
+      name: "Formula E Open Capture"
+      pattern_sets:
+        - formula_e
+    show:
+      key: "formula_e_2025"
+      title: "Formula E 2025"
+      seasons:
+        - title: "Sao Paulo E-Prix"
+          round_number: 1
+          display_number: 1
+          episodes:
+            - title: "Qualifying"
+              aliases: ["qualifying"]
+        - title: "Shanghai E-Prix"
+          round_number: 5
+          display_number: 5
+          episodes:
+            - title: "Shakedown"
+              aliases: ["shakedown"]
+        - title: "London E-Prix"
+          round_number: 16
+          display_number: 16
+          episodes:
+            - title: "Race"
+              aliases: ["race"]
+    filenames:
+      # Dot-separated regression — standard session
+      - value: "FormulaE.2025.Round16.Great.Britain.Race.STAN.WEB-DL.1080p.h264.English-MWR"
+        expect_season: "London E-Prix"
+        expect_episode: "Race"
+      - value: "FormulaE.2025.Round01.Sao.Paulo.Qualifying.WEB-DL.1080p.h264.English-MWR.mkv"
+        expect_season: "Sao Paulo E-Prix"
+        expect_episode: "Qualifying"
+      # Space-separated regression — standard session
+      - value: "FormulaE 2025 Round16 Great Britain Race STAN WEB-DL 1080p h264 English-MWR"
+        expect_season: "London E-Prix"
+        expect_episode: "Race"
+      # Dot-separated open capture — new session type
+      - value: "FormulaE.2025.Round05.Shanghai.Shakedown.WEB-DL.1080p.h264.English-MWR.mkv"
+        expect_season: "Shanghai E-Prix"
+        expect_episode: "Shakedown"
 
   - description: "WTA 2025 tournament and match samples"
     sport:

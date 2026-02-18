@@ -1,4 +1,4 @@
-"""Tests for TheTVSportsDB adapter module."""
+"""Tests for TVSportsDB adapter module."""
 
 from __future__ import annotations
 

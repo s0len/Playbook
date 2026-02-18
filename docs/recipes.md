@@ -15,15 +15,15 @@ These walkthroughs illustrate how to adapt Playbook to new sports, tune regexes,
 ## Extending to New Sports
 
 1. Copy `config/playbook.sample.yaml` and enable the sport by listing the relevant `pattern_sets` (e.g., `formula1`, `motogp`).
-2. Set `show_slug` to reference the show in TheTVSportsDB, and configure `source_globs` and `source_extensions` for your release group.
+2. Set `show_slug` to reference the show in TVSportsDB, and configure `source_globs` and `source_extensions` for your release group.
 3. If no template exists yet, copy the closest set from `src/playbook/pattern_templates.yaml` into your config and adjust the regex/aliases.
 4. Run `python -m playbook.cli --config playbook.yaml --dry-run --verbose` and review both console output and `playbook.log` for skipped/ignored diagnostics.
 5. Iterate on patterns, aliases, and destination templates until every file links where you expect. Consider upstreaming new templates via a PR once battle-tested.
 
 ### Checklist
 
-- [ ] Show exists in TheTVSportsDB with the specified `show_slug`.
-- [ ] TheTVSportsDB API reachable from the container/host.
+- [ ] Show exists in TVSportsDB with the specified `show_slug`.
+- [ ] TVSportsDB API reachable from the container/host.
 - [ ] `pattern_sets` entries spelled exactly as defined in `src/playbook/pattern_templates.yaml`.
 - [ ] Regex capture groups line up with `season_selector` and `episode_selector`.
 - [ ] Notifications configured for the new `sport_id`.

@@ -1,7 +1,7 @@
 """Parallel metadata loading and fingerprint tracking.
 
 This module handles loading sport configurations and show metadata in parallel
-from the TheTVSportsDB API, tracking metadata fingerprints to detect changes,
+from the TVSportsDB API, tracking metadata fingerprints to detect changes,
 and building SportRuntime objects that contain the compiled pattern matchers
 for each sport.
 
@@ -134,14 +134,14 @@ class DynamicMetadataLoader:
             return show
 
         except TVSportsDBNotFoundError:
-            LOGGER.debug("Show not found in TheTVSportsDB: %s", show_slug)
+            LOGGER.debug("Show not found in TVSportsDB: %s", show_slug)
             with self._lock:
                 self._failed_slugs.add(show_slug)
             self._stats.record_failure()
             return None
 
         except TVSportsDBError as exc:
-            LOGGER.warning("Failed to fetch show from TheTVSportsDB: %s - %s", show_slug, exc)
+            LOGGER.warning("Failed to fetch show from TVSportsDB: %s - %s", show_slug, exc)
             with self._lock:
                 self._failed_slugs.add(show_slug)
             self._stats.record_failure()
@@ -210,7 +210,7 @@ def _load_show_from_api(
     sport: SportConfig,
     stats: MetadataFetchStatistics,
 ) -> Show | None:
-    """Load show metadata from TheTVSportsDB API.
+    """Load show metadata from TVSportsDB API.
 
     Args:
         client: API client instance
@@ -232,11 +232,11 @@ def _load_show_from_api(
 
         return show
     except TVSportsDBNotFoundError:
-        LOGGER.warning("Show not found in TheTVSportsDB: %s", sport.show_slug)
+        LOGGER.warning("Show not found in TVSportsDB: %s", sport.show_slug)
         stats.record_failure()
         return None
     except TVSportsDBError as exc:
-        LOGGER.error("Failed to fetch show from TheTVSportsDB: %s - %s", sport.show_slug, exc)
+        LOGGER.error("Failed to fetch show from TVSportsDB: %s - %s", sport.show_slug, exc)
         stats.record_failure()
         return None
 

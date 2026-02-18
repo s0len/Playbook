@@ -38,7 +38,7 @@ settings:
       token: ${PLEX_TOKEN:-}
       library_name: ${PLEX_LIBRARY_NAME:-Sports}
 
-      # Sync metadata (titles, summaries, posters) from TheTVSportsDB to Plex
+      # Sync metadata (titles, summaries, posters) from TVSportsDB to Plex
       metadata_sync:
         enabled: false
         timeout: 15

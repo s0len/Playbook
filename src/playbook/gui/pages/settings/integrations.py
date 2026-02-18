@@ -158,7 +158,7 @@ def _render_plex_metadata_sync_section(state: SettingsFormState, refresh_callbac
     with settings_card(
         "Metadata Sync",
         icon="cloud_sync",
-        description="Push titles, summaries, and posters from TheTVSportsDB to Plex",
+        description="Push titles, summaries, and posters from TVSportsDB to Plex",
     ):
 
         def on_sync_toggle(enabled: bool) -> None:

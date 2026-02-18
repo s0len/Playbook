@@ -108,9 +108,9 @@ The watcher keeps Playbook alive and reacts to filesystem events instead of rely
 - `reconcile_interval` performs a full scan every _N_ seconds even if the platform drops events.
 - Override `WATCH_MODE=true|false` (or use `--watch` / `--no-watch`) to force the CLI into the desired mode regardless of the config.
 
-## 2. TheTVSportsDB API Configuration
+## 2. TVSportsDB API Configuration
 
-Playbook fetches show/season/episode metadata from TheTVSportsDB REST API. The defaults work for most users, but you can optionally tune cache and timeout settings under `settings.tvsportsdb`:
+Playbook fetches show/season/episode metadata from TVSportsDB REST API. The defaults work for most users, but you can optionally tune cache and timeout settings under `settings.tvsportsdb`:
 
 ```yaml
 settings:
@@ -135,13 +135,13 @@ This section is optional—omit it entirely to use defaults.
     - Add a custom sport not in the defaults
     - Replace a default sport with different variants/slugs
 
-Each sport links to a show in TheTVSportsDB via `show_slug` and defines detection filters and pattern packs:
+Each sport links to a show in TVSportsDB via `show_slug` and defines detection filters and pattern packs:
 
 ```yaml
 - id: formula1_2025
   name: Formula 1 2025
   enabled: true
-  show_slug: "formula-1-2025"    # TheTVSportsDB show slug (REQUIRED)
+  show_slug: "formula-1-2025"    # TVSportsDB show slug (REQUIRED)
   source_globs:
     - "Formula.1.*"
   source_extensions:
@@ -158,7 +158,7 @@ Each sport links to a show in TheTVSportsDB via `show_slug` and defines detectio
 
 Key knobs:
 
-- `show_slug` (required) references the show in TheTVSportsDB. Find available slugs at the API endpoint or TheTVSportsDB web interface.
+- `show_slug` (required) references the show in TVSportsDB. Find available slugs at the API endpoint or TVSportsDB web interface.
 - `enabled` toggles sports without deleting them.
 - `source_globs` / `source_extensions` are coarse filters before any regex work happens.
 - `link_mode`, `destination.*`, and notification overrides let you specialize behavior per sport.
@@ -242,7 +242,7 @@ Templates receive a rich context assembled from metadata + regex captures:
 | Key | Meaning |
 |-----|---------|
 | `sport_id`, `sport_name` | Sport metadata from the config. |
-| `show_title`, `show_slug` | Display title and API slug from TheTVSportsDB. |
+| `show_title`, `show_slug` | Display title and API slug from TVSportsDB. |
 | `season_title`, `season_number`, `season_round`, `season_year` | Season context with overrides applied. |
 | `episode_title`, `episode_number`, `episode_summary`, `episode_originally_available` | Episode metadata pulled from the feed. |
 | `location`, `session`, `round`, … | Any capture group from the regex. |
