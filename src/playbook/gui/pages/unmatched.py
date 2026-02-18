@@ -662,7 +662,7 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
                 if year_hint is None:
                     ui.notify("Cannot determine year for this sport from the filename", type="warning")
                     return
-                show = loader.load_show_for_year(sport, year_hint)
+                show = loader.get_show_for_year(sport, year_hint)
             else:
                 # Static sport
                 show = loader.load_show(sport.show_slug, sport.season_overrides)
