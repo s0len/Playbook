@@ -626,9 +626,17 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
     _year_match = re.search(r"\b(20\d{2})\b", record.filename)
     year_hint: int | None = int(_year_match.group(1)) if _year_match else None
 
+    # Resolve initial sport: use best_match_sport only if it's actually an enabled sport
+    _enabled_sport_ids = [s.id for s in gui_state.config.sports if s.enabled]
+    _initial_sport_id = (
+        record.best_match_sport
+        if record.best_match_sport and record.best_match_sport in _enabled_sport_ids
+        else (_enabled_sport_ids[0] if _enabled_sport_ids else "")
+    )
+
     # State for the dialog
     dialog_state = {
-        "sport_id": record.best_match_sport or (gui_state.config.sports[0].id if gui_state.config.sports else ""),
+        "sport_id": _initial_sport_id,
         "season_index": None,
         "episode_index": None,
         "show": None,
