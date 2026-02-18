@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 # TVSportsDB API endpoint (hardcoded - not configurable)
-API_BASE_URL = "https://tvsportsdb-api.uniflix.vip/api/v1"
+API_BASE_URL = "https://api.tvsportsdb.com/api/v1"
 
 MAX_RETRIES = 3
 RETRY_BACKOFF = 1.0
