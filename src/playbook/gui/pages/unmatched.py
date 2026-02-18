@@ -611,6 +611,9 @@ def _render_suggestions(record) -> None:
 
 def _show_manual_match_dialog_v2(record, refresh_page) -> None:
     """Show manual match dialog (v2 with refresh callback)."""
+    import re
+    from pathlib import Path as _Path
+
     from playbook.persistence import UnmatchedFileRecord
 
     record: UnmatchedFileRecord
@@ -618,6 +621,10 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
     if not gui_state.config:
         ui.notify("Configuration not loaded", type="warning")
         return
+
+    # Extract year from filename once (used for dynamic sport slug resolution)
+    _year_match = re.search(r"\b(20\d{2})\b", record.filename)
+    year_hint: int | None = int(_year_match.group(1)) if _year_match else None
 
     # State for the dialog
     dialog_state = {
@@ -631,7 +638,7 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
 
     def load_show_data(sport_id: str):
         """Load show data for the selected sport."""
-        from playbook.metadata_loader import load_sports
+        from playbook.metadata_loader import DynamicMetadataLoader
 
         if not gui_state.config:
             return
@@ -640,21 +647,62 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
         if not sport:
             return
 
+        # Reset state
+        dialog_state["show"] = None
+        dialog_state["seasons"] = []
+        dialog_state["episodes"] = []
+        dialog_state["season_index"] = None
+        dialog_state["episode_index"] = None
+
         try:
-            result = load_sports(
-                sports=[sport],
-                settings=gui_state.config.settings,
-                metadata_fingerprints=None,
-            )
-            if result.runtimes:
-                dialog_state["show"] = result.runtimes[0].show
-                dialog_state["seasons"] = [(s.index, s.title) for s in result.runtimes[0].show.seasons]
+            loader = DynamicMetadataLoader(settings=gui_state.config.settings)
+
+            if sport.show_slug_template:
+                # Dynamic sport – resolve the slug using the year from the filename
+                if year_hint is None:
+                    ui.notify("Cannot determine year for this sport from the filename", type="warning")
+                    return
+                show = loader.get_show_for_year(sport, year_hint)
+            else:
+                # Static sport
+                show = loader.load_show(sport.show_slug, sport.season_overrides)
+
+            if show is not None:
+                dialog_state["show"] = show
+                dialog_state["seasons"] = [(s.index, s.title) for s in show.seasons]
                 if dialog_state["seasons"]:
                     dialog_state["season_index"] = dialog_state["seasons"][0][0]
                     load_episodes(dialog_state["season_index"])
+                    auto_select_episode()
         except Exception as e:
             LOGGER.exception("Failed to load show data: %s", e)
             ui.notify(f"Failed to load sport data: {e}", type="negative")
+
+    def auto_select_episode():
+        """Fuzzy-match the filename against loaded episode titles and pre-select the best hit."""
+        if not dialog_state["show"] or not dialog_state["episodes"]:
+            return
+
+        try:
+            from rapidfuzz import fuzz, process
+
+            season = next(
+                (s for s in dialog_state["show"].seasons if s.index == dialog_state["season_index"]),
+                None,
+            )
+            if not season or not season.episodes:
+                return
+
+            stem = _Path(record.filename).stem.replace(".", " ").replace("_", " ")
+            raw_titles = [e.title for e in season.episodes]
+            result = process.extractOne(stem, raw_titles, scorer=fuzz.partial_ratio)
+            if result and result[1] >= 30:
+                best_title = result[0]
+                ep_idx = next((e.index for e in season.episodes if e.title == best_title), None)
+                if ep_idx is not None:
+                    dialog_state["episode_index"] = ep_idx
+        except Exception:
+            pass  # Auto-select is best-effort; don't break the dialog
 
     def load_episodes(season_index: int):
         """Load episodes for the selected season."""
@@ -673,9 +721,24 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
     def on_sport_change(e):
         dialog_state["sport_id"] = e.value
         load_show_data(e.value)
+
         season_select.options = [f"S{i:02d} - {t}" for i, t in dialog_state["seasons"]]
         if dialog_state["seasons"]:
-            season_select.value = season_select.options[0]
+            auto_idx = next(
+                (i for i, (si, _) in enumerate(dialog_state["seasons"]) if si == dialog_state["season_index"]), 0
+            )
+            season_select.value = season_select.options[auto_idx]
+        else:
+            season_select.value = None
+
+        episode_select.options = [t for _, t in dialog_state["episodes"]]
+        if dialog_state["episodes"]:
+            ep_auto_idx = next(
+                (i for i, (ei, _) in enumerate(dialog_state["episodes"]) if ei == dialog_state["episode_index"]), 0
+            )
+            episode_select.value = episode_select.options[ep_auto_idx]
+        else:
+            episode_select.value = None
 
     def on_season_change(e):
         if dialog_state["seasons"] and e.value:
@@ -791,18 +854,24 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
 
             # Season selector
             season_options = [f"S{i:02d} - {t}" for i, t in dialog_state["seasons"]]
+            _season_auto_idx = next(
+                (i for i, (si, _) in enumerate(dialog_state["seasons"]) if si == dialog_state["season_index"]), 0
+            )
             season_select = ui.select(
                 season_options,
-                value=season_options[0] if season_options else "",
+                value=season_options[_season_auto_idx] if season_options else None,
                 label="Season",
                 on_change=on_season_change,
             ).classes("w-full")
 
             # Episode selector
             episode_options = [t for _, t in dialog_state["episodes"]]
+            _ep_auto_idx = next(
+                (i for i, (ei, _) in enumerate(dialog_state["episodes"]) if ei == dialog_state["episode_index"]), 0
+            )
             episode_select = ui.select(
                 episode_options,
-                value=episode_options[0] if episode_options else "",
+                value=episode_options[_ep_auto_idx] if episode_options else None,
                 label="Episode",
                 on_change=on_episode_change,
             ).classes("w-full")
