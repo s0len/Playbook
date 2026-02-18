@@ -646,7 +646,7 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
                 settings=gui_state.config.settings,
                 metadata_fingerprints=None,
             )
-            if result.runtimes:
+            if result.runtimes and result.runtimes[0].show is not None:
                 dialog_state["show"] = result.runtimes[0].show
                 dialog_state["seasons"] = [(s.index, s.title) for s in result.runtimes[0].show.seasons]
                 if dialog_state["seasons"]:
@@ -676,6 +676,8 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
         season_select.options = [f"S{i:02d} - {t}" for i, t in dialog_state["seasons"]]
         if dialog_state["seasons"]:
             season_select.value = season_select.options[0]
+        else:
+            season_select.value = None
 
     def on_season_change(e):
         if dialog_state["seasons"] and e.value:
@@ -793,7 +795,7 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
             season_options = [f"S{i:02d} - {t}" for i, t in dialog_state["seasons"]]
             season_select = ui.select(
                 season_options,
-                value=season_options[0] if season_options else "",
+                value=season_options[0] if season_options else None,
                 label="Season",
                 on_change=on_season_change,
             ).classes("w-full")
@@ -802,7 +804,7 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
             episode_options = [t for _, t in dialog_state["episodes"]]
             episode_select = ui.select(
                 episode_options,
-                value=episode_options[0] if episode_options else "",
+                value=episode_options[0] if episode_options else None,
                 label="Episode",
                 on_change=on_episode_change,
             ).classes("w-full")
