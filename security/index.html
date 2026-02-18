@@ -1,0 +1,1659 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Sonarr for Sports – Automated file matching, renaming, and metadata for sports content in Plex.">
+      
+      
+      
+        <link rel="canonical" href="https://s0len.github.io/Playbook/security/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Security & Vulnerability Scanning - Playbook</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#security-vulnerability-scanning" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Playbook" class="md-header__button md-logo" aria-label="Playbook" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Playbook
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Security &amp; Vulnerability Scanning
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/s0len/playbook" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    s0len/playbook
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Introduction
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../configuration/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Configuration Guide
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../operations/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Operations & Run Modes
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../integrations/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Integrations
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../recipes/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Recipes & How-tos
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../troubleshooting/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Troubleshooting & FAQ
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../developer-guide/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Developer Guide
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Playbook" class="md-nav__button md-logo" aria-label="Playbook" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    Playbook
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/s0len/playbook" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    s0len/playbook
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations & Run Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recipes & How-tos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting & FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python-dependency-scanning-pip-audit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Dependency Scanning (pip-audit)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Python Dependency Scanning (pip-audit)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-scans" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it scans
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-locally" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running locally
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#docker-image-scanning-trivy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Image Scanning (Trivy)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Docker Image Scanning (Trivy)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#severity-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Severity levels
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-locally_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running locally
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependabot-automated-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependabot Automated Updates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Dependabot Automated Updates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reviewing-dependabot-prs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reviewing Dependabot PRs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#managing-dependabot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managing Dependabot
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreting-scan-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interpreting Scan Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interpreting Scan Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#github-security-tab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GitHub Security Tab
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workflow-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow Logs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#handling-reported-vulnerabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handling Reported Vulnerabilities
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Handling Reported Vulnerabilities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-assess-severity-and-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Assess severity and impact
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-check-for-available-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Check for available fixes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-update-the-dependency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Update the dependency
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-verify-the-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Verify the fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-handle-unfixed-vulnerabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Handle unfixed vulnerabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cicd-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CI/CD Integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CI/CD Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#security-scan-workflow-triggers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security scan workflow triggers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build-pipeline-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build pipeline integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setting-up-required-status-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setting up required status checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#for-developers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For developers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#for-maintainers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For maintainers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#for-cicd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For CI/CD
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scan-failing-due-to-network-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scan failing due to network issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#false-positives-in-trivy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        False positives in Trivy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dependabot-prs-failing-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependabot PRs failing tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-scan-taking-too-long" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security scan taking too long
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#additional-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional Resources
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="security-vulnerability-scanning">Security &amp; Vulnerability Scanning<a class="headerlink" href="#security-vulnerability-scanning" title="Permanent link">&para;</a></h1>
+<p>This project uses automated vulnerability scanning to detect security issues in Python dependencies and Docker images before they reach production. The security pipeline runs on every pull request, push to develop/main, and weekly on a schedule.</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>The security scanning setup consists of three complementary tools:</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Purpose</th>
+<th>Scan Target</th>
+<th>Trigger</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>pip-audit</strong></td>
+<td>Python dependency CVE scanning</td>
+<td><code>requirements.txt</code>, <code>requirements-dev.txt</code></td>
+<td>PRs, pushes, weekly, manual</td>
+</tr>
+<tr>
+<td><strong>Trivy</strong></td>
+<td>Container vulnerability scanning</td>
+<td>Docker images (OS + app dependencies)</td>
+<td>PRs, pushes, weekly, manual</td>
+</tr>
+<tr>
+<td><strong>Dependabot</strong></td>
+<td>Automated dependency updates</td>
+<td>Python packages, GitHub Actions</td>
+<td>Weekly on Mondays</td>
+</tr>
+</tbody>
+</table>
+<p>All scans run in the <code>.github/workflows/security-scan.yml</code> workflow and are integrated into the build pipeline. If HIGH or CRITICAL vulnerabilities are detected, the build is blocked from proceeding.</p>
+<h2 id="python-dependency-scanning-pip-audit">Python Dependency Scanning (pip-audit)<a class="headerlink" href="#python-dependency-scanning-pip-audit" title="Permanent link">&para;</a></h2>
+<p>pip-audit checks Python packages against the <a href="https://github.com/pypa/advisory-database">PyPI Advisory Database</a> for known CVEs.</p>
+<h3 id="what-it-scans">What it scans<a class="headerlink" href="#what-it-scans" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Production dependencies in <code>requirements.txt</code>:</li>
+<li>PyYAML</li>
+<li>jsonschema</li>
+<li>requests</li>
+<li>python-dateutil</li>
+<li>rich</li>
+<li>tenacity</li>
+<li>rapidfuzz</li>
+<li>watchdog</li>
+<li>kubernetes</li>
+<li>Development dependencies in <code>requirements-dev.txt</code>:</li>
+<li>pytest</li>
+<li>mkdocs-material</li>
+<li>pip-audit itself</li>
+</ul>
+<h3 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
+<p>The workflow runs pip-audit on both dependency files:</p>
+<div class="highlight"><pre><span></span><code>pip-audit<span class="w"> </span>-r<span class="w"> </span>requirements.txt<span class="w"> </span>--desc
+pip-audit<span class="w"> </span>-r<span class="w"> </span>requirements-dev.txt<span class="w"> </span>--desc
+</code></pre></div>
+<p>The <code>--desc</code> flag provides detailed descriptions of vulnerabilities, including:
+- CVE identifier (e.g., CVE-2024-1234)
+- Affected package and version
+- Vulnerability description
+- Fixed version (if available)
+- Severity level</p>
+<h3 id="running-locally">Running locally<a class="headerlink" href="#running-locally" title="Permanent link">&para;</a></h3>
+<p>Install pip-audit from dev dependencies:</p>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements-dev.txt
+</code></pre></div>
+<p>Scan dependencies:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Scan production dependencies</span>
+pip-audit<span class="w"> </span>-r<span class="w"> </span>requirements.txt<span class="w"> </span>--desc
+
+<span class="c1"># Scan development dependencies</span>
+pip-audit<span class="w"> </span>-r<span class="w"> </span>requirements-dev.txt<span class="w"> </span>--desc
+
+<span class="c1"># Scan currently installed packages</span>
+pip-audit
+</code></pre></div>
+<p>Additional useful flags:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Output as JSON for automation</span>
+pip-audit<span class="w"> </span>-r<span class="w"> </span>requirements.txt<span class="w"> </span>--format<span class="w"> </span>json
+
+<span class="c1"># Only show vulnerabilities (skip informational messages)</span>
+pip-audit<span class="w"> </span>-r<span class="w"> </span>requirements.txt<span class="w"> </span>--desc<span class="w"> </span>--strict
+
+<span class="c1"># Generate a detailed report</span>
+pip-audit<span class="w"> </span>-r<span class="w"> </span>requirements.txt<span class="w"> </span>--desc<span class="w"> </span>--output<span class="w"> </span>audit-report.txt
+</code></pre></div>
+<h2 id="docker-image-scanning-trivy">Docker Image Scanning (Trivy)<a class="headerlink" href="#docker-image-scanning-trivy" title="Permanent link">&para;</a></h2>
+<p>Trivy scans the built Docker image for vulnerabilities in:
+- Base OS packages (from <code>python:3.12-slim</code>)
+- Python packages installed in the container
+- Known malware or misconfigurations</p>
+<h3 id="severity-levels">Severity levels<a class="headerlink" href="#severity-levels" title="Permanent link">&para;</a></h3>
+<p>Trivy reports vulnerabilities at multiple severity levels:</p>
+<table>
+<thead>
+<tr>
+<th>Severity</th>
+<th>Description</th>
+<th>CI Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CRITICAL</td>
+<td>Exploitable vulnerabilities requiring immediate action</td>
+<td><strong>Blocks build</strong></td>
+</tr>
+<tr>
+<td>HIGH</td>
+<td>Serious vulnerabilities that should be addressed quickly</td>
+<td><strong>Blocks build</strong></td>
+</tr>
+<tr>
+<td>MEDIUM</td>
+<td>Moderate vulnerabilities to address in normal workflow</td>
+<td>Reported only</td>
+</tr>
+<tr>
+<td>LOW</td>
+<td>Minor issues or edge cases</td>
+<td>Reported only</td>
+</tr>
+<tr>
+<td>UNKNOWN</td>
+<td>Severity not yet determined</td>
+<td>Reported only</td>
+</tr>
+</tbody>
+</table>
+<p>The CI workflow is configured to <strong>fail on HIGH or CRITICAL</strong> vulnerabilities only, balancing security with practicality.</p>
+<h3 id="how-it-works_1">How it works<a class="headerlink" href="#how-it-works_1" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p>The workflow builds the Docker image locally:
+   <div class="highlight"><pre><span></span><code>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>playbook:scan<span class="w"> </span>.
+</code></pre></div></p>
+</li>
+<li>
+<p>Trivy scans the image for HIGH and CRITICAL vulnerabilities:
+   <div class="highlight"><pre><span></span><code>trivy<span class="w"> </span>image<span class="w"> </span>--severity<span class="w"> </span>HIGH,CRITICAL<span class="w"> </span>playbook:scan
+</code></pre></div></p>
+</li>
+<li>
+<p>Results are uploaded to GitHub Security tab (SARIF format) and displayed in the workflow logs (table format).</p>
+</li>
+</ol>
+<h3 id="running-locally_1">Running locally<a class="headerlink" href="#running-locally_1" title="Permanent link">&para;</a></h3>
+<p>Scan the Docker image locally:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Build the image</span>
+docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>playbook:dev<span class="w"> </span>.
+
+<span class="c1"># Scan for all vulnerabilities</span>
+trivy<span class="w"> </span>image<span class="w"> </span>playbook:dev
+
+<span class="c1"># Scan for HIGH and CRITICAL only (matches CI)</span>
+trivy<span class="w"> </span>image<span class="w"> </span>--severity<span class="w"> </span>HIGH,CRITICAL<span class="w"> </span>playbook:dev
+
+<span class="c1"># Generate detailed report</span>
+trivy<span class="w"> </span>image<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span>--output<span class="w"> </span>image-scan.json<span class="w"> </span>playbook:dev
+
+<span class="c1"># Scan and ignore unfixed vulnerabilities</span>
+trivy<span class="w"> </span>image<span class="w"> </span>--ignore-unfixed<span class="w"> </span>playbook:dev
+</code></pre></div>
+<p>Additional Trivy scanning capabilities:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Scan the Dockerfile for best practice violations</span>
+trivy<span class="w"> </span>config<span class="w"> </span>Dockerfile
+
+<span class="c1"># Scan local filesystem for secrets</span>
+trivy<span class="w"> </span>fs<span class="w"> </span>.
+
+<span class="c1"># Scan a specific Python package</span>
+trivy<span class="w"> </span>rootfs<span class="w"> </span>--pkg-types<span class="w"> </span>library<span class="w"> </span>/path/to/venv
+</code></pre></div>
+<h2 id="dependabot-automated-updates">Dependabot Automated Updates<a class="headerlink" href="#dependabot-automated-updates" title="Permanent link">&para;</a></h2>
+<p>Dependabot automatically creates pull requests to update dependencies when:
+- New versions are released
+- Security advisories are published
+- Dependencies become outdated</p>
+<h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
+<p>Dependabot is configured in <code>.github/dependabot.yml</code>:</p>
+<ul>
+<li><strong>Schedule</strong>: Weekly on Mondays at 9:00 AM UTC (aligned with security scans)</li>
+<li><strong>Pull request limit</strong>: 5 open PRs per ecosystem</li>
+<li><strong>Ecosystems monitored</strong>:</li>
+<li><code>pip</code> – Python packages in <code>requirements.txt</code> and <code>requirements-dev.txt</code></li>
+<li><code>github-actions</code> – GitHub Actions versions in <code>.github/workflows/</code></li>
+<li><strong>Labels</strong>: PRs are tagged with <code>dependencies</code>, <code>python</code>/<code>github-actions</code>, and <code>security</code></li>
+<li><strong>Commit prefixes</strong>: <code>deps</code> for Python, <code>ci</code> for GitHub Actions</li>
+</ul>
+<h3 id="reviewing-dependabot-prs">Reviewing Dependabot PRs<a class="headerlink" href="#reviewing-dependabot-prs" title="Permanent link">&para;</a></h3>
+<p>When Dependabot opens a PR:</p>
+<ol>
+<li><strong>Check the changelog</strong> – Review what changed in the new version</li>
+<li><strong>Review security advisories</strong> – If the PR addresses a CVE, prioritize it</li>
+<li><strong>Run tests locally</strong> – Ensure the update doesn't break functionality:
+   <div class="highlight"><pre><span></span><code>git<span class="w"> </span>fetch<span class="w"> </span>origin
+git<span class="w"> </span>checkout<span class="w"> </span>dependabot/pip/package-name-1.2.3
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+pytest
+</code></pre></div></li>
+<li><strong>Check CI results</strong> – Security scans and tests run automatically</li>
+<li><strong>Merge if green</strong> – Dependabot PRs that pass all checks are safe to merge</li>
+</ol>
+<h3 id="managing-dependabot">Managing Dependabot<a class="headerlink" href="#managing-dependabot" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Rebase a stale Dependabot PR</span>
+@dependabot<span class="w"> </span>rebase
+
+<span class="c1"># Recreate a PR</span>
+@dependabot<span class="w"> </span>recreate
+
+<span class="c1"># Merge a PR</span>
+@dependabot<span class="w"> </span>merge
+
+<span class="c1"># Ignore a specific version</span>
+@dependabot<span class="w"> </span>ignore<span class="w"> </span>this<span class="w"> </span>version
+
+<span class="c1"># Ignore a major version</span>
+@dependabot<span class="w"> </span>ignore<span class="w"> </span>this<span class="w"> </span>major<span class="w"> </span>version
+</code></pre></div>
+<h2 id="interpreting-scan-results">Interpreting Scan Results<a class="headerlink" href="#interpreting-scan-results" title="Permanent link">&para;</a></h2>
+<h3 id="github-security-tab">GitHub Security Tab<a class="headerlink" href="#github-security-tab" title="Permanent link">&para;</a></h3>
+<p>All Trivy scan results appear in the repository's <strong>Security</strong> → <strong>Code scanning</strong> tab. This provides:
+- Centralized view of all vulnerabilities
+- Filtering by severity, state, and branch
+- Links to CVE details and remediation guidance
+- Historical tracking of when issues were introduced/fixed</p>
+<h3 id="workflow-logs">Workflow Logs<a class="headerlink" href="#workflow-logs" title="Permanent link">&para;</a></h3>
+<p>Security scan results appear in the GitHub Actions workflow logs:</p>
+<p><strong>pip-audit output example:</strong>
+<div class="highlight"><pre><span></span><code>Found 2 known vulnerabilities in 1 package
+Name    Version ID             Fix Versions
+------- ------- -------------- ------------
+urllib3 1.26.5  GHSA-q2q7-5pp4 1.26.18,2.0.7
+urllib3 1.26.5  PYSEC-2023-74  1.26.16
+</code></pre></div></p>
+<p><strong>Trivy output example:</strong>
+<div class="highlight"><pre><span></span><code>playbook:scan (debian 12.4)
+Total: 5 (HIGH: 3, CRITICAL: 2)
+
+┌──────────────┬────────────────┬──────────┬───────────────────┬───────────────┬─────────────────┐
+│   Library    │ Vulnerability  │ Severity │ Installed Version │ Fixed Version │     Title       │
+├──────────────┼────────────────┼──────────┼───────────────────┼───────────────┼─────────────────┤
+│ openssl      │ CVE-2024-1234  │ CRITICAL │ 3.0.11-1          │ 3.0.13-1      │ Buffer overflow │
+└──────────────┴────────────────┴──────────┴───────────────────┴───────────────┴─────────────────┘
+</code></pre></div></p>
+<h2 id="handling-reported-vulnerabilities">Handling Reported Vulnerabilities<a class="headerlink" href="#handling-reported-vulnerabilities" title="Permanent link">&para;</a></h2>
+<p>When a vulnerability is detected:</p>
+<h3 id="1-assess-severity-and-impact">1. Assess severity and impact<a class="headerlink" href="#1-assess-severity-and-impact" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>CRITICAL/HIGH in production dependencies</strong>: Address immediately</li>
+<li><strong>CRITICAL/HIGH in dev dependencies</strong>: Address in next sprint</li>
+<li><strong>MEDIUM/LOW</strong>: Schedule for routine maintenance</li>
+<li><strong>Unfixed vulnerabilities</strong>: Evaluate workarounds or risk acceptance</li>
+</ul>
+<h3 id="2-check-for-available-fixes">2. Check for available fixes<a class="headerlink" href="#2-check-for-available-fixes" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># For Python packages, check PyPI for newer versions</span>
+pip<span class="w"> </span>index<span class="w"> </span>versions<span class="w"> </span>&lt;package-name&gt;
+
+<span class="c1"># Check the CVE database for fix details</span>
+pip-audit<span class="w"> </span>-r<span class="w"> </span>requirements.txt<span class="w"> </span>--desc
+</code></pre></div>
+<h3 id="3-update-the-dependency">3. Update the dependency<a class="headerlink" href="#3-update-the-dependency" title="Permanent link">&para;</a></h3>
+<p><strong>Option A: Direct update (preferred)</strong></p>
+<ol>
+<li>
+<p>Update <code>requirements.txt</code>:
+   <div class="highlight"><pre><span></span><code><span class="gd">-requests==2.31.0</span>
+<span class="gi">+requests==2.32.5</span>
+</code></pre></div></p>
+</li>
+<li>
+<p>Test locally:
+   <div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+pytest
+python<span class="w"> </span>-m<span class="w"> </span>playbook.cli<span class="w"> </span>--dry-run<span class="w"> </span>--config<span class="w"> </span>config/playbook.sample.yaml
+</code></pre></div></p>
+</li>
+<li>
+<p>Commit and push:
+   <div class="highlight"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>requirements.txt
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;deps: Update requests to 2.32.5 to fix CVE-2024-XXXX&quot;</span>
+git<span class="w"> </span>push
+</code></pre></div></p>
+</li>
+</ol>
+<p><strong>Option B: Wait for Dependabot</strong></p>
+<p>If the fix was recently released, Dependabot will create a PR within a week. Monitor the Security tab for updates.</p>
+<p><strong>Option C: Pin to a safe version</strong></p>
+<p>If the latest version introduces breaking changes:</p>
+<ol>
+<li>Pin to the newest <strong>safe</strong> version that fixes the CVE</li>
+<li>Create a tracking issue for upgrading to the latest version</li>
+<li>Document the decision in the commit message</li>
+</ol>
+<h3 id="4-verify-the-fix">4. Verify the fix<a class="headerlink" href="#4-verify-the-fix" title="Permanent link">&para;</a></h3>
+<p>After updating:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Verify Python dependencies are clean</span>
+pip-audit<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+
+<span class="c1"># Rebuild and scan Docker image</span>
+docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>playbook:dev<span class="w"> </span>.
+trivy<span class="w"> </span>image<span class="w"> </span>--severity<span class="w"> </span>HIGH,CRITICAL<span class="w"> </span>playbook:dev
+</code></pre></div>
+<p>The CI workflow will also re-scan on the next push.</p>
+<h3 id="5-handle-unfixed-vulnerabilities">5. Handle unfixed vulnerabilities<a class="headerlink" href="#5-handle-unfixed-vulnerabilities" title="Permanent link">&para;</a></h3>
+<p>If no fix is available:</p>
+<ol>
+<li><strong>Assess exploitability</strong> – Is this vulnerability exploitable in Playbook's context?</li>
+<li><strong>Check for workarounds</strong> – Can you mitigate the risk through configuration?</li>
+<li><strong>File an upstream issue</strong> – Alert the package maintainers</li>
+<li><strong>Consider alternatives</strong> – Can you switch to a different package?</li>
+<li><strong>Document the risk</strong> – Add a comment in <code>requirements.txt</code> explaining why the vulnerable version is pinned</li>
+<li><strong>Suppress false positives</strong> (last resort):
+   <div class="highlight"><pre><span></span><code><span class="c1"># Create .trivyignore file for Trivy</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;CVE-2024-XXXX&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.trivyignore
+
+<span class="c1"># Use pip-audit vulnerability ignore file</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;GHSA-XXXX-XXXX-XXXX&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.pip-audit-ignore.json
+</code></pre></div></li>
+</ol>
+<h2 id="cicd-integration">CI/CD Integration<a class="headerlink" href="#cicd-integration" title="Permanent link">&para;</a></h2>
+<h3 id="security-scan-workflow-triggers">Security scan workflow triggers<a class="headerlink" href="#security-scan-workflow-triggers" title="Permanent link">&para;</a></h3>
+<p>The security scan workflow (<code>.github/workflows/security-scan.yml</code>) runs on:</p>
+<ol>
+<li><strong>Pull requests</strong> – Gates merges via required status checks</li>
+<li><strong>Pushes to <code>develop</code>/<code>main</code></strong> – Catches issues before deployment</li>
+<li><strong>Weekly schedule</strong> – Monday at 9:00 AM UTC to catch newly disclosed CVEs</li>
+<li><strong>Manual trigger</strong> – Via Actions tab for ad-hoc audits</li>
+<li><strong>File changes</strong> – Only runs when <code>requirements*.txt</code>, <code>Dockerfile</code>, or the workflow itself changes</li>
+</ol>
+<h3 id="build-pipeline-integration">Build pipeline integration<a class="headerlink" href="#build-pipeline-integration" title="Permanent link">&para;</a></h3>
+<p>The build-and-push workflow (<code>.github/workflows/build-and-push.yml</code>) includes security scans as prerequisites:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">jobs</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">python-dependency-scan</span><span class="p">:</span>
+<span class="w">    </span><span class="c1"># ... runs pip-audit ...</span>
+
+<span class="w">  </span><span class="nt">docker-image-scan</span><span class="p">:</span>
+<span class="w">    </span><span class="c1"># ... runs Trivy ...</span>
+
+<span class="w">  </span><span class="nt">build-and-push</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">needs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">python-dependency-scan</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">docker-image-scan</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="c1"># ... builds and pushes Docker image ...</span>
+</code></pre></div>
+<p><strong>This ensures:</strong>
+- Security scans run <strong>before</strong> building Docker images
+- Build is <strong>blocked</strong> if HIGH or CRITICAL vulnerabilities are found
+- No vulnerable images are pushed to the registry
+- Failed scans prevent deployment to production</p>
+<h3 id="setting-up-required-status-checks">Setting up required status checks<a class="headerlink" href="#setting-up-required-status-checks" title="Permanent link">&para;</a></h3>
+<p>To enforce security scans on pull requests:</p>
+<ol>
+<li>Go to <strong>Settings</strong> → <strong>Branches</strong> → <strong>Branch protection rules</strong></li>
+<li>Edit the rule for <code>develop</code> and <code>main</code></li>
+<li>Enable <strong>Require status checks to pass before merging</strong></li>
+<li>Search for and add:</li>
+<li><code>python-dependency-scan</code></li>
+<li><code>docker-image-scan</code></li>
+<li>Save changes</li>
+</ol>
+<p>Now PRs cannot be merged if security scans fail.</p>
+<h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
+<h3 id="for-developers">For developers<a class="headerlink" href="#for-developers" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ Run <code>pip-audit</code> locally before committing dependency updates</li>
+<li>✅ Keep dependencies pinned to specific versions in <code>requirements.txt</code></li>
+<li>✅ Review Dependabot PRs promptly, especially security updates</li>
+<li>✅ Test locally after updating dependencies</li>
+<li>✅ Document any risk acceptance decisions in commit messages or issues</li>
+</ul>
+<h3 id="for-maintainers">For maintainers<a class="headerlink" href="#for-maintainers" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ Monitor the GitHub Security tab weekly</li>
+<li>✅ Set security scans as required status checks on protected branches</li>
+<li>✅ Triage vulnerability reports within 1 business day</li>
+<li>✅ Prioritize CRITICAL/HIGH fixes in current sprint</li>
+<li>✅ Keep base Docker images updated (<code>python:3.12-slim</code>)</li>
+<li>✅ Review <code>.trivyignore</code> and <code>.pip-audit-ignore.json</code> quarterly</li>
+</ul>
+<h3 id="for-cicd">For CI/CD<a class="headerlink" href="#for-cicd" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ Run security scans before building artifacts</li>
+<li>✅ Fail fast on CRITICAL/HIGH vulnerabilities</li>
+<li>✅ Upload SARIF reports to GitHub Security tab for tracking</li>
+<li>✅ Schedule regular scans to catch new CVEs</li>
+<li>✅ Monitor workflow failures and fix them promptly</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="scan-failing-due-to-network-issues">Scan failing due to network issues<a class="headerlink" href="#scan-failing-due-to-network-issues" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># pip-audit can&#39;t reach PyPI Advisory Database</span>
+Error:<span class="w"> </span>Failed<span class="w"> </span>to<span class="w"> </span>download<span class="w"> </span>vulnerability<span class="w"> </span>database
+
+<span class="c1"># Solution: Retry the workflow or check network connectivity</span>
+</code></pre></div>
+<h3 id="false-positives-in-trivy">False positives in Trivy<a class="headerlink" href="#false-positives-in-trivy" title="Permanent link">&para;</a></h3>
+<p>Some vulnerabilities may not apply to Playbook's use case:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create .trivyignore file</span>
+cat<span class="w"> </span>&gt;<span class="w"> </span>.trivyignore<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<span class="s"># Not exploitable: Playbook doesn&#39;t use affected code path</span>
+<span class="s">CVE-2024-XXXX</span>
+<span class="s">EOF</span>
+</code></pre></div>
+<p>Document the reason for ignoring in comments.</p>
+<h3 id="dependabot-prs-failing-tests">Dependabot PRs failing tests<a class="headerlink" href="#dependabot-prs-failing-tests" title="Permanent link">&para;</a></h3>
+<p>If a Dependabot PR breaks tests:</p>
+<ol>
+<li>Comment <code>@dependabot ignore this major version</code> to skip major updates</li>
+<li>Investigate breaking changes in the package changelog</li>
+<li>Update Playbook code to handle API changes</li>
+<li>Manually create a PR with the fix</li>
+</ol>
+<h3 id="security-scan-taking-too-long">Security scan taking too long<a class="headerlink" href="#security-scan-taking-too-long" title="Permanent link">&para;</a></h3>
+<p>Large Docker images can slow down Trivy scans. To optimize:</p>
+<div class="highlight"><pre><span></span><code><span class="c"># Use multi-stage builds to reduce final image size</span>
+<span class="k">FROM</span><span class="w"> </span><span class="s">python:3.12-slim</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="s">builder</span>
+<span class="c"># ... build steps ...</span>
+
+<span class="k">FROM</span><span class="w"> </span><span class="s">python:3.12-slim</span>
+<span class="k">COPY</span><span class="w"> </span>--from<span class="o">=</span>builder<span class="w"> </span>/app<span class="w"> </span>/app
+</code></pre></div>
+<h2 id="additional-resources">Additional Resources<a class="headerlink" href="#additional-resources" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://github.com/pypa/pip-audit">pip-audit documentation</a></li>
+<li><a href="https://aquasecurity.github.io/trivy/">Trivy documentation</a></li>
+<li><a href="https://docs.github.com/en/code-security/dependabot">Dependabot documentation</a></li>
+<li><a href="https://docs.github.com/en/code-security/code-scanning">GitHub Security tab</a></li>
+<li><a href="https://github.com/pypa/advisory-database">PyPI Advisory Database</a></li>
+<li><a href="https://cve.mitre.org/">CVE database</a></li>
+</ul>
+<p>Need help? Check <a href="../troubleshooting/">Troubleshooting &amp; FAQ</a> or open a GitHub issue.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tabs", "navigation.sections", "navigation.top", "content.code.copy", "search.highlight", "search.suggest"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

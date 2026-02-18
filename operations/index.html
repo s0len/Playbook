@@ -1,0 +1,1419 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Sonarr for Sports – Automated file matching, renaming, and metadata for sports content in Plex.">
+      
+      
+      
+        <link rel="canonical" href="https://s0len.github.io/Playbook/operations/">
+      
+      
+        <link rel="prev" href="../configuration/">
+      
+      
+        <link rel="next" href="../integrations/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Operations & Run Modes - Playbook</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#operations-run-modes" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Playbook" class="md-header__button md-logo" aria-label="Playbook" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Playbook
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Operations & Run Modes
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/s0len/playbook" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    s0len/playbook
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Introduction
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../configuration/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Configuration Guide
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Operations & Run Modes
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../integrations/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Integrations
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../recipes/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Recipes & How-tos
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../troubleshooting/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Troubleshooting & FAQ
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../developer-guide/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Developer Guide
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Playbook" class="md-nav__button md-logo" aria-label="Playbook" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    Playbook
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/s0len/playbook" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    s0len/playbook
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations & Run Modes
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations & Run Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#run-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run Modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-flags-environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Flags &amp; Environment Variables
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CLI Flags &amp; Environment Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mode-playbooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode playbooks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mode playbooks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#batch-runs-via-cronsystemd-timer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch runs via cron/systemd timer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#always-on-watcher-via-systemd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Always-on watcher via systemd
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kubernetes-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kubernetes patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subcommands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subcommands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plex-metadata-sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plex Metadata Sync
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logging-observability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging &amp; Observability
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Logging &amp; Observability">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tracing-diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracing &amp; diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#monitoring-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitoring Hooks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#directory-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Directory Conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrades-backups" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrades &amp; Backups
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recipes & How-tos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting & FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#run-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run Modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-flags-environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Flags &amp; Environment Variables
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CLI Flags &amp; Environment Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mode-playbooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode playbooks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mode playbooks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#batch-runs-via-cronsystemd-timer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch runs via cron/systemd timer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#always-on-watcher-via-systemd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Always-on watcher via systemd
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kubernetes-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kubernetes patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subcommands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subcommands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plex-metadata-sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plex Metadata Sync
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logging-observability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging &amp; Observability
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Logging &amp; Observability">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tracing-diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracing &amp; diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#monitoring-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitoring Hooks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#directory-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Directory Conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrades-backups" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrades &amp; Backups
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="operations-run-modes">Operations &amp; Run Modes<a class="headerlink" href="#operations-run-modes" title="Permanent link">&para;</a></h1>
+<p>The CLI powers every deployment path—Docker entrypoint, Kubernetes container, or ad-hoc batch run. This guide covers run modes, flags, logging, and day-2 operations.</p>
+<h2 id="run-modes">Run Modes<a class="headerlink" href="#run-modes" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>How to enable</th>
+<th>Best for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Batch</td>
+<td>Default CLI behavior (<code>python -m playbook.cli</code>)</td>
+<td>One-off reorg runs and cron jobs</td>
+</tr>
+<tr>
+<td>Watcher</td>
+<td><code>--watch</code> flag or <code>WATCH_MODE=true</code> (also controlled via <code>settings.file_watcher.enabled</code>)</td>
+<td>Always-on ingestion, reacts to filesystem events</td>
+</tr>
+<tr>
+<td>Validate</td>
+<td><code>python -m playbook.cli validate-config --config ...</code></td>
+<td>CI gates + local smoke tests</td>
+</tr>
+</tbody>
+</table>
+<p>Batch mode exits after a single pass. Watcher mode keeps the process alive, listening for <code>create</code>, <code>modify</code>, and <code>move</code> events underneath <code>source_dir</code> (or <code>file_watcher.paths</code>). Use <code>file_watcher.debounce_seconds</code> to batch bursts of events, and <code>file_watcher.reconcile_interval</code> to force periodic full scans in case the platform drops events.</p>
+<h2 id="cli-flags-environment-variables">CLI Flags &amp; Environment Variables<a class="headerlink" href="#cli-flags-environment-variables" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>CLI Flag</th>
+<th>Environment</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--config PATH</code></td>
+<td><code>CONFIG_PATH</code></td>
+<td><code>/config/playbook.yaml</code></td>
+<td>Path to the YAML config.</td>
+</tr>
+<tr>
+<td><code>--dry-run</code></td>
+<td><code>DRY_RUN</code></td>
+<td>Inherits <code>settings.dry_run</code></td>
+<td>Force no-write mode.</td>
+</tr>
+<tr>
+<td><code>--verbose</code></td>
+<td><code>VERBOSE</code> / <code>DEBUG</code></td>
+<td><code>false</code></td>
+<td>Enables console <code>DEBUG</code> output.</td>
+</tr>
+<tr>
+<td><code>--log-level LEVEL</code></td>
+<td><code>LOG_LEVEL</code></td>
+<td><code>INFO</code> (or <code>DEBUG</code> with <code>--verbose</code>)</td>
+<td>File log level.</td>
+</tr>
+<tr>
+<td><code>--console-level LEVEL</code></td>
+<td><code>CONSOLE_LEVEL</code></td>
+<td>Matches file level</td>
+<td>Console log level.</td>
+</tr>
+<tr>
+<td><code>--log-file PATH</code></td>
+<td><code>LOG_FILE</code> / <code>LOG_DIR</code></td>
+<td><code>./playbook.log</code></td>
+<td>Rotates to <code>*.previous</code> on start.</td>
+</tr>
+<tr>
+<td><code>--trace-matches</code> / <code>--explain</code></td>
+<td>—</td>
+<td><code>false</code></td>
+<td>Capture per-file trace JSON under <code>cache_dir/traces</code>.</td>
+</tr>
+<tr>
+<td><code>--trace-output PATH</code></td>
+<td>—</td>
+<td><code>cache_dir/traces</code></td>
+<td>Custom directory for trace JSONs (implies <code>--trace-matches</code>).</td>
+</tr>
+<tr>
+<td><code>--clear-processed-cache</code></td>
+<td><code>CLEAR_PROCESSED_CACHE</code></td>
+<td><code>false</code></td>
+<td>Resets processed file cache before processing.</td>
+</tr>
+<tr>
+<td><code>--watch</code></td>
+<td><code>WATCH_MODE=true</code></td>
+<td><code>settings.file_watcher.enabled</code></td>
+<td>Force watcher mode on.</td>
+</tr>
+<tr>
+<td><code>--no-watch</code></td>
+<td><code>WATCH_MODE=false</code></td>
+<td><code>false</code></td>
+<td>Disable watcher mode even if config enables it.</td>
+</tr>
+</tbody>
+</table>
+<p>Environment variables override config defaults; CLI flags override both. <code>SOURCE_DIR</code>, <code>DESTINATION_DIR</code>, and <code>CACHE_DIR</code> also override the <code>settings</code> block at runtime, which is handy for per-environment deployments.</p>
+<h3 id="mode-playbooks">Mode playbooks<a class="headerlink" href="#mode-playbooks" title="Permanent link">&para;</a></h3>
+<h4 id="batch-runs-via-cronsystemd-timer">Batch runs via cron/systemd timer<a class="headerlink" href="#batch-runs-via-cronsystemd-timer" title="Permanent link">&para;</a></h4>
+<p>Use cron (or a systemd timer) to kick off a fresh container/CLI run on a schedule. The example below dry-runs every hour and exits cleanly when finished:</p>
+<p><code>--8&lt;-- "snippets/cron-batch-job.md"</code></p>
+<p>Keep <code>LOG_DIR</code> and <code>CACHE_DIR</code> on persistent volumes so subsequent runs stay warm.</p>
+<h4 id="always-on-watcher-via-systemd">Always-on watcher via systemd<a class="headerlink" href="#always-on-watcher-via-systemd" title="Permanent link">&para;</a></h4>
+<p>When running natively on a host, wrap the CLI in a systemd service so it restarts after crashes and logs to <code>journalctl</code> while still writing <code>playbook.log</code>:</p>
+<p><code>--8&lt;-- "snippets/systemd-watcher-service.md"</code></p>
+<p>Store secrets in <code>/etc/playbook.env</code> (referenced by <code>EnvironmentFile</code>) and keep the virtualenv pinned to a known path.</p>
+<h4 id="kubernetes-patterns">Kubernetes patterns<a class="headerlink" href="#kubernetes-patterns" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>CronJob</strong> – mirrors the batch run model; the container runs once and exits. Ideal for nightly/weekly cleanups.</li>
+<li><strong>Deployment / Flux HelmRelease</strong> – keeps the watcher alive. Use <code>WATCH_MODE=true</code>, persistent cache/log PVCs, and <code>reloader.stakater.com/auto: "true"</code> so config changes hot-reload.</li>
+</ul>
+<p>Examples for both live in <a href="../getting-started/#option-c-kubernetes-flux-helmrelease">Getting Started</a>.</p>
+<h3 id="subcommands">Subcommands<a class="headerlink" href="#subcommands" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>python -m playbook.cli validate-config --config … --diff-sample --show-trace</code><br />
+  CI-friendly validation that enforces schema checks and surfaces diffs against <code>config/playbook.sample.yaml</code>.</li>
+<li><code>python -m playbook.cli kometa-trigger --config … --mode docker</code><br />
+  Triggers Kometa once without running the processor. Useful when debugging trigger failures or forcing a metadata refresh after a manual ingest.</li>
+</ul>
+<h3 id="plex-metadata-sync">Plex Metadata Sync<a class="headerlink" href="#plex-metadata-sync" title="Permanent link">&para;</a></h3>
+<p>Playbook can push show/season/episode metadata (titles, sort titles, summaries, dates, posters, backgrounds) directly to Plex after processing files. This eliminates the need for Kometa in many cases.</p>
+<p><strong>Configuration</strong> (<code>settings.plex_metadata_sync</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Env Override</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td><code>PLEX_SYNC_ENABLED</code></td>
+<td>Enable Plex sync (default: false)</td>
+</tr>
+<tr>
+<td><code>url</code></td>
+<td><code>PLEX_URL</code></td>
+<td>Plex server URL (e.g., <code>http://plex:32400</code>)</td>
+</tr>
+<tr>
+<td><code>token</code></td>
+<td><code>PLEX_TOKEN</code></td>
+<td>Plex auth token</td>
+</tr>
+<tr>
+<td><code>library_id</code></td>
+<td><code>PLEX_LIBRARY_ID</code></td>
+<td>Target library section ID</td>
+</tr>
+<tr>
+<td><code>library_name</code></td>
+<td><code>PLEX_LIBRARY_NAME</code></td>
+<td>Target library name (used if ID not set)</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td><code>PLEX_TIMEOUT</code></td>
+<td>HTTP timeout in seconds (default: 15)</td>
+</tr>
+<tr>
+<td><code>force</code></td>
+<td><code>PLEX_FORCE</code></td>
+<td>Force updates even when metadata unchanged</td>
+</tr>
+<tr>
+<td><code>dry_run</code></td>
+<td><code>PLEX_SYNC_DRY_RUN</code></td>
+<td>Log updates without making API calls</td>
+</tr>
+<tr>
+<td><code>sports</code></td>
+<td><code>PLEX_SPORTS</code></td>
+<td>Comma-separated list of sport IDs to sync</td>
+</tr>
+<tr>
+<td><code>scan_wait</code></td>
+<td><code>PLEX_SCAN_WAIT</code></td>
+<td>Seconds to wait after library scan (default: 5, set 0 to skip)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How it works:</strong></p>
+<ol>
+<li><strong>Automatic</strong>: When enabled, Plex sync runs automatically after file processing.</li>
+<li><strong>Smart sync decision</strong>: Sync runs when:</li>
+<li>New files were processed</li>
+<li>Metadata changed in remote YAML</li>
+<li>Sports have never been synced to Plex (first-time sync)</li>
+<li>Force mode is enabled</li>
+<li><strong>Change detection</strong>: Uses fingerprint-based detection—shows/seasons only update when metadata changes; episodes update when their content changes.</li>
+<li><strong>First-time sync</strong>: If a sport has never been synced to Plex, it will sync automatically even if no new files were processed. This ensures existing content gets proper metadata.</li>
+<li><strong>Field locking</strong>: Sets <code>{field}.locked=1</code> to prevent Plex agents from overwriting your custom metadata.</li>
+<li><strong>Rate limiting</strong>: Built-in rate limiting and retry logic for resilient API calls.</li>
+<li><strong>Security</strong>: Token passed via header (not URL query params); URLs sanitized in logs.</li>
+</ol>
+<p><strong>Manual execution:</strong></p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>playbook.plex_metadata_sync<span class="w"> </span>--config<span class="w"> </span>/config/playbook.yaml<span class="w"> </span>--verbose
+</code></pre></div>
+<p><strong>State files</strong> (stored in <code>cache_dir/state/</code>):
+- <code>plex-metadata-hashes.json</code>: Fingerprint cache for change detection
+- <code>plex-sync-state.json</code>: Tracks which sports have been synced to Plex</p>
+<h2 id="logging-observability">Logging &amp; Observability<a class="headerlink" href="#logging-observability" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Logs use a multi-line block layout (timestamp, header, aligned key/value pairs) for rapid scanning.</li>
+<li>INFO-level runs summarize totals per sport/source; add <code>--verbose</code>/<code>LOG_LEVEL=DEBUG</code> for per-file diagnostics.</li>
+<li>Each pass ends with a <code>Run Recap</code> block (duration, totals, Plex sync status, destination samples).</li>
+<li>On every start, the previous log rotates to <code>playbook.log.previous</code>. Persist <code>/var/log/playbook</code> (Docker) or whatever <code>LOG_DIR</code> you choose.</li>
+<li>Set <code>LOG_LEVEL=WARNING</code> (or higher) to cut down on noise for steady-state watcher deployments.</li>
+<li><code>PLAIN_CONSOLE_LOGS=true</code> forces plain text output (handy for syslog collectors); <code>RICH_CONSOLE_LOGS=true</code> forces Rich formatting even when the console isn’t a TTY.</li>
+<li>Use separate <code>LOG_DIR</code> mounts per environment and ship the log files to your preferred log stack (Vector, Fluent Bit, Loki, etc.).</li>
+</ul>
+<h3 id="tracing-diagnostics">Tracing &amp; diagnostics<a class="headerlink" href="#tracing-diagnostics" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>--trace-matches</code> (or <code>--explain</code>) writes JSON artifacts per processed file so you can audit regex captures, selectors, and template output.</li>
+<li><code>--trace-output /path/to/dir</code> stores those JSONs somewhere other than <code>cache_dir/traces</code>.</li>
+<li><code>--clear-processed-cache</code> forces Playbook to treat every file as new; pair it with <code>--dry-run</code> when validating a new config so you see complete notifications and Kometa trigger previews without touching the filesystem.</li>
+<li>Combine <code>--dry-run --verbose --trace-matches</code> to capture a full story: console logs, persistent logs, and JSON traces for each match.</li>
+<li>For watcher deployments, schedule periodic <code>validate-config</code> runs in CI so schema regressions surface before you roll containers.</li>
+</ul>
+<h2 id="monitoring-hooks">Monitoring Hooks<a class="headerlink" href="#monitoring-hooks" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>settings.kometa_trigger</code> nudges Kometa after each ingest cycle. Modes: <code>kubernetes</code> (clone a CronJob) or <code>docker</code> (run/exec a container). Detailed examples live in <a href="../integrations/#kometa-triggering">Integrations</a>.</li>
+<li><code>notifications.targets</code> can ping Autoscan immediately after new files appear so Plex rescans folders without manual input.</li>
+<li>Add <code>notifications.targets</code> entries for Discord/Slack/webhooks to receive summaries per run or per day.</li>
+</ul>
+<h2 id="directory-conventions">Directory Conventions<a class="headerlink" href="#directory-conventions" title="Permanent link">&para;</a></h2>
+<p>Hardlinks are the default action, so you retain the original downloads while presenting a clean Plex library. A typical layout after a Formula 1 weekend:</p>
+<div class="highlight"><pre><span></span><code>Formula 1 2025/
+└── 01 Bahrain Grand Prix/
+    ├── Formula 1 - S01E01 - Free Practice 1.mkv
+    ├── Formula 1 - S01E02 - Qualifying.mkv
+    ├── Formula 1 - S01E03 - Sprint.mkv
+    └── Formula 1 - S01E04 - Race.mkv
+</code></pre></div>
+<p>Switch <code>link_mode</code> to <code>copy</code> or <code>symlink</code> globally or per sport when working across filesystems or SMB/NFS shares.</p>
+<h2 id="upgrades-backups">Upgrades &amp; Backups<a class="headerlink" href="#upgrades-backups" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Docker: pull the latest tag (<code>docker pull ghcr.io/s0len/playbook:latest</code>) and recreate the container. Keep <code>/config</code>, <code>/var/log/playbook</code>, and cache directories mounted so runs resume instantly.</li>
+<li>Kubernetes: bump the HelmRelease image tag and let Flux reconcile. Cluster CronJobs/Deployments inherit the latest container automatically.</li>
+<li>Python: upgrade the virtualenv (<code>pip install -U -r requirements.txt</code>).</li>
+<li>Back up <code>playbook.yaml</code>, notification secrets, and metadata caches if you want to preserve warm-start performance. Everything else is auto-generated.</li>
+<li>Before promoting a new version, run the container with <code>--dry-run --clear-processed-cache</code> against a staging copy of your downloads to confirm new pattern packs behave as expected.</li>
+<li>Pin tags (e.g., <code>ghcr.io/s0len/playbook:v1.3.1</code>) in production deployments, then test <code>:latest</code> or <code>develop</code> in a sandbox before rolling forward.</li>
+<li>Keep a copy of <code>playbook.sample.yaml</code> from the release you are running; diffs against the current sample file quickly highlight breaking config changes.</li>
+</ul>
+<p>When you need to troubleshoot, jump to <a href="../troubleshooting/">Troubleshooting &amp; FAQ</a> for per-scenario guidance.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tabs", "navigation.sections", "navigation.top", "content.code.copy", "search.highlight", "search.suggest"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,1503 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Sonarr for Sports – Automated file matching, renaming, and metadata for sports content in Plex.">
+      
+      
+      
+        <link rel="canonical" href="https://s0len.github.io/Playbook/configuration/">
+      
+      
+        <link rel="prev" href="../getting-started/">
+      
+      
+        <link rel="next" href="../operations/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Configuration Guide - Playbook</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#configuration-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Playbook" class="md-header__button md-logo" aria-label="Playbook" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Playbook
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Configuration Guide
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/s0len/playbook" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    s0len/playbook
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Introduction
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Configuration Guide
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../operations/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Operations & Run Modes
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../integrations/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Integrations
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../recipes/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Recipes & How-tos
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../troubleshooting/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Troubleshooting & FAQ
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../developer-guide/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Developer Guide
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Playbook" class="md-nav__button md-logo" aria-label="Playbook" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    Playbook
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/s0len/playbook" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    s0len/playbook
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration Guide
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-global-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Global Settings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Global Settings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#default-sports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Sports
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notifications-autoscan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notifications &amp; Autoscan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Notifications &amp; Autoscan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#autoscan-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autoscan example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-watcher-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Watcher Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-tvsportsdb-api-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. TVSportsDB API Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-sport-entries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Sport Entries
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Sport Entries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pattern-sets-reuse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern Sets &amp; Reuse
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-pattern-matching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Pattern Matching
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-destination-templating" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Destination Templating
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-variants-reuse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Variants &amp; Reuse
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation Workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations & Run Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recipes & How-tos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting & FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-global-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Global Settings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Global Settings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#default-sports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Sports
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notifications-autoscan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notifications &amp; Autoscan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Notifications &amp; Autoscan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#autoscan-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autoscan example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-watcher-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Watcher Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-tvsportsdb-api-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. TVSportsDB API Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-sport-entries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Sport Entries
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Sport Entries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pattern-sets-reuse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern Sets &amp; Reuse
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-pattern-matching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Pattern Matching
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-destination-templating" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Destination Templating
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-variants-reuse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Variants &amp; Reuse
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation Workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="configuration-guide">Configuration Guide<a class="headerlink" href="#configuration-guide" title="Permanent link">&para;</a></h1>
+<p>Every Playbook deployment runs from a single YAML file. Start by copying <code>config/playbook.sample.yaml</code>, then enable sports, pattern sets, and integrations one section at a time. This guide mirrors the dataclasses under <code>src/playbook/config.py</code>.</p>
+<h2 id="1-global-settings">1. Global Settings<a class="headerlink" href="#1-global-settings" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>source_dir</code></td>
+<td>Root directory containing downloads to normalize.</td>
+<td><code>/data/source</code></td>
+</tr>
+<tr>
+<td><code>destination_dir</code></td>
+<td>Library root where organized folders/files are created.</td>
+<td><code>/data/destination</code></td>
+</tr>
+<tr>
+<td><code>cache_dir</code></td>
+<td>Metadata cache directory (<code>metadata/&lt;hash&gt;.json</code>). Safe to delete to force refetch.</td>
+<td><code>/data/cache</code></td>
+</tr>
+<tr>
+<td><code>dry_run</code></td>
+<td>When <code>true</code>, logs intent but skips filesystem writes.</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>skip_existing</code></td>
+<td>Leave destination files untouched unless a higher-priority release arrives.</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>link_mode</code></td>
+<td>Default link behavior: <code>hardlink</code>, <code>copy</code>, or <code>symlink</code>.</td>
+<td><code>hardlink</code></td>
+</tr>
+<tr>
+<td><code>use_default_sports</code></td>
+<td>Auto-enable all built-in sports. Set <code>false</code> to only use explicitly defined sports.</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>disabled_sports</code></td>
+<td>List of sport base IDs to exclude from defaults (e.g., <code>[formula_e, moto2]</code>).</td>
+<td><code>[]</code></td>
+</tr>
+<tr>
+<td><code>file_watcher.enabled</code></td>
+<td>Keeps Playbook running and reacts to filesystem events.</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>file_watcher.paths</code></td>
+<td>Directories to observe; defaults to <code>source_dir</code> when empty.</td>
+<td><code>[]</code></td>
+</tr>
+<tr>
+<td><code>file_watcher.include</code> / <code>ignore</code></td>
+<td>Glob filters to allow/skip events (e.g., ignore <code>*.part</code>).</td>
+<td><code>[]</code> / <code>["*.part","*.tmp"]</code></td>
+</tr>
+<tr>
+<td><code>file_watcher.debounce_seconds</code></td>
+<td>Minimum seconds between watcher-triggered runs.</td>
+<td><code>5</code></td>
+</tr>
+<tr>
+<td><code>file_watcher.reconcile_interval</code></td>
+<td>Forces a full scan every <em>N</em> seconds even if no events arrive.</td>
+<td><code>900</code></td>
+</tr>
+<tr>
+<td><code>destination.*</code></td>
+<td>Default templates for root folder, season folder, and filename.</td>
+<td>See sample</td>
+</tr>
+</tbody>
+</table>
+<h3 id="default-sports">Default Sports<a class="headerlink" href="#default-sports" title="Permanent link">&para;</a></h3>
+<p>When <code>use_default_sports: true</code> (the default), Playbook automatically enables these sports:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Sports</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Motorsport</strong></td>
+<td>Formula 1, Formula E, IndyCar, MotoGP, Moto2, Moto3, World Superbike, World Supersport, Isle of Man TT</td>
+</tr>
+<tr>
+<td><strong>Combat Sports</strong></td>
+<td>UFC</td>
+</tr>
+<tr>
+<td><strong>North American</strong></td>
+<td>NFL, NBA, NHL</td>
+</tr>
+<tr>
+<td><strong>Football (Soccer)</strong></td>
+<td>Premier League, UEFA Champions League</td>
+</tr>
+<tr>
+<td><strong>Figure Skating</strong></td>
+<td>ISU Figure Skating</td>
+</tr>
+</tbody>
+</table>
+<p>To disable specific sports:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">settings</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">disabled_sports</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">formula_e</span><span class="w">      </span><span class="c1"># Disable Formula E</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">moto2</span><span class="w">          </span><span class="c1"># Disable Moto2</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">moto3</span><span class="w">          </span><span class="c1"># Disable Moto3</span>
+</code></pre></div>
+<p>To disable all defaults and only use your explicit sports:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">settings</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">use_default_sports</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+
+<span class="nt">sports</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">formula1</span>
+<span class="w">    </span><span class="c1"># ... your custom config</span>
+</code></pre></div>
+<h3 id="notifications-autoscan">Notifications &amp; Autoscan<a class="headerlink" href="#notifications-autoscan" title="Permanent link">&para;</a></h3>
+<p>Define Discord/Slack/webhook/email/autoscan targets under <code>notifications.targets</code>. Entries can override mention mappings defined globally:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">notifications</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">mentions</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">premier_league</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;@&amp;123456789012345678&gt;&quot;</span>
+<span class="w">    </span><span class="nt">formula1</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;@&amp;222333444555666777&gt;&quot;</span>
+<span class="w">    </span><span class="nt">default</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@everyone&quot;</span>
+<span class="w">  </span><span class="nt">targets</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">discord</span>
+<span class="w">      </span><span class="nt">webhook_env</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DISCORD_WEBHOOK_URL</span>
+<span class="w">      </span><span class="c1"># webhook_url: ${DISCORD_WEBHOOK_URL}  # Optional inline expansion if your config templating supports it.</span>
+<span class="w">      </span><span class="nt">mentions</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">formula1</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;@&amp;999&gt;&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">autoscan</span>
+<span class="w">      </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://autoscan:3030</span>
+<span class="w">      </span><span class="nt">trigger</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">manual</span>
+<span class="w">      </span><span class="nt">rewrite</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">from</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${DESTINATION_DIR:-/data/destination}</span>
+<span class="w">          </span><span class="nt">to</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/mnt/unionfs/Media</span>
+</code></pre></div>
+<p>Set <code>webhook_env</code> to the name of an environment variable (in your container/host manifest) to keep secrets out of the YAML file. Playbook resolves the value at runtime and skips the target if the variable is absent. If you already template the config file yourself you can keep using <code>webhook_url</code> with <code>${VAR}</code> syntax; both approaches continue to work.</p>
+<p>Autoscan entries mirror the <a href="https://github.com/Cloudbox/autoscan?tab=readme-ov-file#manual">manual trigger</a>. Rewrites translate container paths to Plex-visible mount points. Every successful <code>new</code>/<code>changed</code> event sends the parent directory of the destination file.</p>
+<p><strong>Supported target types</strong></p>
+<ul>
+<li><code>discord</code> – rich embeds with optional mention overrides per webhook.</li>
+<li><code>slack</code> – simple JSON payload; add your preferred text template.</li>
+<li><code>webhook</code> – fully templatable JSON for custom receivers.</li>
+<li><code>email</code> – SMTP transport with subject/body templates.</li>
+<li><code>autoscan</code> – immediately ping Autoscan so Plex/Jellyfin rescans the destination directories.</li>
+</ul>
+<p>Batching knobs (<code>notifications.batch_daily</code>, <code>notifications.flush_time</code>) apply to any target that supports rolling updates (Discord embeds today). Use <code>notifications.mentions</code> to fan out role/user mentions by sport ID (supports shell-style globs), and override them per target when one destination needs custom pings.</p>
+<h4 id="autoscan-example">Autoscan example<a class="headerlink" href="#autoscan-example" title="Permanent link">&para;</a></h4>
+<p><code>--8&lt;-- "snippets/notifications-autoscan.md"</code></p>
+<p>Define multiple <code>rewrite</code> map entries when Autoscan lives in another container or when Plex views different mount points.</p>
+<h3 id="file-watcher-settings">File Watcher Settings<a class="headerlink" href="#file-watcher-settings" title="Permanent link">&para;</a></h3>
+<p>The watcher keeps Playbook alive and reacts to filesystem events instead of relying solely on periodic scans:</p>
+<ul>
+<li><code>file_watcher.paths</code> defaults to <code>source_dir</code>. List additional absolute or relative paths to watch multiple download roots.</li>
+<li><code>include</code> / <code>ignore</code> accept glob syntax. Common ignores: <code>["*.part", "*.tmp", "*.!qb"]</code>.</li>
+<li><code>debounce_seconds</code> batches bursts of events into a single processor run. Increase it when downloaders generate rapid file-change storms.</li>
+<li><code>reconcile_interval</code> performs a full scan every <em>N</em> seconds even if the platform drops events.</li>
+<li>Override <code>WATCH_MODE=true|false</code> (or use <code>--watch</code> / <code>--no-watch</code>) to force the CLI into the desired mode regardless of the config.</li>
+</ul>
+<h2 id="2-tvsportsdb-api-configuration">2. TVSportsDB API Configuration<a class="headerlink" href="#2-tvsportsdb-api-configuration" title="Permanent link">&para;</a></h2>
+<p>Playbook fetches show/season/episode metadata from TVSportsDB REST API. The defaults work for most users, but you can optionally tune cache and timeout settings under <code>settings.tvsportsdb</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">settings</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">tvsportsdb</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">ttl_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span><span class="w">     </span><span class="c1"># Cache API responses for 6 hours (default: 12)</span>
+<span class="w">    </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span><span class="w">      </span><span class="c1"># HTTP request timeout in seconds (default: 30)</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ttl_hours</code></td>
+<td>How long to cache API responses before refreshing</td>
+<td><code>12</code></td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td>HTTP request timeout in seconds</td>
+<td><code>30</code></td>
+</tr>
+</tbody>
+</table>
+<p>This section is optional—omit it entirely to use defaults.</p>
+<h2 id="3-sport-entries">3. Sport Entries<a class="headerlink" href="#3-sport-entries" title="Permanent link">&para;</a></h2>
+<div class="admonition tip">
+<p class="admonition-title">Most users don't need this section</p>
+<p>All supported sports are enabled by default with correct configurations. Only define sports here if you need to:</p>
+<ul>
+<li>Override settings for a specific sport (e.g., custom quality profile)</li>
+<li>Add a custom sport not in the defaults</li>
+<li>Replace a default sport with different variants/slugs</li>
+</ul>
+</div>
+<p>Each sport links to a show in TVSportsDB via <code>show_slug</code> and defines detection filters and pattern packs:</p>
+<div class="highlight"><pre><span></span><code><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">formula1_2025</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Formula 1 2025</span>
+<span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">  </span><span class="nt">show_slug</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;formula-1-2025&quot;</span><span class="w">    </span><span class="c1"># TVSportsDB show slug (REQUIRED)</span>
+<span class="w">  </span><span class="nt">source_globs</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Formula.1.*&quot;</span>
+<span class="w">  </span><span class="nt">source_extensions</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.mkv</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.mp4</span>
+<span class="w">  </span><span class="nt">allow_unmatched</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">  </span><span class="nt">pattern_sets</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">formula1</span>
+<span class="w">  </span><span class="nt">season_overrides</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">Pre-Season Testing</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">season_number</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<span class="w">      </span><span class="nt">round</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+</code></pre></div>
+<p>Key knobs:</p>
+<ul>
+<li><code>show_slug</code> (required) references the show in TVSportsDB. Find available slugs at the API endpoint or TVSportsDB web interface.</li>
+<li><code>enabled</code> toggles sports without deleting them.</li>
+<li><code>source_globs</code> / <code>source_extensions</code> are coarse filters before any regex work happens.</li>
+<li><code>link_mode</code>, <code>destination.*</code>, and notification overrides let you specialize behavior per sport.</li>
+</ul>
+<p><strong>Supported file extensions</strong></p>
+<p>By default, Playbook processes files with these extensions: <code>.mkv</code>, <code>.mp4</code>, <code>.ts</code>, <code>.m4v</code>, <code>.avi</code>. The <code>.ts</code> extension supports MPEG Transport Stream files commonly used in TV recordings.</p>
+<blockquote>
+<p><strong>Important:</strong> When you set <code>source_extensions</code> on a sport, it <strong>replaces</strong> the defaults entirely—it does not merge with them. If you override this field, include all extensions you want to match:</p>
+<p><div class="highlight"><pre><span></span><code><span class="nt">source_extensions</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.mkv</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.mp4</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.ts</span><span class="w">   </span><span class="c1"># Don&#39;t forget .ts if you have transport stream files!</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.m4v</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.avi</span>
+</code></pre></div>
+- <code>team_alias_map</code> (optional) points to a built-in alias table (e.g., <code>premier_league</code>, <code>nhl</code>) used by the structured matcher to normalize shorthand like "Man City" or "NJD".
+- <code>pattern_sets</code> pulls from <code>src/playbook/pattern_templates.yaml</code>; you can still inline <code>file_patterns</code> for overrides.</p>
+</blockquote>
+<p><strong>Metadata overrides</strong></p>
+<ul>
+<li><code>season_overrides</code> lets you force numbers/titles for special events (exhibitions, pre-season testing, etc.). Define these at the sport level.</li>
+<li><code>tvsportsdb.ttl_hours</code> controls how aggressively Playbook refreshes API responses; lower it for rapidly changing leagues.</li>
+<li><code>allow_unmatched: true</code> is useful when onboarding a new sport—you'll still see matches in the log but without warnings.</li>
+</ul>
+<h3 id="pattern-sets-reuse">Pattern Sets &amp; Reuse<a class="headerlink" href="#pattern-sets-reuse" title="Permanent link">&para;</a></h3>
+<p>Pattern sets bundle curated regex/alias definitions under <code>src/playbook/pattern_templates.yaml</code>. To inspect them:</p>
+<div class="highlight"><pre><span></span><code>rg<span class="w"> </span>--context<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="s2">&quot;pattern_sets&quot;</span><span class="w"> </span>src/playbook/pattern_templates.yaml
+</code></pre></div>
+<ul>
+<li>Reference a bundle via <code>pattern_sets: ["formula1", "motoGP"]</code>.</li>
+<li>Layer sport-specific overrides by combining <code>pattern_sets</code> with inline <code>file_patterns</code>.</li>
+<li>Keep experimental tweaks local until they're stable, then upstream them by editing <code>pattern_templates.yaml</code>.</li>
+</ul>
+<h2 id="4-pattern-matching">4. Pattern Matching<a class="headerlink" href="#4-pattern-matching" title="Permanent link">&para;</a></h2>
+<p>Inline patterns support full regex/group control:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">file_patterns</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">regex</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;(?i)^Formula\\.1\\.(?P&lt;year&gt;\\d{4})\\.Round(?P&lt;round&gt;\\d{2})\\.(?P&lt;location&gt;[^.]+)\\.(?P&lt;session&gt;[^.]+)&quot;</span>
+<span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Canonical multi-session weekend releases</span>
+<span class="w">    </span><span class="nt">priority</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
+<span class="w">    </span><span class="nt">season_selector</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">round</span>
+<span class="w">      </span><span class="nt">group</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">round</span>
+<span class="w">    </span><span class="nt">episode_selector</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">group</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">session</span>
+<span class="w">    </span><span class="nt">session_aliases</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">Race</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;Race&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">      </span><span class="nt">Sprint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;Sprint.Race&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;Sprint&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">      </span><span class="nt">Qualifying</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;Qualifying&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;Quali&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">      </span><span class="nt">Free Practice 1</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;FP1&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;Free.Practice.1&quot;</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+<p>Reference table:</p>
+<ul>
+<li><code>regex</code> must expose the capture groups consumed by selectors/templates.</li>
+<li><code>season_selector</code> supports <code>round</code>, <code>key</code>, <code>title</code>, <code>sequential</code>, and <code>date</code> modes plus offsets/mappings.</li>
+<li><code>episode_selector</code> chooses which capture identifies an episode; set <code>allow_fallback_to_title</code> when a regex omits the session.</li>
+<li><code>session_aliases</code> augment metadata aliases with release-specific tokens (case-insensitive).</li>
+<li><code>priority</code> resolves collisions when multiple patterns match the same file.</li>
+</ul>
+<p><code>value_template</code> lets a selector compose a derived lookup key from multiple capture groups (e.g., <code>{date_year}-{month:0&gt;2}-{day:0&gt;2}</code> to normalize <code>10 11</code> → <code>2025-11-10</code>). The <code>date</code> selector mode uses the formatted value to locate the season containing an episode with the same <code>originally_available</code> date—perfect for leagues scheduled by calendar days rather than round numbers.</p>
+<p><strong>Testing patterns quickly</strong></p>
+<ol>
+<li>Drop real release names into <code>tests/data/pattern_samples.yaml</code>.</li>
+<li>Run <code>pytest tests/test_pattern_samples.py</code> to confirm they map to the expected metadata.</li>
+<li>Use <code>python -m playbook.cli --config playbook.yaml --dry-run --verbose</code> with <code>--clear-processed-cache</code> to reprocess the same files repeatedly during tuning.</li>
+</ol>
+<h2 id="5-destination-templating">5. Destination Templating<a class="headerlink" href="#5-destination-templating" title="Permanent link">&para;</a></h2>
+<p>Templates receive a rich context assembled from metadata + regex captures:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sport_id</code>, <code>sport_name</code></td>
+<td>Sport metadata from the config.</td>
+</tr>
+<tr>
+<td><code>show_title</code>, <code>show_slug</code></td>
+<td>Display title and API slug from TVSportsDB.</td>
+</tr>
+<tr>
+<td><code>season_title</code>, <code>season_number</code>, <code>season_round</code>, <code>season_year</code></td>
+<td>Season context with overrides applied.</td>
+</tr>
+<tr>
+<td><code>episode_title</code>, <code>episode_number</code>, <code>episode_summary</code>, <code>episode_originally_available</code></td>
+<td>Episode metadata pulled from the feed.</td>
+</tr>
+<tr>
+<td><code>location</code>, <code>session</code>, <code>round</code>, …</td>
+<td>Any capture group from the regex.</td>
+</tr>
+<tr>
+<td><code>source_filename</code>, <code>extension</code>, <code>relative_source</code></td>
+<td>Safe access to the original file path.</td>
+</tr>
+</tbody>
+</table>
+<p>Set per-sport or per-pattern overrides (<code>destination.root_template</code>, <code>destination.filename_template</code>) whenever a league needs special formatting.</p>
+<p>Tips:</p>
+<ul>
+<li>Append <code>{suffix}</code> to preserve any release-group decorations that survived sanitization.</li>
+<li>Use conditionals in templates (Jinja syntax) for optional segments, e.g., <code>{% if episode_originally_available %}...{% endif %}</code>.</li>
+<li>The renderer automatically normalizes whitespace and strips forbidden path characters—keep templates readable and let Playbook worry about sanitization.</li>
+<li>Override <code>destination.season_folder_template</code> to group rounds (e.g., <code>{season_round:02} {season_title}</code> for touring series).</li>
+</ul>
+<h2 id="6-variants-reuse">6. Variants &amp; Reuse<a class="headerlink" href="#6-variants-reuse" title="Permanent link">&para;</a></h2>
+<p>Reuse a base sport definition across seasons or release groups:</p>
+<div class="highlight"><pre><span></span><code><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">indycar</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IndyCar</span>
+<span class="w">  </span><span class="nt">pattern_sets</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">indycar</span>
+<span class="w">  </span><span class="nt">source_globs</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;IndyCar.*&quot;</span>
+<span class="w">  </span><span class="nt">variants</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2024</span>
+<span class="w">      </span><span class="nt">show_slug</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ntt-indycar-series-2024&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2025</span>
+<span class="w">      </span><span class="nt">show_slug</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ntt-indycar-series-2025&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2026</span>
+<span class="w">      </span><span class="nt">show_slug</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ntt-indycar-series-2026&quot;</span>
+</code></pre></div>
+<p>Each variant inherits fields from the parent, tweaks whatever is listed inside the variant block, and gets an auto-generated <code>id</code>/<code>name</code> when not explicitly set. Use variants when only the <code>show_slug</code> or alias table changes year-to-year.</p>
+<h2 id="validation-workflow">Validation Workflow<a class="headerlink" href="#validation-workflow" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Run <code>python -m playbook.cli validate-config --config /config/playbook.yaml --diff-sample</code> to catch schema errors early.</li>
+<li>Add <code>--show-trace</code> if you need full Python tracebacks.</li>
+<li>Commit sample configs to version control and watch the diff returned by the validator to understand exactly what deviated from <code>playbook.sample.yaml</code>.</li>
+</ol>
+<p>Ready to operate the organizer? Continue to <a href="../operations/">Operations &amp; Run Modes</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tabs", "navigation.sections", "navigation.top", "content.code.copy", "search.highlight", "search.suggest"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
