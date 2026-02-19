@@ -24,14 +24,14 @@ PLAYBOOK_CSS = """
 }
 
 body.body--dark {
-    --bg-primary: #1a1f2e;
-    --bg-card: rgba(26, 31, 46, 0.85);
-    --bg-card-solid: #232939;
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
-    --text-muted: #94a3b8;
-    --border-color: rgba(45, 53, 72, 0.5);
-    --shadow-color: rgba(0, 0, 0, 0.4);
+    --bg-primary: #0b0b0f;
+    --bg-card: #12121a;
+    --bg-card-solid: #12121a;
+    --text-primary: #f0f0f8;
+    --text-secondary: #a0a0b8;
+    --text-muted: #60607a;
+    --border-color: rgba(255, 255, 255, 0.07);
+    --shadow-color: rgba(0, 0, 0, 0.5);
     --accent-color: #00d4d4;
 }
 
@@ -59,6 +59,14 @@ body {
     border: 1px solid var(--border-color);
     box-shadow: 0 8px 32px var(--shadow-color);
     border-radius: 12px;
+}
+
+body.body--dark .glass-card {
+    background: #12121a !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 .glass-card.q-card {
@@ -194,36 +202,43 @@ body.body--dark .status-chip-error {
     padding: 16px;
 }
 
-/* ===== Navigation Header ===== */
-.nav-header {
-    background: linear-gradient(135deg, #1a1f2e 0%, #232939 100%) !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-    border-bottom: 1px solid rgba(0, 212, 212, 0.1);
+/* ===== Left Sidebar ===== */
+.playbook-sidebar .q-drawer__content {
+    background: #0e0e16 !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+    box-shadow: none !important;
 }
 
-.nav-link {
-    padding: 8px 16px;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-}
-
-.nav-link:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-/* ===== Dark Mode Toggle ===== */
-.dark-mode-toggle {
+/* Nav item base */
+.sidebar-nav-item {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    border-radius: 10px;
+    transition: all 0.15s ease;
+    color: rgba(255, 255, 255, 0.3);
 }
 
-.dark-mode-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
+.sidebar-nav-item:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.sidebar-nav-item-active {
+    background: rgba(0, 212, 212, 0.15) !important;
+    color: #00d4d4 !important;
+}
+
+/* Sidebar icon buttons (dark mode toggle, etc.) */
+.sidebar-icon-btn {
+    color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.sidebar-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.07) !important;
+    color: rgba(255, 255, 255, 0.7) !important;
 }
 
 /* ===== Stats Card Enhancements ===== */

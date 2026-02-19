@@ -33,35 +33,40 @@ LOGGER = logging.getLogger(__name__)
 def create_app() -> None:
     """Create and configure the NiceGUI application with all routes."""
 
+    # Serve icon.png as a static file
+    _icon_path = Path(__file__).parent.parent.parent.parent / "icon.png"
+    if _icon_path.exists():
+        app.add_static_file(local_file=str(_icon_path), url_path="/icon.png")
+
     @ui.page("/")
     def index_page() -> None:
         """Dashboard page."""
-        _page_wrapper(dashboard.dashboard_page)
+        _page_wrapper(dashboard.dashboard_page, "/")
 
     @ui.page("/logs")
     def logs_page_route() -> None:
         """Logs page."""
-        _page_wrapper(logs.logs_page)
+        _page_wrapper(logs.logs_page, "/logs")
 
     @ui.page("/config")
     def config_page_route() -> None:
         """Settings page with form-based configuration."""
-        _page_wrapper(settings.settings_page)
+        _page_wrapper(settings.settings_page, "/config")
 
     @ui.page("/sports")
     def sports_page_route() -> None:
         """Sports management page."""
-        _page_wrapper(sports.sports_page)
+        _page_wrapper(sports.sports_page, "/sports")
 
     @ui.page("/sports/{sport_id}")
     def sport_detail_route(sport_id: str) -> None:
         """Sport detail page with season/episode tracking."""
-        _page_wrapper(lambda: sports.sport_detail_page(sport_id))
+        _page_wrapper(lambda: sports.sport_detail_page(sport_id), "/sports")
 
     @ui.page("/unmatched")
     def unmatched_page_route() -> None:
         """Unmatched files management page."""
-        _page_wrapper(unmatched.unmatched_page)
+        _page_wrapper(unmatched.unmatched_page, "/unmatched")
 
     # API endpoints for programmatic access
     @app.get("/api/stats")
@@ -86,7 +91,7 @@ def create_app() -> None:
         }
 
 
-def _page_wrapper(page_fn: callable) -> None:
+def _page_wrapper(page_fn: callable, current_path: str = "/") -> None:
     """Wrap a page function with common layout elements."""
     # Inject styles and set up theme (includes FOUC prevention script)
     setup_page_styles()
@@ -95,8 +100,8 @@ def _page_wrapper(page_fn: callable) -> None:
     dark = ui.dark_mode()
     apply_theme(dark)
 
-    # Add header (pass dark mode controller for toggle)
-    header(dark)
+    # Add sidebar (pass dark mode controller for toggle)
+    header(dark, current_path=current_path)
 
     # Add page content
     page_fn()
