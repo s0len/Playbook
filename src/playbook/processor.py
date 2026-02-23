@@ -198,6 +198,8 @@ class Processor:
         # Reset state and cancellation flag for new run
         self._state.reset()
         self.reset_cancel()
+        # Clear failed slug cache so newly-added metadata on TVSportsDB is discovered
+        self._dynamic_loader.clear_failed_slugs()
         runtimes = self._load_sports()
 
         if self._state.metadata_changed_sports:
