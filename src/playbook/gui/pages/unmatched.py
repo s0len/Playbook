@@ -971,3 +971,14 @@ def _execute_manual_match(record, sport, show, season, episode) -> None:
             season.index,
             episode.index,
         )
+
+    # Save persistent override so the match survives destination clears
+    if gui_state.manual_override_store:
+        gui_state.manual_override_store.add_override(
+            filename=Path(record.source_path).name,
+            sport_id=sport.id,
+            show_slug=show.key,
+            season_index=season.index,
+            episode_index=episode.index,
+            source_path=record.source_path,
+        )

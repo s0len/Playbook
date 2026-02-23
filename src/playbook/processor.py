@@ -21,6 +21,7 @@ from .metadata_loader import DynamicMetadataLoader, SportRuntime, load_sports
 from .models import ProcessingStats, SportFileMatch
 from .notifications import NotificationEvent, NotificationService
 from .persistence import (
+    ManualOverrideStore,
     MatchAttempt,
     ProcessedFileRecord,
     ProcessedFileStore,
@@ -59,6 +60,7 @@ class Processor:
         self.metadata_fingerprints = MetadataFingerprintStore(self.config.settings.cache_dir)
         self.processed_store = ProcessedFileStore(self.config.settings.cache_dir / "playbook.db")
         self.unmatched_store = UnmatchedFileStore(self.config.settings.cache_dir / "playbook.db")
+        self.manual_override_store = ManualOverrideStore(self.config.settings.cache_dir / "playbook.db")
         self.trace_options = trace_options or TraceOptions()
         settings = self.config.settings
         self.notification_service = NotificationService(
@@ -375,6 +377,13 @@ class Processor:
             - diagnostics: List of (severity, message, sport_id) tuples
             - match_attempts: Detailed match attempt records for unmatched file tracking
         """
+        # Check for manual override before pattern matching
+        override = self.manual_override_store.get_override(source_path.name)
+        if override:
+            result = self._process_override(source_path, override, runtimes, stats)
+            if result:
+                return True, [], []
+
         suffix = source_path.suffix.lower()
         matching_runtimes = [runtime for runtime in runtimes if suffix in runtime.extensions]
         ignored_reasons: list[tuple[str, str, str | None]] = []
@@ -570,6 +579,144 @@ class Processor:
                 self._persist_trace(trace_context)
 
         return False, ignored_reasons, match_attempts
+
+    def _process_override(
+        self,
+        source_path: Path,
+        override: Any,
+        runtimes: list[SportRuntime],
+        stats: ProcessingStats,
+    ) -> bool:
+        """Process a file using a manual override, bypassing pattern matching.
+
+        Args:
+            source_path: Path to the source file
+            override: ManualOverride record
+            runtimes: Available sport runtimes
+            stats: Processing statistics
+
+        Returns:
+            True if the override was successfully applied, False to fall through to normal matching.
+        """
+        # Find matching sport runtime
+        runtime = next((r for r in runtimes if r.sport.id == override.sport_id), None)
+        if not runtime:
+            LOGGER.warning(
+                self._format_log(
+                    "Manual Override Skipped (sport not configured)",
+                    {"Source": source_path.name, "Sport": override.sport_id},
+                )
+            )
+            return False
+
+        # Load show metadata
+        show = runtime.show
+        if runtime.is_dynamic:
+            # For dynamic sports, try to load the show via the dynamic loader
+            try:
+                dynamic_show = self._dynamic_loader.get_show_for_year(override.show_slug)
+                if dynamic_show:
+                    show = dynamic_show
+            except Exception:
+                LOGGER.warning(
+                    self._format_log(
+                        "Manual Override Skipped (dynamic metadata load failed)",
+                        {"Source": source_path.name, "Show": override.show_slug},
+                    )
+                )
+                return False
+
+        if not show:
+            LOGGER.warning(
+                self._format_log(
+                    "Manual Override Skipped (show not found)",
+                    {"Source": source_path.name, "Show": override.show_slug},
+                )
+            )
+            return False
+
+        # Look up season and episode by index
+        season = next((s for s in show.seasons if s.index == override.season_index), None)
+        if not season:
+            LOGGER.warning(
+                self._format_log(
+                    "Manual Override Skipped (season not found)",
+                    {"Source": source_path.name, "Season": override.season_index},
+                )
+            )
+            return False
+
+        episode = next((e for e in season.episodes if e.index == override.episode_index), None)
+        if not episode:
+            LOGGER.warning(
+                self._format_log(
+                    "Manual Override Skipped (episode not found)",
+                    {"Source": source_path.name, "Season": override.season_index, "Episode": override.episode_index},
+                )
+            )
+            return False
+
+        # Use the first available pattern for context/destination building
+        if not runtime.patterns:
+            LOGGER.warning(
+                self._format_log(
+                    "Manual Override Skipped (no patterns)",
+                    {"Source": source_path.name, "Sport": override.sport_id},
+                )
+            )
+            return False
+
+        pattern = runtime.patterns[0]
+        context = self._build_context(runtime, source_path, season, episode, {}, show)
+
+        try:
+            destination = self._build_destination(runtime, pattern, context)
+        except ValueError as exc:
+            LOGGER.warning(
+                self._format_log(
+                    "Manual Override Skipped (destination error)",
+                    {"Source": source_path.name, "Error": str(exc)},
+                )
+            )
+            return False
+
+        context["destination_path"] = str(destination)
+        context["destination_dir"] = str(destination.parent)
+        context["source_path"] = str(source_path)
+
+        match = SportFileMatch(
+            source_path=source_path,
+            destination_path=destination,
+            show=show,
+            season=season,
+            episode=episode,
+            pattern=pattern,
+            context=context,
+            sport=runtime.sport,
+        )
+
+        event = self._handle_match(match, stats)
+        if event:
+            self.notification_service.notify(event)
+
+        # Clean up unmatched record
+        if not self.config.settings.dry_run:
+            self.unmatched_store.delete_by_source(str(source_path))
+
+        LOGGER.info(
+            self._format_log(
+                "Manual Override Applied",
+                {
+                    "Source": source_path.name,
+                    "Sport": override.sport_id,
+                    "Show": show.title,
+                    "Season": season.title,
+                    "Episode": episode.title,
+                },
+            )
+        )
+
+        return True
 
     def _persist_trace(self, trace: dict[str, Any] | None) -> Path | None:
         return persist_trace(trace, self.trace_options, self.config.settings.cache_dir)
