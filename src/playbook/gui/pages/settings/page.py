@@ -122,6 +122,9 @@ def settings_page() -> None:
                 if event_type == "tab_changed":
                     render_sidebar()
                     render_content()
+                elif event_type == "value_changed" and data.get("path") == "settings.file_watcher.enabled":
+                    render_sidebar()
+                    render_content()
 
             state.register_callback(on_state_update)
 
