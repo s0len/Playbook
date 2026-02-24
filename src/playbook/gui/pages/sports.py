@@ -187,26 +187,29 @@ def _toggle_sport_enabled(sport_id: str, enabled: bool, sport_name: str = "") ->
         sport_name: Display name for notifications
     """
 
-    async def async_toggle():
+    async def async_toggle(client):
         loop = asyncio.get_event_loop()
         executor = ThreadPoolExecutor(max_workers=1)
         try:
             success = await loop.run_in_executor(executor, lambda: _toggle_sport_enabled_sync(sport_id, enabled))
-            if success:
-                ui.notify(
-                    f"{sport_name or sport_id} {'enabled' if enabled else 'disabled'}",
-                    type="positive",
-                )
-                ui.navigate.to("/sports")
-            else:
-                ui.notify("Failed to update sport status", type="negative")
+            with client:
+                if success:
+                    ui.notify(
+                        f"{sport_name or sport_id} {'enabled' if enabled else 'disabled'}",
+                        type="positive",
+                    )
+                    ui.navigate.to("/sports")
+                else:
+                    ui.notify("Failed to update sport status", type="negative")
         except Exception as e:
             LOGGER.exception("Toggle sport async failed: %s", e)
-            ui.notify("Failed to update sport status", type="negative")
+            with client:
+                ui.notify("Failed to update sport status", type="negative")
         finally:
             executor.shutdown(wait=False)
 
-    asyncio.create_task(async_toggle())
+    client = context.client
+    asyncio.create_task(async_toggle(client))
 
 
 def _bulk_toggle_sports_sync(sport_ids: list[str], enabled: bool) -> bool:
