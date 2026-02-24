@@ -168,6 +168,16 @@ class DynamicMetadataLoader:
             return None
         return self.load_show(show_slug, sport.season_overrides)
 
+    def clear_failed_slugs(self) -> None:
+        """Clear the failed slugs cache so previously-failed lookups are retried.
+
+        Called at the start of each processing run to allow newly-added
+        metadata on TVSportsDB to be discovered without a full cache
+        invalidation or pod restart.
+        """
+        with self._lock:
+            self._failed_slugs.clear()
+
     def invalidate_cache(self) -> None:
         """Invalidate all cached metadata (in-memory and SQLite)."""
         with self._lock:

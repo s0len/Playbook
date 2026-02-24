@@ -20,7 +20,6 @@ from .log_handler import install_gui_log_handler
 from .pages import dashboard, logs, settings, sports, unmatched
 from .state import gui_state
 from .styles import setup_page_styles
-from .theme import apply_theme
 from .utils import suppress_nicegui_disconnect_errors
 
 if TYPE_CHECKING:
@@ -33,35 +32,40 @@ LOGGER = logging.getLogger(__name__)
 def create_app() -> None:
     """Create and configure the NiceGUI application with all routes."""
 
+    # Serve icon.png as a static file
+    _icon_path = Path(__file__).parent.parent.parent.parent / "icon.png"
+    if _icon_path.exists():
+        app.add_static_file(local_file=str(_icon_path), url_path="/icon.png")
+
     @ui.page("/")
     def index_page() -> None:
         """Dashboard page."""
-        _page_wrapper(dashboard.dashboard_page)
+        _page_wrapper(dashboard.dashboard_page, "/")
 
     @ui.page("/logs")
     def logs_page_route() -> None:
         """Logs page."""
-        _page_wrapper(logs.logs_page)
+        _page_wrapper(logs.logs_page, "/logs")
 
     @ui.page("/config")
     def config_page_route() -> None:
         """Settings page with form-based configuration."""
-        _page_wrapper(settings.settings_page)
+        _page_wrapper(settings.settings_page, "/config")
 
     @ui.page("/sports")
     def sports_page_route() -> None:
         """Sports management page."""
-        _page_wrapper(sports.sports_page)
+        _page_wrapper(sports.sports_page, "/sports")
 
     @ui.page("/sports/{sport_id}")
     def sport_detail_route(sport_id: str) -> None:
         """Sport detail page with season/episode tracking."""
-        _page_wrapper(lambda: sports.sport_detail_page(sport_id))
+        _page_wrapper(lambda: sports.sport_detail_page(sport_id), "/sports")
 
     @ui.page("/unmatched")
     def unmatched_page_route() -> None:
         """Unmatched files management page."""
-        _page_wrapper(unmatched.unmatched_page)
+        _page_wrapper(unmatched.unmatched_page, "/unmatched")
 
     # API endpoints for programmatic access
     @app.get("/api/stats")
@@ -86,17 +90,16 @@ def create_app() -> None:
         }
 
 
-def _page_wrapper(page_fn: callable) -> None:
+def _page_wrapper(page_fn: callable, current_path: str = "/") -> None:
     """Wrap a page function with common layout elements."""
     # Inject styles and set up theme (includes FOUC prevention script)
     setup_page_styles()
 
-    # Create dark mode controller and apply stored preference
-    dark = ui.dark_mode()
-    apply_theme(dark)
+    # Force dark mode (light mode removed)
+    ui.dark_mode(True)
 
-    # Add header (pass dark mode controller for toggle)
-    header(dark)
+    # Add sidebar
+    header(current_path=current_path)
 
     # Add page content
     page_fn()
@@ -157,6 +160,7 @@ def run_with_gui(
     gui_state.config_path = config_path
     gui_state.processed_store = processor.processed_store
     gui_state.unmatched_store = processor.unmatched_store
+    gui_state.manual_override_store = processor.manual_override_store
 
     # Set NiceGUI storage path to cache directory (avoids permission issues in containers)
     storage_path = app_config.settings.cache_dir / ".nicegui"

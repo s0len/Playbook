@@ -26,6 +26,7 @@ Example:
     ))
 """
 
+from .manual_override_store import ManualOverride, ManualOverrideStore
 from .metadata_cache import CacheEntry, MetadataCacheStore
 from .processed_store import ProcessedFileRecord, ProcessedFileStore
 from .unmatched_store import (
@@ -39,6 +40,8 @@ from .unmatched_store import (
 
 __all__ = [
     "CacheEntry",
+    "ManualOverride",
+    "ManualOverrideStore",
     "MetadataCacheStore",
     "ProcessedFileRecord",
     "ProcessedFileStore",

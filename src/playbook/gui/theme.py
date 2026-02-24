@@ -62,22 +62,22 @@ LIGHT_PALETTE = ColorPalette(
     border_light="#f1f5f9",  # slate-100
 )
 
-# Dark mode palette (Playbook brand colors - dark navy with cyan accents)
+# Dark mode palette (near-black with cyan accents)
 DARK_PALETTE = ColorPalette(
-    bg_primary="#1a1f2e",  # Dark navy from icon.png
-    bg_card="rgba(26, 31, 46, 0.85)",  # Dark navy with transparency for glassmorphism
-    bg_input="#232939",  # Slightly lighter navy
-    text_primary="#f8fafc",  # slate-50
-    text_secondary="#cbd5e1",  # slate-300
-    text_muted="#94a3b8",  # slate-400
+    bg_primary="#0b0b0f",  # Near-black
+    bg_card="#12121a",  # Flat dark card
+    bg_input="#1a1a24",  # Slightly lighter dark
+    text_primary="#f0f0f8",  # Off-white
+    text_secondary="#a0a0b8",  # Muted lavender
+    text_muted="#60607a",  # Dimmed
     accent="#00d4d4",  # Cyan from icon.png
     accent_hover="#00b8b8",  # Slightly darker cyan
     success="#4ade80",  # green-400
     warning="#fbbf24",  # amber-400
     error="#f87171",  # red-400
     info="#00d4d4",  # Cyan (matches accent)
-    border="#2d3548",  # Lighter navy border
-    border_light="#232939",  # Input background color
+    border="#1e1e2e",  # Subtle border
+    border_light="#16161e",  # Very subtle border
 )
 
 
@@ -164,11 +164,11 @@ def apply_theme(dark_mode_element: ui.dark_mode | None = None) -> None:
 class ThemeClasses:
     """Tailwind CSS class mappings for theming."""
 
-    # Background classes (dark mode uses Playbook brand navy)
-    BG_PRIMARY = "bg-slate-50 dark:bg-[#1a1f2e]"
-    BG_CARD = "bg-white dark:bg-[#232939]/80"
-    BG_INPUT = "bg-slate-100 dark:bg-[#232939]"
-    BG_HEADER = "bg-[#1a1f2e]"
+    # Background classes (dark mode uses near-black)
+    BG_PRIMARY = "bg-slate-50 dark:bg-[#0b0b0f]"
+    BG_CARD = "bg-white dark:bg-[#12121a]"
+    BG_INPUT = "bg-slate-100 dark:bg-[#1a1a24]"
+    BG_HEADER = "bg-[#0e0e16]"
 
     # Text classes
     TEXT_PRIMARY = "text-slate-900 dark:text-slate-50"
