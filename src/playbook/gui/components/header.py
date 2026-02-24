@@ -7,26 +7,27 @@ from __future__ import annotations
 from nicegui import ui
 
 from ..state import gui_state
-from ..theme import is_dark_mode, set_theme_preference
 
 NAV_ITEMS = [
     ("/", "dashboard", "Dashboard"),
     ("/logs", "article", "Logs"),
-    ("/config", "settings", "Config"),
     ("/sports", "emoji_events", "Sports"),
     ("/unmatched", "help_outline", "Unmatched"),
 ]
 
+BOTTOM_ITEMS = [
+    ("/config", "settings", "Settings"),
+]
 
-def header(dark_mode: ui.dark_mode | None = None, current_path: str = "/") -> None:
+
+def header(current_path: str = "/") -> None:
     """Render the icon-only left navigation sidebar.
 
     Args:
-        dark_mode: Optional dark_mode controller for theme toggle
         current_path: The current page path for active state highlighting
     """
-    with ui.left_drawer(value=True).props("persistent show-if-above width=60 bordered=false").classes(
-        "playbook-sidebar"
+    with (
+        ui.left_drawer(value=True).props("persistent show-if-above width=60 bordered=false").classes("playbook-sidebar")
     ):
         with ui.column().classes("w-full h-full items-center py-4 gap-0"):
             # Logo at the top
@@ -40,8 +41,10 @@ def header(dark_mode: ui.dark_mode | None = None, current_path: str = "/") -> No
 
             ui.space()
 
-            # Dark mode toggle and status indicator at the bottom
-            _dark_mode_toggle(dark_mode)
+            # Bottom items (settings) and status indicator
+            with ui.column().classes("w-full items-center gap-1"):
+                for path, icon_name, label in BOTTOM_ITEMS:
+                    _sidebar_item(path, icon_name, label, _is_active(path, current_path))
             _status_indicator()
 
 
@@ -58,28 +61,7 @@ def _sidebar_item(target: str, icon_name: str, label: str, is_active: bool) -> N
     with ui.link(target=target).classes("no-underline w-full flex justify-center") as link:
         with ui.element("div").classes(cls):
             ui.icon(icon_name).classes("text-[20px]")
-    link.tooltip(label)
-
-
-def _dark_mode_toggle(dark_mode: ui.dark_mode | None) -> None:
-    """Create a dark mode toggle button."""
-    is_dark = is_dark_mode()
-    icon_name = "light_mode" if is_dark else "dark_mode"
-
-    def toggle() -> None:
-        nonlocal is_dark
-        is_dark = not is_dark
-        set_theme_preference("dark" if is_dark else "light")
-        if dark_mode is not None:
-            dark_mode.toggle()
-        toggle_icon.props(f"icon={'light_mode' if is_dark else 'dark_mode'}")
-        theme_value = "dark" if is_dark else "light"
-        ui.run_javascript(f"localStorage.setItem('playbook-theme', '{theme_value}');")
-
-    toggle_icon = (
-        ui.button(icon=icon_name, on_click=toggle).props("flat round dense").classes("sidebar-icon-btn")
-    )
-    toggle_icon.tooltip("Toggle dark mode")
+    link.tooltip(label).props('anchor="center right" self="center left"')
 
 
 def _status_indicator() -> None:

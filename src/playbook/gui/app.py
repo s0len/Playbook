@@ -20,7 +20,6 @@ from .log_handler import install_gui_log_handler
 from .pages import dashboard, logs, settings, sports, unmatched
 from .state import gui_state
 from .styles import setup_page_styles
-from .theme import apply_theme
 from .utils import suppress_nicegui_disconnect_errors
 
 if TYPE_CHECKING:
@@ -96,12 +95,11 @@ def _page_wrapper(page_fn: callable, current_path: str = "/") -> None:
     # Inject styles and set up theme (includes FOUC prevention script)
     setup_page_styles()
 
-    # Create dark mode controller and apply stored preference
-    dark = ui.dark_mode()
-    apply_theme(dark)
+    # Force dark mode (light mode removed)
+    ui.dark_mode(True)
 
-    # Add sidebar (pass dark mode controller for toggle)
-    header(dark, current_path=current_path)
+    # Add sidebar
+    header(current_path=current_path)
 
     # Add page content
     page_fn()
