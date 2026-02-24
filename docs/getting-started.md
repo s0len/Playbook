@@ -89,6 +89,33 @@ docker run -d \
   ghcr.io/s0len/playbook:latest
 ```
 
+#### Docker Compose
+
+Alternatively, use a `docker-compose.yml`:
+
+```yaml
+services:
+  playbook:
+    image: ghcr.io/s0len/playbook:latest
+    container_name: playbook
+    restart: unless-stopped
+    environment:
+      - TZ=UTC
+      - SOURCE_DIR=/downloads
+      - DESTINATION_DIR=/library
+      - CACHE_DIR=/cache
+      - WATCH_MODE=true
+    volumes:
+      - /path/to/your/config:/config
+      - /path/to/downloads:/downloads
+      - /path/to/library:/library
+      - /path/to/cache:/cache
+    ports:
+      - 8080:8080
+```
+
+Start with `docker compose up -d`. The GUI is available at `http://localhost:8080`.
+
 #### Environment Variables Reference
 
 | Variable | Purpose | Example |
