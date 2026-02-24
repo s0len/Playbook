@@ -43,7 +43,6 @@ def watcher_tab(state: SettingsFormState) -> None:
                 "settings.file_watcher.enabled",
                 "Enable File Watcher",
                 description="Automatically process new files as they appear",
-                on_change=lambda v: ui.navigate.to("/config"),  # Refresh to update disabled states
             )
 
             if watcher_enabled:
