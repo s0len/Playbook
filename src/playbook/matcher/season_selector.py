@@ -157,6 +157,16 @@ def select_season(show: Show, selector: SeasonSelector, match_groups: dict[str, 
             for season in show.seasons:
                 if season.round_number == desired_round or season.display_number == desired_round:
                     return season
+        # Fallback: try matching by round_number using the "season" capture group
+        season_value = match_groups.get("season")
+        if season_value is not None:
+            try:
+                round_number = int(season_value)
+                for season in show.seasons:
+                    if season.round_number == round_number or season.display_number == round_number:
+                        return season
+            except (ValueError, TypeError):
+                pass
         return None
 
     if mode == "date":

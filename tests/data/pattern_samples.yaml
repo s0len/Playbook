@@ -62,6 +62,14 @@ samples:
             - title: "Early Prelims"
             - title: "Prelims"
             - title: "Main Card"
+        - key: "306"
+          title: "UFC 306 O'Malley vs Dvalishvili"
+          round_number: 306
+          display_number: 306
+          episodes:
+            - title: "Early Prelims"
+            - title: "Prelims"
+            - title: "Main Card"
         - key: "265"
           title: "UFC 265 Lewis vs Gane"
           round_number: 265
@@ -100,6 +108,13 @@ samples:
       - value: "UFC.265.Lewis.vs.Gane.1080p.WEB.h264-VERUM.mkv"
         expect_episode: "Main Card"
       - value: "UFC 265 Lewis vs Gane 1080p WEB h264 VERUM.mkv"
+        expect_episode: "Main Card"
+      # Short format without event name — title-mode fallback to round_number
+      - value: "UFC.306.Prelims.1080p.WEB-DL.H264.Fight-BB.mkv"
+        expect_season: "UFC 306 O'Malley vs Dvalishvili"
+        expect_episode: "Prelims"
+      - value: "UFC.306.Main.Card.1080p.WEB-DL.H264.Fight-BB.mkv"
+        expect_season: "UFC 306 O'Malley vs Dvalishvili"
         expect_episode: "Main Card"
 
   - description: "UFC Fight Night releases resolve"
@@ -996,6 +1011,8 @@ samples:
           round_number: 1
           display_number: 1
           episodes:
+            - title: "Qualifying"
+              aliases: ["qualifying"]
             - title: "Sprint"
               aliases: ["sprint"]
             - title: "Race"
@@ -1032,6 +1049,22 @@ samples:
       - value: "MotoGP.2025.Round01.Thailand.Sprint-MWR.mkv"
         expect_season: "Thai Grand Prix"
         expect_episode: "Sprint"
+      # Regression: WEB token must not leak into session capture — DNU
+      - value: "MotoGP.2024.Round01.Thailand.Qualifying.WEB.1080p.h264.English-DNU.mkv"
+        expect_season: "Thai Grand Prix"
+        expect_episode: "Qualifying"
+      # Regression: PROPER.WEB must not leak into session capture — DNU
+      - value: "MotoGP.2024.Round01.Thailand.Race.PROPER.WEB.1080p.h264.English-DNU.mkv"
+        expect_season: "Thai Grand Prix"
+        expect_episode: "Race"
+      # Regression: WEB token must not leak into session capture — MWR
+      - value: "MotoGP.2024.Round01.Thailand.Sprint.WEB.1080p.h264.English-MWR.mkv"
+        expect_season: "Thai Grand Prix"
+        expect_episode: "Sprint"
+      # Regression: REPACK.WEB must not leak into session capture — MWR
+      - value: "MotoGP.2024.Round01.Thailand.Race.REPACK.WEB.1080p.h264.English-MWR.mkv"
+        expect_season: "Thai Grand Prix"
+        expect_episode: "Race"
 
   - description: "Formula E open session capture — MWR dot and space separated"
     sport:

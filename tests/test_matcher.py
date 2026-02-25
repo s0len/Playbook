@@ -142,6 +142,39 @@ def test_season_selector_fallback_groups() -> None:
     assert result2["season"].title == "Japan"
 
 
+def test_season_selector_title_mode_fallback_to_round_number() -> None:
+    """Test that title mode falls back to round_number when title matching fails."""
+    pattern = PatternConfig(
+        regex=r"(?i)^UFC\.(?P<season>\d{3})\.(?P<session>Early[._-]Prelims|Prelims|Main[._-]Card)",
+        season_selector=SeasonSelector(mode="title", group="season"),
+        priority=10,
+    )
+
+    prelims = Episode(title="Prelims", summary=None, originally_available=None, index=1)
+    early_prelims = Episode(title="Early Prelims", summary=None, originally_available=None, index=2)
+    main_card = Episode(title="Main Card", summary=None, originally_available=None, index=3)
+    season306 = Season(
+        key="306",
+        title="UFC 306 O'Malley vs Dvalishvili",
+        summary=None,
+        index=1,
+        episodes=[early_prelims, prelims, main_card],
+        round_number=306,
+        display_number=306,
+    )
+    show = Show(key="ufc", title="UFC", summary=None, seasons=[season306])
+
+    sport = build_sport([pattern])
+    patterns = compile_patterns(sport)
+
+    # "306" as title won't match "UFC 306 O'Malley vs Dvalishvili", but fallback
+    # uses round_number=306 to resolve the season
+    result = match_file_to_episode("UFC.306.Prelims.mkv", sport, show, patterns)
+    assert result is not None
+    assert result["season"].title == "UFC 306 O'Malley vs Dvalishvili"
+    assert result["episode"].title == "Prelims"
+
+
 def test_match_file_to_episode_suppresses_warnings_when_requested(caplog) -> None:
     pattern = PatternConfig(
         regex=r"(?i)^(?P<round>\d+)[._-]*(?P<session>[A-Z0-9]+)",

@@ -781,7 +781,7 @@ pattern_sets:
         # Example: MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.One.WEB-DL.1080p.H264.English-DNU.mkv
         # Example: MotoGP.2026.Round00.Season.Launch.WEB-DL.1080p.H264.English-DNU.mkv
         regex: >-
-          (?i)^(?=.*-\s*DNU\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
+          (?i)^(?=.*-\s*DNU\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|WEB|PROPER|REPACK|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|WEB|PROPER|REPACK|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
         season_selector:
           mode: round
           group: round
@@ -946,7 +946,7 @@ pattern_sets:
         # Example: MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.Three.WEB-DL.1080p.H264.English-MWR.mkv
         # Example: MotoGP.2026.Round00.Season.Launch.WEB-DL.1080p.H264.English-MWR.mkv
         regex: >-
-          (?i)^(?=.*-MWR\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
+          (?i)^(?=.*-MWR\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|WEB|PROPER|REPACK|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|WEB|PROPER|REPACK|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
         season_selector:
           mode: round
           group: round
