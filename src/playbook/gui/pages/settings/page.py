@@ -119,10 +119,9 @@ def settings_page() -> None:
 
             # Update sidebar and content when tab changes
             def on_state_update(event_type: str, data) -> None:
-                if event_type == "tab_changed":
-                    render_sidebar()
-                    render_content()
-                elif event_type == "value_changed" and data.get("path") == "settings.file_watcher.enabled":
+                if event_type == "tab_changed" or (
+                    event_type == "value_changed" and data.get("path") == "settings.file_watcher.enabled"
+                ):
                     render_sidebar()
                     render_content()
 
