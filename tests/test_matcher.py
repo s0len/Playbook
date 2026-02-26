@@ -23,6 +23,7 @@ from playbook.matcher import (
     compile_patterns,
     match_file_to_episode,
 )
+from playbook.matcher.season_selector import select_season
 from playbook.models import Episode, Season, Show
 from playbook.parsers.structured_filename import StructuredName
 from playbook.team_aliases import get_team_alias_map
@@ -154,25 +155,80 @@ def test_season_selector_title_mode_fallback_to_round_number() -> None:
     early_prelims = Episode(title="Early Prelims", summary=None, originally_available=None, index=2)
     main_card = Episode(title="Main Card", summary=None, originally_available=None, index=3)
     season306 = Season(
-        key="306",
+        key="36",
         title="UFC 306 O'Malley vs Dvalishvili",
         summary=None,
         index=1,
         episodes=[early_prelims, prelims, main_card],
-        round_number=306,
-        display_number=306,
+        round_number=36,
+        display_number=36,
     )
     show = Show(key="ufc", title="UFC", summary=None, seasons=[season306])
 
     sport = build_sport([pattern])
     patterns = compile_patterns(sport)
 
-    # "306" as title won't match "UFC 306 O'Malley vs Dvalishvili", but fallback
-    # uses round_number=306 to resolve the season
+    # "306" as title won't match "UFC 306 O'Malley vs Dvalishvili" exactly,
+    # round_number=36 doesn't match 306, but prefix fallback resolves it:
+    # normalized "306" doesn't match, but full season_title "ufc.306.prelims"
+    # isn't captured here — the selector group is "season" which gives "306".
+    # The prefix fallback extracts "ufc306" and matches "ufc306omalleyvsdvalishvili".
     result = match_file_to_episode("UFC.306.Prelims.mkv", sport, show, patterns)
     assert result is not None
     assert result["season"].title == "UFC 306 O'Malley vs Dvalishvili"
     assert result["episode"].title == "Prelims"
+
+
+def test_season_selector_title_mode_prefix_fallback() -> None:
+    """Test that title mode falls back to prefix matching for short-format filenames.
+
+    When the captured season_title normalizes to e.g. 'ufc306prelims' and no exact/
+    substring match exists, the prefix fallback extracts 'ufc306' and matches against
+    season titles starting with that prefix (e.g. 'ufc306omalleyvsdvalishvili').
+    """
+    prelims = Episode(title="Prelims", summary=None, originally_available=None, index=1)
+    main_card = Episode(title="Main Card", summary=None, originally_available=None, index=3)
+    # Simulate real API: round_number is sequential (36), not event number (306)
+    season306 = Season(
+        key="36",
+        title="UFC 306 O'Malley vs Dvalishvili",
+        summary=None,
+        index=36,
+        episodes=[prelims, main_card],
+        round_number=36,
+        display_number=36,
+    )
+    season305 = Season(
+        key="29",
+        title="UFC 305 du Plessis vs Adesanya",
+        summary=None,
+        index=29,
+        episodes=[prelims, main_card],
+        round_number=29,
+        display_number=29,
+    )
+    show = Show(key="ufc", title="UFC", summary=None, seasons=[season305, season306])
+
+    selector = SeasonSelector(mode="title", group="season_title")
+
+    # Simulate match groups from regex capture of "UFC.306.Prelims.1080p.WEB-DL.H264.Fight-BB.mkv"
+    # In production, season_title captures "UFC.306.Prelims.1080p.WEB-DL.H264"
+    # normalized → "ufc306prelims1080pwebdlh264", prefix "ufc306" matches "ufc306omalleyvsdvalishvili"
+    match_groups = {"season_title": "UFC.306.Prelims.1080p.WEB-DL.H264", "season": "306"}
+    result = select_season(show, selector, match_groups)
+    assert result is not None
+    assert result.title == "UFC 306 O'Malley vs Dvalishvili"
+
+    # Verify 305 matches correctly too
+    match_groups_305 = {"season_title": "UFC.305.Main.Card.1080p.WEB-DL.H264", "season": "305"}
+    result2 = select_season(show, selector, match_groups_305)
+    assert result2 is not None
+    assert result2.title == "UFC 305 du Plessis vs Adesanya"
+
+    # Verify no false positive: "ufc307" should not match "ufc306..."
+    match_groups_307 = {"season_title": "UFC.307.Prelims", "season": "307"}
+    result3 = select_season(show, selector, match_groups_307)
+    assert result3 is None
 
 
 def test_match_file_to_episode_suppresses_warnings_when_requested(caplog) -> None:

@@ -7,11 +7,14 @@ the configured season selector mode (round, key, title, sequential, date, week).
 from __future__ import annotations
 
 import logging
+import re
 
 from ..config import SeasonSelector
 from ..models import Season, Show
 from ..utils import normalize_token
 from .date_utils import parse_date_string
+
+_ALPHA_NUMERIC_PREFIX = re.compile(r"^([a-z]+\d+)")
 
 LOGGER = logging.getLogger(__name__)
 
@@ -157,7 +160,7 @@ def select_season(show: Show, selector: SeasonSelector, match_groups: dict[str, 
             for season in show.seasons:
                 if season.round_number == desired_round or season.display_number == desired_round:
                     return season
-        # Fallback: try matching by round_number using the "season" capture group
+        # Fallback 1: try matching by round_number using the "season" capture group
         season_value = match_groups.get("season")
         if season_value is not None:
             try:
@@ -167,6 +170,17 @@ def select_season(show: Show, selector: SeasonSelector, match_groups: dict[str, 
                         return season
             except (ValueError, TypeError):
                 pass
+        # Fallback 2: prefix match — extract alpha+number prefix from normalized title
+        # and match against season titles starting with the same prefix.
+        # e.g., "ufc306prelims" → prefix "ufc306" matches "ufc306omalleyvsdvalishvili"
+        prefix_match = _ALPHA_NUMERIC_PREFIX.match(normalized)
+        if prefix_match:
+            prefix = prefix_match.group(1)
+            prefix_len = len(prefix)
+            for season in show.seasons:
+                sn = normalize_token(season.title)
+                if sn.startswith(prefix) and (len(sn) == prefix_len or not sn[prefix_len].isdigit()):
+                    return season
         return None
 
     if mode == "date":
