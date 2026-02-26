@@ -1005,14 +1005,18 @@ samples:
           round_number: 5
           display_number: 5
           episodes:
-            - title: "Qualifying"
-              aliases: ["qualifying"]
+            - title: "Qualifying One"
+              aliases: ["qualifying one", "q1", "qualifying"]
+            - title: "Qualifying Two"
+              aliases: ["qualifying two", "q2"]
         - title: "Thai Grand Prix"
           round_number: 1
           display_number: 1
           episodes:
-            - title: "Qualifying"
-              aliases: ["qualifying"]
+            - title: "Qualifying One"
+              aliases: ["qualifying one", "q1", "qualifying"]
+            - title: "Qualifying Two"
+              aliases: ["qualifying two", "q2"]
             - title: "Sprint"
               aliases: ["sprint"]
             - title: "Race"
@@ -1045,14 +1049,14 @@ samples:
       # Regression: standard sessions still match — MWR
       - value: "MotoGP.2024.Round05.Jerez.Qualifying-MWR.mp4"
         expect_season: "Spanish Grand Prix"
-        expect_episode: "Qualifying"
+        expect_episode: "Qualifying One"
       - value: "MotoGP.2025.Round01.Thailand.Sprint-MWR.mkv"
         expect_season: "Thai Grand Prix"
         expect_episode: "Sprint"
       # Regression: WEB token must not leak into session capture — DNU
       - value: "MotoGP.2024.Round01.Thailand.Qualifying.WEB.1080p.h264.English-DNU.mkv"
         expect_season: "Thai Grand Prix"
-        expect_episode: "Qualifying"
+        expect_episode: "Qualifying One"
       # Regression: PROPER.WEB must not leak into session capture — DNU
       - value: "MotoGP.2024.Round01.Thailand.Race.PROPER.WEB.1080p.h264.English-DNU.mkv"
         expect_season: "Thai Grand Prix"
@@ -1065,6 +1069,22 @@ samples:
       - value: "MotoGP.2024.Round01.Thailand.Race.REPACK.WEB.1080p.h264.English-MWR.mkv"
         expect_season: "Thai Grand Prix"
         expect_episode: "Race"
+      # Plex-style season-episode format
+      - value: "MotoGP (1949) - S2026E10 - Thai Grand Prix MotoGP Qualifying [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv"
+        expect_season: "Thai Grand Prix"
+        expect_episode: "Qualifying One"
+      - value: "MotoGP (1949) - S2026E11 - Thai Grand Prix MotoGP Qualifying Nr.2 [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv"
+        expect_season: "Thai Grand Prix"
+        expect_episode: "Qualifying Two"
+      - value: "MotoGP (1949) - S2026E14 - Thai Grand Prix MotoGP Sprint [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv"
+        expect_season: "Thai Grand Prix"
+        expect_episode: "Sprint"
+      - value: "MotoGP (1949) - S2026E18 - Thai Grand Prix MotoGP Race [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv"
+        expect_season: "Thai Grand Prix"
+        expect_episode: "Race"
+      - value: "MotoGP (1949) - S2026E70 - Spanish Grand Prix MotoGP Qualifying Nr.2 [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv"
+        expect_season: "Spanish Grand Prix"
+        expect_episode: "Qualifying Two"
 
   - description: "Formula E open session capture — MWR dot and space separated"
     sport:

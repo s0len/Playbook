@@ -845,6 +845,8 @@ pattern_sets:
             - Qualifying Nr.1
             - MotoGP Qualifying Nr. 1
             - MotoGP Qualifying Nr.1
+            - MotoGP Qualifying
+            - Qualifying
           Qualifying Two:
             - Qualifying.Q2
             - Qualifying2
@@ -855,7 +857,6 @@ pattern_sets:
             - Qualifying Nr.2
             - MotoGP Qualifying Nr. 2
             - MotoGP Qualifying Nr.2
-            - Qualifying
           Qualifying Three:
             - Qualifying.Q3
             - Qualifying3
@@ -980,6 +981,23 @@ pattern_sets:
         season_selector:
           mode: round
           group: round
+        episode_selector:
+          group: session
+          allow_fallback_to_title: true
+        session_aliases: *motogp_session_aliases
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_round:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
+      - description: MotoGP Plex-style season-episode releases
+        # Example: MotoGP (1949) - S2023E10 - Grand Prix of Portugal MotoGP Qualifying [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv
+        # Example: MotoGP (1949) - S2023E72 - SHARK Grand Prix of France MotoGP Qualifying Nr.2 [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv
+        # Example: MotoGP (1949) - S2023E67 - Spanish Grand Prix MotoGP Sprint [WEBRip-1080p][AAC 2.0][x264]-DNU.mkv
+        regex: >-
+          (?i)^MotoGP\s*\(\d{4}\)\s*-\s*S(?P<year>20\d{2})E\d+\s*-\s*(?P<location>.+?)\s+(?P<session>(?:MotoGP\s+)?(?:Sprint|Race|Warm\s*Up|Qualifying(?:\s+(?:Nr\.?|No\.)?\s*\d+)?|Practice(?:\s+(?:Nr\.?|No\.)?\s*\d+)?))\s*\[.+\]-(?:DNU|MWR)\.(?:mkv|mp4|ts)$
+        season_selector:
+          mode: title
+          group: location
         episode_selector:
           group: session
           allow_fallback_to_title: true
