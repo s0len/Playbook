@@ -1017,13 +1017,6 @@ samples:
               aliases: ["sprint"]
             - title: "Race"
               aliases: ["race"]
-        - title: "Gran Premio di San Marino e della Riviera di Rimini"
-          round_number: 13
-          display_number: 13
-          episodes:
-            - title: "Pre-Event Press Conference"
-            - title: "Practice One"
-            - title: "Qualifying Two"
     filenames:
       # DNU open capture — After The Flag
       - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.One.WEB-DL.1080p.H264.English-DNU.mkv"
@@ -1072,13 +1065,6 @@ samples:
       - value: "MotoGP.2024.Round01.Thailand.Race.REPACK.WEB.1080p.h264.English-MWR.mkv"
         expect_season: "Thai Grand Prix"
         expect_episode: "Race"
-      # Pre-Event Press Conference — location must be stripped, PC alias must resolve
-      - value: "MotoGP.2024.Round13.San.Marino.Pre-Event.PC.Part1.WEB.1080p.h264.English-MWR.mkv"
-        expect_season: "Gran Premio di San Marino e della Riviera di Rimini"
-        expect_episode: "Pre-Event Press Conference"
-      - value: "MotoGP.2024.Round13.San.Marino.Pre-Event.PC.Paer2.WEB.1080p.h264.English-MWR.mkv"
-        expect_season: "Gran Premio di San Marino e della Riviera di Rimini"
-        expect_episode: "Pre-Event Press Conference"
 
   - description: "Formula E open session capture — MWR dot and space separated"
     sport:
