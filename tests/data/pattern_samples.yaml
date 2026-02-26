@@ -1011,6 +1011,14 @@ samples:
             - title: "Qualifying Two"
               display_number: 70
               aliases: ["qualifying two", "q2"]
+        - title: "Portuguese Grand Prix"
+          round_number: 2
+          display_number: 2
+          episodes:
+            - title: "Sprint"
+              aliases: ["sprint"]
+            - title: "Race"
+              aliases: ["race"]
         - title: "Thai Grand Prix"
           round_number: 1
           display_number: 1
@@ -1091,6 +1099,10 @@ samples:
       - value: "MotoGP (1949) - S2026E70 - Spanish Grand Prix MotoGP Qualifying Nr.2 [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv"
         expect_season: "Spanish Grand Prix"
         expect_episode: "Qualifying Two"
+      # Word-level matching: non-English location matches English season title via shared word "Portugal"
+      - value: "MotoGP (1949) - S2024E50 - Grande Prémio Tissot de Portugal MotoGP Sprint Race [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv"
+        expect_season: "Portuguese Grand Prix"
+        expect_episode: "Sprint"
 
   - description: "Formula E open session capture — MWR dot and space separated"
     sport:

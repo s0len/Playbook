@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import re
+import unicodedata
 
 from ..config import SeasonSelector
 from ..models import Season, Show
@@ -15,8 +16,60 @@ from ..utils import normalize_token
 from .date_utils import parse_date_string
 
 _ALPHA_NUMERIC_PREFIX = re.compile(r"^([a-z]+\d+)")
+_WORD_SPLIT = re.compile(r"[^a-zA-Z0-9\u00C0-\u024F]+")
+_MIN_WORD_LEN = 4
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _extract_significant_words(text: str) -> set[str]:
+    """Extract normalized words (≥ _MIN_WORD_LEN chars) from text.
+
+    Uses NFD decomposition + combining mark removal so that e.g.
+    'Österreich' becomes 'osterreich' and 'España' becomes 'espana'.
+    """
+    # NFD decompose then strip combining marks to get base letters
+    decomposed = unicodedata.normalize("NFD", text)
+    stripped = re.sub(r"[\u0300-\u036f]", "", decomposed)
+    words = _WORD_SPLIT.split(stripped)
+    result: set[str] = set()
+    for w in words:
+        lowered = w.lower()
+        if len(lowered) >= _MIN_WORD_LEN:
+            result.add(lowered)
+    return result
+
+
+_MIN_PREFIX_LEN = 6
+
+
+def _common_prefix_len(a: str, b: str) -> int:
+    """Return the length of the common prefix between two strings."""
+    limit = min(len(a), len(b))
+    for i in range(limit):
+        if a[i] != b[i]:
+            return i
+    return limit
+
+
+def _word_overlap_score(words_a: set[str], words_b: set[str]) -> int:
+    """Count matching words between two sets using exact and common-prefix matching.
+
+    Exact matches count for any word ≥ _MIN_WORD_LEN.
+    Common-prefix matches require the shared prefix to be ≥ _MIN_PREFIX_LEN to
+    avoid false positives like 'grand' matching 'grande' across unrelated GPs.
+    This handles cases like 'portugal'↔'portuguese' (share 'portug', 6 chars).
+    """
+    score = 0
+    for wa in words_a:
+        for wb in words_b:
+            if wa == wb:
+                score += 1
+                break
+            if _common_prefix_len(wa, wb) >= _MIN_PREFIX_LEN:
+                score += 1
+                break
+    return score
 
 
 def resolve_selector_value(
@@ -154,6 +207,41 @@ def select_season(show: Show, selector: SeasonSelector, match_groups: dict[str, 
             season_normalized = normalize_token(season.title)
             if normalized and (normalized in season_normalized or season_normalized in normalized):
                 return season
+        # Check against season aliases from API metadata
+        for season in show.seasons:
+            for alias in season.metadata.get("aliases", []):
+                alias_normalized = normalize_token(alias)
+                if alias_normalized == normalized:
+                    return season
+        for season in show.seasons:
+            for alias in season.metadata.get("aliases", []):
+                alias_normalized = normalize_token(alias)
+                if normalized and (normalized in alias_normalized or alias_normalized in normalized):
+                    return season
+        # Word-level matching: extract significant words and score overlap.
+        # Only returns a match when unambiguous (best score > second-best) to
+        # avoid false positives from shared generic words like "grand"/"prix".
+        # e.g., "Grande Prémio de Portugal" shares "portug*" with "Portuguese Grand Prix"
+        title_words = _extract_significant_words(title)
+        if title_words:
+            best_season: Season | None = None
+            best_score = 0
+            second_best_score = 0
+            for season in show.seasons:
+                season_words = _extract_significant_words(season.title)
+                score = _word_overlap_score(title_words, season_words)
+                for alias in season.metadata.get("aliases", []):
+                    alias_words = _extract_significant_words(alias)
+                    alias_score = _word_overlap_score(title_words, alias_words)
+                    score = max(score, alias_score)
+                if score > best_score:
+                    second_best_score = best_score
+                    best_score = score
+                    best_season = season
+                elif score > second_best_score:
+                    second_best_score = score
+            if best_season is not None and best_score > 0 and best_score > second_best_score:
+                return best_season
         mapped = selector.mapping.get(title)
         if mapped:
             desired_round = int(mapped)

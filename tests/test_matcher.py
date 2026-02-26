@@ -231,6 +231,48 @@ def test_season_selector_title_mode_prefix_fallback() -> None:
     assert result3 is None
 
 
+def test_season_selector_title_mode_word_level_matching() -> None:
+    """Test word-level matching when exact/substring matching fails.
+
+    Handles cases like non-English GP names matching English season titles
+    via shared word roots (e.g., 'portugal' prefix-matching 'portuguese').
+    """
+    sprint = Episode(title="Sprint", summary=None, originally_available=None, index=1)
+    race = Episode(title="Race", summary=None, originally_available=None, index=2)
+    portuguese_gp = Season(
+        key="2", title="Portuguese Grand Prix", summary=None, index=2,
+        episodes=[sprint, race], round_number=2, display_number=2,
+    )
+    spanish_gp = Season(
+        key="5", title="Spanish Grand Prix", summary=None, index=5,
+        episodes=[sprint, race], round_number=5, display_number=5,
+    )
+    indonesian_gp = Season(
+        key="15", title="Indonesian Grand Prix", summary=None, index=15,
+        episodes=[sprint, race], round_number=15, display_number=15,
+    )
+    show = Show(key="motogp", title="MotoGP", summary=None,
+                seasons=[portuguese_gp, spanish_gp, indonesian_gp])
+    selector = SeasonSelector(mode="title", group="location")
+
+    # Portuguese name matches "Portuguese Grand Prix" via portugal↔portuguese
+    match_groups = {"location": "Grande Prémio Tissot de Portugal"}
+    result = select_season(show, selector, match_groups)
+    assert result is not None
+    assert result.title == "Portuguese Grand Prix"
+
+    # Short location name matches via substring ("Indonesia" in "Indonesian...")
+    match_groups = {"location": "Indonesia"}
+    result = select_season(show, selector, match_groups)
+    assert result is not None
+    assert result.title == "Indonesian Grand Prix"
+
+    # Non-matching language with no word overlap returns None (falls through)
+    match_groups = {"location": "Gran Premio de España"}
+    result = select_season(show, selector, match_groups)
+    assert result is None
+
+
 def test_match_file_to_episode_suppresses_warnings_when_requested(caplog) -> None:
     pattern = PatternConfig(
         regex=r"(?i)^(?P<round>\d+)[._-]*(?P<session>[A-Z0-9]+)",

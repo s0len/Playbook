@@ -995,13 +995,13 @@ pattern_sets:
         # Example: MotoGP (1949) - S2023E10 - Grand Prix of Portugal MotoGP Qualifying [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv
         # Example: MotoGP (1949) - S2023E72 - SHARK Grand Prix of France MotoGP Qualifying Nr.2 [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv
         # Example: MotoGP (1949) - S2023E67 - Spanish Grand Prix MotoGP Sprint [WEBRip-1080p][AAC 2.0][x264]-DNU.mkv
-        # Uses global_episode mode: the E-number uniquely identifies the episode across all seasons,
-        # avoiding title matching issues (filenames use English, API uses local language names).
+        # Uses title mode with location group: matches the Grand Prix name against
+        # season titles/aliases using exact, substring, and word-level matching.
         regex: >-
           (?i)^MotoGP\s*\(\d{4}\)\s*-\s*S(?P<year>20\d{2})E(?P<episode_number>\d+)\s*-\s*(?P<location>.+?)\s+(?P<session>(?:MotoGP\s+)?(?:Sprint\s+Race|Sprint|Race|Warm\s*Up|Qualifying(?:\s+(?:Nr\.?|No\.)?\s*\d+)?|Practice(?:\s+(?:Nr\.?|No\.)?\s*\d+)?))\s*\[.+\]-(?:DNU|MWR)\.(?:mkv|mp4|ts)$
         season_selector:
-          mode: global_episode
-          group: episode_number
+          mode: title
+          group: location
         episode_selector:
           group: session
           allow_fallback_to_title: true
