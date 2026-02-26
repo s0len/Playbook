@@ -891,7 +891,9 @@ pattern_sets:
             - Season.Launch
           Sprint:
             - Sprint.Race
+            - Sprint Race
             - MotoGP Sprint
+            - MotoGP Sprint Race
           Race:
             - Grand.Prix
             - GP
@@ -996,7 +998,7 @@ pattern_sets:
         # Uses global_episode mode: the E-number uniquely identifies the episode across all seasons,
         # avoiding title matching issues (filenames use English, API uses local language names).
         regex: >-
-          (?i)^MotoGP\s*\(\d{4}\)\s*-\s*S(?P<year>20\d{2})E(?P<episode_number>\d+)\s*-\s*(?P<location>.+?)\s+(?P<session>(?:MotoGP\s+)?(?:Sprint|Race|Warm\s*Up|Qualifying(?:\s+(?:Nr\.?|No\.)?\s*\d+)?|Practice(?:\s+(?:Nr\.?|No\.)?\s*\d+)?))\s*\[.+\]-(?:DNU|MWR)\.(?:mkv|mp4|ts)$
+          (?i)^MotoGP\s*\(\d{4}\)\s*-\s*S(?P<year>20\d{2})E(?P<episode_number>\d+)\s*-\s*(?P<location>.+?)\s+(?P<session>(?:MotoGP\s+)?(?:Sprint\s+Race|Sprint|Race|Warm\s*Up|Qualifying(?:\s+(?:Nr\.?|No\.)?\s*\d+)?|Practice(?:\s+(?:Nr\.?|No\.)?\s*\d+)?))\s*\[.+\]-(?:DNU|MWR)\.(?:mkv|mp4|ts)$
         season_selector:
           mode: global_episode
           group: episode_number
