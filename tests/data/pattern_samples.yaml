@@ -1006,20 +1006,26 @@ samples:
           display_number: 5
           episodes:
             - title: "Qualifying One"
+              display_number: 63
               aliases: ["qualifying one", "q1", "qualifying"]
             - title: "Qualifying Two"
+              display_number: 70
               aliases: ["qualifying two", "q2"]
         - title: "Thai Grand Prix"
           round_number: 1
           display_number: 1
           episodes:
             - title: "Qualifying One"
+              display_number: 10
               aliases: ["qualifying one", "q1", "qualifying"]
             - title: "Qualifying Two"
+              display_number: 11
               aliases: ["qualifying two", "q2"]
             - title: "Sprint"
+              display_number: 14
               aliases: ["sprint"]
             - title: "Race"
+              display_number: 18
               aliases: ["race"]
     filenames:
       # DNU open capture — After The Flag

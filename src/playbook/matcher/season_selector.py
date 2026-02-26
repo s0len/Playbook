@@ -196,5 +196,19 @@ def select_season(show: Show, selector: SeasonSelector, match_groups: dict[str, 
                     return season
         return None
 
+    if mode == "global_episode":
+        value = resolve_selector_value(selector, match_groups, "episode_number")
+        if value is None:
+            return None
+        try:
+            episode_number = int(value)
+        except ValueError:
+            return None
+        for season in show.seasons:
+            for episode in season.episodes:
+                if episode.display_number == episode_number:
+                    return season
+        return None
+
     LOGGER.warning("Unknown season selector mode '%s'", mode)
     return None
