@@ -218,30 +218,6 @@ def select_season(show: Show, selector: SeasonSelector, match_groups: dict[str, 
                 alias_normalized = normalize_token(alias)
                 if normalized and (normalized in alias_normalized or alias_normalized in normalized):
                     return season
-        # Word-level matching: extract significant words and score overlap.
-        # Only returns a match when unambiguous (best score > second-best) to
-        # avoid false positives from shared generic words like "grand"/"prix".
-        # e.g., "Grande Prémio de Portugal" shares "portug*" with "Portuguese Grand Prix"
-        title_words = _extract_significant_words(title)
-        if title_words:
-            best_season: Season | None = None
-            best_score = 0
-            second_best_score = 0
-            for season in show.seasons:
-                season_words = _extract_significant_words(season.title)
-                score = _word_overlap_score(title_words, season_words)
-                for alias in season.metadata.get("aliases", []):
-                    alias_words = _extract_significant_words(alias)
-                    alias_score = _word_overlap_score(title_words, alias_words)
-                    score = max(score, alias_score)
-                if score > best_score:
-                    second_best_score = best_score
-                    best_score = score
-                    best_season = season
-                elif score > second_best_score:
-                    second_best_score = score
-            if best_season is not None and best_score > 0 and best_score > second_best_score:
-                return best_season
         mapped = selector.mapping.get(title)
         if mapped:
             desired_round = int(mapped)
@@ -269,6 +245,36 @@ def select_season(show: Show, selector: SeasonSelector, match_groups: dict[str, 
                 sn = normalize_token(season.title)
                 if sn.startswith(prefix) and (len(sn) == prefix_len or not sn[prefix_len].isdigit()):
                     return season
+            # If we found a prefix (e.g., "ufc325") but no season matched it,
+            # do NOT fall through to word-level matching.  The prefix is the
+            # definitive identifier and word-level matching would cause false
+            # positives for rematches (e.g., "volkanovski vs lopes" appearing in
+            # both UFC 314 and UFC 325).
+            return None
+        # Fallback 3 (last resort): word-level matching — extract significant words
+        # and score overlap.  Only used when no alpha+numeric prefix is present
+        # (e.g., non-English location names for MotoGP).
+        # e.g., "Grande Prémio de Portugal" shares "portug*" with "Portuguese Grand Prix"
+        title_words = _extract_significant_words(title)
+        if title_words:
+            best_season: Season | None = None
+            best_score = 0
+            second_best_score = 0
+            for season in show.seasons:
+                season_words = _extract_significant_words(season.title)
+                score = _word_overlap_score(title_words, season_words)
+                for alias in season.metadata.get("aliases", []):
+                    alias_words = _extract_significant_words(alias)
+                    alias_score = _word_overlap_score(title_words, alias_words)
+                    score = max(score, alias_score)
+                if score > best_score:
+                    second_best_score = best_score
+                    best_score = score
+                    best_season = season
+                elif score > second_best_score:
+                    second_best_score = score
+            if best_season is not None and best_score > 0 and best_score > second_best_score:
+                return best_season
         return None
 
     if mode == "date":
