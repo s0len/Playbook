@@ -888,6 +888,14 @@ pattern_sets:
             - After.The.Flag
           Season Launch:
             - Season.Launch
+          Pre-Event Press Conference:
+            - Pre-Event.PC
+            - Pre-Event.PC.Part1
+            - Pre-Event.PC.Part2
+            - Pre-Event.PC.Paer2
+            - Pre.Event.Press.Conference
+            - Pre.Event.PC
+            - Pre-Event Press Conference
           Sprint:
             - Sprint.Race
             - MotoGP Sprint
