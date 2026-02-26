@@ -634,9 +634,16 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
         else (_enabled_sport_ids[0] if _enabled_sport_ids else "")
     )
 
+    # Build year options for dynamic sports (current year back to 3 years ago)
+    from datetime import datetime as _dt
+
+    _current_year = _dt.now().year
+    _year_options = list(range(_current_year, _current_year - 4, -1))
+
     # State for the dialog
     dialog_state = {
         "sport_id": _initial_sport_id,
+        "selected_year": year_hint or _current_year,
         "season_index": None,
         "episode_index": None,
         "show": None,
@@ -666,11 +673,8 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
             loader = DynamicMetadataLoader(settings=gui_state.config.settings)
 
             if sport.show_slug_template:
-                # Dynamic sport – resolve the slug using the year from the filename
-                if year_hint is None:
-                    ui.notify("Cannot determine year for this sport from the filename", type="warning")
-                    return
-                show = loader.get_show_for_year(sport, year_hint)
+                # Dynamic sport – resolve the slug using the selected year
+                show = loader.get_show_for_year(sport, dialog_state["selected_year"])
             else:
                 # Static sport
                 show = loader.load_show(sport.show_slug, sport.season_overrides)
@@ -682,6 +686,11 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
                     dialog_state["season_index"] = dialog_state["seasons"][0][0]
                     load_episodes(dialog_state["season_index"])
                     auto_select_episode()
+            elif sport.show_slug_template:
+                ui.notify(
+                    f"No data found for {sport.name} {dialog_state['selected_year']}",
+                    type="warning",
+                )
         except Exception as e:
             LOGGER.exception("Failed to load show data: %s", e)
             ui.notify(f"Failed to load sport data: {e}", type="negative")
@@ -726,10 +735,8 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
             if dialog_state["episodes"]:
                 dialog_state["episode_index"] = dialog_state["episodes"][0][0]
 
-    def on_sport_change(e):
-        dialog_state["sport_id"] = e.value
-        load_show_data(e.value)
-
+    def _refresh_season_episode_selects():
+        """Refresh season and episode select widgets from dialog_state."""
         season_select.options = [f"S{i:02d} - {t}" for i, t in dialog_state["seasons"]]
         if dialog_state["seasons"]:
             auto_idx = next(
@@ -747,6 +754,19 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
             episode_select.value = episode_select.options[ep_auto_idx]
         else:
             episode_select.value = None
+
+    def on_sport_change(e):
+        dialog_state["sport_id"] = e.value
+        sport = next((s for s in gui_state.config.sports if s.id == e.value), None)
+        # Show/hide year selector based on whether sport uses dynamic slugs
+        year_select.set_visibility(bool(sport and sport.show_slug_template))
+        load_show_data(e.value)
+        _refresh_season_episode_selects()
+
+    def on_year_change(e):
+        dialog_state["selected_year"] = e.value
+        load_show_data(dialog_state["sport_id"])
+        _refresh_season_episode_selects()
 
     def on_season_change(e):
         if dialog_state["seasons"] and e.value:
@@ -856,6 +876,19 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
                 label="Sport",
                 on_change=on_sport_change,
             ).classes("w-full")
+
+            # Year selector (only visible for dynamic sports with show_slug_template)
+            _initial_sport = next(
+                (s for s in gui_state.config.sports if s.id == dialog_state["sport_id"]), None
+            )
+            _is_dynamic = bool(_initial_sport and _initial_sport.show_slug_template)
+            year_select = ui.select(
+                _year_options,
+                value=dialog_state["selected_year"],
+                label="Year",
+                on_change=on_year_change,
+            ).classes("w-full")
+            year_select.set_visibility(_is_dynamic)
 
             # Load initial data
             load_show_data(dialog_state["sport_id"])
