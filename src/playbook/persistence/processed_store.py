@@ -131,6 +131,7 @@ class ProcessedFileStore:
         """Open a new SQLite connection with WAL mode enabled."""
         conn = sqlite3.connect(
             self._db_path,
+            timeout=10,
             detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
         )
         conn.execute("PRAGMA journal_mode=WAL")
