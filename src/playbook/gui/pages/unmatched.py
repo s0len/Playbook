@@ -878,9 +878,7 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
             ).classes("w-full")
 
             # Year selector (only visible for dynamic sports with show_slug_template)
-            _initial_sport = next(
-                (s for s in gui_state.config.sports if s.id == dialog_state["sport_id"]), None
-            )
+            _initial_sport = next((s for s in gui_state.config.sports if s.id == dialog_state["sport_id"]), None)
             _is_dynamic = bool(_initial_sport and _initial_sport.show_slug_template)
             year_select = ui.select(
                 _year_options,
