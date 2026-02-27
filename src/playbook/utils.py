@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import string
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -24,7 +25,8 @@ _FALSE_VALUES = frozenset({"0", "false", "no", "off"})
 @functools.lru_cache(maxsize=2048)
 def normalize_token(value: str) -> str:
     """Return a normalized token suitable for fuzzy comparisons."""
-    lowered = value.lower()
+    decomposed = unicodedata.normalize("NFD", value)
+    lowered = decomposed.lower()
     stripped = NORMALIZE_PATTERN.sub("", lowered)
     return stripped
 

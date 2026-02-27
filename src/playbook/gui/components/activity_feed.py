@@ -77,7 +77,7 @@ def activity_item(event: NotificationEvent) -> None:
             ui.label(event.destination).classes("text-xs opacity-70 truncate max-w-md")
 
         # Timestamp
-        time_str = event.timestamp.strftime("%H:%M:%S")
+        time_str = event.timestamp.astimezone().strftime("%H:%M:%S")
         ui.label(time_str).classes("text-xs opacity-60")
 
 

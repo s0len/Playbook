@@ -781,7 +781,7 @@ pattern_sets:
         # Example: MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.One.WEB-DL.1080p.H264.English-DNU.mkv
         # Example: MotoGP.2026.Round00.Season.Launch.WEB-DL.1080p.H264.English-DNU.mkv
         regex: >-
-          (?i)^(?=.*-\s*DNU\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
+          (?i)^(?=.*-\s*DNU\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|WEB|PROPER|REPACK|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|WEB|PROPER|REPACK|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
         season_selector:
           mode: round
           group: round
@@ -845,6 +845,8 @@ pattern_sets:
             - Qualifying Nr.1
             - MotoGP Qualifying Nr. 1
             - MotoGP Qualifying Nr.1
+            - MotoGP Qualifying
+            - Qualifying
           Qualifying Two:
             - Qualifying.Q2
             - Qualifying2
@@ -855,7 +857,6 @@ pattern_sets:
             - Qualifying Nr.2
             - MotoGP Qualifying Nr. 2
             - MotoGP Qualifying Nr.2
-            - Qualifying
           Qualifying Three:
             - Qualifying.Q3
             - Qualifying3
@@ -890,7 +891,9 @@ pattern_sets:
             - Season.Launch
           Sprint:
             - Sprint.Race
+            - Sprint Race
             - MotoGP Sprint
+            - MotoGP Sprint Race
           Race:
             - Grand.Prix
             - GP
@@ -946,7 +949,7 @@ pattern_sets:
         # Example: MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.Three.WEB-DL.1080p.H264.English-MWR.mkv
         # Example: MotoGP.2026.Round00.Season.Launch.WEB-DL.1080p.H264.English-MWR.mkv
         regex: >-
-          (?i)^(?=.*-MWR\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
+          (?i)^(?=.*-MWR\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|WEB|PROPER|REPACK|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|WEB|PROPER|REPACK|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
         season_selector:
           mode: round
           group: round
@@ -980,6 +983,25 @@ pattern_sets:
         season_selector:
           mode: round
           group: round
+        episode_selector:
+          group: session
+          allow_fallback_to_title: true
+        session_aliases: *motogp_session_aliases
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_round:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
+      - description: MotoGP Plex-style season-episode releases
+        # Example: MotoGP (1949) - S2023E10 - Grand Prix of Portugal MotoGP Qualifying [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv
+        # Example: MotoGP (1949) - S2023E72 - SHARK Grand Prix of France MotoGP Qualifying Nr.2 [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv
+        # Example: MotoGP (1949) - S2023E67 - Spanish Grand Prix MotoGP Sprint [WEBRip-1080p][AAC 2.0][x264]-DNU.mkv
+        # Uses title mode with location group: matches the Grand Prix name against
+        # season titles/aliases using exact, substring, and word-level matching.
+        regex: >-
+          (?i)^MotoGP\s*\(\d{4}\)\s*-\s*S(?P<year>20\d{2})E(?P<episode_number>\d+)\s*-\s*(?P<location>.+?)\s+(?P<session>(?:MotoGP\s+)?(?:Sprint\s+Race|Sprint|Race|Warm\s*Up|Qualifying(?:\s+(?:Nr\.?|No\.)?\s*\d+)?|Practice(?:\s+(?:Nr\.?|No\.)?\s*\d+)?))\s*\[.+\]-(?:DNU|MWR)\.(?:mkv|mp4|ts)$
+        season_selector:
+          mode: title
+          group: location
         episode_selector:
           group: session
           allow_fallback_to_title: true

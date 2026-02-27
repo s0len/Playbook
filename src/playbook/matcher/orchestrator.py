@@ -381,7 +381,8 @@ def match_file_to_episode(
 
     # No match found
     if failed_resolutions:
-        log_fn = LOGGER.debug if (sport.allow_unmatched or suppress_warnings) else LOGGER.warning
+        is_variant = sport.variant_year is not None
+        log_fn = LOGGER.debug if (sport.allow_unmatched or suppress_warnings or is_variant) else LOGGER.warning
         log_fn(
             "File %s matched %d pattern(s) but could not resolve:%s%s",
             filename,
@@ -390,7 +391,8 @@ def match_file_to_episode(
             "\n  - ".join(failed_resolutions) if len(failed_resolutions) > 1 else failed_resolutions[0],
         )
         message = f"Matched {matched_patterns} pattern(s) but could not resolve: {'; '.join(failed_resolutions)}"
-        severity = "ignored" if (sport.allow_unmatched or suppress_warnings) else "warning"
+        is_variant = sport.variant_year is not None
+        severity = "ignored" if (sport.allow_unmatched or suppress_warnings or is_variant) else "warning"
         record(severity, message)
         if trace is not None:
             trace["status"] = "unresolved"

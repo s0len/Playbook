@@ -126,6 +126,7 @@ class MetadataCacheStore:
         """Open a new SQLite connection with WAL mode enabled."""
         conn = sqlite3.connect(
             str(self.db_path),
+            timeout=10,
             detect_types=sqlite3.PARSE_DECLTYPES,
             check_same_thread=False,
         )

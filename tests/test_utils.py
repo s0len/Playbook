@@ -36,6 +36,20 @@ def test_normalize_token_handles_whitespace_normalization() -> None:
     assert normalize_token("  Padded  ") == "padded"
 
 
+def test_normalize_token_decomposes_accented_characters() -> None:
+    """Verify that accented characters are decomposed to base letters."""
+    # Czech name with háček
+    assert normalize_token("Procházka") == "prochazka"
+    # German city with umlaut
+    assert normalize_token("München") == "munchen"
+    # Portuguese with tilde
+    assert normalize_token("São Paulo") == "saopaulo"
+    # French with accents
+    assert normalize_token("Café résumé") == "caferesume"
+    # Mixed accented and plain
+    assert normalize_token("Óliver vs O'Malley") == "olivervsomalley"
+
+
 def test_slugify_handles_punctuation_and_case() -> None:
     assert slugify("Grand Prix #1") == "grand-prix-1"
 
