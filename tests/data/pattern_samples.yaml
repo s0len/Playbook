@@ -1231,3 +1231,49 @@ samples:
       - value: "Pegula, Jessica - Rybakina, Elena.mp4"
         expect_season: "Minimal"
         expect_episode: "Jessica Pegula vs Elena Rybakina"
+
+  - description: "UCL date-based dot releases match via date season selector"
+    sport:
+      id: "ucl_date_test"
+      name: "UEFA Champions League"
+      file_patterns:
+        - regex: "(?i)^UEFA[._\\s-]*Champions[._\\s-]*League[._\\s-]*(?P<season_year>\\d{4})[._\\s-]+(?P<month>\\d{2})[._\\s-]+(?P<day>\\d{2})[._\\s-]+(?P<matchup>(?P<away>[A-Za-z&\\x27\\x27\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF]+(?:[._\\s-]+[A-Za-z&\\x27\\x27\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF]+){0,4})[._\\s-]+(?:vs?|VS?|V)[._\\s-]+(?P<home>[A-Za-z&\\x27\\x27\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF]+(?:[._\\s-]+[A-Za-z&\\x27\\x27\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF]+){0,4}))(?=[._\\s-]+(?:\\d{3,4}p|1080|720|2160|4K|HDR|HEVC|H264|H265|x264|x265|WEB|Blu|HDTV|AMZN|STAN|PROPER|REPACK|MULTI|EN|ENG|AAC|DDP|Atmos|Rip|Pack)(?:[A-Za-z0-9]+)?|\\.(?:mkv|mp4|ts|m4v|avi)$)"
+          priority: 10
+          season_selector:
+            mode: "date"
+            value_template: "{season_year}-{month}-{day}"
+          episode_selector:
+            group: "matchup"
+            allow_fallback_to_title: true
+          metadata_filters:
+            team_alias_map: uefa_champions_league
+    show:
+      key: "ucl-test"
+      title: "UEFA Champions League 2025-2026"
+      seasons:
+        - title: "Knockout Phase Play-offs"
+          round_number: 9
+          display_number: 9
+          episodes:
+            - title: "Paris SG vs Monaco"
+              originally_available: "2026-02-25"
+            - title: "Juventus vs Club Brugge"
+              originally_available: "2026-02-25"
+            - title: "Liverpool vs Qarabag"
+              originally_available: "2026-02-25"
+        - title: "Matchweek 8"
+          round_number: 8
+          display_number: 8
+          episodes:
+            - title: "Barcelona vs Atalanta"
+              originally_available: "2026-01-28"
+    files:
+      - value: "UEFA.Champions.League.2026.02.25.PSG.vs.Monaco.1080p.WEB-DL.H264.Fight-BB.mkv"
+        expect_season: "Knockout Phase Play-offs"
+        expect_episode: "Paris SG vs Monaco"
+      - value: "UEFA.Champions.League.2026.02.25.Juventus.vs.Club.Brugge.1080p.HDTV.mkv"
+        expect_season: "Knockout Phase Play-offs"
+        expect_episode: "Juventus vs Club Brugge"
+      - value: "UEFA.Champions.League.2026.01.28.Barcelona.vs.Atalanta.1080p.WEB.mkv"
+        expect_season: "Matchweek 8"
+        expect_episode: "Barcelona vs Atalanta"
