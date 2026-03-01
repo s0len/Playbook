@@ -145,6 +145,9 @@ class TVSportsDBClient:
         """Fetch show with seasons.
 
         Uses conditional requests to efficiently check for updates.
+        When include_episodes is True, season-level caches are always checked
+        independently so that episode additions are picked up even when the
+        show-level structure hasn't changed.
 
         Args:
             slug: Show slug (e.g., "formula-1-2026")
@@ -161,48 +164,55 @@ class TVSportsDBClient:
 
         # Check cache first (including expired entries for conditional requests)
         cached_entry = self.cache.get_show_entry(slug, include_expired=True)
+        show: ShowResponse | None = None
 
         if cached_entry is not None:
             if cached_entry.is_fresh:
-                # Cache is still valid
+                # Cache is still valid for show structure
                 LOGGER.debug("Using cached show (fresh): %s", slug)
-                return ShowResponse.model_validate(cached_entry.content)
+                show = ShowResponse.model_validate(cached_entry.content)
+            else:
+                # Cache expired - try conditional request
+                LOGGER.debug("Cache expired, checking for updates: %s", slug)
+                response = self._request(
+                    "GET",
+                    f"/shows/{slug}",
+                    etag=cached_entry.etag,
+                    last_modified=cached_entry.last_modified,
+                )
 
-            # Cache expired - try conditional request
-            LOGGER.debug("Cache expired, checking for updates: %s", slug)
-            response = self._request(
-                "GET",
-                f"/shows/{slug}",
-                etag=cached_entry.etag,
-                last_modified=cached_entry.last_modified,
-            )
-
-            if response is None:
-                # 304 Not Modified - refresh TTL and use cached data
-                LOGGER.debug("Content unchanged (304), refreshing TTL: %s", slug)
-                self.cache.refresh_show_ttl(slug)
-                return ShowResponse.model_validate(cached_entry.content)
+                if response is None:
+                    # 304 Not Modified - show structure unchanged
+                    LOGGER.debug("Show structure unchanged (304): %s", slug)
+                    self.cache.refresh_show_ttl(slug)
+                    show = ShowResponse.model_validate(cached_entry.content)
+                else:
+                    LOGGER.debug("Fetched fresh show data: %s", slug)
+                    show = ShowResponse.model_validate(response.json())
+                    etag = response.headers.get("ETag")
+                    last_modified = response.headers.get("Last-Modified")
+                    self.cache.save_show(slug, show, etag=etag, last_modified=last_modified)
         else:
             # No cached entry - make fresh request
             response = self._request("GET", f"/shows/{slug}")
+            LOGGER.debug("Fetched fresh show data: %s", slug)
+            show = ShowResponse.model_validate(response.json())
+            etag = response.headers.get("ETag")
+            last_modified = response.headers.get("Last-Modified")
+            self.cache.save_show(slug, show, etag=etag, last_modified=last_modified)
 
-        # Parse new response
-        LOGGER.debug("Fetched fresh show data: %s", slug)
-        show = ShowResponse.model_validate(response.json())
-
+        # Always check season-level caches for episodes, even on show cache hit.
+        # The show-level ETag/304 only reflects the show structure (title, season
+        # list), NOT episode changes within seasons.  Each season endpoint has its
+        # own ETag and TTL, so get_season() will efficiently return cached data
+        # when episodes haven't changed, but fetch fresh data when they have.
         if include_episodes:
-            # Fetch episodes for each season
             for season in show.seasons:
                 try:
                     season_detail = self.get_season(slug, season.number)
                     season.episodes = season_detail.episodes
                 except TVSportsDBError as exc:
                     LOGGER.warning("Failed to fetch episodes for %s season %d: %s", slug, season.number, exc)
-
-        # Cache with ETag if provided
-        etag = response.headers.get("ETag")
-        last_modified = response.headers.get("Last-Modified")
-        self.cache.save_show(slug, show, etag=etag, last_modified=last_modified)
 
         return show
 
