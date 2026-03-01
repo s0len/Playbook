@@ -32,11 +32,17 @@ class EpisodeMatchStatus:
     air_date: date | None
     status: MatchStatus
     record: ProcessedFileRecord | None = None
+    all_records: list[ProcessedFileRecord] = field(default_factory=list)
 
     @property
     def formatted_code(self) -> str:
         """Return formatted episode code like E01."""
         return f"E{self.episode_index:02d}"
+
+    @property
+    def file_count(self) -> int:
+        """Number of source files tracked for this episode."""
+        return len(self.all_records)
 
 
 @dataclass
@@ -217,12 +223,14 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
 
         matched_in_season = 0
         for episode in season.episodes:
-            # Check if we have a record for this episode
+            # Check if we have records for this episode
             key = (season.index, episode.index)
-            record = records_by_episode.get(key)
+            episode_records = records_by_episode.get(key, [])
+            # Best record is first (sorted by quality_score descending)
+            best_record = episode_records[0] if episode_records else None
 
-            if record:
-                status: MatchStatus = "matched" if record.status != "error" else "error"
+            if best_record:
+                status: MatchStatus = "matched" if best_record.status != "error" else "error"
                 matched_in_season += 1
             else:
                 status = "missing"
@@ -232,7 +240,8 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
                 episode_title=episode.title,
                 air_date=episode.originally_available,
                 status=status,
-                record=record,
+                record=best_record,
+                all_records=episode_records,
             )
             season_status.episodes.append(episode_status)
 
@@ -297,7 +306,9 @@ def get_sports_overview() -> list[SportOverview]:
 def _load_show_metadata(sport_config):
     """Load show metadata for a sport.
 
-    For dynamic sports (using show_slug_template), loads metadata for the current year.
+    For dynamic sports (using show_slug_template), loads metadata for all
+    tracked years (discovered from processed records and fingerprint store)
+    and merges them into a single virtual Show.
 
     Args:
         sport_config: Sport configuration
@@ -309,26 +320,9 @@ def _load_show_metadata(sport_config):
         return None
 
     try:
-        # For dynamic sports, try loading metadata for recent years
+        # For dynamic sports, load metadata for all known years
         if sport_config.show_slug_template and not sport_config.show_slug:
-            from datetime import datetime
-
-            from playbook.metadata_loader import DynamicMetadataLoader
-
-            loader = DynamicMetadataLoader(
-                gui_state.config.settings,
-                cache_dir=gui_state.config.settings.cache_dir,
-            )
-            try:
-                current_year = datetime.now().year
-                # Try current year first, then previous year as fallback
-                for year in [current_year, current_year - 1]:
-                    show = loader.get_show_for_year(sport_config, year)
-                    if show:
-                        return show
-                return None
-            finally:
-                loader.close()
+            return _load_dynamic_show_metadata(sport_config)
 
         # For static sports, use the regular loader
         from playbook.metadata_loader import load_sports
@@ -345,6 +339,72 @@ def _load_show_metadata(sport_config):
         LOGGER.warning("Failed to load metadata for %s: %s", sport_config.id, e)
 
     return None
+
+
+def _load_dynamic_show_metadata(sport_config):
+    """Load and merge metadata for all tracked years of a dynamic sport.
+
+    Discovers years from processed records (show_id field) and also tries
+    the current year. Merges all seasons from all years into a single Show.
+
+    Args:
+        sport_config: Sport configuration with show_slug_template
+
+    Returns:
+        Merged Show model or None
+    """
+    from datetime import datetime
+
+    from playbook.metadata_loader import DynamicMetadataLoader
+    from playbook.models import Show
+
+    # Discover which years have been processed
+    tracked_slugs: set[str] = set()
+    if gui_state.processed_store:
+        show_ids = gui_state.processed_store.get_show_ids_for_sport(sport_config.id)
+        tracked_slugs.update(show_ids)
+
+    # Always try current year (may not have processed files yet)
+    current_year = datetime.now().year
+    current_slug = sport_config.resolve_show_slug(current_year)
+    if current_slug:
+        tracked_slugs.add(current_slug)
+
+    if not tracked_slugs:
+        return None
+
+    loader = DynamicMetadataLoader(
+        gui_state.config.settings,
+        cache_dir=gui_state.config.settings.cache_dir,
+    )
+    try:
+        shows: list[Show] = []
+        for slug in sorted(tracked_slugs):
+            show = loader.load_show(slug, sport_config.season_overrides)
+            if show:
+                shows.append(show)
+
+        if not shows:
+            return None
+
+        # If only one year, return it directly
+        if len(shows) == 1:
+            return shows[0]
+
+        # Merge all years into a single virtual Show
+        merged = Show(
+            key=sport_config.id,
+            title=sport_config.name,
+            summary=None,
+            seasons=[],
+            metadata={},
+        )
+        for show in shows:
+            merged.seasons.extend(show.seasons)
+
+        return merged
+    finally:
+        loader.close()
 
 
 def _build_source_glob_info(sport_config) -> list[SourceGlobInfo]:
@@ -387,14 +447,18 @@ def _build_source_glob_info(sport_config) -> list[SourceGlobInfo]:
     return result
 
 
-def _get_records_by_episode(sport_id: str) -> dict[tuple[int, int], ProcessedFileRecord]:
+def _get_records_by_episode(sport_id: str) -> dict[tuple[int, int], list[ProcessedFileRecord]]:
     """Get processed records indexed by (season_index, episode_index).
+
+    Returns ALL records per episode (multiple source files may target the same
+    episode at different quality levels), sorted by quality_score descending
+    so the best file is first.
 
     Args:
         sport_id: The sport identifier
 
     Returns:
-        Dict mapping (season_index, episode_index) to record
+        Dict mapping (season_index, episode_index) to list of records
     """
     if not gui_state.processed_store:
         LOGGER.debug("_get_records_by_episode: processed_store is None")
@@ -407,16 +471,14 @@ def _get_records_by_episode(sport_id: str) -> dict[tuple[int, int], ProcessedFil
             len(records),
             sport_id,
         )
-        if records:
-            # Log first record for debugging
-            r = records[0]
-            LOGGER.debug(
-                "_get_records_by_episode: sample record - season_index=%d, episode_index=%d, source=%s",
-                r.season_index,
-                r.episode_index,
-                r.source_path,
-            )
-        return {(r.season_index, r.episode_index): r for r in records}
+        result: dict[tuple[int, int], list[ProcessedFileRecord]] = {}
+        for r in records:
+            key = (r.season_index, r.episode_index)
+            result.setdefault(key, []).append(r)
+        # Sort each episode's records by quality_score descending (best first)
+        for key in result:
+            result[key].sort(key=lambda r: r.quality_score or 0, reverse=True)
+        return result
     except Exception as e:
         LOGGER.warning("Failed to get processed records for %s: %s", sport_id, e)
         return {}

@@ -74,7 +74,9 @@ class Processor:
         self._plex_sync: PlexMetadataSync | None = create_plex_sync_from_config(config)
 
         # Dynamic metadata loader for sports with show_slug_template
-        self._dynamic_loader = DynamicMetadataLoader(settings, settings.cache_dir)
+        self._dynamic_loader = DynamicMetadataLoader(
+            settings, settings.cache_dir, metadata_fingerprints=self.metadata_fingerprints
+        )
 
         # Mutable processing state (reset between runs)
         self._state = ProcessingState()
@@ -203,6 +205,16 @@ class Processor:
         # Clear failed slug cache so newly-added metadata on TVSportsDB is discovered
         self._dynamic_loader.clear_failed_slugs()
         runtimes = self._load_sports()
+
+        # Check for metadata changes on dynamic sports (show_slug_template)
+        # by comparing stored fingerprints from the previous run
+        dynamic_sports = [r.sport for r in runtimes if r.is_dynamic]
+        if dynamic_sports:
+            dynamic_changes = self._dynamic_loader.check_dynamic_fingerprints(dynamic_sports)
+            for sport_id, change in dynamic_changes.items():
+                self._state.metadata_change_map[sport_id] = change
+                sport_name = next((s.name for s in dynamic_sports if s.id == sport_id), sport_id)
+                self._state.metadata_changed_sports.append((sport_id, sport_name))
 
         if self._state.metadata_changed_sports:
             labels = ", ".join(
