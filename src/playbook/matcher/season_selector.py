@@ -146,8 +146,6 @@ def select_season(show: Show, selector: SeasonSelector, match_groups: dict[str, 
             candidates = [num for num in candidates if num is not None]
             if round_number in candidates:
                 return season
-        if 0 < round_number <= len(show.seasons):
-            return show.seasons[round_number - 1]
         return None
 
     if mode == "week":
