@@ -768,6 +768,46 @@ samples:
       - value: "EPL 2025 12 03 Liverpool vs Sunderland 2160p50 x264 EN SKY.mkv"
         expect_episode: "Liverpool vs Sunderland"
 
+  - description: "Premier League 2026-dated files (cross-year season)"
+    sport:
+      id: "premier_league"
+      name: "Premier League"
+      variant_year: 2026
+      pattern_sets:
+        - premier_league
+    show:
+      key: "premier_league_2025_26"
+      title: "Premier League 2025-26"
+      seasons:
+        - title: "Matchweek 25"
+          display_number: 25
+          episodes:
+            - title: "Manchester United vs Fulham"
+              aliases:
+                - "Manchester United Vs Fulham"
+            - title: "Tottenham Hotspur vs Manchester City"
+              aliases:
+                - "Tottenham vs Manchester City"
+                - "Tottenham Hotspur Vs Manchester City"
+        - title: "Matchweek 26"
+          display_number: 26
+          episodes:
+            - title: "Arsenal vs Sunderland"
+              aliases:
+                - "Arsenal Vs Sunderland"
+            - title: "Liverpool vs Manchester City"
+              aliases:
+                - "Liverpool Vs Manchester City"
+    filenames:
+      - value: "EPL.2026.02.01.Manchester.United.vs.Fulham.1080p50.x264.EN.SKYNZ.mp4"
+        expect_episode: "Manchester United vs Fulham"
+      - value: "EPL.2026.02.01.Tottenham.vs.Manchester.City.1080p50.x264.EN.SKYNZ.mp4"
+        expect_episode: "Tottenham Hotspur vs Manchester City"
+      - value: "EPL.2026.02.07.Arsenal.vs.Sunderland.1080p50.x264.EN.SKYNZ.mp4"
+        expect_episode: "Arsenal vs Sunderland"
+      - value: "EPL.2026.02.08.Liverpool.vs.Manchester.City.1080p50.x264.EN.SKYNZ.mp4"
+        expect_episode: "Liverpool vs Manchester City"
+
   - description: "Figure Skating Grand Prix 2025 samples"
     sport:
       id: "figure_skating_grand_prix_samples"

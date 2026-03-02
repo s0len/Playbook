@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import re
 import unicodedata
+from datetime import date as dt_date
 
 from ..config import SeasonSelector
 from ..models import Season, Show
@@ -18,6 +19,8 @@ from .date_utils import parse_date_string
 _ALPHA_NUMERIC_PREFIX = re.compile(r"^([a-z]+\d+)")
 _WORD_SPLIT = re.compile(r"[^a-zA-Z0-9\u00C0-\u024F]+")
 _MIN_WORD_LEN = 4
+_DATE_KEY_RE = re.compile(r"^\d{4}\.\d{2}\.\d{2}$")
+_MAX_DATE_PROXIMITY_DAYS = 4
 
 LOGGER = logging.getLogger(__name__)
 
@@ -109,6 +112,44 @@ def resolve_selector_value(
     return value
 
 
+def _find_nearest_date_mapping(key: str, mapping: dict[str, int]) -> int | None:
+    """Find the nearest date key in a mapping within _MAX_DATE_PROXIMITY_DAYS.
+
+    Used as a fallback when an exact date key isn't in the mapping, to handle
+    sports where matchweeks span multiple days but only primary dates are mapped.
+
+    Args:
+        key: Date key in YYYY.MM.DD format
+        mapping: Date-to-season mapping
+
+    Returns:
+        The mapped season index of the nearest date, or None
+    """
+    try:
+        year, month, day = key.split(".")
+        target = dt_date(int(year), int(month), int(day))
+    except (ValueError, TypeError):
+        return None
+
+    best_distance = _MAX_DATE_PROXIMITY_DAYS + 1
+    best_value: int | None = None
+
+    for map_key, value in mapping.items():
+        if not _DATE_KEY_RE.match(map_key):
+            continue
+        try:
+            y, m, d = map_key.split(".")
+            map_date = dt_date(int(y), int(m), int(d))
+        except (ValueError, TypeError):
+            continue
+        distance = abs((target - map_date).days)
+        if distance < best_distance:
+            best_distance = distance
+            best_value = value
+
+    return best_value
+
+
 def select_season(show: Show, selector: SeasonSelector, match_groups: dict[str, str]) -> Season | None:
     """Select the appropriate season based on selector mode and match groups.
 
@@ -181,6 +222,16 @@ def select_season(show: Show, selector: SeasonSelector, match_groups: dict[str, 
             for season in show.seasons:
                 if season.index == mapped:
                     return season
+        # Nearest-date fallback: if the key looks like a date (YYYY.MM.DD) and the
+        # mapping has date-like keys, find the closest date within 4 days.
+        # This handles matchweek sports where games span multiple days but only the
+        # primary date is in the map.
+        if selector.mapping and _DATE_KEY_RE.match(key):
+            nearest = _find_nearest_date_mapping(key, selector.mapping)
+            if nearest is not None:
+                for season in show.seasons:
+                    if season.index == nearest:
+                        return season
         return None
 
     if mode == "title":

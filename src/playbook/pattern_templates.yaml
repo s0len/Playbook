@@ -7079,6 +7079,8 @@ default_sports:
     variants:
       - year: 2025
         show_slug: "nba-2025-2026"
+      - year: 2026
+        show_slug: "nba-2025-2026"
 
   - id: nhl
     name: NHL
@@ -7087,6 +7089,8 @@ default_sports:
       - nhl
     variants:
       - year: 2025
+        show_slug: "nhl-2025-2026"
+      - year: 2026
         show_slug: "nhl-2025-2026"
 
   # ------------------------------------------------------------------
@@ -7100,6 +7104,8 @@ default_sports:
     variants:
       - year: 2025
         show_slug: "english-premier-league-2025-2026"
+      - year: 2026
+        show_slug: "english-premier-league-2025-2026"
 
   - id: uefa_champions_league
     name: UEFA Champions League
@@ -7107,6 +7113,8 @@ default_sports:
       - uefa_champions_league
     variants:
       - year: 2025
+        show_slug: "uefa-champions-league-2025-2026"
+      - year: 2026
         show_slug: "uefa-champions-league-2025-2026"
 
   # ------------------------------------------------------------------
