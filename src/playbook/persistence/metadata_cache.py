@@ -13,6 +13,7 @@ import json
 import logging
 import sqlite3
 import threading
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -123,16 +124,49 @@ class MetadataCacheStore:
         return self._local.connection
 
     def _open_connection(self) -> sqlite3.Connection:
-        """Open a new SQLite connection with WAL mode enabled."""
+        """Open a new SQLite connection with WAL mode enabled.
+
+        Uses NORMAL synchronous mode (safe with WAL) and a generous busy
+        timeout to handle concurrent access from the metadata thread pool.
+        """
         conn = sqlite3.connect(
             str(self.db_path),
-            timeout=10,
+            timeout=60,
             detect_types=sqlite3.PARSE_DECLTYPES,
             check_same_thread=False,
         )
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
         return conn
+
+    def _execute_with_retry(self, func, *, max_retries: int = 3, description: str = "write"):
+        """Execute a database operation with retry on 'database is locked'.
+
+        Args:
+            func: Callable that performs the database operation
+            max_retries: Maximum number of retry attempts
+            description: Description for logging
+
+        Returns:
+            The return value of func
+        """
+        backoff = 0.1
+        for attempt in range(max_retries + 1):
+            try:
+                return func()
+            except sqlite3.OperationalError as exc:
+                if "database is locked" not in str(exc) or attempt >= max_retries:
+                    raise
+                LOGGER.debug(
+                    "Cache %s retry %d/%d (database locked): %s",
+                    description,
+                    attempt + 1,
+                    max_retries,
+                    self.db_path.name,
+                )
+                time.sleep(backoff)
+                backoff = min(backoff * 2, 2.0)
 
     def _remove_lock_files(self) -> None:
         """Remove SQLite WAL/SHM lock files that may be corrupted."""
@@ -239,23 +273,26 @@ class MetadataCacheStore:
         ttl = timedelta(hours=ttl_hours) if ttl_hours is not None else self._ttl
         expires_at = now + ttl
 
-        conn = self._get_connection()
-        conn.execute(
-            """
-            INSERT OR REPLACE INTO metadata_cache
-            (key, content, etag, last_modified, fetched_at, expires_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (
-                key,
-                json.dumps(content, ensure_ascii=False),
-                etag,
-                last_modified,
-                now.isoformat(),
-                expires_at.isoformat(),
-            ),
-        )
-        conn.commit()
+        def _do_set():
+            conn = self._get_connection()
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO metadata_cache
+                (key, content, etag, last_modified, fetched_at, expires_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    key,
+                    json.dumps(content, ensure_ascii=False),
+                    etag,
+                    last_modified,
+                    now.isoformat(),
+                    expires_at.isoformat(),
+                ),
+            )
+            conn.commit()
+
+        self._execute_with_retry(_do_set, description="set")
 
     def refresh_ttl(self, key: str, ttl_hours: int | None = None) -> bool:
         """Refresh the TTL for an existing entry (e.g., after a 304 response).
@@ -271,17 +308,20 @@ class MetadataCacheStore:
         ttl = timedelta(hours=ttl_hours) if ttl_hours is not None else self._ttl
         expires_at = now + ttl
 
-        conn = self._get_connection()
-        cursor = conn.execute(
-            """
-            UPDATE metadata_cache
-            SET expires_at = ?
-            WHERE key = ?
-            """,
-            (expires_at.isoformat(), key),
-        )
-        conn.commit()
-        return cursor.rowcount > 0
+        def _do_refresh():
+            conn = self._get_connection()
+            cursor = conn.execute(
+                """
+                UPDATE metadata_cache
+                SET expires_at = ?
+                WHERE key = ?
+                """,
+                (expires_at.isoformat(), key),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+        return self._execute_with_retry(_do_refresh, description="refresh_ttl")
 
     def delete(self, key: str) -> bool:
         """Delete a specific cache entry.
@@ -292,10 +332,14 @@ class MetadataCacheStore:
         Returns:
             True if an entry was deleted, False otherwise
         """
-        conn = self._get_connection()
-        cursor = conn.execute("DELETE FROM metadata_cache WHERE key = ?", (key,))
-        conn.commit()
-        return cursor.rowcount > 0
+
+        def _do_delete():
+            conn = self._get_connection()
+            cursor = conn.execute("DELETE FROM metadata_cache WHERE key = ?", (key,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+        return self._execute_with_retry(_do_delete, description="delete")
 
     def invalidate_by_prefix(self, prefix: str) -> int:
         """Invalidate all entries matching a key prefix.
@@ -306,13 +350,17 @@ class MetadataCacheStore:
         Returns:
             Number of entries deleted
         """
-        conn = self._get_connection()
-        cursor = conn.execute(
-            "DELETE FROM metadata_cache WHERE key LIKE ?",
-            (f"{prefix}%",),
-        )
-        conn.commit()
-        return cursor.rowcount
+
+        def _do_invalidate():
+            conn = self._get_connection()
+            cursor = conn.execute(
+                "DELETE FROM metadata_cache WHERE key LIKE ?",
+                (f"{prefix}%",),
+            )
+            conn.commit()
+            return cursor.rowcount
+
+        return self._execute_with_retry(_do_invalidate, description="invalidate")
 
     def invalidate_expired(self) -> int:
         """Remove all expired entries.
@@ -321,13 +369,17 @@ class MetadataCacheStore:
             Number of entries deleted
         """
         now = datetime.now(UTC)
-        conn = self._get_connection()
-        cursor = conn.execute(
-            "DELETE FROM metadata_cache WHERE expires_at < ?",
-            (now.isoformat(),),
-        )
-        conn.commit()
-        return cursor.rowcount
+
+        def _do_invalidate():
+            conn = self._get_connection()
+            cursor = conn.execute(
+                "DELETE FROM metadata_cache WHERE expires_at < ?",
+                (now.isoformat(),),
+            )
+            conn.commit()
+            return cursor.rowcount
+
+        return self._execute_with_retry(_do_invalidate, description="invalidate_expired")
 
     def clear(self) -> int:
         """Clear all cached entries.
@@ -335,10 +387,14 @@ class MetadataCacheStore:
         Returns:
             Number of entries deleted
         """
-        conn = self._get_connection()
-        cursor = conn.execute("DELETE FROM metadata_cache")
-        conn.commit()
-        return cursor.rowcount
+
+        def _do_clear():
+            conn = self._get_connection()
+            cursor = conn.execute("DELETE FROM metadata_cache")
+            conn.commit()
+            return cursor.rowcount
+
+        return self._execute_with_retry(_do_clear, description="clear")
 
     def get_stats(self) -> dict[str, Any]:
         """Get cache statistics.
