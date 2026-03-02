@@ -99,6 +99,7 @@ class SportDetail:
     # Source glob information
     source_globs: list[SourceGlobInfo] = field(default_factory=list)
     pattern_set_names: list[str] = field(default_factory=list)
+    metadata_error: str | None = None  # Error message if metadata loading failed
 
     @property
     def overall_matched(self) -> int:
@@ -191,9 +192,10 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
     )
 
     # Try to load show metadata
-    show = _load_show_metadata(sport_config)
+    show, metadata_error = _load_show_metadata(sport_config)
     if not show:
-        LOGGER.warning("get_sport_detail: failed to load metadata for %s", sport_id)
+        detail.metadata_error = metadata_error or "Failed to load metadata"
+        LOGGER.warning("get_sport_detail: failed to load metadata for %s: %s", sport_id, detail.metadata_error)
         return detail
 
     LOGGER.debug(
@@ -305,7 +307,7 @@ def get_sports_overview() -> list[SportOverview]:
     return overviews
 
 
-def _load_show_metadata(sport_config):
+def _load_show_metadata(sport_config) -> tuple:
     """Load show metadata for a sport.
 
     For dynamic sports (using show_slug_template), loads metadata for all
@@ -316,15 +318,16 @@ def _load_show_metadata(sport_config):
         sport_config: Sport configuration
 
     Returns:
-        Show model or None
+        Tuple of (Show model or None, error message or None)
     """
     if not gui_state.config:
-        return None
+        return None, "No configuration available"
 
     try:
         # For dynamic sports, load metadata for all known years
         if sport_config.show_slug_template and not sport_config.show_slug:
-            return _load_dynamic_show_metadata(sport_config)
+            show, error = _load_dynamic_show_metadata(sport_config)
+            return show, error
 
         # For static sports, use the regular loader
         from playbook.metadata_loader import load_sports
@@ -336,14 +339,14 @@ def _load_show_metadata(sport_config):
         )
 
         if result.runtimes:
-            return result.runtimes[0].show
+            return result.runtimes[0].show, None
+        return None, f"No metadata found for slug '{sport_config.show_slug}'"
     except Exception as e:
-        LOGGER.warning("Failed to load metadata for %s: %s", sport_config.id, e)
+        LOGGER.warning("Failed to load metadata for %s: %s", sport_config.id, e, exc_info=True)
+        return None, f"{type(e).__name__}: {e}"
 
-    return None
 
-
-def _load_dynamic_show_metadata(sport_config):
+def _load_dynamic_show_metadata(sport_config) -> tuple:
     """Load and merge metadata for all tracked years of a dynamic sport.
 
     Discovers years from processed records (show_id field) and also tries
@@ -354,7 +357,7 @@ def _load_dynamic_show_metadata(sport_config):
         sport_config: Sport configuration with show_slug_template
 
     Returns:
-        Merged Show model or None
+        Tuple of (Merged Show model or None, error message or None)
     """
     from datetime import datetime
 
@@ -374,7 +377,13 @@ def _load_dynamic_show_metadata(sport_config):
         tracked_slugs.add(current_slug)
 
     if not tracked_slugs:
-        return None
+        return None, f"No slugs to try (template: {sport_config.show_slug_template})"
+
+    LOGGER.debug(
+        "_load_dynamic_show_metadata: sport=%s slugs_to_try=%s",
+        sport_config.id,
+        sorted(tracked_slugs),
+    )
 
     loader = DynamicMetadataLoader(
         gui_state.config.settings,
@@ -382,17 +391,32 @@ def _load_dynamic_show_metadata(sport_config):
     )
     try:
         shows: list[tuple[str, Show]] = []  # (slug, show) pairs
+        failed_slugs: list[str] = []
         for slug in sorted(tracked_slugs):
-            show = loader.load_show(slug, sport_config.season_overrides)
-            if show:
-                shows.append((slug, show))
+            try:
+                show = loader.load_show(slug, sport_config.season_overrides)
+                if show:
+                    LOGGER.debug(
+                        "_load_dynamic_show_metadata: loaded %s (%d seasons, %d episodes)",
+                        slug,
+                        len(show.seasons),
+                        sum(len(s.episodes) for s in show.seasons),
+                    )
+                    shows.append((slug, show))
+                else:
+                    LOGGER.warning("_load_dynamic_show_metadata: slug %s returned no data", slug)
+                    failed_slugs.append(slug)
+            except Exception as e:
+                LOGGER.warning("_load_dynamic_show_metadata: failed to load %s: %s", slug, e, exc_info=True)
+                failed_slugs.append(slug)
 
         if not shows:
-            return None
+            tried = ", ".join(sorted(tracked_slugs))
+            return None, f"All slugs failed to load: {tried}"
 
         # If only one year, return it directly (no year labels needed)
         if len(shows) == 1:
-            return shows[0][1]
+            return shows[0][1], None
 
         # Merge all years into a single virtual Show with year labels
         merged = Show(
@@ -409,7 +433,7 @@ def _load_dynamic_show_metadata(sport_config):
                 season.metadata["_year_label"] = year_label
             merged.seasons.extend(show.seasons)
 
-        return merged
+        return merged, None
     finally:
         loader.close()
 

@@ -346,7 +346,7 @@ def _apply_season_overrides(show: Show, overrides: dict) -> None:
 def load_sports(
     sports: list[SportConfig],
     settings: Settings,
-    metadata_fingerprints: MetadataFingerprintStore,
+    metadata_fingerprints: MetadataFingerprintStore | None,
     cache_dir: Path | None = None,
 ) -> MetadataLoadResult:
     """Load sports metadata in parallel with fingerprint tracking.
@@ -460,26 +460,27 @@ def load_sports(
         patterns = compile_patterns(sport)
         extensions = {ext.lower() for ext in sport.source_extensions}
 
-        # Compute and track metadata fingerprint
-        try:
-            cached_fingerprint = metadata_fingerprints.get(sport.id)
-            fingerprint = compute_show_fingerprint(show, sport.show_slug, cached_fingerprint)
-        except Exception as exc:  # pragma: no cover - defensive, should not happen
-            LOGGER.warning(
-                render_fields_block(
-                    "Failed To Compute Metadata Fingerprint",
-                    {
-                        "Sport": sport.id,
-                        "Error": exc,
-                    },
-                    pad_top=True,
+        # Compute and track metadata fingerprint (skip if no store provided)
+        if metadata_fingerprints is not None:
+            try:
+                cached_fingerprint = metadata_fingerprints.get(sport.id)
+                fingerprint = compute_show_fingerprint(show, sport.show_slug, cached_fingerprint)
+            except Exception as exc:  # pragma: no cover - defensive, should not happen
+                LOGGER.warning(
+                    render_fields_block(
+                        "Failed To Compute Metadata Fingerprint",
+                        {
+                            "Sport": sport.id,
+                            "Error": exc,
+                        },
+                        pad_top=True,
+                    )
                 )
-            )
-        else:
-            change = metadata_fingerprints.update(sport.id, fingerprint)
-            if change.updated:
-                changed_sports.append((sport.id, sport.name))
-                change_map[sport.id] = change
+            else:
+                change = metadata_fingerprints.update(sport.id, fingerprint)
+                if change.updated:
+                    changed_sports.append((sport.id, sport.name))
+                    change_map[sport.id] = change
 
         runtimes.append(SportRuntime(sport=sport, show=show, patterns=patterns, extensions=extensions))
 

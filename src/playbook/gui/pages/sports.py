@@ -108,6 +108,10 @@ def sport_detail_page(sport_id: str) -> None:
         # Seasons
         with ui.card().classes("glass-card w-full"):
             ui.label("Seasons").classes("text-xl font-semibold text-slate-700 dark:text-slate-200 mb-4")
+            if detail.metadata_error:
+                with ui.row().classes("w-full items-center gap-2 py-2 px-3 rounded bg-red-50 dark:bg-red-900/20"):
+                    ui.icon("error_outline").classes("text-red-500 text-lg")
+                    ui.label(detail.metadata_error).classes("text-sm text-red-600 dark:text-red-400")
             seasons_list(detail.seasons, expand_recent=True)
 
         # Recent matches for this sport
