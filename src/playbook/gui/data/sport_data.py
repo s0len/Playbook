@@ -52,6 +52,7 @@ class SeasonMatchStatus:
     season_index: int
     season_title: str
     episodes: list[EpisodeMatchStatus] = field(default_factory=list)
+    year_label: str | None = None  # Year grouping for dynamic sports (e.g., "2026")
 
     @property
     def matched_count(self) -> int:
@@ -219,6 +220,7 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
         season_status = SeasonMatchStatus(
             season_index=season.index,
             season_title=season.title,
+            year_label=season.metadata.get("_year_label"),
         )
 
         matched_in_season = 0
@@ -345,7 +347,8 @@ def _load_dynamic_show_metadata(sport_config):
     """Load and merge metadata for all tracked years of a dynamic sport.
 
     Discovers years from processed records (show_id field) and also tries
-    the current year. Merges all seasons from all years into a single Show.
+    the current year. Returns a merged Show with year labels on each season
+    (stored in season.metadata["_year_label"]) for UI grouping.
 
     Args:
         sport_config: Sport configuration with show_slug_template
@@ -378,20 +381,20 @@ def _load_dynamic_show_metadata(sport_config):
         cache_dir=gui_state.config.settings.cache_dir,
     )
     try:
-        shows: list[Show] = []
+        shows: list[tuple[str, Show]] = []  # (slug, show) pairs
         for slug in sorted(tracked_slugs):
             show = loader.load_show(slug, sport_config.season_overrides)
             if show:
-                shows.append(show)
+                shows.append((slug, show))
 
         if not shows:
             return None
 
-        # If only one year, return it directly
+        # If only one year, return it directly (no year labels needed)
         if len(shows) == 1:
-            return shows[0]
+            return shows[0][1]
 
-        # Merge all years into a single virtual Show
+        # Merge all years into a single virtual Show with year labels
         merged = Show(
             key=sport_config.id,
             title=sport_config.name,
@@ -399,12 +402,32 @@ def _load_dynamic_show_metadata(sport_config):
             seasons=[],
             metadata={},
         )
-        for show in shows:
+        for slug, show in shows:
+            # Extract year from slug using the template pattern
+            year_label = _extract_year_from_slug(slug, sport_config.show_slug_template) or slug
+            for season in show.seasons:
+                season.metadata["_year_label"] = year_label
             merged.seasons.extend(show.seasons)
 
         return merged
     finally:
         loader.close()
+
+
+def _extract_year_from_slug(slug: str, template: str | None) -> str | None:
+    """Extract the year portion from a resolved slug using the template.
+
+    E.g., slug="formula-1-2026", template="formula-1-{year}" → "2026"
+    """
+    if not template or "{year}" not in template:
+        return None
+    prefix, _, suffix = template.partition("{year}")
+    if not slug.startswith(prefix):
+        return None
+    remainder = slug[len(prefix) :]
+    if suffix and remainder.endswith(suffix):
+        remainder = remainder[: -len(suffix)]
+    return remainder
 
 
 def _build_source_glob_info(sport_config) -> list[SourceGlobInfo]:
