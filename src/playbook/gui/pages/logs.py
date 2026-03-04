@@ -43,7 +43,7 @@ def logs_page() -> None:
                 ui.input(
                     placeholder="Search logs...",
                     on_change=lambda e: _update_filter(state, "search_query", e.value or ""),
-                ).props('dense outlined').classes("flex-1 min-w-48")
+                ).props("dense outlined").classes("flex-1 min-w-48")
 
                 # Level filter
                 ui.select(
@@ -90,9 +90,7 @@ def logs_page() -> None:
                 log_container = ui.column().classes("w-full p-3 gap-0")
 
             # Footer
-            with ui.row().classes(
-                "w-full justify-center items-center mt-2 text-xs text-slate-500 dark:text-slate-400"
-            ):
+            with ui.row().classes("w-full justify-center items-center mt-2 text-xs text-slate-500 dark:text-slate-400"):
                 log_count_label = ui.label(f"Showing 0 of 0 entries ({MAX_LOG_LINES} max)")
 
             def refresh_logs() -> None:
@@ -117,9 +115,7 @@ def logs_page() -> None:
 
                     total_logs = len(gui_state.log_buffer)
                     filtered_count = len(logs)
-                    log_count_label.text = (
-                        f"Showing {filtered_count} of {total_logs} entries ({MAX_LOG_LINES} max)"
-                    )
+                    log_count_label.text = f"Showing {filtered_count} of {total_logs} entries ({MAX_LOG_LINES} max)"
 
                     if state["auto_scroll"]:
                         log_scroll.scroll_to(percent=0)
