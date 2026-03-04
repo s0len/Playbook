@@ -1792,6 +1792,8 @@ pattern_sets:
       - "UEFA-Champions-League-*"
       - "UCL.*"
       - "UCL *"
+      - "Champions League *"
+      - "Champions League*"
     patterns:
       - description: UEFA Champions League dot releases with date
         # Example: UEFA.Champions.League.2026.02.25.PSG.vs.Monaco.1080p.WEB-DL.mkv
@@ -5978,6 +5980,20 @@ pattern_sets:
           allow_fallback_to_title: true
         metadata_filters:
           team_alias_map: uefa_champions_league
+
+      - description: Champions League spaced releases without UEFA prefix
+        # Example: Champions League Playoff 2026 Benfica vs Real Madrid 1st leg 17 02 1080pEN60fps.mkv
+        regex: >-
+          (?i)^Champions\s+League(?:\s+(?:Playoff|Play-off|Quarterfinal|Quarter-final|Semifinal|Semi-final|Final|Round\s+of\s+16))?\s+(?P<season_year>\d{4})\s+(?P<matchup>(?P<away>[A-Za-z&''À-ÖØ-öø-ÿ]+(?:\s+[A-Za-z&''À-ÖØ-öø-ÿ]+){0,3})\s+(?:vs?|VS?|V|versus)\s+(?P<home>[A-Za-z&''À-ÖØ-öø-ÿ]+(?:\s+[A-Za-z&''À-ÖØ-öø-ÿ]+){0,3}))(?:\s+\d+(?:st|nd|rd|th)\s+leg)?\s+(?P<day>\d{2})\s+(?P<month>\d{2})(?:\s+.+)?\.(?P<extension>mkv|mp4|ts|m4v|avi)$
+        season_selector:
+          mode: date
+          value_template: "{season_year}-{month}-{day}"
+        episode_selector:
+          group: matchup
+          allow_fallback_to_title: true
+        metadata_filters:
+          team_alias_map: uefa_champions_league
+        session_aliases: *uefa_cl_aliases
 
       - description: UCL abbreviated with date and matchday
         # Example: UCL.2026.01.28.MD8.Liverpool.vs.Qarabag.1080p50.x264.EN.TNT.mp4
