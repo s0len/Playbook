@@ -225,10 +225,14 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
             year_label=season.metadata.get("_year_label"),
         )
 
+        # For dynamic sports, use the season's show_slug to scope record lookups;
+        # for static sports the show key is the same for all seasons.
+        season_show_slug = season.metadata.get("_show_slug") or show.key
+
         matched_in_season = 0
         for episode in season.episodes:
             # Check if we have records for this episode
-            key = (season.index, episode.index)
+            key = (season_show_slug, season.index, episode.index)
             episode_records = records_by_episode.get(key, [])
             # Best record is first (sorted by quality_score descending)
             best_record = episode_records[0] if episode_records else None
@@ -431,6 +435,7 @@ def _load_dynamic_show_metadata(sport_config) -> tuple:
             year_label = _extract_year_from_slug(slug, sport_config.show_slug_template) or slug
             for season in show.seasons:
                 season.metadata["_year_label"] = year_label
+                season.metadata["_show_slug"] = slug
             merged.seasons.extend(show.seasons)
 
         return merged, None
@@ -494,8 +499,8 @@ def _build_source_glob_info(sport_config) -> list[SourceGlobInfo]:
     return result
 
 
-def _get_records_by_episode(sport_id: str) -> dict[tuple[int, int], list[ProcessedFileRecord]]:
-    """Get processed records indexed by (season_index, episode_index).
+def _get_records_by_episode(sport_id: str) -> dict[tuple[str, int, int], list[ProcessedFileRecord]]:
+    """Get processed records indexed by (show_id, season_index, episode_index).
 
     Returns ALL records per episode (multiple source files may target the same
     episode at different quality levels), sorted by quality_score descending
@@ -505,7 +510,7 @@ def _get_records_by_episode(sport_id: str) -> dict[tuple[int, int], list[Process
         sport_id: The sport identifier
 
     Returns:
-        Dict mapping (season_index, episode_index) to list of records
+        Dict mapping (show_id, season_index, episode_index) to list of records
     """
     if not gui_state.processed_store:
         LOGGER.debug("_get_records_by_episode: processed_store is None")
@@ -518,9 +523,9 @@ def _get_records_by_episode(sport_id: str) -> dict[tuple[int, int], list[Process
             len(records),
             sport_id,
         )
-        result: dict[tuple[int, int], list[ProcessedFileRecord]] = {}
+        result: dict[tuple[str, int, int], list[ProcessedFileRecord]] = {}
         for r in records:
-            key = (r.season_index, r.episode_index)
+            key = (r.show_id, r.season_index, r.episode_index)
             result.setdefault(key, []).append(r)
         # Sort each episode's records by quality_score descending (best first)
         for key in result:
