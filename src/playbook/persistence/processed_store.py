@@ -407,6 +407,24 @@ class ProcessedFileStore:
         )
         return [self._row_to_record(row) for row in cursor]
 
+    def get_show_ids_for_sport(self, sport_id: str) -> list[str]:
+        """Get distinct show_ids for a sport, ordered alphabetically.
+
+        Useful for dynamic sports to discover which years have been processed.
+
+        Args:
+            sport_id: The sport identifier
+
+        Returns:
+            List of distinct show_id values
+        """
+        conn = self._get_connection()
+        cursor = conn.execute(
+            "SELECT DISTINCT show_id FROM processed_files WHERE sport_id = ? ORDER BY show_id",
+            (sport_id,),
+        )
+        return [row["show_id"] for row in cursor]
+
     def get_by_status(self, status: ProcessingStatus) -> list[ProcessedFileRecord]:
         """Get all records with a given status.
 

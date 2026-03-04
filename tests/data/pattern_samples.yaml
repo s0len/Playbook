@@ -768,6 +768,46 @@ samples:
       - value: "EPL 2025 12 03 Liverpool vs Sunderland 2160p50 x264 EN SKY.mkv"
         expect_episode: "Liverpool vs Sunderland"
 
+  - description: "Premier League 2026-dated files (cross-year season)"
+    sport:
+      id: "premier_league"
+      name: "Premier League"
+      variant_year: 2026
+      pattern_sets:
+        - premier_league
+    show:
+      key: "premier_league_2025_26"
+      title: "Premier League 2025-26"
+      seasons:
+        - title: "Matchweek 25"
+          display_number: 25
+          episodes:
+            - title: "Manchester United vs Fulham"
+              aliases:
+                - "Manchester United Vs Fulham"
+            - title: "Tottenham Hotspur vs Manchester City"
+              aliases:
+                - "Tottenham vs Manchester City"
+                - "Tottenham Hotspur Vs Manchester City"
+        - title: "Matchweek 26"
+          display_number: 26
+          episodes:
+            - title: "Arsenal vs Sunderland"
+              aliases:
+                - "Arsenal Vs Sunderland"
+            - title: "Liverpool vs Manchester City"
+              aliases:
+                - "Liverpool Vs Manchester City"
+    filenames:
+      - value: "EPL.2026.02.01.Manchester.United.vs.Fulham.1080p50.x264.EN.SKYNZ.mp4"
+        expect_episode: "Manchester United vs Fulham"
+      - value: "EPL.2026.02.01.Tottenham.vs.Manchester.City.1080p50.x264.EN.SKYNZ.mp4"
+        expect_episode: "Tottenham Hotspur vs Manchester City"
+      - value: "EPL.2026.02.07.Arsenal.vs.Sunderland.1080p50.x264.EN.SKYNZ.mp4"
+        expect_episode: "Arsenal vs Sunderland"
+      - value: "EPL.2026.02.08.Liverpool.vs.Manchester.City.1080p50.x264.EN.SKYNZ.mp4"
+        expect_episode: "Liverpool vs Manchester City"
+
   - description: "Figure Skating Grand Prix 2025 samples"
     sport:
       id: "figure_skating_grand_prix_samples"
@@ -1005,10 +1045,10 @@ samples:
           round_number: 5
           display_number: 5
           episodes:
-            - title: "Qualifying One"
+            - title: "Qualifying 1"
               display_number: 63
               aliases: ["qualifying one", "q1", "qualifying"]
-            - title: "Qualifying Two"
+            - title: "Qualifying 2"
               display_number: 70
               aliases: ["qualifying two", "q2"]
         - title: "Portuguese Grand Prix"
@@ -1023,10 +1063,10 @@ samples:
           round_number: 1
           display_number: 1
           episodes:
-            - title: "Qualifying One"
+            - title: "Qualifying 1"
               display_number: 10
               aliases: ["qualifying one", "q1", "qualifying"]
-            - title: "Qualifying Two"
+            - title: "Qualifying 2"
               display_number: 11
               aliases: ["qualifying two", "q2"]
             - title: "Sprint"
@@ -1053,6 +1093,13 @@ samples:
       - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.One.WEB-DL.1080p.H264.English-MWR.mkv"
         expect_season: "Pre-Season Testing"
         expect_episode: "After the Flag: Sepang Test Day 1"
+      # Regression: dot-separated DNU tag (no hyphen before DNU)
+      - value: "MotoGP.2026.Round01.Thailand.Qualifying.Q1.1080p.WEBRip.x265.10bit.AAC.2.0.DNU.mkv"
+        expect_season: "Thai Grand Prix"
+        expect_episode: "Qualifying 1"
+      - value: "MotoGP.2026.Round01.Thailand.Race.1080p.WEBRip.x265.10bit.AAC.2.0.DNU.mkv"
+        expect_season: "Thai Grand Prix"
+        expect_episode: "Race"
       # Regression: standard sessions still match — DNU
       - value: "MotoGP.2024.Round03.Austin.Circuit.of.the.Americas.Qualifying-DNU.mkv"
         expect_season: "Grand Prix of the Americas"
@@ -1063,14 +1110,14 @@ samples:
       # Regression: standard sessions still match — MWR
       - value: "MotoGP.2024.Round05.Jerez.Qualifying-MWR.mp4"
         expect_season: "Spanish Grand Prix"
-        expect_episode: "Qualifying One"
+        expect_episode: "Qualifying 1"
       - value: "MotoGP.2025.Round01.Thailand.Sprint-MWR.mkv"
         expect_season: "Thai Grand Prix"
         expect_episode: "Sprint"
       # Regression: WEB token must not leak into session capture — DNU
       - value: "MotoGP.2024.Round01.Thailand.Qualifying.WEB.1080p.h264.English-DNU.mkv"
         expect_season: "Thai Grand Prix"
-        expect_episode: "Qualifying One"
+        expect_episode: "Qualifying 1"
       # Regression: PROPER.WEB must not leak into session capture — DNU
       - value: "MotoGP.2024.Round01.Thailand.Race.PROPER.WEB.1080p.h264.English-DNU.mkv"
         expect_season: "Thai Grand Prix"
@@ -1086,10 +1133,10 @@ samples:
       # Plex-style season-episode format
       - value: "MotoGP (1949) - S2026E10 - Thai Grand Prix MotoGP Qualifying [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv"
         expect_season: "Thai Grand Prix"
-        expect_episode: "Qualifying One"
+        expect_episode: "Qualifying 1"
       - value: "MotoGP (1949) - S2026E11 - Thai Grand Prix MotoGP Qualifying Nr.2 [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv"
         expect_season: "Thai Grand Prix"
-        expect_episode: "Qualifying Two"
+        expect_episode: "Qualifying 2"
       - value: "MotoGP (1949) - S2026E14 - Thai Grand Prix MotoGP Sprint [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv"
         expect_season: "Thai Grand Prix"
         expect_episode: "Sprint"
@@ -1098,7 +1145,7 @@ samples:
         expect_episode: "Race"
       - value: "MotoGP (1949) - S2026E70 - Spanish Grand Prix MotoGP Qualifying Nr.2 [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv"
         expect_season: "Spanish Grand Prix"
-        expect_episode: "Qualifying Two"
+        expect_episode: "Qualifying 2"
       # Word-level matching: non-English location matches English season title via shared word "Portugal"
       - value: "MotoGP (1949) - S2024E50 - Grande Prémio Tissot de Portugal MotoGP Sprint Race [WEBRip-1080p][AAC 2.0][x265]-DNU.mkv"
         expect_season: "Portuguese Grand Prix"
@@ -1231,3 +1278,49 @@ samples:
       - value: "Pegula, Jessica - Rybakina, Elena.mp4"
         expect_season: "Minimal"
         expect_episode: "Jessica Pegula vs Elena Rybakina"
+
+  - description: "UCL date-based dot releases match via date season selector"
+    sport:
+      id: "ucl_date_test"
+      name: "UEFA Champions League"
+      file_patterns:
+        - regex: "(?i)^UEFA[._\\s-]*Champions[._\\s-]*League[._\\s-]*(?P<season_year>\\d{4})[._\\s-]+(?P<month>\\d{2})[._\\s-]+(?P<day>\\d{2})[._\\s-]+(?P<matchup>(?P<away>[A-Za-z&\\x27\\x27\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF]+(?:[._\\s-]+[A-Za-z&\\x27\\x27\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF]+){0,4})[._\\s-]+(?:vs?|VS?|V)[._\\s-]+(?P<home>[A-Za-z&\\x27\\x27\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF]+(?:[._\\s-]+[A-Za-z&\\x27\\x27\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF]+){0,4}))(?=[._\\s-]+(?:\\d{3,4}p|1080|720|2160|4K|HDR|HEVC|H264|H265|x264|x265|WEB|Blu|HDTV|AMZN|STAN|PROPER|REPACK|MULTI|EN|ENG|AAC|DDP|Atmos|Rip|Pack)(?:[A-Za-z0-9]+)?|\\.(?:mkv|mp4|ts|m4v|avi)$)"
+          priority: 10
+          season_selector:
+            mode: "date"
+            value_template: "{season_year}-{month}-{day}"
+          episode_selector:
+            group: "matchup"
+            allow_fallback_to_title: true
+          metadata_filters:
+            team_alias_map: uefa_champions_league
+    show:
+      key: "ucl-test"
+      title: "UEFA Champions League 2025-2026"
+      seasons:
+        - title: "Knockout Phase Play-offs"
+          round_number: 9
+          display_number: 9
+          episodes:
+            - title: "Paris SG vs Monaco"
+              originally_available: "2026-02-25"
+            - title: "Juventus vs Club Brugge"
+              originally_available: "2026-02-25"
+            - title: "Liverpool vs Qarabag"
+              originally_available: "2026-02-25"
+        - title: "Matchweek 8"
+          round_number: 8
+          display_number: 8
+          episodes:
+            - title: "Barcelona vs Atalanta"
+              originally_available: "2026-01-28"
+    files:
+      - value: "UEFA.Champions.League.2026.02.25.PSG.vs.Monaco.1080p.WEB-DL.H264.Fight-BB.mkv"
+        expect_season: "Knockout Phase Play-offs"
+        expect_episode: "Paris SG vs Monaco"
+      - value: "UEFA.Champions.League.2026.02.25.Juventus.vs.Club.Brugge.1080p.HDTV.mkv"
+        expect_season: "Knockout Phase Play-offs"
+        expect_episode: "Juventus vs Club Brugge"
+      - value: "UEFA.Champions.League.2026.01.28.Barcelona.vs.Atalanta.1080p.WEB.mkv"
+        expect_season: "Matchweek 8"
+        expect_episode: "Barcelona vs Atalanta"

@@ -331,3 +331,19 @@ class TestMetadataChangeResult:
             invalidate_all=True,
         )
         assert result.invalidate_all
+
+
+class TestMetadataFingerprintStoreKeysWithPrefix:
+    """Tests for keys_with_prefix method."""
+
+    def test_keys_with_prefix(self, tmp_path) -> None:
+        """Test finding keys by prefix."""
+        store = MetadataFingerprintStore(tmp_path)
+        fp = ShowFingerprint(digest="abc", season_hashes={}, episode_hashes={})
+        store.update("motogp-2025", fp)
+        store.update("motogp-2026", fp)
+        store.update("ufc", fp)
+
+        assert sorted(store.keys_with_prefix("motogp-")) == ["motogp-2025", "motogp-2026"]
+        assert store.keys_with_prefix("ufc") == ["ufc"]
+        assert store.keys_with_prefix("nfl") == []

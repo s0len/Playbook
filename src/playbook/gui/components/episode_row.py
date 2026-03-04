@@ -4,6 +4,8 @@ Episode row component for the Playbook GUI.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from nicegui import ui
@@ -11,6 +13,8 @@ from nicegui import ui
 from .status_chip import status_icon
 
 if TYPE_CHECKING:
+    from playbook.persistence import ProcessedFileRecord
+
     from ..data.sport_data import EpisodeMatchStatus
 
 
@@ -47,6 +51,16 @@ def episode_row(
         # Episode title
         ui.label(episode.episode_title).classes("flex-1 text-slate-800 dark:text-slate-200 truncate")
 
+        # Quality score badge (if matched and has score)
+        if episode.status == "matched" and episode.record and episode.record.quality_score is not None:
+            score = episode.record.quality_score
+            score_color = _quality_score_color(score)
+            ui.badge(str(score), color=score_color).props("rounded").classes("text-xs")
+
+        # File count badge (if multiple files tracked)
+        if episode.file_count > 1:
+            ui.badge(f"{episode.file_count} files", color="blue-grey").props("rounded outline").classes("text-xs")
+
         # Air date
         if episode.air_date:
             date_str = episode.air_date.strftime("%b %d, %Y")
@@ -64,43 +78,159 @@ def episode_row(
     return row
 
 
+def _quality_score_color(score: int) -> str:
+    """Get a color for a quality score badge."""
+    if score >= 500:
+        return "purple"
+    if score >= 400:
+        return "green"
+    if score >= 300:
+        return "teal"
+    if score >= 200:
+        return "orange"
+    return "grey"
+
+
+def _parse_quality_info(record: ProcessedFileRecord) -> dict | None:
+    """Parse quality_info JSON from a record."""
+    if not record.quality_info:
+        return None
+    try:
+        return json.loads(record.quality_info)
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+
+def _format_quality_tags(quality: dict) -> list[tuple[str, str]]:
+    """Format quality info dict into displayable (label, color) tag pairs."""
+    tags: list[tuple[str, str]] = []
+
+    if resolution := quality.get("resolution"):
+        color = "purple" if "2160" in resolution else "teal" if "1080" in resolution else "orange"
+        tags.append((resolution, color))
+
+    if frame_rate := quality.get("frame_rate"):
+        if frame_rate and int(frame_rate) >= 50:
+            tags.append((f"{frame_rate}fps", "blue"))
+
+    if source := quality.get("source"):
+        tags.append((source, "blue-grey"))
+
+    if codec := quality.get("codec"):
+        tags.append((codec, "grey"))
+
+    if hdr := quality.get("hdr_format"):
+        tags.append((hdr.upper(), "amber"))
+
+    if bit_depth := quality.get("bit_depth"):
+        if bit_depth == 10:
+            tags.append(("10-bit", "deep-purple"))
+
+    if audio := quality.get("audio"):
+        tags.append((audio, "brown"))
+
+    if broadcaster := quality.get("broadcaster"):
+        tags.append((broadcaster, "indigo"))
+
+    if quality.get("is_proper"):
+        tags.append(("PROPER", "red"))
+    if quality.get("is_repack"):
+        tags.append(("REPACK", "red"))
+
+    if group := quality.get("release_group"):
+        tags.append((group, "cyan"))
+
+    return tags
+
+
 def episode_detail_dialog(episode: EpisodeMatchStatus) -> None:
-    """Show a dialog with episode file details.
+    """Show a dialog with episode file details and all tracked candidates.
 
     Args:
-        episode: Episode match status with record
+        episode: Episode match status with record(s)
     """
     if not episode.record:
         ui.notify("No file record available", type="warning")
         return
 
-    record = episode.record
+    all_records = episode.all_records if episode.all_records else [episode.record]
 
-    with ui.dialog() as dialog, ui.card().classes("glass-card w-[600px] max-w-full"):
+    with ui.dialog() as dialog, ui.card().classes("glass-card w-[800px] max-w-full max-h-[80vh]"):
         # Header
         with ui.row().classes("w-full items-center justify-between mb-4"):
-            ui.label(episode.episode_title).classes("text-xl font-semibold text-slate-800 dark:text-slate-200")
+            with ui.column().classes("gap-0"):
+                ui.label(episode.episode_title).classes("text-xl font-semibold text-slate-800 dark:text-slate-200")
+                if episode.air_date:
+                    ui.label(episode.air_date.strftime("%b %d, %Y")).classes(
+                        "text-sm text-slate-500 dark:text-slate-400"
+                    )
             ui.button(icon="close", on_click=dialog.close).props("flat round dense")
 
-        # File details
-        with ui.column().classes("w-full gap-3"):
-            _detail_row("Status", record.status.capitalize())
-            _detail_row("Source", record.source_path, mono=True)
-            _detail_row("Destination", record.destination_path, mono=True)
-            _detail_row("Sport", record.sport_id)
-            _detail_row("Season", f"S{record.season_index:02d}")
-            _detail_row("Episode", f"E{record.episode_index:02d}")
-            _detail_row("Processed", record.processed_at.strftime("%Y-%m-%d %H:%M:%S"))
+        # Destination
+        _detail_row("Destination", episode.record.destination_path, mono=True)
+        ui.separator().classes("my-2")
 
-            if record.checksum:
-                _detail_row("Checksum", record.checksum[:16] + "...", mono=True)
+        # File candidates table
+        with ui.column().classes("w-full gap-0"):
+            header_text = f"Tracked Files ({len(all_records)})" if len(all_records) > 1 else "Source File"
+            ui.label(header_text).classes("text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2")
 
-            if record.error_message:
-                with ui.row().classes("w-full items-start gap-2 mt-2"):
-                    ui.label("Error:").classes("text-sm font-medium text-red-600 dark:text-red-400 w-24 shrink-0")
-                    ui.label(record.error_message).classes("text-sm text-red-600 dark:text-red-400 break-all")
+            for idx, record in enumerate(all_records):
+                is_active = record.source_path == episode.record.source_path
+                _file_candidate_row(record, rank=idx + 1, is_active=is_active)
 
     dialog.open()
+
+
+def _file_candidate_row(record: ProcessedFileRecord, *, rank: int, is_active: bool) -> None:
+    """Render a single file candidate row with quality details."""
+    border_class = "border-l-4 border-green-500" if is_active else "border-l-4 border-transparent"
+    bg_class = "bg-green-50 dark:bg-green-900/20" if is_active else ""
+
+    with ui.column().classes(f"w-full p-3 rounded {border_class} {bg_class} gap-2 mb-1"):
+        # Top row: rank, filename, score
+        with ui.row().classes("w-full items-center gap-2"):
+            # Rank badge
+            if is_active:
+                ui.icon("check_circle").classes("text-green-600 dark:text-green-400 text-lg")
+            else:
+                ui.label(f"#{rank}").classes("text-xs font-mono text-slate-500 dark:text-slate-400 w-6 text-center")
+
+            # Filename (just the name, not full path)
+            filename = Path(record.source_path).name
+            ui.label(filename).classes("flex-1 text-sm font-mono text-slate-800 dark:text-slate-200 truncate")
+
+            # Quality score
+            if record.quality_score is not None:
+                score_color = _quality_score_color(record.quality_score)
+                ui.badge(f"Score: {record.quality_score}", color=score_color).props("rounded")
+
+            # Status chip
+            status_colors = {
+                "linked": "green",
+                "copied": "blue",
+                "symlinked": "purple",
+                "skipped": "orange",
+                "error": "red",
+            }
+            ui.badge(record.status, color=status_colors.get(record.status, "grey")).props("rounded outline")
+
+        # Quality tags row
+        quality = _parse_quality_info(record)
+        if quality:
+            tags = _format_quality_tags(quality)
+            if tags:
+                with ui.row().classes("flex-wrap gap-1 ml-8"):
+                    for label, color in tags:
+                        ui.badge(label, color=color).props("rounded outline dense").classes("text-xs")
+
+        # Metadata row
+        with ui.row().classes("ml-8 gap-4"):
+            ui.label(record.processed_at.strftime("%Y-%m-%d %H:%M")).classes(
+                "text-xs text-slate-500 dark:text-slate-400"
+            )
+            if record.error_message:
+                ui.label(record.error_message).classes("text-xs text-red-500")
 
 
 def _detail_row(label: str, value: str, *, mono: bool = False) -> None:

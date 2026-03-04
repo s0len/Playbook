@@ -100,6 +100,28 @@ def build_session_lookup(pattern: PatternConfig, season: Season) -> SessionLooku
             if index.get_direct(normalized_alias) is None:
                 index.add(normalized_alias, canonical)
 
+    # Add canonicalized team matchup variants for team sports.
+    # When a team_alias_map is configured, extract teams from episode titles,
+    # canonicalize them, and add the canonical form to the index.
+    # This bridges the gap between filename aliases (e.g., "PSG" → "Paris Saint-Germain")
+    # and API episode titles (e.g., "Paris SG vs Monaco").
+    team_alias_map_name = pattern.metadata_filters.get("team_alias_map")
+    if team_alias_map_name:
+        from ..team_aliases import get_team_alias_map
+        from .team_resolver import extract_teams_from_text
+
+        alias_lookup = get_team_alias_map(team_alias_map_name)
+        if alias_lookup:
+            for episode in season.episodes:
+                teams = extract_teams_from_text(episode.title, alias_lookup)
+                if len(teams) == 2:
+                    for sep in ("vs", "v", "at"):
+                        for a, b in ((teams[0], teams[1]), (teams[1], teams[0])):
+                            canonical_matchup = f"{a} {sep} {b}"
+                            normalized_canonical = normalize_token(canonical_matchup)
+                            if normalized_canonical and index.get_direct(normalized_canonical) is None:
+                                index.add(normalized_canonical, episode.title)
+
     # Add default generic session aliases for common motorsport terms.
     # These aliases normalize various spellings/formats to canonical session names.
     # The canonical names can then be used by pattern-specific session_aliases.

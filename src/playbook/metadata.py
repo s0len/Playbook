@@ -310,6 +310,10 @@ class MetadataFingerprintStore:
             invalidate_all=False,
         )
 
+    def keys_with_prefix(self, prefix: str) -> list[str]:
+        """Return all stored fingerprint keys that start with the given prefix."""
+        return [k for k in self._fingerprints if k.startswith(prefix)]
+
     def remove(self, key: str) -> None:
         if key in self._fingerprints:
             del self._fingerprints[key]

@@ -62,12 +62,18 @@ class DynamicMetadataLoader:
     is first captured from a filename during matching.
     """
 
-    def __init__(self, settings: Settings, cache_dir: Path | None = None):
+    def __init__(
+        self,
+        settings: Settings,
+        cache_dir: Path | None = None,
+        metadata_fingerprints: MetadataFingerprintStore | None = None,
+    ):
         """Initialize the dynamic loader.
 
         Args:
             settings: Application settings (includes TVSportsDB config)
             cache_dir: Optional cache directory override
+            metadata_fingerprints: Optional fingerprint store for change tracking
         """
         self._settings = settings
         self._cache_dir = cache_dir if cache_dir is not None else settings.cache_dir
@@ -77,6 +83,8 @@ class DynamicMetadataLoader:
         self._adapter = TVSportsDBAdapter()
         self._stats = MetadataFetchStatistics()
         self._failed_slugs: set[str] = set()  # Track slugs that failed to load
+        self._fingerprints = metadata_fingerprints
+        self._fingerprint_changes: dict[str, MetadataChangeResult] = {}  # Slug -> change result
 
     def _get_client(self) -> TVSportsDBClient:
         """Get or create the API client (lazy initialization)."""
@@ -124,6 +132,17 @@ class DynamicMetadataLoader:
             with self._lock:
                 self._cache[show_slug] = show
 
+            # Track fingerprint for change detection across runs
+            if self._fingerprints is not None:
+                try:
+                    cached_fp = self._fingerprints.get(show_slug)
+                    fp = compute_show_fingerprint(show, show_slug, cached_fp)
+                    change = self._fingerprints.update(show_slug, fp)
+                    if change.updated:
+                        self._fingerprint_changes[show_slug] = change
+                except Exception:  # pragma: no cover - defensive
+                    LOGGER.debug("Failed to compute fingerprint for dynamic show %s", show_slug)
+
             LOGGER.debug(
                 render_fields_block(
                     "Dynamic Metadata Loaded",
@@ -169,14 +188,18 @@ class DynamicMetadataLoader:
         return self.load_show(show_slug, sport.season_overrides)
 
     def clear_failed_slugs(self) -> None:
-        """Clear the failed slugs cache so previously-failed lookups are retried.
+        """Clear caches so previously-failed lookups are retried and fresh metadata is fetched.
 
         Called at the start of each processing run to allow newly-added
         metadata on TVSportsDB to be discovered without a full cache
-        invalidation or pod restart.
+        invalidation or pod restart.  Also clears the in-memory show cache
+        so that fingerprint comparison uses freshly-fetched data (the
+        TVSportsDB client's SQLite cache with TTL still applies).
         """
         with self._lock:
             self._failed_slugs.clear()
+            self._cache.clear()
+            self._fingerprint_changes.clear()
 
     def invalidate_cache(self) -> None:
         """Invalidate all cached metadata (in-memory and SQLite)."""
@@ -193,6 +216,57 @@ class DynamicMetadataLoader:
         if self._client is not None:
             self._client.close()
             self._client = None
+
+    def check_dynamic_fingerprints(
+        self,
+        dynamic_sports: list[SportConfig],
+    ) -> dict[str, MetadataChangeResult]:
+        """Check for metadata changes on previously-tracked dynamic sport slugs.
+
+        Looks up stored fingerprints for each dynamic sport's resolved slugs,
+        eagerly fetches the current metadata, and compares fingerprints.
+        Returns a change_map keyed by sport_id for any sports with changes.
+
+        This must be called before file processing so that stale records
+        can be invalidated before the DB filter skips them.
+        """
+        if not self._fingerprints:
+            return {}
+
+        change_map: dict[str, MetadataChangeResult] = {}
+
+        for sport in dynamic_sports:
+            # Find all stored fingerprint keys that match this sport's slug pattern
+            # Dynamic slugs follow the template, e.g., "motogp-2026"
+            prefix = sport.show_slug_template.split("{")[0] if sport.show_slug_template else ""
+            if not prefix:
+                continue
+
+            stored_keys = self._fingerprints.keys_with_prefix(prefix)
+            if not stored_keys:
+                continue
+
+            for slug in stored_keys:
+                # Eagerly load the show — load_show() computes the fingerprint
+                # and stores the change result in self._fingerprint_changes
+                self.load_show(slug, sport.season_overrides)
+
+            # Collect any changes detected for this sport's slugs
+            for slug in stored_keys:
+                change = self._fingerprint_changes.get(slug)
+                if change is not None:
+                    if sport.id not in change_map:
+                        change_map[sport.id] = change
+                    else:
+                        existing = change_map[sport.id]
+                        change_map[sport.id] = MetadataChangeResult(
+                            updated=True,
+                            changed_seasons=existing.changed_seasons | change.changed_seasons,
+                            changed_episodes={**existing.changed_episodes, **change.changed_episodes},
+                            invalidate_all=existing.invalidate_all or change.invalidate_all,
+                        )
+
+        return change_map
 
     @property
     def stats(self) -> MetadataFetchStatistics:
@@ -272,7 +346,7 @@ def _apply_season_overrides(show: Show, overrides: dict) -> None:
 def load_sports(
     sports: list[SportConfig],
     settings: Settings,
-    metadata_fingerprints: MetadataFingerprintStore,
+    metadata_fingerprints: MetadataFingerprintStore | None,
     cache_dir: Path | None = None,
 ) -> MetadataLoadResult:
     """Load sports metadata in parallel with fingerprint tracking.
@@ -386,26 +460,27 @@ def load_sports(
         patterns = compile_patterns(sport)
         extensions = {ext.lower() for ext in sport.source_extensions}
 
-        # Compute and track metadata fingerprint
-        try:
-            cached_fingerprint = metadata_fingerprints.get(sport.id)
-            fingerprint = compute_show_fingerprint(show, sport.show_slug, cached_fingerprint)
-        except Exception as exc:  # pragma: no cover - defensive, should not happen
-            LOGGER.warning(
-                render_fields_block(
-                    "Failed To Compute Metadata Fingerprint",
-                    {
-                        "Sport": sport.id,
-                        "Error": exc,
-                    },
-                    pad_top=True,
+        # Compute and track metadata fingerprint (skip if no store provided)
+        if metadata_fingerprints is not None:
+            try:
+                cached_fingerprint = metadata_fingerprints.get(sport.id)
+                fingerprint = compute_show_fingerprint(show, sport.show_slug, cached_fingerprint)
+            except Exception as exc:  # pragma: no cover - defensive, should not happen
+                LOGGER.warning(
+                    render_fields_block(
+                        "Failed To Compute Metadata Fingerprint",
+                        {
+                            "Sport": sport.id,
+                            "Error": exc,
+                        },
+                        pad_top=True,
+                    )
                 )
-            )
-        else:
-            change = metadata_fingerprints.update(sport.id, fingerprint)
-            if change.updated:
-                changed_sports.append((sport.id, sport.name))
-                change_map[sport.id] = change
+            else:
+                change = metadata_fingerprints.update(sport.id, fingerprint)
+                if change.updated:
+                    changed_sports.append((sport.id, sport.name))
+                    change_map[sport.id] = change
 
         runtimes.append(SportRuntime(sport=sport, show=show, patterns=patterns, extensions=extensions))
 

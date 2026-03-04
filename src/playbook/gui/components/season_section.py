@@ -82,6 +82,9 @@ def seasons_list(
 ) -> None:
     """Create a list of season sections.
 
+    Inserts year divider headers when seasons have year_label set
+    (dynamic sports spanning multiple years).
+
     Args:
         seasons: List of season match statuses
         expand_recent: Whether to expand the most recent (last) season
@@ -91,7 +94,16 @@ def seasons_list(
         return
 
     with ui.column().classes("w-full gap-4"):
+        current_year: str | None = None
         for i, season in enumerate(seasons):
+            # Insert year header when the year changes (dynamic sports)
+            if season.year_label and season.year_label != current_year:
+                current_year = season.year_label
+                with ui.row().classes("w-full items-center gap-3 mt-2"):
+                    ui.separator().classes("flex-1")
+                    ui.label(current_year).classes("text-lg font-bold text-slate-600 dark:text-slate-300 px-2")
+                    ui.separator().classes("flex-1")
+
             # Expand the last season if expand_recent is True
             is_last = i == len(seasons) - 1
             expanded = expand_recent and is_last

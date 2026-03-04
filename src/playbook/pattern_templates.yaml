@@ -780,8 +780,9 @@ pattern_sets:
         # Example: MotoGP.2024.Round03.Austin.Circuit.of.the.Americas.Qualifying-DNU.mkv
         # Example: MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.One.WEB-DL.1080p.H264.English-DNU.mkv
         # Example: MotoGP.2026.Round00.Season.Launch.WEB-DL.1080p.H264.English-DNU.mkv
+        # Example: MotoGP.2026.Round01.Thailand.Qualifying.Q1.1080p.WEBRip.x265.10bit.AAC.2.0.DNU.mkv
         regex: >-
-          (?i)^(?=.*-\s*DNU\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|WEB|PROPER|REPACK|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|WEB|PROPER|REPACK|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
+          (?i)^(?=.*[.\-]\s*DNU\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|WEB|PROPER|REPACK|TNT|DDP\d|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|DNU|AAC|WEB|PROPER|REPACK|TNT|DDP\d|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
         season_selector:
           mode: round
           group: round
@@ -789,19 +790,20 @@ pattern_sets:
           group: session
           truncate_session: true
         session_aliases: &motogp_session_aliases
-          Practice One:
+          Free Practice 1:
             - Practice.One
+            - Practice One
             - Practice1
             - Practice-1
             - Practice_1
-            - Practice
             - FP1
             - Free.Practice.One
             - Free.Practice.1
             - FreePractice1
             - FreePracticeOne
-          Practice Two:
+          Free Practice 2:
             - Practice.Two
+            - Practice Two
             - Practice2
             - Practice-2
             - Practice_2
@@ -810,8 +812,9 @@ pattern_sets:
             - Free.Practice.2
             - FreePractice2
             - FreePracticeTwo
-          Practice Three:
+          Free Practice 3:
             - Practice.Three
+            - Practice Three
             - Practice3
             - Practice-3
             - Practice_3
@@ -820,8 +823,9 @@ pattern_sets:
             - Free.Practice.3
             - FreePractice3
             - FreePracticeThree
-          Practice Four:
+          Free Practice 4:
             - Practice.Four
+            - Practice Four
             - Practice4
             - Practice-4
             - Practice_4
@@ -830,13 +834,14 @@ pattern_sets:
             - Free.Practice.4
             - FreePractice4
             - FreePracticeFour
-          Warm Up:
+          Warm-Up:
             - Warm.Up
             - WarmUp
-            - Warm-Up
+            - Warm Up
             - MotoGP Warm Up
-          Qualifying One:
+          Qualifying 1:
             - Qualifying.Q1
+            - Qualifying One
             - Qualifying1
             - Qualifying-1
             - Qualifying_1
@@ -847,8 +852,9 @@ pattern_sets:
             - MotoGP Qualifying Nr.1
             - MotoGP Qualifying
             - Qualifying
-          Qualifying Two:
+          Qualifying 2:
             - Qualifying.Q2
+            - Qualifying Two
             - Qualifying2
             - Qualifying-2
             - Qualifying_2
@@ -857,8 +863,9 @@ pattern_sets:
             - Qualifying Nr.2
             - MotoGP Qualifying Nr. 2
             - MotoGP Qualifying Nr.2
-          Qualifying Three:
+          Qualifying 3:
             - Qualifying.Q3
+            - Qualifying Three
             - Qualifying3
             - Qualifying-3
             - Qualifying_3
@@ -948,8 +955,9 @@ pattern_sets:
         # Example: MotoGP.2024.Round05.Jerez.Qualifying-MWR.mp4
         # Example: MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.Three.WEB-DL.1080p.H264.English-MWR.mkv
         # Example: MotoGP.2026.Round00.Season.Launch.WEB-DL.1080p.H264.English-MWR.mkv
+        # Example: MotoGP.2026.Round01.Thailand.Qualifying.Q1.1080p.WEBRip.x265.10bit.AAC.2.0.MWR.mkv
         regex: >-
-          (?i)^(?=.*-MWR\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|WEB|PROPER|REPACK|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|WEB|PROPER|REPACK|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
+          (?i)^(?=.*[.\-]\s*MWR\.(?:mkv|mp4|ts)$)MotoGP\.(?P<year>\d{4})\.Round(?P<round>\d{2})\.(?P<session>(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|WEB|PROPER|REPACK|TNT|DDP\d|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+(?:\.(?!(?:WEB[-.]?DL|WEBRiP|HDTV|1080[pi]|720p|2160p|h264|h265|x264|x265|HEVC|English|MWR|AAC|STAN|WEB|PROPER|REPACK|TNT|DDP\d|mkv|mp4|ts)(?:[.\-]|$))[-A-Za-z0-9]+)*)
         season_selector:
           mode: round
           group: round
@@ -1785,9 +1793,22 @@ pattern_sets:
       - "UCL.*"
       - "UCL *"
     patterns:
+      - description: UEFA Champions League dot releases with date
+        # Example: UEFA.Champions.League.2026.02.25.PSG.vs.Monaco.1080p.WEB-DL.mkv
+        regex: >-
+          (?i)^UEFA[._\s-]*Champions[._\s-]*League[._\s-]*(?P<season_year>\d{4})[._\s-]+(?P<month>\d{2})[._\s-]+(?P<day>\d{2})[._\s-]+(?P<matchup>(?P<away>[A-Za-z&’’À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&’’À-ÖØ-öø-ÿ]+){0,4})[._\s-]+(?:vs?|VS?|V)[._\s-]+(?P<home>[A-Za-z&’’À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&’’À-ÖØ-öø-ÿ]+){0,4}))(?=[._\s-]+(?:\d{3,4}p|1080|720|2160|4K|HDR|HEVC|H264|H265|x264|x265|WEB|Blu|HDTV|AMZN|STAN|PROPER|REPACK|MULTI|EN|ENG|AAC|DDP|Atmos|Rip|Pack)(?:[A-Za-z0-9]+)?|\.(?:mkv|mp4|ts|m4v|avi)$)
+        season_selector:
+          mode: date
+          value_template: "{season_year}-{month}-{day}"
+        episode_selector:
+          group: matchup
+          allow_fallback_to_title: true
+        metadata_filters:
+          team_alias_map: uefa_champions_league
+
       - description: UEFA Champions League dot releases
         regex: >-
-          (?i)^UEFA[._\s-]*Champions[._\s-]*League[._\s-]*(?P<season_year>\d{4})(?:[._-]\d{2})?[._\s-]+(?P<matchup>(?P<away>[A-Za-z&'’À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&'’À-ÖØ-öø-ÿ]+){0,4})[._\s-]+(?:vs?|VS?|V)[._\s-]+(?P<home>[A-Za-z&'’À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&'’À-ÖØ-öø-ÿ]+){0,4}))(?=[._\s-]+(?:\d{3,4}p|1080|720|2160|4K|HDR|HEVC|H264|H265|x264|x265|WEB|Blu|HDTV|AMZN|STAN|PROPER|REPACK|MULTI|EN|ENG|AAC|DDP|Atmos|Rip|Pack)(?:[A-Za-z0-9]+)?|\.(?:mkv|mp4|ts|m4v|avi)$)
+          (?i)^UEFA[._\s-]*Champions[._\s-]*League[._\s-]*(?P<season_year>\d{4})(?:[._-]\d{2})?[._\s-]+(?P<matchup>(?P<away>[A-Za-z&’’À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&’’À-ÖØ-öø-ÿ]+){0,4})[._\s-]+(?:vs?|VS?|V)[._\s-]+(?P<home>[A-Za-z&’’À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&’’À-ÖØ-öø-ÿ]+){0,4}))(?=[._\s-]+(?:\d{3,4}p|1080|720|2160|4K|HDR|HEVC|H264|H265|x264|x265|WEB|Blu|HDTV|AMZN|STAN|PROPER|REPACK|MULTI|EN|ENG|AAC|DDP|Atmos|Rip|Pack)(?:[A-Za-z0-9]+)?|\.(?:mkv|mp4|ts|m4v|avi)$)
         season_selector:
           mode: title
           group: matchup
@@ -7060,6 +7081,8 @@ default_sports:
     variants:
       - year: 2025
         show_slug: "nba-2025-2026"
+      - year: 2026
+        show_slug: "nba-2025-2026"
 
   - id: nhl
     name: NHL
@@ -7068,6 +7091,8 @@ default_sports:
       - nhl
     variants:
       - year: 2025
+        show_slug: "nhl-2025-2026"
+      - year: 2026
         show_slug: "nhl-2025-2026"
 
   # ------------------------------------------------------------------
@@ -7081,6 +7106,8 @@ default_sports:
     variants:
       - year: 2025
         show_slug: "english-premier-league-2025-2026"
+      - year: 2026
+        show_slug: "english-premier-league-2025-2026"
 
   - id: uefa_champions_league
     name: UEFA Champions League
@@ -7088,6 +7115,8 @@ default_sports:
       - uefa_champions_league
     variants:
       - year: 2025
+        show_slug: "uefa-champions-league-2025-2026"
+      - year: 2026
         show_slug: "uefa-champions-league-2025-2026"
 
   # ------------------------------------------------------------------
