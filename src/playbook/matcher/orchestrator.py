@@ -283,7 +283,7 @@ def match_file_to_episode(
         if not episode and fallback_by_matchup:
             fallback = find_episode_across_seasons(
                 pattern_runtime.config,
-                show,
+                effective_show,
                 groups,
                 exclude_season=season,
                 trace_enabled=trace is not None,
