@@ -83,27 +83,33 @@ def log_viewer(
     return log_container
 
 
+LEVEL_STYLES = {
+    "DEBUG": ("bg-blue-500/20 text-blue-400", "text-blue-400"),
+    "INFO": ("bg-green-500/20 text-green-400", "text-green-400"),
+    "WARNING": ("bg-yellow-500/20 text-yellow-400", "text-yellow-400"),
+    "ERROR": ("bg-red-500/20 text-red-400", "text-red-400"),
+    "CRITICAL": ("bg-red-500/30 text-red-300", "text-red-300"),
+}
+
+
 def log_line(entry: LogEntry) -> None:
-    """Render a single log line with level-based coloring.
+    """Render a single log line with qui-style colored level badge.
 
     Args:
         entry: The log entry to display
     """
-    level_colors = {
-        "DEBUG": "text-gray-400",
-        "INFO": "text-blue-400",
-        "WARNING": "text-yellow-400",
-        "ERROR": "text-red-400",
-        "CRITICAL": "text-red-600 font-bold",
-    }
-
-    color_class = level_colors.get(entry.level, "text-gray-300")
+    badge_cls, msg_cls = LEVEL_STYLES.get(entry.level, ("bg-gray-500/20 text-gray-400", "text-gray-400"))
     time_str = entry.timestamp.strftime("%H:%M:%S")
 
-    with ui.row().classes("w-full gap-2 items-start hover:bg-gray-800 px-1"):
-        ui.label(time_str).classes("text-gray-500 text-xs shrink-0")
-        ui.label(entry.level[:4]).classes(f"w-10 text-xs font-bold {color_class}")
-        ui.label(entry.message).classes("text-gray-200 break-all flex-1 text-xs")
+    with ui.row().classes("w-full gap-2 items-center py-0.5 hover:bg-white/5 px-1"):
+        # Timestamp
+        ui.label(time_str).classes("text-xs text-gray-500/60 shrink-0 font-mono")
+        # Level badge
+        ui.label(entry.level).classes(
+            f"w-12 text-center text-[10px] uppercase font-semibold rounded px-1 py-0.5 shrink-0 {badge_cls}"
+        )
+        # Message
+        ui.label(entry.message).classes(f"text-xs whitespace-nowrap font-mono {msg_cls}")
 
 
 def log_filters(

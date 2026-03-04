@@ -211,12 +211,12 @@ body.body--dark .status-chip-error {
 
 /* Nav item base */
 .sidebar-nav-item {
-    width: 40px;
-    height: 40px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    border-radius: 10px;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    width: 100%;
     transition: all 0.15s ease;
     color: rgba(255, 255, 255, 0.3);
 }
@@ -229,6 +229,13 @@ body.body--dark .status-chip-error {
 .sidebar-nav-item-active {
     background: rgba(0, 212, 212, 0.15) !important;
     color: #00d4d4 !important;
+}
+
+/* Sidebar separator */
+.sidebar-separator {
+    width: 100%;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
 }
 
 /* Sidebar icon buttons (dark mode toggle, etc.) */

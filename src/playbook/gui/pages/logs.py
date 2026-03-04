@@ -2,6 +2,7 @@
 Logs page for the Playbook GUI.
 
 Displays real-time log streaming with filtering capabilities.
+Styled to match qui's log viewer aesthetic.
 """
 
 from __future__ import annotations
@@ -12,10 +13,11 @@ from ..components.log_viewer import log_line
 from ..state import LogEntry, gui_state
 from ..utils import safe_timer
 
+MAX_LOG_LINES = 500
+
 
 def logs_page() -> None:
     """Render the logs page."""
-    # State for filters
     state = {
         "level_filter": "INFO",
         "sport_filter": "ALL",
@@ -25,74 +27,73 @@ def logs_page() -> None:
     }
 
     with ui.column().classes("w-full max-w-6xl mx-auto p-4 gap-4"):
-        # Page title
+        # Header
         ui.label("Logs").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
+        ui.label("Real-time application logs.").classes("text-sm text-slate-500 dark:text-slate-400 -mt-2")
 
-        # Filter controls
+        # Toolbar
         with ui.card().classes("glass-card w-full"):
             with ui.row().classes("w-full gap-3 items-center flex-wrap"):
-                # Level filter
-                ui.select(
-                    ["DEBUG", "INFO", "WARNING", "ERROR"],
-                    value=state["level_filter"],
-                    label="Level",
-                    on_change=lambda e: _update_filter(state, "level_filter", e.value),
-                ).classes("w-28")
-
-                # Sport filter
-                sport_options = ["ALL"] + _get_sport_ids()
-                ui.select(
-                    sport_options,
-                    value=state["sport_filter"],
-                    label="Sport",
-                    on_change=lambda e: _update_filter(state, "sport_filter", e.value),
-                ).classes("w-40")
+                # Connection indicator
+                with ui.row().classes("items-center gap-1.5 mr-2"):
+                    ui.icon("circle").classes("text-[8px] text-green-400")
+                    ui.label("Connected").classes("text-xs text-green-400")
 
                 # Search input
                 ui.input(
                     placeholder="Search logs...",
                     on_change=lambda e: _update_filter(state, "search_query", e.value or ""),
-                ).classes("flex-1 min-w-48")
+                ).props('dense outlined').classes("flex-1 min-w-48")
 
-                # Auto-scroll toggle
-                ui.checkbox(
-                    "Auto-scroll",
-                    value=state["auto_scroll"],
-                    on_change=lambda e: _update_filter(state, "auto_scroll", e.value),
-                ).classes("text-slate-700 dark:text-slate-300")
+                # Level filter
+                ui.select(
+                    {
+                        "DEBUG": "Debug",
+                        "INFO": "All Levels",
+                        "WARNING": "Warning+",
+                        "ERROR": "Error+",
+                    },
+                    value=state["level_filter"],
+                    on_change=lambda e: _update_filter(state, "level_filter", e.value),
+                ).props("dense outlined").classes("w-32")
 
-                # Pause toggle
-                pause_btn = (
-                    ui.button(
-                        icon="pause",
-                        on_click=lambda: _toggle_pause(state, pause_btn),
-                    )
-                    .props("flat")
-                    .classes("text-slate-600 dark:text-slate-400")
-                )
+                # Sport filter
+                sport_options = {"ALL": "All Sports"} | {s: s for s in _get_sport_ids()}
+                ui.select(
+                    sport_options,
+                    value=state["sport_filter"],
+                    on_change=lambda e: _update_filter(state, "sport_filter", e.value),
+                ).props("dense outlined").classes("w-36")
 
                 # Clear button
                 ui.button(
-                    icon="delete_sweep",
+                    "Clear",
                     on_click=lambda: _clear_logs(),
-                ).props("flat").classes("text-slate-600 dark:text-slate-400")
+                ).props("flat dense").classes("text-slate-500 dark:text-slate-400 text-xs")
 
-        # Log display
+                # Auto-scroll toggle
+                with ui.row().classes("items-center gap-1.5"):
+                    ui.switch(
+                        value=state["auto_scroll"],
+                        on_change=lambda e: _update_filter(state, "auto_scroll", e.value),
+                    ).props("dense")
+                    ui.label("Auto-scroll").classes("text-xs text-slate-500 dark:text-slate-400")
+
+        # Log viewport
         with ui.card().classes("glass-card w-full"):
             log_scroll = (
                 ui.scroll_area()
-                .classes("w-full font-mono text-sm log-container text-slate-100 rounded-lg")
+                .classes("w-full font-mono text-xs log-container text-slate-100 rounded-lg")
                 .style("height: 600px; max-height: 70vh;")
             )
             with log_scroll:
-                log_container = ui.column().classes("w-full p-3")
+                log_container = ui.column().classes("w-full p-3 gap-0")
 
-            # Stats row
+            # Footer
             with ui.row().classes(
-                "w-full justify-between items-center mt-2 text-sm text-slate-600 dark:text-slate-400"
+                "w-full justify-center items-center mt-2 text-xs text-slate-500 dark:text-slate-400"
             ):
-                log_count_label = ui.label("0 entries")
-                filter_info = ui.label("")
+                log_count_label = ui.label(f"Showing 0 of 0 entries ({MAX_LOG_LINES} max)")
 
             def refresh_logs() -> None:
                 if state["paused"]:
@@ -103,7 +104,7 @@ def logs_page() -> None:
                         level_filter=state["level_filter"],
                         sport_filter=state["sport_filter"],
                         search_query=state["search_query"],
-                        max_lines=300,
+                        max_lines=MAX_LOG_LINES,
                     )
 
                     log_container.clear()
@@ -114,26 +115,15 @@ def logs_page() -> None:
                             for entry in logs:
                                 log_line(entry)
 
-                    # Update stats
                     total_logs = len(gui_state.log_buffer)
                     filtered_count = len(logs)
-                    log_count_label.text = f"{filtered_count} of {total_logs} entries"
+                    log_count_label.text = (
+                        f"Showing {filtered_count} of {total_logs} entries ({MAX_LOG_LINES} max)"
+                    )
 
-                    # Update filter info
-                    filters_active = []
-                    if state["level_filter"] != "INFO":
-                        filters_active.append(f"level={state['level_filter']}")
-                    if state["sport_filter"] != "ALL":
-                        filters_active.append(f"sport={state['sport_filter']}")
-                    if state["search_query"]:
-                        filters_active.append(f"search='{state['search_query']}'")
-                    filter_info.text = ", ".join(filters_active) if filters_active else ""
-
-                    # Auto-scroll to top (newest)
                     if state["auto_scroll"]:
                         log_scroll.scroll_to(percent=0)
                 except (RuntimeError, KeyError):
-                    # Client disconnected - timer will be cleaned up
                     pass
 
             safe_timer(1.0, refresh_logs)
@@ -143,18 +133,6 @@ def logs_page() -> None:
 def _update_filter(state: dict, key: str, value) -> None:
     """Update a filter value."""
     state[key] = value
-
-
-def _toggle_pause(state: dict, button: ui.button) -> None:
-    """Toggle log refresh pause."""
-    state["paused"] = not state["paused"]
-    if state["paused"]:
-        button.props("color=warning")
-        button._props["icon"] = "play_arrow"
-    else:
-        button.props(remove="color")
-        button._props["icon"] = "pause"
-    button.update()
 
 
 def _clear_logs() -> None:
@@ -182,18 +160,15 @@ def _get_filtered_logs(
 
     filtered = []
     for entry in gui_state.log_buffer:
-        # Level filter
         entry_level = level_order.get(entry.level, 1)
         if entry_level < min_level:
             continue
 
-        # Sport filter (check if sport ID appears in logger name or message)
         if sport_filter != "ALL":
             sport_lower = sport_filter.lower()
             if sport_lower not in entry.message.lower() and sport_lower not in entry.logger_name.lower():
                 continue
 
-        # Search filter
         if search_query:
             if search_query.lower() not in entry.message.lower():
                 continue
