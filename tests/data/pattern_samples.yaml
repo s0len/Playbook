@@ -1093,6 +1093,13 @@ samples:
       - value: "MotoGP.2026.Round00.Sepang.Test.After.The.Flag.Day.One.WEB-DL.1080p.H264.English-MWR.mkv"
         expect_season: "Pre-Season Testing"
         expect_episode: "After the Flag: Sepang Test Day 1"
+      # Regression: dot-separated DNU tag (no hyphen before DNU)
+      - value: "MotoGP.2026.Round01.Thailand.Qualifying.Q1.1080p.WEBRip.x265.10bit.AAC.2.0.DNU.mkv"
+        expect_season: "Thai Grand Prix"
+        expect_episode: "Qualifying 1"
+      - value: "MotoGP.2026.Round01.Thailand.Race.1080p.WEBRip.x265.10bit.AAC.2.0.DNU.mkv"
+        expect_season: "Thai Grand Prix"
+        expect_episode: "Race"
       # Regression: standard sessions still match — DNU
       - value: "MotoGP.2024.Round03.Austin.Circuit.of.the.Americas.Qualifying-DNU.mkv"
         expect_season: "Grand Prix of the Americas"
