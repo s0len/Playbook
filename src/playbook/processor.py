@@ -237,6 +237,7 @@ class Processor:
             self._state.stale_records = removed_records
         stats = ProcessingStats()
         run_started = time.perf_counter()
+        scan_started_at = datetime.now()
 
         try:
             all_source_files = list(self._gather_source_files(stats))
@@ -319,6 +320,16 @@ class Processor:
                         if not self.config.settings.dry_run:
                             self._record_unmatched_file(source_path, diagnostics, match_attempts)
                     progress.advance(task_id, 1)
+
+            # Prune unmatched records for files that no longer exist on disk.
+            # Any record whose last_seen was not updated during this scan refers
+            # to a file that was renamed, moved, or deleted since the last run.
+            if not self.config.settings.dry_run and not stats.cancelled:
+                pruned = self.unmatched_store.delete_stale(scan_started_at)
+                if pruned:
+                    LOGGER.info(
+                        self._format_log("Unmatched Cleanup", {"Pruned Stale Records": pruned}),
+                    )
 
             summary_counts = (stats.processed, stats.skipped, stats.ignored)
             summary_changed = summary_counts != self._state.previous_summary
