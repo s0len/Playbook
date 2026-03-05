@@ -846,12 +846,24 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
 
 
 def _recent_matches_card(sport_id: str) -> None:
-    """Show recent matches for a sport."""
+    """Show recent matches for a sport (including sibling variants)."""
     if not gui_state.processed_store:
         return
 
     try:
-        records = gui_state.processed_store.get_by_sport(sport_id)
+        from ..data.sport_data import _get_sibling_sport_ids
+
+        # Find sibling sport_ids that share the same merge key
+        sibling_ids = [sport_id]
+        if gui_state.config:
+            for sport in gui_state.config.sports:
+                if sport.id == sport_id:
+                    sibling_ids = _get_sibling_sport_ids(sport)
+                    break
+
+        records = []
+        for sid in sibling_ids:
+            records.extend(gui_state.processed_store.get_by_sport(sid))
         recent = sorted(records, key=lambda r: r.processed_at, reverse=True)[:10]
     except Exception as e:
         LOGGER.warning("Failed to get recent matches: %s", e)
