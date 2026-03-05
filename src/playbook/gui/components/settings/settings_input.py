@@ -105,7 +105,7 @@ def settings_input(
                     placeholder=placeholder or "",
                     on_change=handle_change,
                 )
-                .classes("flex-1")
+                .classes("flex-1 settings-input")
                 .props(input_props)
             )
 
@@ -195,7 +195,7 @@ def settings_path_input(
                 placeholder=placeholder,
                 on_change=handle_change,
             )
-            .classes("w-full font-mono text-sm")
+            .classes("w-full font-mono text-sm settings-input")
             .props(input_props)
         )
 
@@ -261,7 +261,7 @@ def settings_textarea(
 
         textarea = (
             ui.textarea(value=current_value, placeholder=placeholder or "", on_change=handle_change)
-            .classes("w-full font-mono text-sm")
+            .classes("w-full font-mono text-sm settings-input")
             .props(f'outlined dense rows="{rows}"')
         )
 

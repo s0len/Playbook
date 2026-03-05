@@ -428,20 +428,23 @@ body.body--dark a:hover {
 /* ===== Settings Page Styles ===== */
 .settings-sidebar {
     border-right: 1px solid var(--border-color);
+    padding-right: 8px;
 }
 
 .settings-tab {
     transition: all 0.15s ease;
     border-radius: 8px;
+    color: var(--text-muted);
 }
 
 .settings-tab:hover {
-    background: rgba(148, 163, 184, 0.1);
+    background: rgba(148, 163, 184, 0.12);
+    color: var(--text-primary);
 }
 
 .settings-tab-active {
-    background: rgba(0, 212, 212, 0.1);
-    color: #00d4d4;
+    background: rgba(0, 212, 212, 0.15);
+    color: #00d4d4 !important;
 }
 
 body.body--dark .settings-tab-active {
@@ -449,18 +452,55 @@ body.body--dark .settings-tab-active {
     color: #00d4d4;
 }
 
+.settings-content {
+    gap: 16px;
+}
+
+.settings-surface {
+    background: #0e0e16 !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    box-shadow: none !important;
+}
+
+.settings-surface .q-expansion-item,
+.settings-surface .q-expansion-item__container {
+    border-radius: 8px;
+}
+
 /* Settings form inputs */
 .settings-input .q-field__control {
     min-height: 40px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
 }
 
 .settings-input .q-field__label {
     font-size: 0.875rem;
 }
 
+body.body--dark .settings-input .q-field__control::before {
+    border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+body.body--dark .settings-input.q-field--focused .q-field__control::before,
+body.body--dark .settings-input.q-field--focused .q-field__control::after {
+    border-color: #00d4d4 !important;
+}
+
+body.body--dark .settings-input .q-field__native,
+body.body--dark .settings-input .q-field__input,
+body.body--dark .settings-input .q-field__label,
+body.body--dark .settings-input .q-select__dropdown-icon {
+    color: rgba(255, 255, 255, 0.82) !important;
+}
+
 /* Settings toggle */
 .settings-toggle .q-toggle__label {
     font-size: 0.875rem;
+}
+
+body.body--dark .settings-toggle .q-toggle__inner {
+    color: #00d4d4;
 }
 
 /* Key-value editor */

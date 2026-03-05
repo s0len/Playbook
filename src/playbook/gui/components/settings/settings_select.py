@@ -72,7 +72,7 @@ def settings_select(
                 value=current_value,
                 on_change=handle_change,
             )
-            .classes("w-full")
+            .classes("w-full settings-input")
             .props(select_props)
         )
 

@@ -54,7 +54,7 @@ def settings_toggle(
             if on_change:
                 on_change(e.value)
 
-        switch = ui.switch(value=current_value, on_change=handle_change)
+        switch = ui.switch(value=current_value, on_change=handle_change).classes("settings-toggle")
         if disabled:
             switch.disable()
 
@@ -90,7 +90,7 @@ def settings_toggle_inline(
 
     with ui.row().classes("items-center gap-2"):
         switch = ui.switch(label, value=current_value, on_change=handle_change)
-        switch.classes("text-sm text-slate-700 dark:text-slate-200")
+        switch.classes("text-sm text-slate-700 dark:text-slate-200 settings-toggle")
         if disabled:
             switch.disable()
 

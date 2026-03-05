@@ -37,7 +37,7 @@ def settings_card(
     Yields:
         The column container for section content
     """
-    card_classes = "glass-card w-full opacity-60" if disabled else "glass-card w-full"
+    card_classes = "glass-card settings-surface w-full opacity-60" if disabled else "glass-card settings-surface w-full"
 
     with ui.card().classes(card_classes):
         if collapsible:

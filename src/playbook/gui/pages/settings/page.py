@@ -86,7 +86,7 @@ def settings_page() -> None:
         # Main content area
         with ui.row().classes("w-full gap-6"):
             # Sidebar navigation
-            sidebar_container = ui.column().classes("w-48 shrink-0 gap-1")
+            sidebar_container = ui.column().classes("w-48 shrink-0 gap-1 settings-sidebar")
 
             def render_sidebar() -> None:
                 """Render the sidebar navigation."""
@@ -96,7 +96,7 @@ def settings_page() -> None:
                         _render_tab_button(state, tab_id, tab_label, tab_icon)
 
             # Content area
-            content_container = ui.column().classes("flex-1 min-w-0")
+            content_container = ui.column().classes("flex-1 min-w-0 settings-content")
 
             def render_content() -> None:
                 """Render the content for the active tab."""
@@ -106,7 +106,7 @@ def settings_page() -> None:
                     active_label = next(
                         (label for tid, label, _ in SETTINGS_TABS if tid == state.active_tab), "Settings"
                     )
-                    with ui.row().classes("items-center gap-2 mb-4"):
+                    with ui.row().classes("items-center gap-2 mb-4 px-1"):
                         ui.label("Settings").classes("text-sm text-slate-500 dark:text-slate-400")
                         ui.icon("chevron_right").classes("text-slate-400")
                         ui.label(active_label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
@@ -148,14 +148,11 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
     )
 
     # Button styling
-    if is_active:
-        btn_classes = "bg-[#00d4d4]/10 dark:bg-[#00d4d4]/15 text-[#00d4d4]"
-    else:
-        btn_classes = "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400"
+    btn_classes = "settings-tab-active" if is_active else "settings-tab"
 
     with (
         ui.button(on_click=lambda t=tab_id: state.set_active_tab(t))
-        .classes(f"w-full justify-start px-3 py-2 rounded-lg {btn_classes}")
+        .classes(f"w-full justify-start px-3 py-2 rounded-lg text-left {btn_classes}")
         .props("flat")
     ):
         with ui.row().classes("w-full items-center gap-3"):
