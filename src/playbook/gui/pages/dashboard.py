@@ -105,8 +105,8 @@ def _quick_actions_card() -> None:
                     icon="play_arrow",
                     on_click=_trigger_run,
                 )
-                .classes("w-full")
-                .props("color=primary")
+                .classes("w-full app-btn app-btn-primary")
+                .props("no-caps")
             )
 
             stop_button = (
@@ -115,8 +115,8 @@ def _quick_actions_card() -> None:
                     icon="stop",
                     on_click=_stop_processing,
                 )
-                .classes("w-full")
-                .props("color=negative")
+                .classes("w-full app-btn app-btn-danger")
+                .props("no-caps")
             )
             stop_button.set_visibility(False)
 
@@ -146,21 +146,21 @@ def _quick_actions_card() -> None:
                 "Clear Processed Cache",
                 icon="delete_sweep",
                 on_click=_clear_cache,
-            ).classes("w-full").props("color=warning outline")
+            ).classes("w-full app-btn app-btn-outline").props("no-caps")
 
             # Clear manual matches button
             ui.button(
                 "Clear Manual Matches",
                 icon="rule_folder",
                 on_click=_clear_manual_matches,
-            ).classes("w-full").props("color=warning outline")
+            ).classes("w-full app-btn app-btn-outline").props("no-caps")
 
             # Refresh Metadata button
             ui.button(
                 "Refresh Metadata",
                 icon="refresh",
                 on_click=_refresh_metadata,
-            ).classes("w-full").props("color=secondary outline")
+            ).classes("w-full app-btn app-btn-outline").props("no-caps")
 
 
 def _status_card() -> None:

@@ -598,6 +598,59 @@ body.body--dark .settings-toggle .q-toggle__inner {
     background: rgba(255, 255, 255, 0.08) !important;
 }
 
+/* App-wide semantic button system */
+.app-btn {
+    border-radius: 8px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.app-btn-primary {
+    background: var(--accent-color) !important;
+    border: 1px solid var(--accent-color) !important;
+    color: #111114 !important;
+}
+
+.app-btn-primary .q-btn__content,
+.app-btn-primary .q-icon {
+    color: #111114 !important;
+}
+
+.app-btn-primary:hover {
+    background: var(--accent-hover) !important;
+    border-color: var(--accent-hover) !important;
+}
+
+.app-btn-danger {
+    background: rgba(239, 68, 68, 0.12) !important;
+    border: 1px solid rgba(239, 68, 68, 0.35) !important;
+    color: #fca5a5 !important;
+}
+
+.app-btn-danger .q-btn__content,
+.app-btn-danger .q-icon {
+    color: #fca5a5 !important;
+}
+
+.app-btn-danger:hover {
+    background: rgba(239, 68, 68, 0.18) !important;
+}
+
+.app-btn-outline {
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.app-btn-outline .q-btn__content,
+.app-btn-outline .q-icon {
+    color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.app-btn-outline:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
 body.body--dark .q-toggle__inner,
 body.body--dark .q-radio__inner,
 body.body--dark .q-checkbox__inner {
