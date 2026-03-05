@@ -474,6 +474,14 @@ body.body--dark a:hover {
     background: transparent;
 }
 
+.settings-subnav-item .q-btn__content,
+.settings-subnav-item .q-icon,
+.settings-subnav-item .q-badge,
+.settings-subnav-item .q-focus-helper,
+.settings-subnav-item .q-btn__content span {
+    color: inherit !important;
+}
+
 .settings-subnav-item:hover {
     background: rgba(255, 255, 255, 0.07);
     color: rgba(255, 255, 255, 0.88);
@@ -482,6 +490,7 @@ body.body--dark a:hover {
 .settings-subnav-item-active {
     background: rgba(255, 255, 255, 0.14) !important;
     color: #f8fafc !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 body.body--dark .settings-subnav-item-active {
@@ -564,6 +573,11 @@ body.body--dark .settings-toggle .q-toggle__inner {
     border: 1px solid var(--accent-color) !important;
 }
 
+.settings-action-primary .q-btn__content,
+.settings-action-primary .q-icon {
+    color: #111114 !important;
+}
+
 .settings-action-primary:hover {
     background: var(--accent-hover) !important;
     border-color: var(--accent-hover) !important;
@@ -573,6 +587,11 @@ body.body--dark .settings-toggle .q-toggle__inner {
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     color: rgba(255, 255, 255, 0.85) !important;
     background: transparent !important;
+}
+
+.settings-action-secondary .q-btn__content,
+.settings-action-secondary .q-icon {
+    color: rgba(255, 255, 255, 0.85) !important;
 }
 
 .settings-action-secondary:hover {

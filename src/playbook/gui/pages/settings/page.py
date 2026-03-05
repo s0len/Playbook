@@ -63,12 +63,12 @@ def settings_page() -> None:
             # Action buttons
             with ui.row().classes("items-center gap-2"):
                 # Modified indicator
-                modified_indicator = ui.label("").classes("text-sm text-amber-600 dark:text-amber-400")
+                modified_indicator = ui.label("").classes("text-sm text-slate-400")
 
                 def update_modified_indicator() -> None:
                     if state.is_modified:
                         modified_indicator.text = "Modified"
-                        modified_indicator.classes(replace="text-sm text-amber-600 dark:text-amber-400")
+                        modified_indicator.classes(replace="text-sm text-slate-300")
                     else:
                         modified_indicator.text = ""
 
@@ -87,7 +87,7 @@ def settings_page() -> None:
                     "Save",
                     icon="save",
                     on_click=lambda: _save_changes(state),
-                ).props("no-caps").classes("settings-action-primary")
+                ).props("color=positive no-caps").classes("settings-action-primary")
 
         # Main content area
         with ui.row().classes("w-full gap-8 items-start settings-main-layout"):

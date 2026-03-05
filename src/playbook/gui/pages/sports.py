@@ -85,7 +85,8 @@ def sport_detail_page(sport_id: str) -> None:
                 detail = await loop.run_in_executor(executor, lambda: get_sport_detail(sport_id))
                 with client:
                     content_container.clear()
-                    _render_sport_detail_content(sport_id, detail)
+                    with content_container:
+                        _render_sport_detail_content(sport_id, detail)
             except Exception as e:
                 LOGGER.exception("Failed to load sport detail for %s: %s", sport_id, e)
                 with client:
