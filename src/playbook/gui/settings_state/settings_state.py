@@ -50,7 +50,7 @@ class SettingsFormState:
     form_data: dict[str, Any] = field(default_factory=dict)
     modified_paths: set[str] = field(default_factory=set)
     validation_errors: dict[str, ValidationError] = field(default_factory=dict)
-    active_tab: str = "general"
+    active_tab: str = "application"
     is_saving: bool = False
     config_path: Path | None = None
     _update_callbacks: list[Callable[[str, Any], None]] = field(default_factory=list)
@@ -360,6 +360,7 @@ class SettingsFormState:
 
 # Default tabs for the settings page
 SETTINGS_TABS = [
+    ("application", "Application", "info"),
     ("general", "General", "settings"),
     ("quality", "Quality", "tune"),
     ("notifications", "Notifications", "notifications"),

@@ -17,6 +17,7 @@ from ...settings_state.settings_state import SETTINGS_TABS, SettingsFormState
 from ...state import gui_state
 from ...utils import safe_notify
 from .advanced import advanced_tab
+from .application import application_tab
 from .general import general_tab
 from .integrations import integrations_tab
 from .notifications import notifications_tab
@@ -27,6 +28,7 @@ LOGGER = logging.getLogger(__name__)
 
 # Tab renderers
 TAB_RENDERERS = {
+    "application": application_tab,
     "general": general_tab,
     "quality": quality_tab,
     "notifications": notifications_tab,
@@ -147,9 +149,9 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
 
     # Button styling
     if is_active:
-        btn_classes = "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+        btn_classes = "bg-[#00d4d4]/10 dark:bg-[#00d4d4]/15 text-[#00d4d4]"
     else:
-        btn_classes = "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+        btn_classes = "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400"
 
     with (
         ui.button(on_click=lambda t=tab_id: state.set_active_tab(t))
@@ -158,7 +160,7 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
     ):
         with ui.row().classes("w-full items-center gap-3"):
             ui.icon(tab_icon).classes("text-lg w-5 text-center")
-            ui.label(tab_label.upper()).classes("text-sm flex-1 text-left")
+            ui.label(tab_label).classes("text-sm flex-1 text-left")
             if has_modifications:
                 ui.badge("", color="amber").props("dense rounded")
 

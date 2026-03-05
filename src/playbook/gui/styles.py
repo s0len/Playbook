@@ -440,8 +440,8 @@ body.body--dark a:hover {
 }
 
 .settings-tab-active {
-    background: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
+    background: rgba(0, 212, 212, 0.1);
+    color: #00d4d4;
 }
 
 body.body--dark .settings-tab-active {
