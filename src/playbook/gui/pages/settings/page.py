@@ -162,8 +162,14 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
         .props("flat no-caps")
     ):
         with ui.row().classes("w-full items-center gap-3 justify-start"):
-            ui.icon(tab_icon).classes("text-lg w-5 text-center")
-            ui.label(tab_label).classes("text-sm flex-1 text-left")
+            icon_class = (
+                "text-lg w-5 text-center text-slate-100" if is_active else "text-lg w-5 text-center text-slate-400"
+            )
+            label_class = (
+                "text-sm flex-1 text-left text-slate-100" if is_active else "text-sm flex-1 text-left text-slate-300"
+            )
+            ui.icon(tab_icon).classes(icon_class)
+            ui.label(tab_label).classes(label_class)
             if has_modifications:
                 ui.badge("").classes("app-badge app-badge-warning")
 

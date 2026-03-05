@@ -103,8 +103,8 @@ def log_line(entry: LogEntry) -> None:
         # Timestamp
         ui.label(time_str).classes("text-xs app-text-muted shrink-0 font-mono")
         # Level badge
-        ui.label(entry.level).classes(
-            f"w-12 text-center text-[10px] uppercase font-semibold rounded px-1 py-0.5 shrink-0 {badge_cls}"
+        ui.label(entry.level.title()).classes(
+            f"w-12 text-center text-[10px] font-semibold rounded px-1 py-0.5 shrink-0 {badge_cls}"
         )
         # Message
         ui.label(entry.message).classes(f"text-xs whitespace-nowrap font-mono {msg_cls}")

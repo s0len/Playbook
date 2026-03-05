@@ -24,6 +24,8 @@ PLAYBOOK_CSS = """
     --accent-color: #34d399;
     --accent-hover: #2cb783;
     --accent-soft: rgba(52, 211, 153, 0.2);
+    --q-primary: #34d399;
+    --q-info: #34d399;
 }
 
 body.body--dark {
@@ -38,6 +40,8 @@ body.body--dark {
     --accent-color: #34d399;
     --accent-hover: #2cb783;
     --accent-soft: rgba(52, 211, 153, 0.2);
+    --q-primary: #34d399;
+    --q-info: #34d399;
 }
 
 body.body--dark.theme-swizzin {
@@ -50,6 +54,8 @@ body.body--dark.theme-catppuccin {
     --accent-color: #cba6f7;
     --accent-hover: #b78de8;
     --accent-soft: rgba(203, 166, 247, 0.24);
+    --q-primary: #cba6f7;
+    --q-info: #cba6f7;
 }
 
 /* ===== Theme Transitions ===== */
@@ -298,8 +304,7 @@ body.body--dark .status-chip-error {
     color: var(--text-muted);
     font-weight: 600;
     font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.02em;
 }
 
 body.body--dark .q-table thead th {
@@ -465,8 +470,9 @@ a:hover {
     width: 100%;
     transition: all 0.15s ease;
     border-radius: 8px;
-    color: rgba(255, 255, 255, 0.62);
-    background: transparent;
+    color: rgba(255, 255, 255, 0.62) !important;
+    background: transparent !important;
+    border: 1px solid transparent;
 }
 
 .settings-subnav-item .q-btn__content,
@@ -478,14 +484,14 @@ a:hover {
 }
 
 .settings-subnav-item:hover {
-    background: rgba(255, 255, 255, 0.07);
-    color: rgba(255, 255, 255, 0.88);
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
 }
 
 .settings-subnav-item-active {
     background: rgba(255, 255, 255, 0.14) !important;
     color: #f8fafc !important;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.24) !important;
 }
 
 body.body--dark .settings-subnav-item-active {
@@ -523,6 +529,18 @@ body.body--dark .settings-subnav-item-active {
 
 .settings-modal-card {
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.08)) !important;
+}
+
+.settings-theme-card {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+}
+
+.settings-theme-card-active {
+    border-color: var(--accent-color) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 0 0 1px var(--accent-soft) !important;
 }
 
 /* Settings form inputs */
@@ -564,13 +582,13 @@ body.body--dark .settings-toggle .q-toggle__inner {
 /* Buttons scoped to settings header actions */
 .settings-action-primary {
     background: var(--accent-color) !important;
-    color: #111114 !important;
+    color: #f8fafc !important;
     border: 1px solid var(--accent-color) !important;
 }
 
 .settings-action-primary .q-btn__content,
 .settings-action-primary .q-icon {
-    color: #111114 !important;
+    color: #f8fafc !important;
 }
 
 .settings-action-primary:hover {
@@ -603,12 +621,12 @@ body.body--dark .settings-toggle .q-toggle__inner {
 .app-btn-primary {
     background: var(--accent-color) !important;
     border: 1px solid var(--accent-color) !important;
-    color: #111114 !important;
+    color: #f8fafc !important;
 }
 
 .app-btn-primary .q-btn__content,
 .app-btn-primary .q-icon {
-    color: #111114 !important;
+    color: #f8fafc !important;
 }
 
 .app-btn-primary:hover {
@@ -632,8 +650,8 @@ body.body--dark .settings-toggle .q-toggle__inner {
 }
 
 .app-btn-outline {
-    background: transparent !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
     color: rgba(255, 255, 255, 0.88) !important;
 }
 
@@ -643,7 +661,18 @@ body.body--dark .settings-toggle .q-toggle__inner {
 }
 
 .app-btn-outline:hover {
-    background: rgba(255, 255, 255, 0.08) !important;
+    background: rgba(255, 255, 255, 0.09) !important;
+    border-color: rgba(255, 255, 255, 0.24) !important;
+}
+
+.q-btn .q-btn__content {
+    text-transform: none !important;
+    letter-spacing: normal !important;
+}
+
+body.body--dark .q-btn--outline,
+body.body--dark .q-btn--flat {
+    color: var(--text-primary);
 }
 
 /* App-wide chips and badges */

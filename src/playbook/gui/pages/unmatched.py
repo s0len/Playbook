@@ -67,7 +67,7 @@ def unmatched_page() -> None:
                     "Rescan",
                     icon="refresh",
                     on_click=lambda: _trigger_rescan(refresh_page),
-                ).props("flat").classes("text-slate-600 dark:text-slate-400")
+                ).props("flat dense no-caps").classes("app-btn app-btn-outline")
 
         # Stats overview
         state.stats_container = ui.row().classes("w-full gap-4 flex-wrap")
@@ -349,7 +349,7 @@ def _file_card(record, state, refresh_page) -> None:
                     "Match",
                     icon="link",
                     on_click=lambda r=record, rp=refresh_page: _show_manual_match_dialog_v2(r, rp),
-                ).props("flat dense no-caps").classes("text-sm app-btn app-btn-primary")
+                ).props("flat dense no-caps").classes("text-sm app-btn app-btn-outline")
 
                 ui.button(
                     "Hide",

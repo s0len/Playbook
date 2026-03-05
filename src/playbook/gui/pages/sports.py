@@ -1153,5 +1153,5 @@ def _render_diagnostics(diagnostics: list[tuple[str, str]]) -> None:
                 }.get(severity, "app-text-muted")
 
                 with ui.row().classes("gap-2"):
-                    ui.label(f"[{severity.upper()}]").classes(f"font-mono text-xs w-20 {color}")
+                    ui.label(f"[{severity.title()}]").classes(f"font-mono text-xs w-20 {color}")
                     ui.label(message).classes("text-sm text-slate-700 dark:text-slate-300")

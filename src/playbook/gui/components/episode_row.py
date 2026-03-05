@@ -120,7 +120,7 @@ def _format_quality_tags(quality: dict) -> list[tuple[str, str]]:
         tags.append((codec, "app-badge-muted"))
 
     if hdr := quality.get("hdr_format"):
-        tags.append((hdr.upper(), "app-badge-warning"))
+        tags.append((str(hdr), "app-badge-warning"))
 
     if bit_depth := quality.get("bit_depth"):
         if bit_depth == 10:
