@@ -23,7 +23,14 @@ def app_button(
     accidental Quasar primary styling from leaking into custom themes.
     """
     button = ui.button(text, icon=icon, on_click=on_click)
-    button.classes(remove="bg-primary text-white")
+
+    # Remove framework default color utility classes explicitly.
+    def strip_framework_classes() -> None:
+        button.classes(remove="bg-primary")
+        button.classes(remove="text-white")
+
+    strip_framework_classes()
+    ui.timer(0.05, strip_framework_classes, once=True)
     button.props("no-caps")
     if props:
         button.props(props)
