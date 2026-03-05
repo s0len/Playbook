@@ -79,6 +79,7 @@ def seasons_list(
     seasons: list[SeasonMatchStatus],
     *,
     expand_recent: bool = True,
+    collapse_year_groups: bool = False,
 ) -> None:
     """Create a list of season sections.
 
@@ -88,15 +89,35 @@ def seasons_list(
     Args:
         seasons: List of season match statuses
         expand_recent: Whether to expand the most recent (last) season
+        collapse_year_groups: Whether to collapse each year into an expansion panel
     """
     if not seasons:
         ui.label("No seasons available").classes("text-slate-500 dark:text-slate-400 italic py-4")
         return
 
     with ui.column().classes("w-full gap-4"):
+        has_year_labels = any(season.year_label for season in seasons)
+
+        if collapse_year_groups and has_year_labels:
+            grouped_seasons: dict[str, list[SeasonMatchStatus]] = {}
+            for season in seasons:
+                label = season.year_label or "Other"
+                grouped_seasons.setdefault(label, []).append(season)
+
+            year_groups = list(grouped_seasons.items())
+            for group_index, (year_label, year_seasons) in enumerate(year_groups):
+                matched_count = sum(season.matched_count for season in year_seasons)
+                total_count = sum(season.total_count for season in year_seasons)
+                year_header = f"{year_label} ({matched_count}/{total_count})"
+
+                with ui.expansion(year_header, icon="calendar_month", value=False).classes("w-full"):
+                    with ui.column().classes("w-full gap-2"):
+                        is_last_group = group_index == len(year_groups) - 1
+                        _render_season_group(year_seasons, expand_recent=expand_recent and is_last_group)
+            return
+
         current_year: str | None = None
-        for i, season in enumerate(seasons):
-            # Insert year header when the year changes (dynamic sports)
+        for season in seasons:
             if season.year_label and season.year_label != current_year:
                 current_year = season.year_label
                 with ui.row().classes("w-full items-center gap-3 mt-2"):
@@ -104,7 +125,11 @@ def seasons_list(
                     ui.label(current_year).classes("text-lg font-bold text-slate-600 dark:text-slate-300 px-2")
                     ui.separator().classes("flex-1")
 
-            # Expand the last season if expand_recent is True
-            is_last = i == len(seasons) - 1
-            expanded = expand_recent and is_last
-            season_section(season, expanded=expanded)
+        _render_season_group(seasons, expand_recent=expand_recent)
+
+
+def _render_season_group(seasons: list[SeasonMatchStatus], *, expand_recent: bool) -> None:
+    for i, season in enumerate(seasons):
+        is_last = i == len(seasons) - 1
+        expanded = expand_recent and is_last
+        season_section(season, expanded=expanded)

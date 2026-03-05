@@ -53,8 +53,13 @@ def sport_detail_page(sport_id: str) -> None:
     Args:
         sport_id: The sport identifier from the URL
     """
-    # Load sport detail
-    detail = get_sport_detail(sport_id)
+    # Resolve display name quickly from config (avoid blocking metadata load)
+    sport_name = sport_id
+    if gui_state.config:
+        for sport in gui_state.config.sports:
+            if sport.id == sport_id:
+                sport_name = sport.name
+                break
 
     with ui.column().classes("w-full max-w-6xl mx-auto p-4 gap-6"):
         # Back button and header
@@ -62,60 +67,93 @@ def sport_detail_page(sport_id: str) -> None:
             ui.button(icon="arrow_back", on_click=lambda: ui.navigate.to("/sports")).props("flat round").classes(
                 "text-slate-600 dark:text-slate-400"
             )
+            ui.label(sport_name).classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
 
-            if detail:
-                ui.label(detail.sport_name).classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
-            else:
-                ui.label("Sport Not Found").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
-
-        if not detail:
+        content_container = ui.column().classes("w-full gap-6")
+        with content_container:
             with ui.card().classes("glass-card w-full"):
-                ui.label(f"Sport '{sport_id}' not found in configuration.").classes(
-                    "text-slate-600 dark:text-slate-400 py-4"
-                )
-            return
+                with ui.row().classes("items-center gap-3 py-2"):
+                    ui.spinner(size="md")
+                    ui.label("Loading sport details...").classes("text-slate-600 dark:text-slate-300")
 
-        # Overview card
+        client = context.client
+
+        async def async_load_detail() -> None:
+            loop = asyncio.get_event_loop()
+            executor = ThreadPoolExecutor(max_workers=1)
+            try:
+                detail = await loop.run_in_executor(executor, lambda: get_sport_detail(sport_id))
+                with client:
+                    content_container.clear()
+                    _render_sport_detail_content(sport_id, detail)
+            except Exception as e:
+                LOGGER.exception("Failed to load sport detail for %s: %s", sport_id, e)
+                with client:
+                    content_container.clear()
+                    with content_container:
+                        with ui.card().classes("glass-card w-full"):
+                            with ui.row().classes(
+                                "w-full items-center gap-2 py-2 px-3 rounded bg-red-50 dark:bg-red-900/20"
+                            ):
+                                ui.icon("error_outline").classes("text-red-500 text-lg")
+                                ui.label(f"Failed to load sport details: {e}").classes(
+                                    "text-sm text-red-600 dark:text-red-400"
+                                )
+            finally:
+                executor.shutdown(wait=False)
+
+        asyncio.create_task(async_load_detail())
+
+
+def _render_sport_detail_content(sport_id: str, detail) -> None:
+    if not detail:
         with ui.card().classes("glass-card w-full"):
-            with ui.row().classes("w-full items-center justify-between flex-wrap gap-4"):
-                # Info column
-                with ui.column().classes("gap-1"):
-                    with ui.row().classes("items-center gap-2"):
-                        ui.label("Show:").classes("text-sm text-slate-500 dark:text-slate-400")
-                        ui.label(detail.show_slug).classes("text-sm font-mono text-slate-700 dark:text-slate-300")
+            ui.label(f"Sport '{sport_id}' not found in configuration.").classes(
+                "text-slate-600 dark:text-slate-400 py-4"
+            )
+        return
 
-                    with ui.row().classes("items-center gap-2"):
-                        status_chip("enabled" if detail.enabled else "disabled")
-                        ui.label(f"{detail.link_mode}").classes("text-sm text-slate-500 dark:text-slate-400")
+    # Overview card
+    with ui.card().classes("glass-card w-full"):
+        with ui.row().classes("w-full items-center justify-between flex-wrap gap-4"):
+            # Info column
+            with ui.column().classes("gap-1"):
+                with ui.row().classes("items-center gap-2"):
+                    ui.label("Show:").classes("text-sm text-slate-500 dark:text-slate-400")
+                    ui.label(detail.show_slug).classes("text-sm font-mono text-slate-700 dark:text-slate-300")
 
-                # Overall progress
-                with ui.column().classes("gap-1 min-w-64"):
-                    ui.label("Overall Progress").classes("text-sm text-slate-500 dark:text-slate-400")
-                    with ui.row().classes("items-center gap-3 w-full"):
-                        _progress_variant = _get_progress_variant(detail.overall_progress)
-                        progress_bar(
-                            detail.overall_progress,
-                            variant=_progress_variant,
-                            show_value=False,
-                        )
-                        ui.label(f"{detail.overall_matched}/{detail.overall_total}").classes(
-                            "text-lg font-semibold text-slate-700 dark:text-slate-300"
-                        )
+                with ui.row().classes("items-center gap-2"):
+                    status_chip("enabled" if detail.enabled else "disabled")
+                    ui.label(f"{detail.link_mode}").classes("text-sm text-slate-500 dark:text-slate-400")
 
-        # Source Globs
-        _source_globs_card(sport_id, detail)
+            # Overall progress
+            with ui.column().classes("gap-1 min-w-64"):
+                ui.label("Overall Progress").classes("text-sm text-slate-500 dark:text-slate-400")
+                with ui.row().classes("items-center gap-3 w-full"):
+                    _progress_variant = _get_progress_variant(detail.overall_progress)
+                    progress_bar(
+                        detail.overall_progress,
+                        variant=_progress_variant,
+                        show_value=False,
+                    )
+                    ui.label(f"{detail.overall_matched}/{detail.overall_total}").classes(
+                        "text-lg font-semibold text-slate-700 dark:text-slate-300"
+                    )
 
-        # Seasons
-        with ui.card().classes("glass-card w-full"):
-            ui.label("Seasons").classes("text-xl font-semibold text-slate-700 dark:text-slate-200 mb-4")
-            if detail.metadata_error:
-                with ui.row().classes("w-full items-center gap-2 py-2 px-3 rounded bg-red-50 dark:bg-red-900/20"):
-                    ui.icon("error_outline").classes("text-red-500 text-lg")
-                    ui.label(detail.metadata_error).classes("text-sm text-red-600 dark:text-red-400")
-            seasons_list(detail.seasons, expand_recent=True)
+    # Source Globs
+    _source_globs_card(sport_id, detail)
 
-        # Recent matches for this sport
-        _recent_matches_card(sport_id)
+    # Seasons
+    with ui.card().classes("glass-card w-full"):
+        ui.label("Seasons").classes("text-xl font-semibold text-slate-700 dark:text-slate-200 mb-4")
+        if detail.metadata_error:
+            with ui.row().classes("w-full items-center gap-2 py-2 px-3 rounded bg-red-50 dark:bg-red-900/20"):
+                ui.icon("error_outline").classes("text-red-500 text-lg")
+                ui.label(detail.metadata_error).classes("text-sm text-red-600 dark:text-red-400")
+        seasons_list(detail.seasons, expand_recent=False, collapse_year_groups=True)
+
+    # Recent matches for this sport
+    _recent_matches_card(sport_id)
 
 
 def _get_progress_variant(progress: float) -> str:
@@ -841,8 +879,9 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
                     "text-sm text-slate-500 dark:text-slate-400"
                 )
 
-        globs_container = ui.column().classes("w-full gap-1")
-        _render_globs_list(globs_container)
+        with ui.expansion("Manage Source Patterns", icon="tune", value=False).classes("w-full"):
+            globs_container = ui.column().classes("w-full gap-1")
+            _render_globs_list(globs_container)
 
 
 def _recent_matches_card(sport_id: str) -> None:
