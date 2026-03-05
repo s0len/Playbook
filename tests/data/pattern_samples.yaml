@@ -1324,3 +1324,63 @@ samples:
       - value: "UEFA.Champions.League.2026.01.28.Barcelona.vs.Atalanta.1080p.WEB.mkv"
         expect_season: "Matchweek 8"
         expect_episode: "Barcelona vs Atalanta"
+
+  - description: "Champions League spaced releases without UEFA prefix"
+    sport:
+      id: "ucl_no_prefix_test"
+      name: "UEFA Champions League"
+      file_patterns:
+        - regex: "(?i)^Champions\\s+League(?:\\s+(?:Playoff|Play-off|Quarterfinal|Quarter-final|Semifinal|Semi-final|Final|Round\\s+of\\s+16))?\\s+(?P<season_year>\\d{4})\\s+(?P<matchup>(?P<away>[A-Za-z&\\x27\\x27\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF]+(?:\\s+[A-Za-z&\\x27\\x27\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF]+){0,3})\\s+(?:vs?|VS?|V|versus)\\s+(?P<home>[A-Za-z&\\x27\\x27\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF]+(?:\\s+[A-Za-z&\\x27\\x27\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF]+){0,3}))(?:\\s+\\d+(?:st|nd|rd|th)\\s+leg)?\\s+(?P<day>\\d{2})\\s+(?P<month>\\d{2})(?:\\s+.+)?\\.(?P<extension>mkv|mp4|ts|m4v|avi)$"
+          priority: 10
+          season_selector:
+            mode: "date"
+            value_template: "{season_year}-{month}-{day}"
+          episode_selector:
+            group: "matchup"
+            allow_fallback_to_title: true
+          metadata_filters:
+            team_alias_map: uefa_champions_league
+    show:
+      key: "ucl-no-prefix-test"
+      title: "UEFA Champions League 2025-2026"
+      seasons:
+        - title: "Knockout Phase Play-offs"
+          round_number: 9
+          display_number: 9
+          episodes:
+            - title: "Benfica vs Real Madrid"
+              originally_available: "2026-02-17"
+            - title: "Monaco vs Benfica"
+              originally_available: "2026-02-18"
+    files:
+      - value: "Champions League Playoff 2026 Benfica vs Real Madrid 1st leg 17 02 1080pEN60fps.mkv"
+        expect_season: "Knockout Phase Play-offs"
+        expect_episode: "Benfica vs Real Madrid"
+      - value: "Champions League 2026 Monaco vs Benfica 18 02 1080pEN60fps.mkv"
+        expect_season: "Knockout Phase Play-offs"
+        expect_episode: "Monaco vs Benfica"
+
+  - description: "Formula 1 generic dot-separated releases without Round number (BILLIE)"
+    sport:
+      id: "f1_generic_no_round"
+      name: "Formula 1"
+      pattern_sets:
+        - formula1
+    show:
+      key: "formula1-2026"
+      title: "Formula 1 2026"
+      seasons:
+        - title: "Australian Grand Prix"
+          round_number: 3
+          display_number: 3
+          episodes:
+            - title: "Weekend Warm Up"
+              aliases: ["weekend warmup", "weekend warm-up"]
+            - title: "Free Practice 1"
+              aliases: ["fp1"]
+            - title: "Qualifying"
+            - title: "Race"
+    files:
+      - value: "Formula1.2026.Australia.Grand.Prix.Weekend.Warmup.HLG.2160p.WEB.h265-BILLIE.mkv"
+        expect_season: "Australian Grand Prix"
+        expect_episode: "Weekend Warm Up"

@@ -49,7 +49,14 @@ def general_tab(state: SettingsFormState) -> None:
                 state,
                 "settings.cache_dir",
                 "Cache Directory",
-                description="Directory for storing metadata cache and processing state",
+                description="Directory for metadata cache and trace artifacts",
+                required=True,
+            )
+            settings_path_input(
+                state,
+                "settings.state_dir",
+                "State Directory",
+                description="Directory for persistent sqlite state (processed files, unmatched, manual matches)",
                 required=True,
             )
 

@@ -67,9 +67,9 @@ def list_editor(
         with ui.row().classes("w-full items-center justify-between"):
             with ui.row().classes("items-center gap-2"):
                 ui.label(label).classes("text-sm font-semibold text-slate-700 dark:text-slate-200")
-                ui.badge(str(len(items))).props("color=grey-7").classes("text-xs")
+                ui.badge(str(len(items))).classes("text-xs app-badge app-badge-muted")
                 if is_modified:
-                    ui.icon("edit").classes("text-amber-500 text-xs")
+                    ui.icon("edit").classes("app-text-warning text-xs")
 
         if description:
             ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400")
@@ -105,7 +105,7 @@ def list_editor(
                         add_list_item(str(value))
                         new_input.value = ""
 
-                ui.button(icon="add", on_click=add_item).props("flat dense").classes("text-blue-600")
+                ui.button(icon="add", on_click=add_item).props("flat dense").classes("app-text-accent")
 
     def _render_item(idx: int, item: str) -> None:
         """Render a single list item."""
@@ -129,7 +129,7 @@ def list_editor(
                 ui.button(
                     icon="close",
                     on_click=lambda i=idx: remove_item(i),
-                ).props("flat dense size=sm color=negative")
+                ).props("flat dense size=sm").classes("app-text-danger")
 
     def add_list_item(value: str) -> None:
         """Add a new item to the list."""

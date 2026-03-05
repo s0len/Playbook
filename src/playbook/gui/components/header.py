@@ -10,41 +10,38 @@ from ..state import gui_state
 
 NAV_ITEMS = [
     ("/", "dashboard", "Dashboard"),
-    ("/logs", "article", "Logs"),
     ("/sports", "emoji_events", "Sports"),
     ("/unmatched", "help_outline", "Unmatched"),
-]
-
-BOTTOM_ITEMS = [
     ("/config", "settings", "Settings"),
+    ("/logs", "article", "Logs"),
 ]
 
 
 def header(current_path: str = "/") -> None:
-    """Render the icon-only left navigation sidebar.
+    """Render the left navigation sidebar with icon + text labels.
 
     Args:
         current_path: The current page path for active state highlighting
     """
     with (
-        ui.left_drawer(value=True).props("persistent show-if-above width=60 bordered=false").classes("playbook-sidebar")
+        ui.left_drawer(value=True)
+        .props("persistent show-if-above width=200 bordered=false")
+        .classes("playbook-sidebar")
     ):
-        with ui.column().classes("w-full h-full items-center py-4 gap-0"):
-            # Logo at the top
-            with ui.link(target="/").classes("no-underline mb-6"):
-                ui.image("/icon.png").classes("w-9 h-9 rounded-xl object-cover")
+        with ui.column().classes("w-full h-full p-4 gap-0"):
+            # Logo section
+            with ui.link(target="/").classes("no-underline flex items-center gap-3 mb-6"):
+                ui.image("/icon.png").classes("w-8 h-8 rounded-xl object-cover")
+                ui.label("Playbook").classes("text-base font-semibold text-white/90")
 
             # Navigation items
-            with ui.column().classes("w-full items-center gap-1"):
+            with ui.column().classes("w-full gap-1"):
                 for path, icon_name, label in NAV_ITEMS:
                     _sidebar_item(path, icon_name, label, _is_active(path, current_path))
 
             ui.space()
 
-            # Bottom items (settings) and status indicator
-            with ui.column().classes("w-full items-center gap-1"):
-                for path, icon_name, label in BOTTOM_ITEMS:
-                    _sidebar_item(path, icon_name, label, _is_active(path, current_path))
+            # Status indicator at very bottom
             _status_indicator()
 
 
@@ -56,18 +53,19 @@ def _is_active(nav_path: str, current_path: str) -> bool:
 
 
 def _sidebar_item(target: str, icon_name: str, label: str, is_active: bool) -> None:
-    """Render a single sidebar nav item."""
+    """Render a single sidebar nav item with icon + text."""
     cls = "sidebar-nav-item" + (" sidebar-nav-item-active" if is_active else "")
-    with ui.link(target=target).classes("no-underline w-full flex justify-center") as link:
+    with ui.link(target=target).classes("no-underline w-full"):
         with ui.element("div").classes(cls):
             ui.icon(icon_name).classes("text-[20px]")
-    link.tooltip(label).props('anchor="center right" self="center left"')
+            ui.label(label).classes("text-sm")
 
 
 def _status_indicator() -> None:
-    """Show processing status indicator."""
-    with ui.column().classes("items-center mt-2"):
-        status_icon = ui.icon("circle").classes("text-sm text-slate-400")
+    """Show processing status indicator with text label."""
+    with ui.row().classes("items-center gap-2 mt-3 px-3 py-2"):
+        status_icon = ui.icon("circle").classes("text-[10px] text-slate-400")
+        status_label = ui.label("Idle").classes("text-xs text-white/40")
 
         last_status = [None]
 
@@ -77,9 +75,13 @@ def _status_indicator() -> None:
                 if current != last_status[0]:
                     last_status[0] = current
                     if current:
-                        status_icon.classes(replace="text-green-400 animate-pulse text-sm")
+                        status_icon.classes(replace="text-[10px] app-text-success animate-pulse")
+                        status_label.text = "Processing"
+                        status_label.classes(replace="text-xs app-text-success")
                     else:
-                        status_icon.classes(replace="text-slate-400 text-sm")
+                        status_icon.classes(replace="text-[10px] text-slate-400")
+                        status_label.text = "Idle"
+                        status_label.classes(replace="text-xs text-white/40")
             except (RuntimeError, KeyError):
                 pass
 

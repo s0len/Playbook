@@ -76,6 +76,14 @@ class TestManualOverrideStore:
         store.add_override("b.mkv", "nba", "nba", 2024, 2)
         assert store.get_count() == 2
 
+    def test_clear(self, store: ManualOverrideStore) -> None:
+        store.add_override("a.mkv", "f1", "f1", 2024, 1)
+        store.add_override("b.mkv", "nba", "nba", 2024, 2)
+
+        deleted = store.clear()
+        assert deleted == 2
+        assert store.get_count() == 0
+
     def test_close(self, store: ManualOverrideStore) -> None:
         store.add_override("a.mkv", "f1", "f1", 2024, 1)
         store.close()

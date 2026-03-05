@@ -26,11 +26,31 @@ from .watcher import FileWatcherLoop, WatchdogUnavailableError
 LOGGER = logging.getLogger(__name__)
 CONSOLE = Console()
 LOG_LEVEL_CHOICES = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
+DEFAULT_GUI_PORT = 8765
 LOG_RECORD_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s\n%(message)s\n"
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 _FALSE_VALUES = {"0", "false", "no", "off"}
+
+
+def _default_config_path() -> Path:
+    """Resolve default config path with legacy fallback.
+
+    Priority:
+    1) CONFIG_PATH env var (if set)
+    2) /config/config.yaml
+    3) /config/playbook.yaml (legacy)
+    """
+    env_path = os.getenv("CONFIG_PATH")
+    if env_path:
+        return Path(env_path)
+
+    default_path = Path("/config/config.yaml")
+    legacy_path = Path("/config/playbook.yaml")
+    if default_path.exists() or not legacy_path.exists():
+        return default_path
+    return legacy_path
 
 
 def _make_help_formatter(command_name: str):
@@ -124,6 +144,8 @@ def parse_args(argv: tuple[str, ...] | None = None) -> argparse.Namespace:
     # Validate run-specific argument conflicts
     if namespace.command == "run" and getattr(namespace, "watch", False) and getattr(namespace, "no_watch", False):
         parser.error("--watch and --no-watch cannot be used together")
+    if namespace.command == "run" and getattr(namespace, "gui", False) and getattr(namespace, "no_gui", False):
+        parser.error("--gui and --no-gui cannot be used together")
 
     return namespace
 
@@ -144,7 +166,7 @@ def _add_run_subparser(subparsers) -> None:
     run_parser.add_argument(
         "--config",
         type=Path,
-        default=Path(os.getenv("CONFIG_PATH", "/config/playbook.yaml")),
+        default=_default_config_path(),
         help="Path to the YAML configuration file",
     )
     run_parser.add_argument(
@@ -207,13 +229,18 @@ def _add_run_subparser(subparsers) -> None:
     run_parser.add_argument(
         "--gui",
         action="store_true",
-        help="Enable web GUI on port 8080 (or GUI_PORT env var)",
+        help="Enable web GUI (enabled by default unless disabled)",
+    )
+    run_parser.add_argument(
+        "--no-gui",
+        action="store_true",
+        help="Disable web GUI and run CLI processing only",
     )
     run_parser.add_argument(
         "--gui-port",
         type=int,
-        default=int(os.getenv("GUI_PORT", "8080")),
-        help="Port for web GUI (default: 8080 or GUI_PORT env var)",
+        default=int(os.getenv("GUI_PORT", str(DEFAULT_GUI_PORT))),
+        help=f"Port for web GUI (default: {DEFAULT_GUI_PORT} or GUI_PORT env var)",
     )
     run_parser.add_argument(
         "--gui-host",
@@ -239,7 +266,7 @@ def _add_validate_config_subparser(subparsers) -> None:
     validate_parser.add_argument(
         "--config",
         type=Path,
-        default=Path(os.getenv("CONFIG_PATH", "/config/playbook.yaml")),
+        default=_default_config_path(),
         help="Path to the YAML configuration file",
     )
     validate_parser.add_argument(
@@ -275,7 +302,7 @@ def _add_kometa_trigger_subparser(subparsers) -> None:
     trigger_parser.add_argument(
         "--config",
         type=Path,
-        default=Path(os.getenv("CONFIG_PATH", "/config/playbook.yaml")),
+        default=_default_config_path(),
         help="Path to the YAML configuration file",
     )
     trigger_parser.add_argument(
@@ -391,12 +418,18 @@ def apply_runtime_overrides(config: AppConfig, args: argparse.Namespace) -> None
     source_override = os.getenv("SOURCE_DIR")
     dest_override = os.getenv("DESTINATION_DIR")
     cache_override = os.getenv("CACHE_DIR")
+    state_override = os.getenv("STATE_DIR")
+    theme_override = os.getenv("GUI_THEME") or os.getenv("PLAYBOOK_THEME")
     if source_override:
         config.settings.source_dir = Path(source_override)
     if dest_override:
         config.settings.destination_dir = Path(dest_override)
     if cache_override:
         config.settings.cache_dir = Path(cache_override)
+    if state_override:
+        config.settings.state_dir = Path(state_override)
+    if theme_override:
+        config.settings.theme = theme_override.strip().lower()
 
     watch_enabled = config.settings.file_watcher.enabled
     if getattr(args, "watch", False):
@@ -457,8 +490,15 @@ def _execute_run(args: argparse.Namespace) -> int:
         LOGGER.error("Configuration file %s does not exist", args.config)
         return 1
 
-    # Check if GUI mode is enabled
-    gui_enabled = getattr(args, "gui", False) or _env_bool("GUI_ENABLED")
+    # GUI defaults to enabled unless explicitly disabled by flag/env.
+    env_gui_enabled = _env_bool("GUI_ENABLED")
+    if getattr(args, "no_gui", False):
+        gui_enabled = False
+    elif getattr(args, "gui", False) or env_gui_enabled is None:
+        gui_enabled = True
+    else:
+        gui_enabled = env_gui_enabled
+
     if gui_enabled:
         return _execute_gui_run(args, verbose)
 
@@ -533,7 +573,7 @@ def _execute_gui_run(args: argparse.Namespace, verbose: bool) -> int:
         )
         return 1
 
-    gui_port = getattr(args, "gui_port", 8080)
+    gui_port = getattr(args, "gui_port", DEFAULT_GUI_PORT)
     gui_host = getattr(args, "gui_host", "0.0.0.0")
 
     LOGGER.info("Starting Playbook with GUI on http://%s:%d", gui_host, gui_port)

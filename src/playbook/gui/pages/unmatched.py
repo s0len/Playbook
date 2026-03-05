@@ -15,6 +15,7 @@ from datetime import datetime
 
 from nicegui import ui
 
+from ..components.app_button import app_button
 from ..state import gui_state
 from ..utils import safe_notify
 
@@ -58,16 +59,18 @@ def unmatched_page() -> None:
         # Refresh results
         refresh_results()
 
-    with ui.column().classes("w-full max-w-6xl mx-auto p-4 gap-6"):
+    with ui.column().classes("w-full p-6 gap-6 view-shell"):
         # Page title with refresh button
         with ui.row().classes("w-full items-center justify-between"):
             ui.label("Unmatched Files").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
             with ui.row().classes("gap-2"):
-                ui.button(
+                app_button(
                     "Rescan",
                     icon="refresh",
                     on_click=lambda: _trigger_rescan(refresh_page),
-                ).props("flat").classes("text-slate-600 dark:text-slate-400")
+                    variant="outline",
+                    props="flat dense",
+                )
 
         # Stats overview
         state.stats_container = ui.row().classes("w-full gap-4 flex-wrap")
@@ -100,28 +103,28 @@ def _render_stats_content() -> None:
         # Total unmatched
         total = stats.get("total", 0)
         hidden = stats.get("hidden", 0)
-        _stat_card("Total Unmatched", total - hidden, "help_outline", "amber")
+        _stat_card("Total Unmatched", total - hidden, "help_outline", "warning")
 
         # Videos
         video_count = category_counts.get("video", 0)
-        _stat_card("Videos", video_count, "movie", "blue")
+        _stat_card("Videos", video_count, "movie", "accent")
 
         # Samples
         sample_count = category_counts.get("sample", 0)
-        _stat_card("Samples", sample_count, "content_cut", "slate")
+        _stat_card("Samples", sample_count, "content_cut", "muted")
 
         # Other files
         other_count = (
             category_counts.get("metadata", 0) + category_counts.get("archive", 0) + category_counts.get("other", 0)
         )
-        _stat_card("Other", other_count, "folder", "slate")
+        _stat_card("Other", other_count, "folder", "muted")
 
 
-def _stat_card(label: str, value: int, icon: str, color: str) -> None:
+def _stat_card(label: str, value: int, icon: str, tone: str) -> None:
     """Render a statistics card."""
     with ui.card().classes("glass-card p-4 min-w-32"):
         with ui.row().classes("items-center gap-2"):
-            ui.icon(icon).classes(f"text-{color}-500 dark:text-{color}-400 text-xl")
+            ui.icon(icon).classes(f"text-xl app-stat-icon app-stat-icon-{tone}")
             with ui.column().classes("gap-0"):
                 ui.label(str(value)).classes("text-2xl font-bold text-slate-800 dark:text-slate-100")
                 ui.label(label).classes("text-sm text-slate-500 dark:text-slate-400")
@@ -208,11 +211,8 @@ def _render_category_toggles(state, on_filter_change, refresh_toggles) -> None:
             return handler
 
         btn = ui.button(label, icon=icon, on_click=make_toggle_handler(category, state))
-        if is_active:
-            btn.props("color=primary")
-        else:
-            btn.props("flat color=grey")
-        btn.classes("text-sm")
+        btn.props("flat dense no-caps")
+        btn.classes(f"text-sm app-chip {'app-chip-active' if is_active else ''}")
 
 
 def _render_results_content(state, refresh_results, refresh_page) -> None:
@@ -240,7 +240,9 @@ def _render_results_content(state, refresh_results, refresh_page) -> None:
         )
     except Exception as e:
         LOGGER.exception("Failed to get unmatched files: %s", e)
-        ui.label(f"Error loading unmatched files: {e}").classes("text-red-600 dark:text-red-400")
+        with ui.row().classes("w-full items-center gap-2 app-alert app-alert-danger"):
+            ui.icon("error_outline").classes("app-text-danger")
+            ui.label(f"Error loading unmatched files: {e}").classes("text-sm app-text-danger")
         return
 
     # Results header
@@ -279,7 +281,7 @@ def _render_results_content(state, refresh_results, refresh_page) -> None:
     if not records:
         with ui.card().classes("glass-card w-full p-8"):
             with ui.column().classes("items-center gap-2"):
-                ui.icon("check_circle").classes("text-green-500 text-4xl")
+                ui.icon("check_circle").classes("app-text-success text-4xl")
                 ui.label("No unmatched files found").classes("text-lg font-medium text-slate-700 dark:text-slate-300")
                 ui.label("Try adjusting your filters or run a scan").classes(
                     "text-sm text-slate-500 dark:text-slate-400"
@@ -300,14 +302,14 @@ def _file_card(record, state, refresh_page) -> None:
         with ui.row().classes("w-full items-start gap-4"):
             # File icon based on category
             icon_map = {
-                "video": ("movie", "blue"),
-                "sample": ("content_cut", "amber"),
-                "metadata": ("description", "slate"),
-                "archive": ("archive", "slate"),
-                "other": ("insert_drive_file", "slate"),
+                "video": ("movie", "accent"),
+                "sample": ("content_cut", "warning"),
+                "metadata": ("description", "muted"),
+                "archive": ("archive", "muted"),
+                "other": ("insert_drive_file", "muted"),
             }
-            icon_name, icon_color = icon_map.get(record.file_category, ("insert_drive_file", "slate"))
-            ui.icon(icon_name).classes(f"text-{icon_color}-500 dark:text-{icon_color}-400 text-2xl mt-1")
+            icon_name, icon_tone = icon_map.get(record.file_category, ("insert_drive_file", "muted"))
+            ui.icon(icon_name).classes(f"text-2xl mt-1 app-stat-icon app-stat-icon-{icon_tone}")
 
             # Main content
             with ui.column().classes("flex-1 gap-1"):
@@ -325,38 +327,47 @@ def _file_card(record, state, refresh_page) -> None:
                     ui.label(f"First seen: {first_seen_str}").classes("text-xs text-slate-500 dark:text-slate-400")
 
                     # Category badge
-                    ui.badge(record.file_category, color=icon_color).classes("text-xs")
+                    ui.badge(record.file_category).classes("text-xs app-badge app-badge-muted")
 
                 # Failure summary - shows why the best match failed
                 if record.failure_summary:
                     with ui.row().classes("items-start gap-2 mt-2"):
-                        ui.icon("warning").classes("text-amber-500 dark:text-amber-400 text-sm mt-0.5")
+                        ui.icon("warning").classes("app-text-warning text-sm mt-0.5")
                         ui.label(record.failure_summary).classes("text-sm text-slate-600 dark:text-slate-400")
                 elif record.best_match_sport:
                     # Fallback: show best match sport if no failure summary
                     with ui.row().classes("items-center gap-2 mt-2"):
                         ui.label("Best match:").classes("text-xs text-slate-500 dark:text-slate-400")
-                        ui.badge(record.best_match_sport, color="blue").classes("text-xs")
+                        ui.badge(record.best_match_sport).classes("text-xs app-badge app-badge-muted")
 
             # Action buttons
             with ui.column().classes("gap-2"):
-                ui.button(
+                app_button(
                     "Details",
                     icon="info",
                     on_click=lambda r=record: _show_details_dialog(r),
-                ).props("flat dense").classes("text-sm")
+                    variant="outline",
+                    classes="text-sm",
+                    props="flat dense",
+                )
 
-                ui.button(
+                app_button(
                     "Match",
                     icon="link",
                     on_click=lambda r=record, rp=refresh_page: _show_manual_match_dialog_v2(r, rp),
-                ).props("flat dense color=primary").classes("text-sm")
+                    variant="outline",
+                    classes="text-sm",
+                    props="flat dense",
+                )
 
-                ui.button(
+                app_button(
                     "Hide",
                     icon="visibility_off",
                     on_click=lambda r=record, rp=refresh_page: _hide_file_v2(r.source_path, rp),
-                ).props("flat dense").classes("text-sm text-slate-500")
+                    variant="outline",
+                    classes="text-sm",
+                    props="flat dense",
+                )
 
 
 def _format_file_size(size_bytes: int) -> str:
@@ -603,7 +614,7 @@ def _render_suggestions(record) -> None:
 
     for title, description in suggestions:
         with ui.row().classes("items-start gap-2"):
-            ui.icon("lightbulb").classes("text-amber-500 text-sm mt-0.5")
+            ui.icon("lightbulb").classes("app-text-warning text-sm mt-0.5")
             with ui.column().classes("gap-0"):
                 ui.label(title).classes("font-medium text-slate-700 dark:text-slate-300")
                 ui.label(description).classes("text-sm text-slate-500 dark:text-slate-400")
@@ -926,8 +937,8 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
 
             # Actions
             with ui.row().classes("w-full justify-end gap-2"):
-                ui.button("Cancel", on_click=dialog.close).props("flat")
-                ui.button("Match & Process", icon="link", on_click=do_manual_match).props("color=primary")
+                app_button("Cancel", on_click=dialog.close, variant="outline", props="flat")
+                app_button("Match & Process", icon="link", on_click=do_manual_match, variant="primary")
 
     dialog.open()
 

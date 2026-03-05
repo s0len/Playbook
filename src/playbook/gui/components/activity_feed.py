@@ -32,7 +32,7 @@ def activity_feed(max_items: int = 20) -> ui.column:
             events = list(gui_state.recent_events)[:max_items]
             with feed_container:
                 if not events:
-                    ui.label("No recent activity").classes("text-gray-500 italic py-4 text-center")
+                    ui.label("No recent activity").classes("text-slate-500 dark:text-slate-400 italic py-4 text-center")
                 else:
                     for event in events:
                         activity_item(event)
@@ -53,15 +53,15 @@ def activity_item(event: NotificationEvent) -> None:
         event: The notification event to display
     """
     action_colors = {
-        "hardlink": ("bg-green-100 text-green-800", "link"),
-        "copy": ("bg-blue-100 text-blue-800", "content_copy"),
-        "symlink": ("bg-purple-100 text-purple-800", "link"),
-        "skipped": ("bg-yellow-100 text-yellow-800", "skip_next"),
-        "error": ("bg-red-100 text-red-800", "error"),
-        "dry-run": ("bg-gray-100 text-gray-800", "visibility"),
+        "hardlink": ("app-alert app-alert-success", "link"),
+        "copy": ("app-alert app-alert-info", "content_copy"),
+        "symlink": ("app-alert app-alert-info", "link"),
+        "skipped": ("app-alert app-alert-warning", "skip_next"),
+        "error": ("app-alert app-alert-danger", "error"),
+        "dry-run": ("app-alert app-alert-info", "visibility"),
     }
 
-    color_class, icon_name = action_colors.get(event.action, ("bg-gray-100 text-gray-800", "help"))
+    color_class, icon_name = action_colors.get(event.action, ("app-alert app-alert-info", "help"))
 
     with ui.row().classes(f"w-full items-center gap-2 p-2 rounded {color_class}"):
         ui.icon(icon_name).classes("text-lg")

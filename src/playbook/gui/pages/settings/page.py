@@ -13,22 +13,27 @@ from pathlib import Path
 
 from nicegui import ui
 
+from ...components.app_button import app_button
 from ...settings_state.settings_state import SETTINGS_TABS, SettingsFormState
 from ...state import gui_state
 from ...utils import safe_notify
 from .advanced import advanced_tab
+from .application import application_tab
 from .general import general_tab
 from .integrations import integrations_tab
 from .notifications import notifications_tab
 from .quality import quality_tab
+from .themes import themes_tab
 from .watcher import watcher_tab
 
 LOGGER = logging.getLogger(__name__)
 
 # Tab renderers
 TAB_RENDERERS = {
+    "application": application_tab,
     "general": general_tab,
     "quality": quality_tab,
+    "themes": themes_tab,
     "notifications": notifications_tab,
     "watcher": watcher_tab,
     "integrations": integrations_tab,
@@ -47,20 +52,24 @@ def settings_page() -> None:
     else:
         ui.notify("No configuration file loaded", type="warning")
 
-    with ui.column().classes("w-full max-w-7xl mx-auto p-4 gap-4"):
+    with ui.column().classes("w-full p-6 gap-5 settings-page-shell"):
         # Page header
-        with ui.row().classes("w-full items-center justify-between"):
-            ui.label("Settings").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
+        with ui.row().classes("w-full items-start justify-between border-b border-white/6 pb-5"):
+            with ui.column().classes("gap-1"):
+                ui.label("Settings").classes("text-4xl font-bold text-slate-100")
+                ui.label("Manage your Playbook behavior, integrations, and processing rules").classes(
+                    "text-sm text-slate-400"
+                )
 
             # Action buttons
             with ui.row().classes("items-center gap-2"):
                 # Modified indicator
-                modified_indicator = ui.label("").classes("text-sm text-amber-600 dark:text-amber-400")
+                modified_indicator = ui.label("").classes("text-sm text-slate-400")
 
                 def update_modified_indicator() -> None:
                     if state.is_modified:
                         modified_indicator.text = "Modified"
-                        modified_indicator.classes(replace="text-sm text-amber-600 dark:text-amber-400")
+                        modified_indicator.classes(replace="text-sm text-slate-300")
                     else:
                         modified_indicator.text = ""
 
@@ -68,23 +77,26 @@ def settings_page() -> None:
                 state.register_callback(lambda t, d: update_modified_indicator())
 
                 # Reset button
-                ui.button(
+                app_button(
                     "Reset",
                     icon="undo",
                     on_click=lambda: _reset_changes(state),
-                ).props("outline")
+                    variant="outline",
+                    props="outline",
+                ).classes("settings-action-secondary")
 
                 # Save button
-                ui.button(
+                app_button(
                     "Save",
                     icon="save",
                     on_click=lambda: _save_changes(state),
-                ).props("color=primary")
+                    variant="primary",
+                ).classes("settings-action-primary")
 
         # Main content area
-        with ui.row().classes("w-full gap-6"):
+        with ui.row().classes("w-full gap-8 items-start settings-main-layout"):
             # Sidebar navigation
-            sidebar_container = ui.column().classes("w-48 shrink-0 gap-1")
+            sidebar_container = ui.column().classes("w-56 shrink-0 gap-1 settings-sidebar")
 
             def render_sidebar() -> None:
                 """Render the sidebar navigation."""
@@ -94,21 +106,12 @@ def settings_page() -> None:
                         _render_tab_button(state, tab_id, tab_label, tab_icon)
 
             # Content area
-            content_container = ui.column().classes("flex-1 min-w-0")
+            content_container = ui.column().classes("flex-1 min-w-0 settings-content")
 
             def render_content() -> None:
                 """Render the content for the active tab."""
                 content_container.clear()
                 with content_container:
-                    # Breadcrumb
-                    active_label = next(
-                        (label for tid, label, _ in SETTINGS_TABS if tid == state.active_tab), "Settings"
-                    )
-                    with ui.row().classes("items-center gap-2 mb-4"):
-                        ui.label("Settings").classes("text-sm text-slate-500 dark:text-slate-400")
-                        ui.icon("chevron_right").classes("text-slate-400")
-                        ui.label(active_label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
-
                     # Tab content
                     renderer = TAB_RENDERERS.get(state.active_tab, general_tab)
                     renderer(state)
@@ -134,8 +137,15 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
 
     # Check if tab has modified fields
     tab_prefixes = {
-        "general": ["settings.source_dir", "settings.destination_dir", "settings.cache_dir", "settings.dry_run"],
+        "general": [
+            "settings.source_dir",
+            "settings.destination_dir",
+            "settings.cache_dir",
+            "settings.state_dir",
+            "settings.dry_run",
+        ],
         "quality": ["settings.quality_profile"],
+        "themes": ["settings.theme"],
         "notifications": ["settings.notifications"],
         "watcher": ["settings.file_watcher"],
         "integrations": ["settings.plex_sync", "settings.kometa_trigger", "settings.tvsportsdb"],
@@ -145,22 +155,35 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
         any(path.startswith(prefix) for prefix in tab_prefixes.get(tab_id, [])) for path in state.modified_paths
     )
 
-    # Button styling
+    # Match main sidebar structure with settings-specific palette
+    btn_classes = "settings-subnav-item"
     if is_active:
-        btn_classes = "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-    else:
-        btn_classes = "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+        btn_classes += " settings-subnav-item-active"
 
-    with (
+    tab_button = (
         ui.button(on_click=lambda t=tab_id: state.set_active_tab(t))
-        .classes(f"w-full justify-start px-3 py-2 rounded-lg {btn_classes}")
-        .props("flat")
-    ):
-        with ui.row().classes("w-full items-center gap-3"):
-            ui.icon(tab_icon).classes("text-lg w-5 text-center")
-            ui.label(tab_label.upper()).classes("text-sm flex-1 text-left")
+        .classes(f"w-full justify-start px-3 py-2 rounded-lg text-left {btn_classes}")
+        .props("flat no-caps")
+    )
+
+    def strip_primary_class() -> None:
+        tab_button.classes(remove="text-primary")
+
+    strip_primary_class()
+    ui.timer(0.05, strip_primary_class, once=True)
+
+    with tab_button:
+        with ui.row().classes("w-full items-center gap-3 justify-start"):
+            icon_class = (
+                "text-lg w-5 text-center text-slate-100" if is_active else "text-lg w-5 text-center text-slate-400"
+            )
+            label_class = (
+                "text-sm flex-1 text-left text-slate-100" if is_active else "text-sm flex-1 text-left text-slate-300"
+            )
+            ui.icon(tab_icon).classes(icon_class)
+            ui.label(tab_label).classes(label_class)
             if has_modifications:
-                ui.badge("", color="amber").props("dense rounded")
+                ui.badge("").classes("app-badge app-badge-warning")
 
 
 def _save_changes(state: SettingsFormState) -> None:

@@ -50,7 +50,7 @@ class SettingsFormState:
     form_data: dict[str, Any] = field(default_factory=dict)
     modified_paths: set[str] = field(default_factory=set)
     validation_errors: dict[str, ValidationError] = field(default_factory=dict)
-    active_tab: str = "general"
+    active_tab: str = "application"
     is_saving: bool = False
     config_path: Path | None = None
     _update_callbacks: list[Callable[[str, Any], None]] = field(default_factory=list)
@@ -82,6 +82,12 @@ class SettingsFormState:
         try:
             yaml_text = yaml_path.read_text(encoding="utf-8")
             data = yaml.safe_load(yaml_text) or {}
+            settings = data.get("settings")
+            if isinstance(settings, dict):
+                if not settings.get("state_dir") and settings.get("cache_dir"):
+                    settings["state_dir"] = settings.get("cache_dir")
+                if not settings.get("theme"):
+                    settings["theme"] = "swizzin"
             self.original_data = data
             self.form_data = copy.deepcopy(data)
             self.modified_paths = set()
@@ -101,7 +107,13 @@ class SettingsFormState:
             config_path: Optional path to associate with this config
         """
         self.original_data = copy.deepcopy(data)
-        self.form_data = copy.deepcopy(data)
+        settings = self.original_data.get("settings")
+        if isinstance(settings, dict):
+            if not settings.get("state_dir") and settings.get("cache_dir"):
+                settings["state_dir"] = settings.get("cache_dir")
+            if not settings.get("theme"):
+                settings["theme"] = "swizzin"
+        self.form_data = copy.deepcopy(self.original_data)
         self.modified_paths = set()
         self.validation_errors = {}
         self.config_path = config_path
@@ -360,8 +372,10 @@ class SettingsFormState:
 
 # Default tabs for the settings page
 SETTINGS_TABS = [
+    ("application", "Application", "info"),
     ("general", "General", "settings"),
     ("quality", "Quality", "tune"),
+    ("themes", "Themes", "palette"),
     ("notifications", "Notifications", "notifications"),
     ("watcher", "File Watcher", "visibility"),
     ("integrations", "Integrations", "extension"),

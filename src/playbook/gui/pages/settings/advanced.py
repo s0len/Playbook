@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 import yaml
 from nicegui import ui
 
+from ...components.app_button import app_button
 from ...components.settings import settings_card
 
 if TYPE_CHECKING:
@@ -64,22 +65,27 @@ def _render_yaml_editor(state: SettingsFormState) -> None:
 
         with ui.row().classes("w-full items-center justify-between mt-4"):
             with ui.row().classes("gap-2"):
-                ui.button(
+                app_button(
                     "Format",
                     icon="format_align_left",
                     on_click=lambda: _format_yaml(editor),
-                ).props("outline")
-                ui.button(
+                    variant="outline",
+                    props="outline",
+                )
+                app_button(
                     "Validate",
                     icon="check_circle",
                     on_click=lambda: _validate_yaml(editor.value),
-                ).props("outline")
+                    variant="outline",
+                    props="outline",
+                )
 
-            ui.button(
+            app_button(
                 "Apply Changes",
                 icon="save",
                 on_click=lambda: _apply_yaml_changes(state, editor.value),
-            ).props("color=primary")
+                variant="primary",
+            )
 
         # Help text
         with ui.expansion(text="YAML Syntax Help", icon="help").props("dense").classes("mt-2"):
@@ -114,16 +120,20 @@ def _render_backups_section(state: SettingsFormState) -> None:
             ui.label("No backups found").classes("text-sm text-slate-500 dark:text-slate-400 italic")
 
         with ui.row().classes("w-full gap-2 mt-4"):
-            ui.button(
+            app_button(
                 "Create Backup",
                 icon="add",
                 on_click=lambda: _create_backup(state),
-            ).props("outline")
-            ui.button(
+                variant="outline",
+                props="outline",
+            )
+            app_button(
                 "Clean Old Backups",
                 icon="delete_sweep",
                 on_click=lambda: _clean_old_backups(state),
-            ).props("outline color=warning")
+                variant="outline",
+                props="outline",
+            )
 
 
 def _render_backup_row(state: SettingsFormState, backup_path: Path) -> None:
@@ -145,11 +155,11 @@ def _render_backup_row(state: SettingsFormState, backup_path: Path) -> None:
         ui.button(
             icon="restore",
             on_click=lambda p=backup_path: _restore_backup(state, p),
-        ).props("flat dense").classes("text-blue-600")
+        ).props("flat dense").classes("app-text-accent")
         ui.button(
             icon="delete",
             on_click=lambda p=backup_path: _delete_backup(p),
-        ).props("flat dense color=negative")
+        ).props("flat dense").classes("app-text-danger")
 
 
 def _render_import_export_section(state: SettingsFormState) -> None:
@@ -168,11 +178,13 @@ def _render_import_export_section(state: SettingsFormState) -> None:
                 ui.label("Download current configuration as YAML file").classes(
                     "text-xs text-slate-500 dark:text-slate-400"
                 )
-                ui.button(
+                app_button(
                     "Export",
                     icon="download",
                     on_click=lambda: _export_config(state),
-                ).props("outline")
+                    variant="outline",
+                    props="outline",
+                )
 
             # Import
             with ui.column().classes("flex-1 gap-2"):
@@ -187,11 +199,13 @@ def _render_import_export_section(state: SettingsFormState) -> None:
             with ui.column().classes("flex-1 gap-2"):
                 ui.label("Reset to Sample").classes("text-sm font-medium text-slate-700 dark:text-slate-200")
                 ui.label("Reset configuration to sample defaults").classes("text-xs text-slate-500 dark:text-slate-400")
-                ui.button(
+                app_button(
                     "Reset",
                     icon="restart_alt",
                     on_click=lambda: _reset_to_sample(state),
-                ).props("outline color=warning")
+                    variant="outline",
+                    props="outline",
+                )
 
 
 # Helper functions

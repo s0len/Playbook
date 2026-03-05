@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import tempfile
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import pytest
 
 from playbook.persistence import (
-    FileCategory,
     MatchAttempt,
     UnmatchedFileRecord,
     UnmatchedFileStore,
@@ -447,6 +444,22 @@ class TestUnmatchedFileStore:
         deleted = store.clear()
         assert deleted == 1
         assert store.get_count() == 0
+
+    def test_clear_manual_matches(self, store, sample_record):
+        """Test clearing only manual match markers."""
+        store.record_unmatched(sample_record)
+        store.mark_manually_matched(sample_record.source_path, "formula-1-2024", 1, 2)
+
+        updated = store.clear_manual_matches()
+        assert updated == 1
+
+        retrieved = store.get_by_source(sample_record.source_path)
+        assert retrieved is not None
+        assert retrieved.manually_matched is False
+        assert retrieved.matched_show_slug is None
+        assert retrieved.matched_season is None
+        assert retrieved.matched_episode is None
+        assert retrieved.matched_at is None
 
     def test_get_stats(self, store):
         """Test getting statistics."""

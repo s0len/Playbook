@@ -82,11 +82,11 @@ def status_icon(
         The icon element
     """
     icons = {
-        "matched": ("check_circle", "text-green-600 dark:text-green-400"),
-        "missing": ("radio_button_unchecked", "text-slate-400 dark:text-slate-500"),
-        "error": ("error", "text-red-600 dark:text-red-400"),
-        "enabled": ("check_circle", "text-green-600 dark:text-green-400"),
-        "disabled": ("cancel", "text-slate-400 dark:text-slate-500"),
+        "matched": ("check_circle", "app-text-success"),
+        "missing": ("radio_button_unchecked", "app-text-muted"),
+        "error": ("error", "app-text-danger"),
+        "enabled": ("check_circle", "app-text-success"),
+        "disabled": ("cancel", "app-text-muted"),
     }
 
     icon_name, color_class = icons.get(status, icons["missing"])

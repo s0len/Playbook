@@ -37,7 +37,7 @@ def settings_card(
     Yields:
         The column container for section content
     """
-    card_classes = "glass-card w-full opacity-60" if disabled else "glass-card w-full"
+    card_classes = "glass-card settings-surface w-full opacity-60" if disabled else "glass-card settings-surface w-full"
 
     with ui.card().classes(card_classes):
         if collapsible:
@@ -59,7 +59,7 @@ def settings_card(
                             with ui.row().classes("items-center gap-2"):
                                 ui.label(title).classes("text-lg font-semibold text-slate-700 dark:text-slate-200")
                                 if modified:
-                                    ui.badge("Modified").props("color=warning").classes("text-xs")
+                                    ui.badge("Modified").classes("text-xs app-badge app-badge-muted")
                             if description:
                                 ui.label(description).classes("text-sm text-slate-500 dark:text-slate-400")
 
@@ -75,7 +75,7 @@ def settings_card(
                     with ui.row().classes("items-center gap-2"):
                         ui.label(title).classes("text-lg font-semibold text-slate-700 dark:text-slate-200")
                         if modified:
-                            ui.badge("Modified").props("color=warning").classes("text-xs")
+                            ui.badge("Modified").classes("text-xs app-badge app-badge-muted")
                     if description:
                         ui.label(description).classes("text-sm text-slate-500 dark:text-slate-400")
 
@@ -100,6 +100,6 @@ def settings_section_header(
     with ui.row().classes("items-center gap-2 mt-2"):
         if icon:
             ui.icon(icon).classes("text-slate-400 dark:text-slate-500 text-lg")
-        ui.label(title).classes("text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide")
+        ui.label(title).classes("text-sm font-semibold text-slate-600 dark:text-slate-300")
     if description:
         ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400 mb-2")

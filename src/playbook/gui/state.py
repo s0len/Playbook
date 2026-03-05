@@ -66,6 +66,7 @@ class GUIState:
     log_buffer: deque[LogEntry] = field(default_factory=lambda: deque(maxlen=500))
 
     # Processing status
+    start_time: datetime = field(default_factory=datetime.now)
     is_processing: bool = False
     last_run_at: datetime | None = None
     run_count: int = 0

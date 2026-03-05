@@ -44,6 +44,8 @@ CONFIG_SCHEMA: dict[str, Any] = {
                 "source_dir": {"type": "string"},
                 "destination_dir": {"type": "string"},
                 "cache_dir": {"type": "string"},
+                "state_dir": {"type": "string"},
+                "theme": {"type": "string", "enum": ["swizzin", "catppuccin"]},
                 "dry_run": {"type": "boolean"},
                 "skip_existing": {"type": "boolean"},
                 "link_mode": {"type": "string", "enum": _LINK_MODES},

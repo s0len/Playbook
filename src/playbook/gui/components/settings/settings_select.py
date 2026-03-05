@@ -52,7 +52,7 @@ def settings_select(
         with ui.row().classes("items-center gap-2"):
             ui.label(label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
             if is_modified:
-                ui.icon("edit").classes("text-amber-500 text-xs")
+                ui.icon("edit").classes("app-text-warning text-xs")
 
         # Select
         select_props = "outlined dense"
@@ -72,7 +72,7 @@ def settings_select(
                 value=current_value,
                 on_change=handle_change,
             )
-            .classes("w-full")
+            .classes("w-full settings-input")
             .props(select_props)
         )
 
@@ -81,11 +81,7 @@ def settings_select(
 
         # Description or error
         if error:
-            error_classes = (
-                "text-xs text-red-600 dark:text-red-400"
-                if error.severity == "error"
-                else "text-xs text-amber-600 dark:text-amber-400"
-            )
+            error_classes = "text-xs app-text-danger" if error.severity == "error" else "text-xs app-text-warning"
             ui.label(error.message).classes(error_classes)
         elif description:
             ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400")
@@ -127,7 +123,7 @@ def settings_radio(
         with ui.row().classes("items-center gap-2"):
             ui.label(label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
             if is_modified:
-                ui.icon("edit").classes("text-amber-500 text-xs")
+                ui.icon("edit").classes("app-text-warning text-xs")
 
         def handle_change(e) -> None:
             state.set_value(path, e.value)

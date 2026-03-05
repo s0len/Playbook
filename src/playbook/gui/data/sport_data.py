@@ -204,12 +204,21 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
         len(show.seasons),
     )
 
-    # Get processed records for this sport
-    records_by_episode = _get_records_by_episode(sport_id)
+    # Get processed records for this sport and all sibling variants
+    # (variants that share the same name and show_slug are merged in the overview)
+    sibling_ids = _get_sibling_sport_ids(sport_config)
+    records_by_episode: dict[tuple[str, int, int], list[ProcessedFileRecord]] = {}
+    for sid in sibling_ids:
+        for key, recs in _get_records_by_episode(sid).items():
+            records_by_episode.setdefault(key, []).extend(recs)
+    # Re-sort merged records by quality_score descending
+    for key in records_by_episode:
+        records_by_episode[key].sort(key=lambda r: r.quality_score or 0, reverse=True)
     LOGGER.debug(
-        "get_sport_detail: found %d processed records for %s",
+        "get_sport_detail: found %d episode keys across %d sibling sport(s) %s",
         len(records_by_episode),
-        sport_id,
+        len(sibling_ids),
+        sibling_ids,
     )
 
     # Log sample of record keys for debugging
@@ -272,13 +281,17 @@ def get_sports_overview() -> list[SportOverview]:
     database and does NOT make network requests to load metadata. Total episode
     counts are not available in the list view to avoid blocking the UI.
 
+    Variants that share the same (name, show_slug) are merged into a single
+    row with summed matched counts (e.g. NFL 2025 + NFL 2026 → one NFL row).
+
     Returns:
         List of SportOverview for the sports list page
     """
     if not gui_state.config:
         return []
 
-    overviews = []
+    # Group variants by (name, show_slug) to merge cross-year duplicates
+    merged: dict[tuple[str, str], SportOverview] = {}
 
     for sport in gui_state.config.sports:
         # Get processed records count from local database only (fast)
@@ -290,25 +303,26 @@ def get_sports_overview() -> list[SportOverview]:
             except Exception as e:
                 LOGGER.warning("Failed to get processed records for %s: %s", sport.id, e)
 
-        # Note: total_count is 0 here - we don't load metadata in the list view
-        # to avoid blocking network requests. Full counts are shown in detail view.
-        # For display, prefer show_slug, fall back to template
         display_slug = sport.show_slug or sport.show_slug_template or ""
+        merge_key = (sport.name, display_slug)
 
-        overview = SportOverview(
-            sport_id=sport.id,
-            sport_name=sport.name,
-            show_slug=display_slug,
-            enabled=sport.enabled,
-            link_mode=sport.link_mode,
-            pattern_count=len(sport.patterns),
-            extensions=sport.source_extensions,
-            matched_count=matched_count,
-            total_count=0,  # Not loaded in list view for performance
-        )
-        overviews.append(overview)
+        if merge_key in merged:
+            # Add matched count to existing entry
+            merged[merge_key].matched_count += matched_count
+        else:
+            merged[merge_key] = SportOverview(
+                sport_id=sport.id,
+                sport_name=sport.name,
+                show_slug=display_slug,
+                enabled=sport.enabled,
+                link_mode=sport.link_mode,
+                pattern_count=len(sport.patterns),
+                extensions=sport.source_extensions,
+                matched_count=matched_count,
+                total_count=0,
+            )
 
-    return overviews
+    return list(merged.values())
 
 
 def _load_show_metadata(sport_config) -> tuple:
@@ -368,11 +382,12 @@ def _load_dynamic_show_metadata(sport_config) -> tuple:
     from playbook.metadata_loader import DynamicMetadataLoader
     from playbook.models import Show
 
-    # Discover which years have been processed
+    # Discover which years have been processed (check all sibling variants)
     tracked_slugs: set[str] = set()
     if gui_state.processed_store:
-        show_ids = gui_state.processed_store.get_show_ids_for_sport(sport_config.id)
-        tracked_slugs.update(show_ids)
+        for sid in _get_sibling_sport_ids(sport_config):
+            show_ids = gui_state.processed_store.get_show_ids_for_sport(sid)
+            tracked_slugs.update(show_ids)
 
     # Always try current year (may not have processed files yet)
     current_year = datetime.now().year
@@ -497,6 +512,27 @@ def _build_source_glob_info(sport_config) -> list[SourceGlobInfo]:
             )
 
     return result
+
+
+def _get_sibling_sport_ids(sport_config) -> list[str]:
+    """Find all sport config IDs that share the same (name, show_slug) merge key.
+
+    This matches the merge logic in get_sports_overview() so that the detail
+    view aggregates records from all variants that appear as one row.
+    """
+    if not gui_state.config:
+        return [sport_config.id]
+
+    display_slug = sport_config.show_slug or sport_config.show_slug_template or ""
+    merge_key = (sport_config.name, display_slug)
+
+    siblings = []
+    for sport in gui_state.config.sports:
+        other_slug = sport.show_slug or sport.show_slug_template or ""
+        if (sport.name, other_slug) == merge_key:
+            siblings.append(sport.id)
+
+    return siblings or [sport_config.id]
 
 
 def _get_records_by_episode(sport_id: str) -> dict[tuple[str, int, int], list[ProcessedFileRecord]]:

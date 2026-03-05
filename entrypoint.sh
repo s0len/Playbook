@@ -8,7 +8,46 @@ if [ "${DEBUG:-false}" = "true" ]; then
   set -x
 fi
 
-: "${CONFIG_PATH:=/config/playbook.yaml}"
+DEFAULT_CONFIG_PATH="/config/config.yaml"
+LEGACY_CONFIG_PATH="/config/playbook.yaml"
+
+if [ -z "${CONFIG_PATH:-}" ]; then
+  if [ -f "$DEFAULT_CONFIG_PATH" ]; then
+    CONFIG_PATH="$DEFAULT_CONFIG_PATH"
+  elif [ -f "$LEGACY_CONFIG_PATH" ]; then
+    CONFIG_PATH="$LEGACY_CONFIG_PATH"
+    echo "INFO: Using legacy config path $LEGACY_CONFIG_PATH" >&2
+  else
+    CONFIG_PATH="$DEFAULT_CONFIG_PATH"
+  fi
+fi
+
+bootstrap_minimal_config() {
+  local config_path="$1"
+  local config_dir
+  config_dir="$(dirname "$config_path")"
+
+  mkdir -p "$config_dir"
+  cat >"$config_path" <<'YAML'
+settings:
+  source_dir: /data/source
+  destination_dir: /data/destination
+  cache_dir: /data/cache
+  state_dir: /config/state
+  theme: swizzin
+  dry_run: false
+  skip_existing: true
+  link_mode: hardlink
+
+sports: []
+YAML
+
+  echo "INFO: Created minimal config at $config_path" >&2
+}
+
+if [ ! -f "$CONFIG_PATH" ]; then
+  bootstrap_minimal_config "$CONFIG_PATH"
+fi
 
 if ! command -v python3 >/dev/null 2>&1; then
   echo "Python 3 is required but not found on PATH" >&2
@@ -99,8 +138,19 @@ require_path_setting "SOURCE_DIR" "source_dir"
 require_path_setting "DESTINATION_DIR" "destination_dir"
 require_path_setting "CACHE_DIR" "cache_dir"
 
+if [ -z "${STATE_DIR:-}" ]; then
+  state_value=""
+  state_status=0
+  state_value=$(read_config_setting "$CONFIG_PATH" "state_dir") || state_status=$?
+  if [ "$state_status" -eq 0 ]; then
+    export STATE_DIR="$state_value"
+  else
+    export STATE_DIR="$CACHE_DIR"
+  fi
+fi
+
 : "${DRY_RUN:=false}"
 
-export CONFIG_PATH SOURCE_DIR DESTINATION_DIR CACHE_DIR DRY_RUN
+export CONFIG_PATH SOURCE_DIR DESTINATION_DIR CACHE_DIR STATE_DIR DRY_RUN
 
 exec python3 -m playbook.cli "$@"

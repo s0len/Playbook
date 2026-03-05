@@ -19,7 +19,7 @@ from .components.header import header
 from .log_handler import install_gui_log_handler
 from .pages import dashboard, logs, settings, sports, unmatched
 from .state import gui_state
-from .styles import setup_page_styles
+from .styles import apply_color_theme, setup_page_styles
 from .utils import suppress_nicegui_disconnect_errors
 
 if TYPE_CHECKING:
@@ -98,6 +98,12 @@ def _page_wrapper(page_fn: callable, current_path: str = "/") -> None:
     # Force dark mode (light mode removed)
     ui.dark_mode(True)
 
+    # Apply selected GUI color theme
+    selected_theme = "swizzin"
+    if gui_state.config and gui_state.config.settings:
+        selected_theme = getattr(gui_state.config.settings, "theme", "swizzin") or "swizzin"
+    apply_color_theme(str(selected_theme))
+
     # Add sidebar
     header(current_path=current_path)
 
@@ -162,8 +168,9 @@ def run_with_gui(
     gui_state.unmatched_store = processor.unmatched_store
     gui_state.manual_override_store = processor.manual_override_store
 
-    # Set NiceGUI storage path to cache directory (avoids permission issues in containers)
-    storage_path = app_config.settings.cache_dir / ".nicegui"
+    # Set NiceGUI storage path to persistent state directory
+    state_dir = app_config.settings.state_dir or app_config.settings.cache_dir
+    storage_path = state_dir / ".nicegui"
     storage_path.mkdir(parents=True, exist_ok=True)
     app.storage.path = storage_path
     LOGGER.debug("NiceGUI storage path: %s", storage_path)

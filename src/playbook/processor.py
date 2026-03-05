@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import shutil
 import time
 from collections.abc import Iterable, Mapping
 from datetime import datetime
@@ -11,7 +12,12 @@ from rich.progress import Progress
 
 from .config import AppConfig
 from .destination_builder import build_destination, build_match_context, format_relative_destination
-from .file_discovery import gather_source_files, matches_globs, should_suppress_sample_ignored
+from .file_discovery import (
+    gather_source_files,
+    matches_globs,
+    matches_include_ignore_patterns,
+    should_suppress_sample_ignored,
+)
 from .kometa_trigger import build_kometa_trigger
 from .logging_utils import render_fields_block
 from .match_handler import handle_match
@@ -54,18 +60,30 @@ class Processor:
         trace_options: TraceOptions | None = None,
     ) -> None:
         self.config = config
+        state_dir = self._resolve_state_dir(self.config)
         if not self.config.settings.dry_run:
             ensure_directory(self.config.settings.destination_dir)
             ensure_directory(self.config.settings.cache_dir)
+            ensure_directory(state_dir)
         self.metadata_fingerprints = MetadataFingerprintStore(self.config.settings.cache_dir)
-        self.processed_store = ProcessedFileStore(self.config.settings.cache_dir / "playbook.db")
-        self.unmatched_store = UnmatchedFileStore(self.config.settings.cache_dir / "playbook.db")
-        self.manual_override_store = ManualOverrideStore(self.config.settings.cache_dir / "playbook.db")
+        main_db_path = state_dir / "playbook.db"
+        manual_override_db_path = state_dir / "playbook-manual-overrides.db"
+        legacy_main_db_path = self.config.settings.cache_dir / "playbook.db"
+        self._migrate_state_databases_if_needed(
+            legacy_main_db_path=legacy_main_db_path,
+            legacy_manual_override_db_path=self.config.settings.cache_dir.parent / "playbook-manual-overrides.db",
+            main_db_path=main_db_path,
+            manual_override_db_path=manual_override_db_path,
+        )
+        self.processed_store = ProcessedFileStore(main_db_path)
+        self.unmatched_store = UnmatchedFileStore(main_db_path)
+        self.manual_override_store = ManualOverrideStore(manual_override_db_path)
+        self._migrate_legacy_manual_overrides(legacy_main_db_path)
         self.trace_options = trace_options or TraceOptions()
         settings = self.config.settings
         self.notification_service = NotificationService(
             settings.notifications,
-            cache_dir=settings.cache_dir,
+            cache_dir=state_dir,
             destination_dir=settings.destination_dir,
             enabled=enable_notifications,
             integrations=settings.integrations,
@@ -94,11 +112,12 @@ class Processor:
         """
         self.config = new_config
         settings = new_config.settings
+        state_dir = self._resolve_state_dir(new_config)
 
         # Rebuild notification service with new settings
         self.notification_service = NotificationService(
             settings.notifications,
-            cache_dir=settings.cache_dir,
+            cache_dir=state_dir,
             destination_dir=settings.destination_dir,
             enabled=self._enable_notifications,
             integrations=settings.integrations,
@@ -109,6 +128,60 @@ class Processor:
         self._plex_sync = create_plex_sync_from_config(new_config)
 
         LOGGER.info("Reloaded processor services after configuration change")
+
+    @staticmethod
+    def _resolve_state_dir(config: AppConfig) -> Path:
+        state_dir = config.settings.state_dir
+        return state_dir if state_dir is not None else config.settings.cache_dir
+
+    def _migrate_state_databases_if_needed(
+        self,
+        *,
+        legacy_main_db_path: Path,
+        legacy_manual_override_db_path: Path,
+        main_db_path: Path,
+        manual_override_db_path: Path,
+    ) -> None:
+        """Copy legacy state databases into the configured state directory.
+
+        This migration is safe and non-destructive: it only copies when the new
+        destination file does not already exist.
+        """
+
+        migrations = [
+            (legacy_main_db_path, main_db_path, "Processed/Unmatched DB"),
+            (legacy_manual_override_db_path, manual_override_db_path, "Manual Overrides DB"),
+        ]
+        for source, destination, label in migrations:
+            if source.resolve() == destination.resolve():
+                continue
+            if not source.exists() or destination.exists():
+                continue
+            try:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, destination)
+                LOGGER.info(
+                    self._format_log(
+                        "State Database Migrated",
+                        {
+                            "Type": label,
+                            "From": source,
+                            "To": destination,
+                        },
+                    )
+                )
+            except Exception as exc:  # noqa: BLE001
+                LOGGER.warning(
+                    self._format_log(
+                        "State Database Migration Failed",
+                        {
+                            "Type": label,
+                            "From": source,
+                            "To": destination,
+                            "Reason": str(exc),
+                        },
+                    )
+                )
 
     def request_cancel(self) -> None:
         """Request cancellation of the current processing run.
@@ -198,6 +271,81 @@ class Processor:
             )
         )
 
+    def clear_manual_overrides(self) -> None:
+        """Clear all persisted manual overrides and GUI manual-match markers."""
+        if self.config.settings.dry_run:
+            LOGGER.debug(self._format_log("Dry-Run: Skipping Manual Override Clear", {}))
+            return
+
+        cleared_overrides = self.manual_override_store.clear()
+        cleared_unmatched_flags = self.unmatched_store.clear_manual_matches()
+        LOGGER.info(
+            self._format_log(
+                "Manual Overrides Cleared",
+                {
+                    "Overrides Deleted": cleared_overrides,
+                    "Unmatched Manual Flags Cleared": cleared_unmatched_flags,
+                },
+            )
+        )
+
+    def _migrate_legacy_manual_overrides(self, legacy_db_path: Path) -> None:
+        """Migrate manual overrides from the old shared cache database.
+
+        Older versions stored manual overrides in `cache_dir/playbook.db`.
+        Newer versions keep overrides in a dedicated database next to cache dir
+        so cache clearing does not remove manual match mappings.
+        """
+        current_count = self.manual_override_store.get_count()
+        if current_count > 0:
+            return
+
+        try:
+            legacy_store = ManualOverrideStore(legacy_db_path)
+            legacy_count = legacy_store.get_count()
+            if legacy_count == 0:
+                return
+
+            migrated = 0
+            offset = 0
+            batch_size = 500
+            while True:
+                batch = legacy_store.get_all(limit=batch_size, offset=offset)
+                if not batch:
+                    break
+                for override in batch:
+                    self.manual_override_store.add_override(
+                        filename=override.filename,
+                        sport_id=override.sport_id,
+                        show_slug=override.show_slug,
+                        season_index=override.season_index,
+                        episode_index=override.episode_index,
+                        source_path=override.source_path,
+                    )
+                    migrated += 1
+                offset += batch_size
+
+            if migrated:
+                LOGGER.info(
+                    self._format_log(
+                        "Manual Overrides Migrated",
+                        {
+                            "Legacy DB": legacy_db_path,
+                            "Migrated": migrated,
+                        },
+                    )
+                )
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.warning(
+                self._format_log(
+                    "Manual Override Migration Skipped",
+                    {
+                        "Legacy DB": legacy_db_path,
+                        "Reason": str(exc),
+                    },
+                )
+            )
+
     def process_all(self) -> ProcessingStats:
         # Reset state and cancellation flag for new run
         self._state.reset()
@@ -237,6 +385,7 @@ class Processor:
             self._state.stale_records = removed_records
         stats = ProcessingStats()
         run_started = time.perf_counter()
+        scan_started_at = datetime.now()
 
         try:
             all_source_files = list(self._gather_source_files(stats))
@@ -308,6 +457,18 @@ class Processor:
                         is_sample_file=is_sample_file,
                     )
                     if not handled:
+                        watcher_settings = self.config.settings.file_watcher
+                        if not matches_include_ignore_patterns(
+                            source_path,
+                            watcher_settings.include,
+                            watcher_settings.ignore,
+                        ):
+                            stats.register_ignored(
+                                f"Excluded by include/ignore patterns: {source_path.name}",
+                            )
+                            progress.advance(task_id, 1)
+                            continue
+
                         if is_sample_file:
                             stats.register_ignored(suppressed_reason="sample")
                         else:
@@ -319,6 +480,16 @@ class Processor:
                         if not self.config.settings.dry_run:
                             self._record_unmatched_file(source_path, diagnostics, match_attempts)
                     progress.advance(task_id, 1)
+
+            # Prune unmatched records for files that no longer exist on disk.
+            # Any record whose last_seen was not updated during this scan refers
+            # to a file that was renamed, moved, or deleted since the last run.
+            if not self.config.settings.dry_run and not stats.cancelled:
+                pruned = self.unmatched_store.delete_stale(scan_started_at)
+                if pruned:
+                    LOGGER.info(
+                        self._format_log("Unmatched Cleanup", {"Pruned Stale Records": pruned}),
+                    )
 
             summary_counts = (stats.processed, stats.skipped, stats.ignored)
             summary_changed = summary_counts != self._state.previous_summary
@@ -626,7 +797,7 @@ class Processor:
         if runtime.is_dynamic:
             # For dynamic sports, try to load the show via the dynamic loader
             try:
-                dynamic_show = self._dynamic_loader.get_show_for_year(override.show_slug)
+                dynamic_show = self._dynamic_loader.load_show(override.show_slug, runtime.sport.season_overrides)
                 if dynamic_show:
                     show = dynamic_show
             except Exception:

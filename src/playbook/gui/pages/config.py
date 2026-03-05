@@ -14,6 +14,7 @@ from pathlib import Path
 import yaml
 from nicegui import ui
 
+from ..components.app_button import app_button
 from ..state import gui_state
 
 LOGGER = logging.getLogger(__name__)
@@ -42,25 +43,30 @@ def config_page() -> None:
                 save_indicator = ui.label("").classes("text-sm")
 
                 # Validate button
-                validate_btn = ui.button(
+                validate_btn = app_button(
                     "Validate",
                     icon="check_circle",
                     on_click=lambda: _validate_config(editor.value, validation_panel, state, validate_btn),
-                ).props("outline")
+                    variant="outline",
+                    props="outline",
+                )
 
                 # Save button
-                save_btn = ui.button(
+                save_btn = app_button(
                     "Save",
                     icon="save",
                     on_click=lambda: _save_config(editor.value, state, save_btn, save_indicator),
-                ).props("color=primary")
+                    variant="primary",
+                )
 
                 # Reset button
-                ui.button(
+                app_button(
                     "Reset",
                     icon="undo",
                     on_click=lambda: _reset_config(editor, original_text, state),
-                ).props("outline")
+                    variant="outline",
+                    props="outline",
+                )
 
         # Main content: Editor + Validation panel
         with ui.row().classes("w-full gap-4"):
@@ -84,7 +90,7 @@ def config_page() -> None:
                     state["modified"] = e.value != original_text
                     if state["modified"]:
                         save_indicator.text = "Modified"
-                        save_indicator.classes(replace="text-amber-600 dark:text-amber-400 text-sm")
+                        save_indicator.classes(replace="text-sm app-text-warning")
                     else:
                         save_indicator.text = ""
 
@@ -118,12 +124,12 @@ def config_page() -> None:
                             "Documentation",
                             "https://s0len.github.io/Playbook/",
                             new_tab=True,
-                        ).classes("text-sm text-blue-600 dark:text-blue-400")
+                        ).classes("text-sm app-link")
                         ui.link(
                             "Sample Config",
                             "https://github.com/s0len/Playbook/blob/main/config/playbook.sample.yaml",
                             new_tab=True,
-                        ).classes("text-sm text-blue-600 dark:text-blue-400")
+                        ).classes("text-sm app-link")
 
 
 def _load_config_yaml() -> str:
@@ -198,10 +204,10 @@ def _validate_config(yaml_text: str, panel: ui.column, state: dict, button: ui.b
 
     # Update button
     if state["valid"]:
-        button.props("color=positive")
+        button.classes(remove="app-btn-danger").classes(add="app-btn-outline")
         ui.notify("Configuration is valid", type="positive")
     else:
-        button.props("color=negative")
+        button.classes(remove="app-btn-outline").classes(add="app-btn-danger")
         ui.notify("Configuration has errors", type="negative")
 
 
@@ -209,15 +215,15 @@ def _validation_message(msg_type: str, message: str) -> None:
     """Render a validation message."""
     colors = {
         "error": (
-            "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300",
+            "app-alert app-alert-danger app-text-danger",
             "error",
         ),
         "warning": (
-            "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300",
+            "app-alert app-alert-warning app-text-warning",
             "warning",
         ),
         "success": (
-            "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300",
+            "app-alert app-alert-success app-text-success",
             "check_circle",
         ),
     }
@@ -258,7 +264,7 @@ def _save_config(yaml_text: str, state: dict, button: ui.button, indicator: ui.l
 
         state["modified"] = False
         indicator.text = "Saved"
-        indicator.classes(replace="text-green-600 dark:text-green-400 text-sm")
+        indicator.classes(replace="text-sm app-text-success")
 
         ui.notify("Configuration saved successfully", type="positive")
         LOGGER.info("Configuration saved to %s", gui_state.config_path)

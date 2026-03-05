@@ -660,6 +660,30 @@ class UnmatchedFileStore:
         conn.commit()
         return cursor.rowcount
 
+    def clear_manual_matches(self) -> int:
+        """Clear manual-match markers from unmatched records.
+
+        This keeps unmatched history intact while removing user-applied
+        manual match metadata.
+
+        Returns:
+            Number of records updated
+        """
+        conn = self._get_connection()
+        cursor = conn.execute(
+            """
+            UPDATE unmatched_files
+            SET manually_matched = 0,
+                matched_show_slug = NULL,
+                matched_season = NULL,
+                matched_episode = NULL,
+                matched_at = NULL
+            WHERE manually_matched = 1
+            """
+        )
+        conn.commit()
+        return cursor.rowcount
+
     def iter_all(self) -> Iterator[UnmatchedFileRecord]:
         """Iterate over all records.
 

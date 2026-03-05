@@ -5,168 +5,110 @@
 [![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fs0len%2Fplaybook-0db7ed.svg?logo=docker&logoColor=white)](https://github.com/users/s0len/packages/container/package/playbook)
 [![Docs](https://img.shields.io/badge/docs-View%20Documentation-0f172a.svg?logo=book&logoColor=white)](https://s0len.github.io/Playbook/)
 
-**Sonarr for Sports** – Automated file matching, renaming, and metadata for sports content in Plex.
+**Sonarr for Sports** – automated sports file matching, naming, and organization for Plex.
 
-> Metadata-driven automation that turns chaotic sports releases into Plex-perfect TV libraries—no brittle scripts, just declarative YAML.
+Playbook watches your downloads, identifies what each file actually is (race, match, event), then creates clean TV-style files and folders in your media library.
 
-## The Problem
+## What Playbook Solves
 
-Love watching sports replays in Plex but hate manually renaming files and setting metadata? Traditional tools like Sonarr don't work for sports because there's no centralized database like TheTVDB. Every sport structures their seasons differently (F1 has races, UFC has events, NFL has weeks), and release groups use wildly inconsistent naming schemes.
+Sports releases are messy:
+- Inconsistent naming (`F1`, `Formula.1`, `R05`, `Round 5`, etc.)
+- Different season models by sport (events, rounds, weeks)
+- Manual renaming and moving every day
 
-## How Playbook Solves It
+Playbook fixes that by combining:
+- Metadata-driven matching (show/season/episode model)
+- Built-in sport pattern packs (F1, MotoGP, UFC, NFL, NBA, NHL, Premier League, and more)
+- Smart linking (`hardlink`, `copy`, `symlink`) into your Plex structure
+- Optional notifications and Plex/Kometa integrations
 
-Playbook is a complete pipeline that bridges the gap between messy downloads and perfectly organized Plex libraries:
+## TL;DR Quick Start (Docker Compose)
 
-### 1. **The Database Layer**
+This is the easiest first run. Copy, edit two paths, and start.
 
-Custom scrapers pull sports schedules from various sources (SportsDB, official APIs, manual curation) and structure them as YAML files that mirror how Plex expects TV shows: Show → Season → Episode. This is the foundation – every sport gets its own "TVDb" equivalent.
-
-### 2. **Smart File Matching** (like Sonarr)
-
-Playbook scans your downloads, parses filenames using regex patterns (built-in packs for F1, MotoGP, UFC, NFL, NBA, NHL, etc.), matches them against the YAML database, and automatically renames/moves them to your Plex library with perfect naming.
-
-### 3. **Rich Metadata** (via Kometa)
-
-The same YAML files that power matching also feed Kometa to set posters, summaries, air dates, and episode titles. One source of truth for everything.
-
-## Why It's a Game-Changer
-
-- **One YAML file** does it all: episode matching + metadata + Kometa integration
-- **Declarative**: Swap leagues, change folder structures, or add new release groups without touching Python
-- **Complete automation**: From download to Plex-ready with proper artwork and descriptions
-- **Built for sports**: Handles special cases like sprint races, prelims, qualifying sessions, and multi-part events
-
-## Quick Verification
-
-Before running for real, test with a dry-run to confirm metadata downloads and filesystem access:
-
-```bash
-docker run --rm -it \
-  -e DRY_RUN=true \
-  -e VERBOSE=true \
-  -e SOURCE_DIR="/downloads" \
-  -e DESTINATION_DIR="/library" \
-  -e CACHE_DIR="/cache" \
-  -v /config:/config \
-  -v /downloads:/data/source \
-  -v /library:/data/destination \
-  -v /cache:/var/cache/playbook \
-  ghcr.io/s0len/playbook:latest --dry-run --verbose
+```yaml
+services:
+  playbook:
+    image: ghcr.io/s0len/playbook:latest
+    container_name: playbook
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+      GUI_PORT: 8765
+      CONFIG_PATH: /config/config.yaml
+    ports:
+      - "8765:8765"
+    volumes:
+      - ./config:/config              # config + persistent state db
+      - /path/to/downloads:/data/source
+      - /path/to/library:/data/destination
+      - ./cache:/data/cache           # metadata cache (can be tmpfs if desired)
 ```
 
-## Table of Contents
+Start it:
 
-- [Playbook](#playbook)
-  - [The Problem](#the-problem)
-  - [How Playbook Solves It](#how-playbook-solves-it)
-    - [1. **The Database Layer**](#1-the-database-layer)
-    - [2. **Smart File Matching** (like Sonarr)](#2-smart-file-matching-like-sonarr)
-    - [3. **Rich Metadata** (via Kometa)](#3-rich-metadata-via-kometa)
-  - [Why It's a Game-Changer](#why-its-a-game-changer)
-  - [Quick Verification](#quick-verification)
-  - [Table of Contents](#table-of-contents)
-  - [Quickstart](#quickstart)
-    - [Option A: Docker (Recommended)](#option-a-docker-recommended)
-    - [Option B: Python Environment](#option-b-python-environment)
-    - [Option C: Kubernetes (Flux HelmRelease)](#option-c-kubernetes-flux-helmrelease)
-  - [Architecture at a Glance](#architecture-at-a-glance)
-  - [Configuration Deep Dive](#configuration-deep-dive)
-    - [1. Global Settings](#1-global-settings)
-      - [Notification targets \& Autoscan](#notification-targets--autoscan)
-    - [2. Sport Entries](#2-sport-entries)
-    - [3. Pattern Matching](#3-pattern-matching)
-    - [4. Destination Templating](#4-destination-templating)
-    - [5. Variants \& Reuse](#5-variants--reuse)
-  - [Run Modes \& CLI](#run-modes--cli)
-    - [Config Validation](#config-validation)
-  - [Logging \& Observability](#logging--observability)
-  - [Directory Conventions](#directory-conventions)
-  - [Plex Metadata via Kometa](#plex-metadata-via-kometa)
-    - [Example Kometa config](#example-kometa-config)
-    - [Triggering Kometa After Ingests](#triggering-kometa-after-ingests)
-      - [Kubernetes CronJob trigger](#kubernetes-cronjob-trigger)
-      - [Docker Run trigger](#docker-run-trigger)
-        - [Docker prerequisites inside the Playbook container](#docker-prerequisites-inside-the-playbook-container)
-      - [Manual trigger CLI](#manual-trigger-cli)
-  - [Downloading Sports with Autobrr](#downloading-sports-with-autobrr)
-    - [Basic Autobrr setup](#basic-autobrr-setup)
-    - [Example regexes](#example-regexes)
-  - [Plex Library Setup](#plex-library-setup)
-  - [Extending to New Sports](#extending-to-new-sports)
-  - [Troubleshooting \& FAQ](#troubleshooting--faq)
-  - [Development](#development)
-  - [Roadmap](#roadmap)
-  - [License](#license)
-  - [Support](#support)
-  - [Sample NHL Regular Season Filenames](#sample-nhl-regular-season-filenames)
-  - [Sample Figure Skating Grand Prix Filenames](#sample-figure-skating-grand-prix-filenames)
+```bash
+docker compose up -d
+```
 
-## Quickstart
+Open GUI:
 
-Before running the organizer for real, confirm:
+```text
+http://<host-ip>:8765
+```
 
-- `playbook.yaml` exists (copy `config/playbook.sample.yaml` and tailor it).
-- `SOURCE_DIR`, `DESTINATION_DIR`, and `CACHE_DIR` point at mounted paths with the right permissions.
-- You can reach the remote metadata URLs from the host/container (validate with the dry-run above).
+On first run, Playbook auto-creates `/config/config.yaml` if missing. You can then configure everything in the GUI and click Save.
 
-### Option A: Docker (Recommended)
-
-> **Important:** The container validates that `SOURCE_DIR`, `DESTINATION_DIR`, and `CACHE_DIR` are defined through environment variables or the `settings` block in your config. It exits with an error instead of silently creating `/data/...` defaults, so wire these paths explicitly.
+## Minimal `docker run` Alternative
 
 ```bash
 docker run -d \
   --name playbook \
-  -e TZ="UTC" \
-  -e SOURCE_DIR="/downloads" \
-  -e DESTINATION_DIR="/library" \
-  -e CACHE_DIR="/cache" \
-  -v /config:/config \
-  -v /downloads:/data/source \
-  -v /library:/data/destination \
-  -v /cache:/var/cache/playbook \
-  -v /logs:/var/log/playbook \
+  -p 8765:8765 \
+  -e TZ=UTC \
+  -e GUI_PORT=8765 \
+  -e CONFIG_PATH=/config/config.yaml \
+  -v ./config:/config \
+  -v /path/to/downloads:/data/source \
+  -v /path/to/library:/data/destination \
+  -v ./cache:/data/cache \
   ghcr.io/s0len/playbook:latest
 ```
 
-1. Copy the sample configuration: `cp config/playbook.sample.yaml /config/playbook.yaml`.
-2. Update `playbook.yaml` with your directories, enabled sports, and any overrides.
-3. Tail the logs (`docker logs -f playbook`) to watch the first pass.
+## First-Run Checklist
 
-> Tip: Dry-run everything first.
->
-> ```bash
-> docker run --rm -it \
->   -e DRY_RUN=true \
->   -e VERBOSE=true \
->   -e SOURCE_DIR="/downloads" \
->   -e DESTINATION_DIR="/library" \
->   -e CACHE_DIR="/cache" \
->   -v /config:/config \
->   -v /downloads:/data/source \
->   -v /library:/data/destination \
->   -v /cache:/var/cache/playbook \
->   -v /logs:/var/log/playbook \
->   ghcr.io/s0len/playbook:latest --dry-run --verbose
-> ```
+1. Open `Settings` in the GUI.
+2. Verify `Source Directory` and `Destination Directory`.
+3. Keep default `State Directory` persistent (`/config/state`).
+4. Enable the sports you want.
+5. Click `Save`.
+6. Trigger processing from dashboard or wait for watcher mode.
 
-### Option B: Python Environment
+## Storage Model (Important)
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python -m playbook.cli --config /path/to/playbook.yaml --dry-run --verbose
-```
+Playbook now separates persistent state from cache:
 
-Tips:
+- `state_dir` (default: `/config/state`): SQLite databases and durable app state.
+- `cache_dir` (default: `/data/cache`): metadata cache and trace artifacts.
 
-- Set `SOURCE_DIR`, `DESTINATION_DIR`, and `CACHE_DIR` env vars (or the equivalent entries in `settings`)—the container will refuse to start if these are missing.
-- Use `LOG_LEVEL=DEBUG` or `VERBOSE=true` to mirror the Docker verbosity locally.
-- When running from source, the entrypoint script `entrypoint.sh` mirrors the Docker environment variable contract.
+This means you can keep `cache_dir` disposable/temporary while preserving match history and manual overrides in `state_dir`.
 
-### Option C: Kubernetes (Flux HelmRelease)
+## Table of Contents
 
-Use the [bjw-s/app-template](https://github.com/bjw-s/helm-charts/tree/main/charts/other/app-template) chart with Flux to keep a cluster deployment reconciled. The example below mirrors the Docker settings and mounts persistent cache/log directories alongside the config file:
+- [Playbook](#playbook)
+- [What Playbook Solves](#what-playbook-solves)
+- [TL;DR Quick Start (Docker Compose)](#tldr-quick-start-docker-compose)
+- [Minimal `docker run` Alternative](#minimal-docker-run-alternative)
+- [First-Run Checklist](#first-run-checklist)
+- [Storage Model (Important)](#storage-model-important)
+- [Architecture at a Glance](#architecture-at-a-glance)
+- [Configuration Deep Dive](#configuration-deep-dive)
+- [Run Modes & CLI](#run-modes--cli)
+- [Troubleshooting & FAQ](#troubleshooting--faq)
+
+## Kubernetes (Flux HelmRelease)
+
+Use the [bjw-s/app-template](https://github.com/bjw-s/helm-charts/tree/main/charts/other/app-template) chart with Flux to keep a cluster deployment reconciled. The example below mirrors the Docker settings and keeps persistent state under `/config`:
 
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
@@ -192,8 +134,9 @@ spec:
             env:
               WATCH_MODE: true
               LOG_LEVEL: INFO
-              CONFIG_PATH: /config/playbook.yaml
-              CACHE_DIR: /settings/cache
+              CONFIG_PATH: /config/config.yaml
+              CACHE_DIR: /data/cache
+              STATE_DIR: /config/state
               LOG_DIR: /settings/logs
               SOURCE_DIR: /data/torrents/sport
               DESTINATION_DIR: /data/media/sport
@@ -215,16 +158,16 @@ spec:
         type: configMap
         name: playbook-configmap
         globalMounts:
-          - path: /config/playbook.yaml
-            subPath: playbook.yaml
+          - path: /config/config.yaml
+            subPath: config.yaml
             readOnly: true
 ```
 
 Quick checklist:
 
 - Create a `playbook-secret` with any sensitive values (`kubectl create secret generic ... --from-literal=API_TOKEN=...`).
-- Mount a `playbook-configmap` containing your `playbook.yaml` (or use an `externalSecret`).
-- Backing storage: either bind an existing PVC (`settings`) for cache/logs or swap in another persistence strategy. The NFS block mounts downloads and media libraries.
+- Mount a `playbook-configmap` containing your `config.yaml` (or use an `externalSecret`).
+- Backing storage: persist `/config` (for `state_dir`) and choose persistent or ephemeral storage for `/data/cache`.
 - Enable `file_watcher.enabled` (or set `WATCH_MODE=true`) to keep Playbook running continuously; leave it disabled for ad-hoc batch runs.
 - Add `reloader.stakater.com/auto: "true"` (already in the example) to hot-reload when the config map changes.
 
@@ -269,6 +212,7 @@ Start with `config/playbook.sample.yaml`. The schema mirrors `playbook.config` d
 | `source_dir` | Root directory containing downloads to normalize. | `/data/source` |
 | `destination_dir` | Library root where organized folders/files are created. | `/data/destination` |
 | `cache_dir` | Metadata cache directory (`metadata/<hash>.json`). Safe to delete to force refetch. | `/data/cache` |
+| `state_dir` | Persistent state directory for SQLite DBs and durable runtime state. | `/config/state` |
 | `dry_run` | When `true`, logs intent but skips filesystem writes. | `false` |
 | `skip_existing` | Leave destination files untouched unless a higher-priority release arrives. | `true` |
 | `link_mode` | Default link behavior: `hardlink`, `copy`, or `symlink`. | `hardlink` |
@@ -444,7 +388,7 @@ Each variant inherits the base config, tweaks fields from the variant block, and
 
 | CLI Flag | Environment | Default | Notes |
 |----------|-------------|---------|-------|
-| `--config PATH` | `CONFIG_PATH` | `/config/playbook.yaml` | Path to the YAML config. |
+| `--config PATH` | `CONFIG_PATH` | `/config/config.yaml` | Path to the YAML config. |
 | `--dry-run` | `DRY_RUN` | Inherits `settings.dry_run` | Force no-write mode. |
 | `--verbose` | `VERBOSE` / `DEBUG` | `false` | Enables console DEBUG output. |
 | `--log-level LEVEL` | `LOG_LEVEL` | `INFO` (or `DEBUG` with `--verbose`) | File log level. |
@@ -453,6 +397,9 @@ Each variant inherits the base config, tweaks fields from the variant block, and
 | `--clear-processed-cache` | `CLEAR_PROCESSED_CACHE` | `false` | Truthy to reset processed file cache before processing. |
 | `--watch` | `WATCH_MODE=true` | `settings.file_watcher.enabled` | Force filesystem watcher mode (keep Playbook running). |
 | `--no-watch` | `WATCH_MODE=false` | `false` | Disable watcher mode even if the config enables it. |
+| `--gui` | `GUI_ENABLED=true` | `true` | Force-enable GUI mode. |
+| `--no-gui` | `GUI_ENABLED=false` | `false` | Disable GUI mode and run CLI-only processing. |
+| `--gui-port PORT` | `GUI_PORT` | `8765` | GUI web port. |
 
 Environment variables always win over config defaults, and CLI flags win over environment variables.
 
@@ -488,7 +435,7 @@ All help content is formatted with colors and icons for easy scanning. On non-in
 Preflight your YAML before running the processor:
 
 ```bash
-python -m playbook.cli validate-config --config /config/playbook.yaml --diff-sample
+python -m playbook.cli validate-config --config /config/config.yaml --diff-sample
 ```
 
 The validator enforces the JSON schema, confirms referenced pattern sets exist, and then calls the same loader used by the runtime. Add `--show-trace` to surface Python tracebacks for deeper debugging. `--diff-sample` compares your file to `config/playbook.sample.yaml` to highlight customizations.
@@ -643,7 +590,7 @@ For absolute control you can provide `docker.exec_command` (a list such as `["py
 Need to test the integration without running the full ingest loop? Use the dedicated CLI helper:
 
 ```bash
-python -m playbook.cli kometa-trigger --config /config/playbook.yaml --mode docker
+python -m playbook.cli kometa-trigger --config /config/config.yaml --mode docker
 ```
 
 It loads your config, instantiates the trigger, and logs the full docker command/output to `playbook.log` (or whatever `--log-file` you specify), making it easy to diagnose missing mounts or permissions.

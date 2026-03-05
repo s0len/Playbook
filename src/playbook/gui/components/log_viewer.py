@@ -28,9 +28,7 @@ def log_viewer(
     Returns:
         The log container element
     """
-    log_container = ui.column().classes(
-        "w-full font-mono text-sm bg-gray-900 text-gray-100 p-3 rounded h-96 overflow-auto"
-    )
+    log_container = ui.column().classes("w-full font-mono text-sm glass-card p-3 rounded h-96 overflow-auto")
 
     level_order = {"DEBUG": 0, "INFO": 1, "WARNING": 2, "ERROR": 3, "CRITICAL": 4}
     min_level = level_order.get(level_filter, 1)
@@ -83,27 +81,33 @@ def log_viewer(
     return log_container
 
 
+LEVEL_STYLES = {
+    "DEBUG": ("app-alert app-alert-info app-text-muted", "app-text-muted"),
+    "INFO": ("app-alert app-alert-success app-text-success", "app-text-success"),
+    "WARNING": ("app-alert app-alert-warning app-text-warning", "app-text-warning"),
+    "ERROR": ("app-alert app-alert-danger app-text-danger", "app-text-danger"),
+    "CRITICAL": ("app-alert app-alert-danger app-text-danger", "app-text-danger"),
+}
+
+
 def log_line(entry: LogEntry) -> None:
-    """Render a single log line with level-based coloring.
+    """Render a single log line with qui-style colored level badge.
 
     Args:
         entry: The log entry to display
     """
-    level_colors = {
-        "DEBUG": "text-gray-400",
-        "INFO": "text-blue-400",
-        "WARNING": "text-yellow-400",
-        "ERROR": "text-red-400",
-        "CRITICAL": "text-red-600 font-bold",
-    }
-
-    color_class = level_colors.get(entry.level, "text-gray-300")
+    badge_cls, msg_cls = LEVEL_STYLES.get(entry.level, ("app-alert app-alert-info app-text-muted", "app-text-muted"))
     time_str = entry.timestamp.strftime("%H:%M:%S")
 
-    with ui.row().classes("w-full gap-2 items-start hover:bg-gray-800 px-1"):
-        ui.label(time_str).classes("text-gray-500 text-xs shrink-0")
-        ui.label(entry.level[:4]).classes(f"w-10 text-xs font-bold {color_class}")
-        ui.label(entry.message).classes("text-gray-200 break-all flex-1 text-xs")
+    with ui.row().classes("w-full gap-2 items-center py-0.5 hover:bg-white/5 px-1"):
+        # Timestamp
+        ui.label(time_str).classes("text-xs app-text-muted shrink-0 font-mono")
+        # Level badge
+        ui.label(entry.level.title()).classes(
+            f"w-12 text-center text-[10px] font-semibold rounded px-1 py-0.5 shrink-0 {badge_cls}"
+        )
+        # Message
+        ui.label(entry.message).classes(f"text-xs whitespace-nowrap font-mono {msg_cls}")
 
 
 def log_filters(

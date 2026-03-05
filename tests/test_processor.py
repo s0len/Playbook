@@ -8,10 +8,12 @@ import pytest
 from playbook.config import AppConfig, KometaTriggerSettings, PatternConfig, Settings, SportConfig
 from playbook.file_discovery import should_suppress_sample_ignored
 from playbook.metadata import (
+    MetadataFetchStatistics,
     MetadataFingerprintStore,
     ShowFingerprint,
     compute_show_fingerprint,
 )
+from playbook.metadata_loader import MetadataLoadResult
 from playbook.models import Episode, ProcessingStats, Season, Show
 from playbook.processor import Processor
 from playbook.run_summary import extract_error_context, summarize_plex_errors
@@ -609,6 +611,41 @@ def test_ts_extension_is_processed_correctly(tmp_path, monkeypatch) -> None:
     assert stats.warnings == []
 
 
+def test_watcher_ignore_patterns_do_not_create_unmatched_records(tmp_path, monkeypatch) -> None:
+    settings = Settings(
+        source_dir=tmp_path / "source",
+        destination_dir=tmp_path / "dest",
+        cache_dir=tmp_path / "cache",
+        dry_run=False,
+    )
+    settings.file_watcher.ignore = ["*.tmp"]
+    settings.source_dir.mkdir(parents=True)
+    settings.destination_dir.mkdir(parents=True)
+    settings.cache_dir.mkdir(parents=True)
+
+    ignored_file = settings.source_dir / "download.part.tmp"
+    ignored_file.write_text("x", encoding="utf-8")
+
+    config = AppConfig(settings=settings, sports=[])
+
+    def mock_load_sports(*args, **kwargs):
+        return MetadataLoadResult(
+            runtimes=[],
+            changed_sports=[],
+            change_map={},
+            fetch_stats=MetadataFetchStatistics(),
+        )
+
+    monkeypatch.setattr("playbook.processor.load_sports", mock_load_sports)
+
+    processor = Processor(config, enable_notifications=False)
+    stats = processor.process_all()
+
+    assert stats.processed == 0
+    assert stats.ignored == 1
+    assert processor.unmatched_store.get_count() == 0
+
+
 class TestSummarizePlexErrors:
     """Tests for run_summary.summarize_plex_errors."""
 
@@ -712,7 +749,9 @@ class TestExtractErrorContext:
     """Tests for run_summary.extract_error_context."""
 
     def test_extract_show_not_found_context(self) -> None:
-        error = "Show not found: 'Formula 1' in library 5 (metadata: http://example.com/f1.yaml). Similar: F1, Formula One"
+        error = (
+            "Show not found: 'Formula 1' in library 5 (metadata: http://example.com/f1.yaml). Similar: F1, Formula One"
+        )
         result = extract_error_context(error)
 
         assert result is not None
@@ -769,7 +808,9 @@ class TestExtractErrorContext:
         assert "plex has=[E01, E02, E03]" in result
 
     def test_extract_episode_not_found_without_available(self) -> None:
-        error = "Episode not found: E05 in season S01 of 'Demo Series' | library=2 | source=http://example.com/demo.yaml."
+        error = (
+            "Episode not found: E05 in season S01 of 'Demo Series' | library=2 | source=http://example.com/demo.yaml."
+        )
         result = extract_error_context(error)
 
         assert result is not None
@@ -904,4 +945,6 @@ def test_content_hash_determinism() -> None:
     fingerprint3 = compute_show_fingerprint(show3, "demo-show")
 
     assert fingerprint3.content_hash is not None
-    assert fingerprint3.content_hash != fingerprint1.content_hash, "Different metadata should produce different content_hash"
+    assert fingerprint3.content_hash != fingerprint1.content_hash, (
+        "Different metadata should produce different content_hash"
+    )

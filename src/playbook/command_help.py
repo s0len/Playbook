@@ -38,7 +38,7 @@ RUN_COMMAND_HELP = CommandHelp(
         ),
         (
             "Run once and process all files in source directory",
-            "playbook run --config /config/playbook.yaml",
+            "playbook run --config /config/config.yaml",
         ),
         (
             "Watch mode: continuously monitor source directory for new files",
@@ -53,7 +53,7 @@ RUN_COMMAND_HELP = CommandHelp(
         ),
         (
             "Run once and process all files in source directory",
-            "playbook run --config /config/playbook.yaml",
+            "playbook run --config /config/config.yaml",
         ),
         (
             "Watch mode: continuously monitor source directory for new files",
@@ -68,7 +68,7 @@ RUN_COMMAND_HELP = CommandHelp(
         ),
         (
             "Run once and process all files in source directory",
-            "playbook run --config /config/playbook.yaml",
+            "playbook run --config /config/config.yaml",
         ),
         (
             "Watch mode: continuously monitor source directory for new files",
@@ -124,10 +124,12 @@ RUN_COMMAND_HELP = CommandHelp(
         ),
     ],
     env_vars=[
-        ("CONFIG_PATH", "Path to the YAML configuration file (default: /config/playbook.yaml)"),
+        ("CONFIG_PATH", "Path to the YAML configuration file (default: /config/config.yaml)"),
         ("SOURCE_DIR", "Root directory containing downloads to process"),
         ("DESTINATION_DIR", "Library root where organized files are created"),
         ("CACHE_DIR", "Metadata cache directory (default: /data/cache)"),
+        ("STATE_DIR", "Persistent state directory for sqlite databases (defaults to CACHE_DIR)"),
+        ("GUI_THEME", "GUI color theme: swizzin or catppuccin (default: swizzin)"),
         ("DRY_RUN", "When true, logs actions without writing files (true/false/1/0)"),
         ("VERBOSE", "Enable debug-level console logging (true/false/1/0)"),
         ("DEBUG", "Alias for VERBOSE (true/false/1/0)"),
@@ -135,6 +137,9 @@ RUN_COMMAND_HELP = CommandHelp(
         ("CONSOLE_LEVEL", "Console log level (defaults to LOG_LEVEL)"),
         ("LOG_FILE", "Path to the persistent log file (default: ./playbook.log)"),
         ("LOG_DIR", "Directory for log files (alternative to LOG_FILE)"),
+        ("GUI_ENABLED", "Enable/disable web GUI (default: enabled unless set to false/0/no/off)"),
+        ("GUI_PORT", "Port for web GUI (default: 8765)"),
+        ("GUI_HOST", "Host to bind web GUI (default: 0.0.0.0)"),
         ("WATCH_MODE", "Enable filesystem watcher mode to continuously process new files (true/false/1/0)"),
         ("CLEAR_PROCESSED_CACHE", "Clear processed file cache before running (true/false/1/0)"),
         ("PLAIN_CONSOLE_LOGS", "Force plain text console output without Rich formatting (true/false/1/0)"),
@@ -158,7 +163,7 @@ VALIDATE_CONFIG_COMMAND_HELP = CommandHelp(
     examples=[
         (
             "Validate configuration file for errors",
-            "playbook validate-config --config /config/playbook.yaml",
+            "playbook validate-config --config /config/config.yaml",
         ),
         (
             "Show diff against sample configuration to see customizations",
@@ -169,7 +174,7 @@ VALIDATE_CONFIG_COMMAND_HELP = CommandHelp(
     brief_examples=[
         (
             "Validate configuration file for errors",
-            "playbook validate-config --config /config/playbook.yaml",
+            "playbook validate-config --config /config/config.yaml",
         ),
         (
             "Show diff against sample configuration to see customizations",
@@ -180,7 +185,7 @@ VALIDATE_CONFIG_COMMAND_HELP = CommandHelp(
     extended_examples=[
         (
             "Basic validation: check configuration file for syntax and schema errors",
-            "playbook validate-config --config /config/playbook.yaml",
+            "playbook validate-config --config /config/config.yaml",
         ),
         (
             "Show diff against sample configuration to see what you've customized",
@@ -204,11 +209,11 @@ VALIDATE_CONFIG_COMMAND_HELP = CommandHelp(
         ),
         (
             "Docker Compose: validate config as a pre-check service",
-            "docker-compose run --rm playbook validate-config --config /config/playbook.yaml",
+            "docker-compose run --rm playbook validate-config --config /config/config.yaml",
         ),
         (
             "CI/CD: GitHub Actions validation step with error reporting",
-            "playbook validate-config --config ./config/playbook.yaml --show-trace || exit 1",
+            "playbook validate-config --config ./config/config.yaml --show-trace || exit 1",
         ),
         (
             "CI/CD: GitLab CI validation job that fails the pipeline on errors",
@@ -216,7 +221,7 @@ VALIDATE_CONFIG_COMMAND_HELP = CommandHelp(
         ),
         (
             "CI/CD: Pre-commit hook to validate before allowing commits",
-            "#!/bin/bash\nplaybook validate-config --config ./config/playbook.yaml || { echo 'Config validation failed'; exit 1; }",
+            "#!/bin/bash\nplaybook validate-config --config ./config/config.yaml || { echo 'Config validation failed'; exit 1; }",
         ),
         (
             "Kubernetes: validate ConfigMap before applying to cluster",
@@ -240,7 +245,7 @@ VALIDATE_CONFIG_COMMAND_HELP = CommandHelp(
         ),
     ],
     env_vars=[
-        ("CONFIG_PATH", "Path to the YAML configuration file to validate (default: /config/playbook.yaml)"),
+        ("CONFIG_PATH", "Path to the YAML configuration file to validate (default: /config/config.yaml)"),
     ],
     tips=[
         "Run validate-config before deploying configuration changes to catch errors early",
@@ -258,7 +263,7 @@ KOMETA_TRIGGER_COMMAND_HELP = CommandHelp(
     examples=[
         (
             "Manually trigger Kometa using configuration settings",
-            "playbook kometa-trigger --config /config/playbook.yaml",
+            "playbook kometa-trigger --config /config/config.yaml",
         ),
         (
             "Override trigger mode to use Docker instead of Kubernetes",
@@ -269,7 +274,7 @@ KOMETA_TRIGGER_COMMAND_HELP = CommandHelp(
     brief_examples=[
         (
             "Manually trigger Kometa using configuration settings",
-            "playbook kometa-trigger --config /config/playbook.yaml",
+            "playbook kometa-trigger --config /config/config.yaml",
         ),
         (
             "Override trigger mode to use Docker instead of Kubernetes",
@@ -280,7 +285,7 @@ KOMETA_TRIGGER_COMMAND_HELP = CommandHelp(
     extended_examples=[
         (
             "Basic manual trigger using configuration settings from playbook.yaml",
-            "playbook kometa-trigger --config /config/playbook.yaml",
+            "playbook kometa-trigger --config /config/config.yaml",
         ),
         (
             "Override trigger mode to use Docker instead of Kubernetes",
@@ -296,7 +301,7 @@ KOMETA_TRIGGER_COMMAND_HELP = CommandHelp(
         ),
         (
             "Docker mode: trigger via 'docker run' to start a new Kometa container",
-            "playbook kometa-trigger --mode docker --config /config/playbook.yaml",
+            "playbook kometa-trigger --mode docker --config /config/config.yaml",
         ),
         (
             "Docker mode: trigger via 'docker exec' in existing Kometa container",
@@ -304,7 +309,7 @@ KOMETA_TRIGGER_COMMAND_HELP = CommandHelp(
         ),
         (
             "Docker mode: trigger specific libraries only (e.g., 'Sports' library)",
-            "playbook kometa-trigger --mode docker --config /config/playbook.yaml",
+            "playbook kometa-trigger --mode docker --config /config/config.yaml",
         ),
         (
             "Docker mode: troubleshoot missing Docker socket or binary",
@@ -312,7 +317,7 @@ KOMETA_TRIGGER_COMMAND_HELP = CommandHelp(
         ),
         (
             "Kubernetes mode: trigger metadata refresh after bulk imports",
-            "playbook kometa-trigger --mode kubernetes --config /config/playbook.yaml",
+            "playbook kometa-trigger --mode kubernetes --config /config/config.yaml",
         ),
         (
             "Kubernetes mode: trigger from within cluster with custom namespace",
@@ -336,7 +341,7 @@ KOMETA_TRIGGER_COMMAND_HELP = CommandHelp(
         ),
         (
             "Integration: scheduled trigger via cron for daily metadata updates",
-            "0 3 * * * /usr/local/bin/playbook kometa-trigger --config /config/playbook.yaml --mode docker >> /var/log/kometa-trigger.log 2>&1",
+            "0 3 * * * /usr/local/bin/playbook kometa-trigger --config /config/config.yaml --mode docker >> /var/log/kometa-trigger.log 2>&1",
         ),
         (
             "CI/CD: test Kometa trigger in staging before production rollout",
@@ -376,7 +381,7 @@ KOMETA_TRIGGER_COMMAND_HELP = CommandHelp(
         ),
     ],
     env_vars=[
-        ("CONFIG_PATH", "Path to the YAML configuration file (default: /config/playbook.yaml)"),
+        ("CONFIG_PATH", "Path to the YAML configuration file (default: /config/config.yaml)"),
         ("LOG_LEVEL", "File log level: CRITICAL, ERROR, WARNING, INFO, DEBUG (default: INFO)"),
         ("CONSOLE_LEVEL", "Console log level (defaults to LOG_LEVEL)"),
         ("LOG_FILE", "Path to the persistent log file (default: ./playbook.log)"),

@@ -68,6 +68,27 @@ def should_suppress_sample_ignored(source_path: Path) -> bool:
     return bool(SAMPLE_FILENAME_PATTERN.search(name))
 
 
+def matches_include_ignore_patterns(path: Path, include: list[str], ignore: list[str]) -> bool:
+    """Check include/ignore pattern filters using watcher semantics.
+
+    Pattern matching is applied to both filename and full path string.
+
+    Args:
+        path: Path to evaluate
+        include: Include patterns (empty means include all)
+        ignore: Ignore patterns
+
+    Returns:
+        True if the file passes filters and should be processed.
+    """
+    filename = path.name
+    target = str(path)
+
+    if include and not any(fnmatch(filename, pattern) or fnmatch(target, pattern) for pattern in include):
+        return False
+    return not (ignore and any(fnmatch(filename, pattern) or fnmatch(target, pattern) for pattern in ignore))
+
+
 def gather_source_files(source_dir: Path, stats: ProcessingStats | None = None) -> Iterable[Path]:
     """Discover and yield source files for processing.
 

@@ -16,6 +16,8 @@ settings:
   source_dir: ${SOURCE_DIR:-/data/source}
   destination_dir: ${DESTINATION_DIR:-/data/destination}
   cache_dir: ${CACHE_DIR:-/var/cache/playbook}
+  state_dir: ${STATE_DIR:-/config/state}
+  theme: swizzin
 
   # Execution behavior
   dry_run: false

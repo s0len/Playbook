@@ -15,6 +15,7 @@ Components:
 from __future__ import annotations
 
 from .activity_feed import activity_feed, activity_item
+from .app_button import app_button
 from .episode_row import episode_detail_dialog, episode_row
 from .header import header
 from .log_viewer import log_viewer
@@ -31,6 +32,8 @@ __all__ = [
     # Activity
     "activity_feed",
     "activity_item",
+    # Controls
+    "app_button",
     # Logs
     "log_viewer",
     # Progress

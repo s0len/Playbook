@@ -1169,7 +1169,7 @@ def main() -> int:
     parser.add_argument(
         "--config",
         type=Path,
-        default=Path(os.getenv("CONFIG_PATH", "/config/playbook.yaml")),
+        default=Path(os.getenv("CONFIG_PATH", "/config/config.yaml")),
         help="Path to playbook YAML config",
     )
     parser.add_argument("--verbose", action="store_true", help="Enable debug logging")
