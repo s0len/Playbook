@@ -253,12 +253,12 @@ body.body--dark .status-chip-error {
 
 /* Sidebar icon buttons (dark mode toggle, etc.) */
 .sidebar-icon-btn {
-    color: rgba(255, 255, 255, 0.3) !important;
+    color: rgba(255, 255, 255, 0.3);
 }
 
 .sidebar-icon-btn:hover {
-    background: rgba(255, 255, 255, 0.07) !important;
-    color: rgba(255, 255, 255, 0.7) !important;
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 /* ===== Stats Card Enhancements ===== */
@@ -531,10 +531,10 @@ body.body--dark .settings-subnav-item-active {
 }
 
 .settings-theme-card {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 12px !important;
-    box-shadow: none !important;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    box-shadow: none;
 }
 
 .settings-theme-card-active {
@@ -763,43 +763,43 @@ body.body--dark .q-btn--flat {
 
 /* Semantic icon tones */
 .app-stat-icon-accent {
-    color: var(--accent-color) !important;
+    color: var(--accent-color);
 }
 
 .app-stat-icon-warning {
-    color: #fbbf24 !important;
+    color: #fbbf24;
 }
 
 .app-stat-icon-muted {
-    color: rgba(255, 255, 255, 0.56) !important;
+    color: rgba(255, 255, 255, 0.56);
 }
 
 .app-text-accent {
-    color: var(--accent-color) !important;
+    color: var(--accent-color);
 }
 
 .app-text-success {
-    color: #4ade80 !important;
+    color: #4ade80;
 }
 
 .app-text-warning {
-    color: #fbbf24 !important;
+    color: #fbbf24;
 }
 
 .app-text-danger {
-    color: #f87171 !important;
+    color: #f87171;
 }
 
 .app-text-muted {
-    color: rgba(255, 255, 255, 0.62) !important;
+    color: rgba(255, 255, 255, 0.62);
 }
 
 .app-link {
-    color: var(--accent-color) !important;
+    color: var(--accent-color);
 }
 
 .app-link:hover {
-    color: var(--accent-hover) !important;
+    color: var(--accent-hover);
 }
 
 .app-alert {
@@ -809,48 +809,48 @@ body.body--dark .q-btn--flat {
 }
 
 .app-alert-info {
-    background: rgba(255, 255, 255, 0.08) !important;
-    border-color: rgba(255, 255, 255, 0.16) !important;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.16);
 }
 
 .app-alert-success {
-    background: rgba(74, 222, 128, 0.12) !important;
-    border-color: rgba(74, 222, 128, 0.28) !important;
+    background: rgba(74, 222, 128, 0.12);
+    border-color: rgba(74, 222, 128, 0.28);
 }
 
 .app-alert-warning {
-    background: rgba(251, 191, 36, 0.12) !important;
-    border-color: rgba(251, 191, 36, 0.28) !important;
+    background: rgba(251, 191, 36, 0.12);
+    border-color: rgba(251, 191, 36, 0.28);
 }
 
 .app-alert-danger {
-    background: rgba(248, 113, 113, 0.12) !important;
-    border-color: rgba(248, 113, 113, 0.28) !important;
+    background: rgba(248, 113, 113, 0.12);
+    border-color: rgba(248, 113, 113, 0.28);
 }
 
 .app-stat-surface-accent {
-    background: rgba(255, 255, 255, 0.08) !important;
-    border-color: rgba(255, 255, 255, 0.14) !important;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.14);
 }
 
 .app-stat-surface-success {
-    background: rgba(74, 222, 128, 0.12) !important;
-    border-color: rgba(74, 222, 128, 0.24) !important;
+    background: rgba(74, 222, 128, 0.12);
+    border-color: rgba(74, 222, 128, 0.24);
 }
 
 .app-stat-surface-warning {
-    background: rgba(251, 191, 36, 0.12) !important;
-    border-color: rgba(251, 191, 36, 0.24) !important;
+    background: rgba(251, 191, 36, 0.12);
+    border-color: rgba(251, 191, 36, 0.24);
 }
 
 .app-stat-surface-danger {
-    background: rgba(248, 113, 113, 0.12) !important;
-    border-color: rgba(248, 113, 113, 0.24) !important;
+    background: rgba(248, 113, 113, 0.12);
+    border-color: rgba(248, 113, 113, 0.24);
 }
 
 .app-stat-surface-muted {
-    background: rgba(255, 255, 255, 0.06) !important;
-    border-color: rgba(255, 255, 255, 0.12) !important;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
 }
 
 body.body--dark .q-toggle__inner,
