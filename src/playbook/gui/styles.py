@@ -750,14 +750,30 @@ body.body--dark .q-btn--flat {
     border: 1px solid transparent;
 }
 
+/* Quasar adds bg/text utility classes to badges by default; neutralize them. */
+.q-badge.app-badge.bg-primary {
+    background-color: transparent !important;
+}
+
+.q-badge.app-badge.text-white,
+.q-badge.app-badge .text-white,
+.q-badge.app-badge.text-dark,
+.q-badge.app-badge .text-dark,
+.q-badge.app-badge.text-primary,
+.q-badge.app-badge .text-primary {
+    color: inherit !important;
+}
+
 .app-badge-muted {
     background: rgba(255, 255, 255, 0.12) !important;
+    background-color: rgba(255, 255, 255, 0.12) !important;
     border-color: rgba(255, 255, 255, 0.2) !important;
     color: rgba(255, 255, 255, 0.86) !important;
 }
 
 .app-badge-warning {
     background: rgba(251, 191, 36, 0.14) !important;
+    background-color: rgba(251, 191, 36, 0.14) !important;
     border-color: rgba(251, 191, 36, 0.28) !important;
     color: #fcd34d !important;
     min-width: 8px;
@@ -767,12 +783,14 @@ body.body--dark .q-btn--flat {
 
 .app-badge-success {
     background: rgba(74, 222, 128, 0.14) !important;
+    background-color: rgba(74, 222, 128, 0.14) !important;
     border-color: rgba(74, 222, 128, 0.3) !important;
     color: #86efac !important;
 }
 
 .app-badge-danger {
     background: rgba(248, 113, 113, 0.14) !important;
+    background-color: rgba(248, 113, 113, 0.14) !important;
     border-color: rgba(248, 113, 113, 0.3) !important;
     color: #fca5a5 !important;
 }
