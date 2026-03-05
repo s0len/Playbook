@@ -160,11 +160,14 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
     if is_active:
         btn_classes += " settings-subnav-item-active"
 
-    with (
+    tab_button = (
         ui.button(on_click=lambda t=tab_id: state.set_active_tab(t))
         .classes(f"w-full justify-start px-3 py-2 rounded-lg text-left {btn_classes}")
         .props("flat no-caps")
-    ):
+    )
+    tab_button.classes(remove="text-primary")
+
+    with tab_button:
         with ui.row().classes("w-full items-center gap-3 justify-start"):
             icon_class = (
                 "text-lg w-5 text-center text-slate-100" if is_active else "text-lg w-5 text-center text-slate-400"

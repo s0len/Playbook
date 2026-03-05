@@ -477,6 +477,17 @@ a:hover {
     color: inherit !important;
 }
 
+.settings-subnav-item .q-btn__content {
+    width: 100%;
+    justify-content: flex-start !important;
+    text-align: left;
+}
+
+.settings-subnav-item .q-btn__content .nicegui-row {
+    width: 100%;
+    justify-content: flex-start !important;
+}
+
 .settings-subnav-item.text-primary,
 .settings-subnav-item .text-primary {
     color: inherit !important;
