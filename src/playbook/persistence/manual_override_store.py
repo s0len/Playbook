@@ -235,6 +235,17 @@ class ManualOverrideStore:
         cursor = conn.execute("SELECT COUNT(*) as count FROM manual_overrides")
         return cursor.fetchone()["count"]
 
+    def clear(self) -> int:
+        """Delete all manual overrides.
+
+        Returns:
+            Number of records deleted
+        """
+        conn = self._get_connection()
+        cursor = conn.execute("DELETE FROM manual_overrides")
+        conn.commit()
+        return cursor.rowcount
+
     def _row_to_override(self, row: sqlite3.Row) -> ManualOverride:
         """Convert a database row to a ManualOverride."""
         return ManualOverride(

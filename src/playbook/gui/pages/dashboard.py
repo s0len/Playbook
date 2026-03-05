@@ -141,11 +141,18 @@ def _quick_actions_card() -> None:
             safe_timer(0.5, update_buttons)
             update_buttons()
 
-            # Clear Cache button
+            # Clear processed cache button
             ui.button(
-                "Clear Cache",
+                "Clear Processed Cache",
                 icon="delete_sweep",
                 on_click=_clear_cache,
+            ).classes("w-full").props("color=warning outline")
+
+            # Clear manual matches button
+            ui.button(
+                "Clear Manual Matches",
+                icon="rule_folder",
+                on_click=_clear_manual_matches,
             ).classes("w-full").props("color=warning outline")
 
             # Refresh Metadata button
@@ -287,16 +294,32 @@ async def _clear_cache() -> None:
         _safe_notify("Processor not initialized", type="warning")
         return
 
-    _safe_notify("Clearing cache...", type="info")
+    _safe_notify("Clearing processed cache...", type="info")
 
     try:
         # Run cache clear in background to avoid blocking
         await asyncio.get_event_loop().run_in_executor(None, gui_state.processor.clear_processed_cache)
         gui_state.recent_events.clear()
-        _safe_notify("Cache cleared", type="positive")
+        _safe_notify("Processed cache cleared", type="positive")
     except Exception as e:
         LOGGER.exception("Error clearing cache: %s", e)
         _safe_notify(f"Error clearing cache: {e}", type="negative")
+
+
+async def _clear_manual_matches() -> None:
+    """Clear persisted manual match overrides."""
+    if not gui_state.processor:
+        _safe_notify("Processor not initialized", type="warning")
+        return
+
+    _safe_notify("Clearing manual matches...", type="info")
+
+    try:
+        await asyncio.get_event_loop().run_in_executor(None, gui_state.processor.clear_manual_overrides)
+        _safe_notify("Manual matches cleared", type="positive")
+    except Exception as e:
+        LOGGER.exception("Error clearing manual matches: %s", e)
+        _safe_notify(f"Error clearing manual matches: {e}", type="negative")
 
 
 async def _refresh_metadata() -> None:

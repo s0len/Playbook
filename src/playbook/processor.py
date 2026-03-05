@@ -58,9 +58,12 @@ class Processor:
             ensure_directory(self.config.settings.destination_dir)
             ensure_directory(self.config.settings.cache_dir)
         self.metadata_fingerprints = MetadataFingerprintStore(self.config.settings.cache_dir)
-        self.processed_store = ProcessedFileStore(self.config.settings.cache_dir / "playbook.db")
-        self.unmatched_store = UnmatchedFileStore(self.config.settings.cache_dir / "playbook.db")
-        self.manual_override_store = ManualOverrideStore(self.config.settings.cache_dir / "playbook.db")
+        main_db_path = self.config.settings.cache_dir / "playbook.db"
+        manual_override_db_path = self.config.settings.cache_dir.parent / "playbook-manual-overrides.db"
+        self.processed_store = ProcessedFileStore(main_db_path)
+        self.unmatched_store = UnmatchedFileStore(main_db_path)
+        self.manual_override_store = ManualOverrideStore(manual_override_db_path)
+        self._migrate_legacy_manual_overrides(main_db_path)
         self.trace_options = trace_options or TraceOptions()
         settings = self.config.settings
         self.notification_service = NotificationService(
@@ -197,6 +200,81 @@ class Processor:
                 {"Database Records": cleared_count},
             )
         )
+
+    def clear_manual_overrides(self) -> None:
+        """Clear all persisted manual overrides and GUI manual-match markers."""
+        if self.config.settings.dry_run:
+            LOGGER.debug(self._format_log("Dry-Run: Skipping Manual Override Clear", {}))
+            return
+
+        cleared_overrides = self.manual_override_store.clear()
+        cleared_unmatched_flags = self.unmatched_store.clear_manual_matches()
+        LOGGER.info(
+            self._format_log(
+                "Manual Overrides Cleared",
+                {
+                    "Overrides Deleted": cleared_overrides,
+                    "Unmatched Manual Flags Cleared": cleared_unmatched_flags,
+                },
+            )
+        )
+
+    def _migrate_legacy_manual_overrides(self, legacy_db_path: Path) -> None:
+        """Migrate manual overrides from the old shared cache database.
+
+        Older versions stored manual overrides in `cache_dir/playbook.db`.
+        Newer versions keep overrides in a dedicated database next to cache dir
+        so cache clearing does not remove manual match mappings.
+        """
+        current_count = self.manual_override_store.get_count()
+        if current_count > 0:
+            return
+
+        try:
+            legacy_store = ManualOverrideStore(legacy_db_path)
+            legacy_count = legacy_store.get_count()
+            if legacy_count == 0:
+                return
+
+            migrated = 0
+            offset = 0
+            batch_size = 500
+            while True:
+                batch = legacy_store.get_all(limit=batch_size, offset=offset)
+                if not batch:
+                    break
+                for override in batch:
+                    self.manual_override_store.add_override(
+                        filename=override.filename,
+                        sport_id=override.sport_id,
+                        show_slug=override.show_slug,
+                        season_index=override.season_index,
+                        episode_index=override.episode_index,
+                        source_path=override.source_path,
+                    )
+                    migrated += 1
+                offset += batch_size
+
+            if migrated:
+                LOGGER.info(
+                    self._format_log(
+                        "Manual Overrides Migrated",
+                        {
+                            "Legacy DB": legacy_db_path,
+                            "Migrated": migrated,
+                        },
+                    )
+                )
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.warning(
+                self._format_log(
+                    "Manual Override Migration Skipped",
+                    {
+                        "Legacy DB": legacy_db_path,
+                        "Reason": str(exc),
+                    },
+                )
+            )
 
     def process_all(self) -> ProcessingStats:
         # Reset state and cancellation flag for new run
@@ -637,7 +715,7 @@ class Processor:
         if runtime.is_dynamic:
             # For dynamic sports, try to load the show via the dynamic loader
             try:
-                dynamic_show = self._dynamic_loader.get_show_for_year(override.show_slug)
+                dynamic_show = self._dynamic_loader.load_show(override.show_slug, runtime.sport.season_overrides)
                 if dynamic_show:
                     show = dynamic_show
             except Exception:
