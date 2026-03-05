@@ -729,6 +729,22 @@ body.body--dark .q-btn--flat {
     padding: 4px 8px;
 }
 
+/* Quasar may inject text/bg utility classes on chip-like buttons. */
+@layer quasar_importants {
+    .q-btn.app-chip.text-primary,
+    .q-btn.app-chip .text-primary,
+    .q-chip.app-chip.text-primary,
+    .q-chip.app-chip .text-primary {
+        color: inherit !important;
+    }
+
+    .q-btn.app-chip.bg-primary,
+    .q-chip.app-chip.bg-primary {
+        background: transparent !important;
+        background-color: transparent !important;
+    }
+}
+
 .app-chip .q-btn__content,
 .app-chip .q-icon {
     color: inherit !important;
