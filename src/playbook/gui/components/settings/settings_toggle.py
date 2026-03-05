@@ -45,7 +45,7 @@ def settings_toggle(
             with ui.row().classes("items-center gap-2"):
                 ui.label(label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
                 if is_modified:
-                    ui.icon("edit").classes("text-amber-500 text-xs")
+                    ui.icon("edit").classes("app-text-warning text-xs")
             if description:
                 ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400")
 

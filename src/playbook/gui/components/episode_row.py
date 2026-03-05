@@ -54,12 +54,12 @@ def episode_row(
         # Quality score badge (if matched and has score)
         if episode.status == "matched" and episode.record and episode.record.quality_score is not None:
             score = episode.record.quality_score
-            score_color = _quality_score_color(score)
-            ui.badge(str(score), color=score_color).props("rounded").classes("text-xs")
+            score_class = _quality_score_class(score)
+            ui.badge(str(score)).classes(f"text-xs app-badge {score_class}")
 
         # File count badge (if multiple files tracked)
         if episode.file_count > 1:
-            ui.badge(f"{episode.file_count} files", color="blue-grey").props("rounded outline").classes("text-xs")
+            ui.badge(f"{episode.file_count} files").classes("text-xs app-badge app-badge-muted")
 
         # Air date
         if episode.air_date:
@@ -78,17 +78,17 @@ def episode_row(
     return row
 
 
-def _quality_score_color(score: int) -> str:
-    """Get a color for a quality score badge."""
+def _quality_score_class(score: int) -> str:
+    """Get semantic badge class for a quality score."""
     if score >= 500:
-        return "purple"
+        return "app-badge-success"
     if score >= 400:
-        return "green"
+        return "app-badge-success"
     if score >= 300:
-        return "teal"
+        return "app-badge-muted"
     if score >= 200:
-        return "orange"
-    return "grey"
+        return "app-badge-warning"
+    return "app-badge-danger"
 
 
 def _parse_quality_info(record: ProcessedFileRecord) -> dict | None:
@@ -102,43 +102,43 @@ def _parse_quality_info(record: ProcessedFileRecord) -> dict | None:
 
 
 def _format_quality_tags(quality: dict) -> list[tuple[str, str]]:
-    """Format quality info dict into displayable (label, color) tag pairs."""
+    """Format quality info dict into displayable (label, class) tag pairs."""
     tags: list[tuple[str, str]] = []
 
     if resolution := quality.get("resolution"):
-        color = "purple" if "2160" in resolution else "teal" if "1080" in resolution else "orange"
-        tags.append((resolution, color))
+        badge_class = "app-badge-success" if "2160" in resolution else "app-badge-muted"
+        tags.append((resolution, badge_class))
 
     if frame_rate := quality.get("frame_rate"):
         if frame_rate and int(frame_rate) >= 50:
-            tags.append((f"{frame_rate}fps", "blue"))
+            tags.append((f"{frame_rate}fps", "app-badge-muted"))
 
     if source := quality.get("source"):
-        tags.append((source, "blue-grey"))
+        tags.append((source, "app-badge-muted"))
 
     if codec := quality.get("codec"):
-        tags.append((codec, "grey"))
+        tags.append((codec, "app-badge-muted"))
 
     if hdr := quality.get("hdr_format"):
-        tags.append((hdr.upper(), "amber"))
+        tags.append((hdr.upper(), "app-badge-warning"))
 
     if bit_depth := quality.get("bit_depth"):
         if bit_depth == 10:
-            tags.append(("10-bit", "deep-purple"))
+            tags.append(("10-bit", "app-badge-success"))
 
     if audio := quality.get("audio"):
-        tags.append((audio, "brown"))
+        tags.append((audio, "app-badge-muted"))
 
     if broadcaster := quality.get("broadcaster"):
-        tags.append((broadcaster, "indigo"))
+        tags.append((broadcaster, "app-badge-muted"))
 
     if quality.get("is_proper"):
-        tags.append(("PROPER", "red"))
+        tags.append(("PROPER", "app-badge-danger"))
     if quality.get("is_repack"):
-        tags.append(("REPACK", "red"))
+        tags.append(("REPACK", "app-badge-danger"))
 
     if group := quality.get("release_group"):
-        tags.append((group, "cyan"))
+        tags.append((group, "app-badge-muted"))
 
     return tags
 
@@ -184,15 +184,15 @@ def episode_detail_dialog(episode: EpisodeMatchStatus) -> None:
 
 def _file_candidate_row(record: ProcessedFileRecord, *, rank: int, is_active: bool) -> None:
     """Render a single file candidate row with quality details."""
-    border_class = "border-l-4 border-green-500" if is_active else "border-l-4 border-transparent"
-    bg_class = "bg-green-50 dark:bg-green-900/20" if is_active else ""
+    border_class = "border-l-4 border-white/20" if is_active else "border-l-4 border-transparent"
+    bg_class = "app-alert app-alert-success" if is_active else ""
 
     with ui.column().classes(f"w-full p-3 rounded {border_class} {bg_class} gap-2 mb-1"):
         # Top row: rank, filename, score
         with ui.row().classes("w-full items-center gap-2"):
             # Rank badge
             if is_active:
-                ui.icon("check_circle").classes("text-green-600 dark:text-green-400 text-lg")
+                ui.icon("check_circle").classes("app-text-success text-lg")
             else:
                 ui.label(f"#{rank}").classes("text-xs font-mono text-slate-500 dark:text-slate-400 w-6 text-center")
 
@@ -202,18 +202,19 @@ def _file_candidate_row(record: ProcessedFileRecord, *, rank: int, is_active: bo
 
             # Quality score
             if record.quality_score is not None:
-                score_color = _quality_score_color(record.quality_score)
-                ui.badge(f"Score: {record.quality_score}", color=score_color).props("rounded")
+                score_class = _quality_score_class(record.quality_score)
+                ui.badge(f"Score: {record.quality_score}").classes(f"app-badge {score_class}")
 
             # Status chip
-            status_colors = {
-                "linked": "green",
-                "copied": "blue",
-                "symlinked": "purple",
-                "skipped": "orange",
-                "error": "red",
+            status_classes = {
+                "linked": "app-badge-success",
+                "copied": "app-badge-muted",
+                "symlinked": "app-badge-muted",
+                "skipped": "app-badge-warning",
+                "error": "app-badge-danger",
             }
-            ui.badge(record.status, color=status_colors.get(record.status, "grey")).props("rounded outline")
+            chip_class = status_classes.get(record.status, "app-badge-muted")
+            ui.badge(record.status).classes(f"app-badge {chip_class}")
 
         # Quality tags row
         quality = _parse_quality_info(record)
@@ -222,7 +223,7 @@ def _file_candidate_row(record: ProcessedFileRecord, *, rank: int, is_active: bo
             if tags:
                 with ui.row().classes("flex-wrap gap-1 ml-8"):
                     for label, color in tags:
-                        ui.badge(label, color=color).props("rounded outline dense").classes("text-xs")
+                        ui.badge(label).classes(f"text-xs app-badge {color}")
 
         # Metadata row
         with ui.row().classes("ml-8 gap-4"):
@@ -230,7 +231,7 @@ def _file_candidate_row(record: ProcessedFileRecord, *, rank: int, is_active: bo
                 "text-xs text-slate-500 dark:text-slate-400"
             )
             if record.error_message:
-                ui.label(record.error_message).classes("text-xs text-red-500")
+                ui.label(record.error_message).classes("text-xs app-text-danger")
 
 
 def _detail_row(label: str, value: str, *, mono: bool = False) -> None:

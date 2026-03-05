@@ -75,9 +75,9 @@ def _status_indicator() -> None:
                 if current != last_status[0]:
                     last_status[0] = current
                     if current:
-                        status_icon.classes(replace="text-[10px] text-green-400 animate-pulse")
+                        status_icon.classes(replace="text-[10px] app-text-success animate-pulse")
                         status_label.text = "Processing"
-                        status_label.classes(replace="text-xs text-green-400")
+                        status_label.classes(replace="text-xs app-text-success")
                     else:
                         status_icon.classes(replace="text-[10px] text-slate-400")
                         status_label.text = "Idle"

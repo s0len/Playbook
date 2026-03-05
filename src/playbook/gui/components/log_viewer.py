@@ -28,9 +28,7 @@ def log_viewer(
     Returns:
         The log container element
     """
-    log_container = ui.column().classes(
-        "w-full font-mono text-sm bg-gray-900 text-gray-100 p-3 rounded h-96 overflow-auto"
-    )
+    log_container = ui.column().classes("w-full font-mono text-sm glass-card p-3 rounded h-96 overflow-auto")
 
     level_order = {"DEBUG": 0, "INFO": 1, "WARNING": 2, "ERROR": 3, "CRITICAL": 4}
     min_level = level_order.get(level_filter, 1)
@@ -84,11 +82,11 @@ def log_viewer(
 
 
 LEVEL_STYLES = {
-    "DEBUG": ("bg-blue-500/20 text-blue-400", "text-blue-400"),
-    "INFO": ("bg-green-500/20 text-green-400", "text-green-400"),
-    "WARNING": ("bg-yellow-500/20 text-yellow-400", "text-yellow-400"),
-    "ERROR": ("bg-red-500/20 text-red-400", "text-red-400"),
-    "CRITICAL": ("bg-red-500/30 text-red-300", "text-red-300"),
+    "DEBUG": ("app-alert app-alert-info app-text-muted", "app-text-muted"),
+    "INFO": ("app-alert app-alert-success app-text-success", "app-text-success"),
+    "WARNING": ("app-alert app-alert-warning app-text-warning", "app-text-warning"),
+    "ERROR": ("app-alert app-alert-danger app-text-danger", "app-text-danger"),
+    "CRITICAL": ("app-alert app-alert-danger app-text-danger", "app-text-danger"),
 }
 
 
@@ -98,12 +96,12 @@ def log_line(entry: LogEntry) -> None:
     Args:
         entry: The log entry to display
     """
-    badge_cls, msg_cls = LEVEL_STYLES.get(entry.level, ("bg-gray-500/20 text-gray-400", "text-gray-400"))
+    badge_cls, msg_cls = LEVEL_STYLES.get(entry.level, ("app-alert app-alert-info app-text-muted", "app-text-muted"))
     time_str = entry.timestamp.strftime("%H:%M:%S")
 
     with ui.row().classes("w-full gap-2 items-center py-0.5 hover:bg-white/5 px-1"):
         # Timestamp
-        ui.label(time_str).classes("text-xs text-gray-500/60 shrink-0 font-mono")
+        ui.label(time_str).classes("text-xs app-text-muted shrink-0 font-mono")
         # Level badge
         ui.label(entry.level).classes(
             f"w-12 text-center text-[10px] uppercase font-semibold rounded px-1 py-0.5 shrink-0 {badge_cls}"

@@ -68,18 +68,18 @@ def _render_yaml_editor(state: SettingsFormState) -> None:
                     "Format",
                     icon="format_align_left",
                     on_click=lambda: _format_yaml(editor),
-                ).props("outline")
+                ).props("outline no-caps").classes("app-btn app-btn-outline")
                 ui.button(
                     "Validate",
                     icon="check_circle",
                     on_click=lambda: _validate_yaml(editor.value),
-                ).props("outline")
+                ).props("outline no-caps").classes("app-btn app-btn-outline")
 
             ui.button(
                 "Apply Changes",
                 icon="save",
                 on_click=lambda: _apply_yaml_changes(state, editor.value),
-            ).props("color=primary")
+            ).props("no-caps").classes("app-btn app-btn-primary")
 
         # Help text
         with ui.expansion(text="YAML Syntax Help", icon="help").props("dense").classes("mt-2"):
@@ -118,12 +118,12 @@ def _render_backups_section(state: SettingsFormState) -> None:
                 "Create Backup",
                 icon="add",
                 on_click=lambda: _create_backup(state),
-            ).props("outline")
+            ).props("outline no-caps").classes("app-btn app-btn-outline")
             ui.button(
                 "Clean Old Backups",
                 icon="delete_sweep",
                 on_click=lambda: _clean_old_backups(state),
-            ).props("outline color=warning")
+            ).props("outline no-caps").classes("app-btn app-btn-outline")
 
 
 def _render_backup_row(state: SettingsFormState, backup_path: Path) -> None:
@@ -145,11 +145,11 @@ def _render_backup_row(state: SettingsFormState, backup_path: Path) -> None:
         ui.button(
             icon="restore",
             on_click=lambda p=backup_path: _restore_backup(state, p),
-        ).props("flat dense").classes("text-blue-600")
+        ).props("flat dense").classes("app-text-accent")
         ui.button(
             icon="delete",
             on_click=lambda p=backup_path: _delete_backup(p),
-        ).props("flat dense color=negative")
+        ).props("flat dense").classes("app-text-danger")
 
 
 def _render_import_export_section(state: SettingsFormState) -> None:
@@ -172,7 +172,7 @@ def _render_import_export_section(state: SettingsFormState) -> None:
                     "Export",
                     icon="download",
                     on_click=lambda: _export_config(state),
-                ).props("outline")
+                ).props("outline no-caps").classes("app-btn app-btn-outline")
 
             # Import
             with ui.column().classes("flex-1 gap-2"):
@@ -191,7 +191,7 @@ def _render_import_export_section(state: SettingsFormState) -> None:
                     "Reset",
                     icon="restart_alt",
                     on_click=lambda: _reset_to_sample(state),
-                ).props("outline color=warning")
+                ).props("outline no-caps").classes("app-btn app-btn-outline")
 
 
 # Helper functions

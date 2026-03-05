@@ -36,8 +36,8 @@ def logs_page() -> None:
             with ui.row().classes("w-full gap-3 items-center flex-wrap"):
                 # Connection indicator
                 with ui.row().classes("items-center gap-1.5 mr-2"):
-                    ui.icon("circle").classes("text-[8px] text-green-400")
-                    ui.label("Connected").classes("text-xs text-green-400")
+                    ui.icon("circle").classes("text-[8px] app-text-success")
+                    ui.label("Connected").classes("text-xs app-text-success")
 
                 # Search input
                 ui.input(

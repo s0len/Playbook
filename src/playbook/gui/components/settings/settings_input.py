@@ -65,9 +65,9 @@ def settings_input(
         with ui.row().classes("items-center gap-2"):
             ui.label(label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
             if required:
-                ui.label("*").classes("text-red-500 text-sm")
+                ui.label("*").classes("app-text-danger text-sm")
             if is_modified:
-                ui.icon("edit").classes("text-amber-500 text-xs")
+                ui.icon("edit").classes("app-text-warning text-xs")
 
         # Input with optional prefix/suffix
         input_props = "outlined dense"
@@ -122,11 +122,7 @@ def settings_input(
 
         # Description or error
         if error:
-            error_classes = (
-                "text-xs text-red-600 dark:text-red-400"
-                if error.severity == "error"
-                else "text-xs text-amber-600 dark:text-amber-400"
-            )
+            error_classes = "text-xs app-text-danger" if error.severity == "error" else "text-xs app-text-warning"
             ui.label(error.message).classes(error_classes)
         elif description:
             ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400")
@@ -175,9 +171,9 @@ def settings_path_input(
             ui.icon("folder").classes("text-slate-400 text-sm")
             ui.label(label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
             if required:
-                ui.label("*").classes("text-red-500 text-sm")
+                ui.label("*").classes("app-text-danger text-sm")
             if is_modified:
-                ui.icon("edit").classes("text-amber-500 text-xs")
+                ui.icon("edit").classes("app-text-warning text-xs")
 
         # Input
         input_props = "outlined dense"
@@ -204,11 +200,7 @@ def settings_path_input(
 
         # Description or error
         if error:
-            error_classes = (
-                "text-xs text-red-600 dark:text-red-400"
-                if error.severity == "error"
-                else "text-xs text-amber-600 dark:text-amber-400"
-            )
+            error_classes = "text-xs app-text-danger" if error.severity == "error" else "text-xs app-text-warning"
             ui.label(error.message).classes(error_classes)
         elif description:
             ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400")
@@ -252,7 +244,7 @@ def settings_textarea(
         with ui.row().classes("items-center gap-2"):
             ui.label(label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
             if is_modified:
-                ui.icon("edit").classes("text-amber-500 text-xs")
+                ui.icon("edit").classes("app-text-warning text-xs")
 
         def handle_change(e) -> None:
             state.set_value(path, e.value)

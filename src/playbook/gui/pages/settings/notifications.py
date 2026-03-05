@@ -137,7 +137,7 @@ def _render_throttle_editor(state: SettingsFormState) -> None:
                                 state.set_value("settings.notifications.throttle", data)
                             refresh()
 
-                        ui.button(icon="delete", on_click=on_delete).props("flat dense color=negative")
+                        ui.button(icon="delete", on_click=on_delete).props("flat dense").classes("app-text-danger")
         else:
             ui.label("No rate limits configured").classes("text-sm text-slate-500 italic")
 
@@ -161,7 +161,7 @@ def _render_throttle_editor(state: SettingsFormState) -> None:
                 state.set_value("settings.notifications.throttle", data)
                 refresh()
 
-            ui.button("Add", icon="add", on_click=add_throttle).props("flat dense").classes("text-blue-600")
+            ui.button("Add", icon="add", on_click=add_throttle).props("flat dense").classes("app-text-accent")
 
     with container:
         _render_throttle_content()
@@ -202,7 +202,7 @@ def _render_mentions_editor(state: SettingsFormState) -> None:
                                 state.set_value("settings.notifications.mentions", data)
                             refresh()
 
-                        ui.button(icon="delete", on_click=on_delete).props("flat dense color=negative")
+                        ui.button(icon="delete", on_click=on_delete).props("flat dense").classes("app-text-danger")
         else:
             ui.label("No mentions configured").classes("text-sm text-slate-500 italic")
 
@@ -226,7 +226,7 @@ def _render_mentions_editor(state: SettingsFormState) -> None:
                 state.set_value("settings.notifications.mentions", data)
                 refresh()
 
-            ui.button("Add", icon="add", on_click=add_mention).props("flat dense").classes("text-blue-600")
+            ui.button("Add", icon="add", on_click=add_mention).props("flat dense").classes("app-text-accent")
 
     with container:
         _render_mentions_content()

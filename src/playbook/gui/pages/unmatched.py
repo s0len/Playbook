@@ -237,7 +237,9 @@ def _render_results_content(state, refresh_results, refresh_page) -> None:
         )
     except Exception as e:
         LOGGER.exception("Failed to get unmatched files: %s", e)
-        ui.label(f"Error loading unmatched files: {e}").classes("text-red-600 dark:text-red-400")
+        with ui.row().classes("w-full items-center gap-2 app-alert app-alert-danger"):
+            ui.icon("error_outline").classes("app-text-danger")
+            ui.label(f"Error loading unmatched files: {e}").classes("text-sm app-text-danger")
         return
 
     # Results header
@@ -276,7 +278,7 @@ def _render_results_content(state, refresh_results, refresh_page) -> None:
     if not records:
         with ui.card().classes("glass-card w-full p-8"):
             with ui.column().classes("items-center gap-2"):
-                ui.icon("check_circle").classes("text-green-500 text-4xl")
+                ui.icon("check_circle").classes("app-text-success text-4xl")
                 ui.label("No unmatched files found").classes("text-lg font-medium text-slate-700 dark:text-slate-300")
                 ui.label("Try adjusting your filters or run a scan").classes(
                     "text-sm text-slate-500 dark:text-slate-400"
@@ -327,7 +329,7 @@ def _file_card(record, state, refresh_page) -> None:
                 # Failure summary - shows why the best match failed
                 if record.failure_summary:
                     with ui.row().classes("items-start gap-2 mt-2"):
-                        ui.icon("warning").classes("text-amber-500 dark:text-amber-400 text-sm mt-0.5")
+                        ui.icon("warning").classes("app-text-warning text-sm mt-0.5")
                         ui.label(record.failure_summary).classes("text-sm text-slate-600 dark:text-slate-400")
                 elif record.best_match_sport:
                     # Fallback: show best match sport if no failure summary
@@ -600,7 +602,7 @@ def _render_suggestions(record) -> None:
 
     for title, description in suggestions:
         with ui.row().classes("items-start gap-2"):
-            ui.icon("lightbulb").classes("text-amber-500 text-sm mt-0.5")
+            ui.icon("lightbulb").classes("app-text-warning text-sm mt-0.5")
             with ui.column().classes("gap-0"):
                 ui.label(title).classes("font-medium text-slate-700 dark:text-slate-300")
                 ui.label(description).classes("text-sm text-slate-500 dark:text-slate-400")

@@ -87,7 +87,7 @@ def settings_page() -> None:
                     "Save",
                     icon="save",
                     on_click=lambda: _save_changes(state),
-                ).props("color=positive no-caps").classes("settings-action-primary")
+                ).props("no-caps").classes("settings-action-primary")
 
         # Main content area
         with ui.row().classes("w-full gap-8 items-start settings-main-layout"):
@@ -165,7 +165,7 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
             ui.icon(tab_icon).classes("text-lg w-5 text-center")
             ui.label(tab_label).classes("text-sm flex-1 text-left")
             if has_modifications:
-                ui.badge("", color="amber").props("dense rounded")
+                ui.badge("").classes("app-badge app-badge-warning")
 
 
 def _save_changes(state: SettingsFormState) -> None:

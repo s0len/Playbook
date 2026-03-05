@@ -132,7 +132,7 @@ body.body--dark .glass-card {
 }
 
 .modern-progress.progress-info .q-linear-progress__model {
-    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    background: linear-gradient(90deg, var(--accent-color), var(--accent-hover));
 }
 
 .modern-progress.progress-error .q-linear-progress__model {
@@ -425,16 +425,11 @@ body.body--dark .q-expansion-item__toggle-icon {
 }
 
 /* ===== Link Colors ===== */
-a.text-blue-600 {
-    color: #3b82f6;
-}
-
-body.body--dark a.text-blue-600,
-body.body--dark a {
+a {
     color: var(--accent-color);
 }
 
-body.body--dark a:hover {
+a:hover {
     color: var(--accent-hover);
 }
 
@@ -687,6 +682,27 @@ body.body--dark .settings-toggle .q-toggle__inner {
     color: rgba(255, 255, 255, 0.86) !important;
 }
 
+.app-badge-warning {
+    background: rgba(251, 191, 36, 0.14) !important;
+    border-color: rgba(251, 191, 36, 0.28) !important;
+    color: #fcd34d !important;
+    min-width: 8px;
+    min-height: 8px;
+    padding: 0 !important;
+}
+
+.app-badge-success {
+    background: rgba(74, 222, 128, 0.14) !important;
+    border-color: rgba(74, 222, 128, 0.3) !important;
+    color: #86efac !important;
+}
+
+.app-badge-danger {
+    background: rgba(248, 113, 113, 0.14) !important;
+    border-color: rgba(248, 113, 113, 0.3) !important;
+    color: #fca5a5 !important;
+}
+
 /* Semantic icon tones */
 .app-stat-icon-accent {
     color: var(--accent-color) !important;
@@ -698,6 +714,85 @@ body.body--dark .settings-toggle .q-toggle__inner {
 
 .app-stat-icon-muted {
     color: rgba(255, 255, 255, 0.56) !important;
+}
+
+.app-text-accent {
+    color: var(--accent-color) !important;
+}
+
+.app-text-success {
+    color: #4ade80 !important;
+}
+
+.app-text-warning {
+    color: #fbbf24 !important;
+}
+
+.app-text-danger {
+    color: #f87171 !important;
+}
+
+.app-text-muted {
+    color: rgba(255, 255, 255, 0.62) !important;
+}
+
+.app-link {
+    color: var(--accent-color) !important;
+}
+
+.app-link:hover {
+    color: var(--accent-hover) !important;
+}
+
+.app-alert {
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 8px;
+}
+
+.app-alert-info {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+.app-alert-success {
+    background: rgba(74, 222, 128, 0.12) !important;
+    border-color: rgba(74, 222, 128, 0.28) !important;
+}
+
+.app-alert-warning {
+    background: rgba(251, 191, 36, 0.12) !important;
+    border-color: rgba(251, 191, 36, 0.28) !important;
+}
+
+.app-alert-danger {
+    background: rgba(248, 113, 113, 0.12) !important;
+    border-color: rgba(248, 113, 113, 0.28) !important;
+}
+
+.app-stat-surface-accent {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+.app-stat-surface-success {
+    background: rgba(74, 222, 128, 0.12) !important;
+    border-color: rgba(74, 222, 128, 0.24) !important;
+}
+
+.app-stat-surface-warning {
+    background: rgba(251, 191, 36, 0.12) !important;
+    border-color: rgba(251, 191, 36, 0.24) !important;
+}
+
+.app-stat-surface-danger {
+    background: rgba(248, 113, 113, 0.12) !important;
+    border-color: rgba(248, 113, 113, 0.24) !important;
+}
+
+.app-stat-surface-muted {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
 body.body--dark .q-toggle__inner,

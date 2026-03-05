@@ -94,12 +94,10 @@ def sport_detail_page(sport_id: str) -> None:
                     with content_container:
                         with ui.card().classes("glass-card w-full"):
                             with ui.row().classes(
-                                "w-full items-center gap-2 py-2 px-3 rounded bg-red-50 dark:bg-red-900/20"
+                                "w-full items-center gap-2 py-2 px-3 rounded app-alert app-alert-danger"
                             ):
-                                ui.icon("error_outline").classes("text-red-500 text-lg")
-                                ui.label(f"Failed to load sport details: {e}").classes(
-                                    "text-sm text-red-600 dark:text-red-400"
-                                )
+                                ui.icon("error_outline").classes("app-text-danger text-lg")
+                                ui.label(f"Failed to load sport details: {e}").classes("text-sm app-text-danger")
             finally:
                 executor.shutdown(wait=False)
 
@@ -148,9 +146,9 @@ def _render_sport_detail_content(sport_id: str, detail) -> None:
     with ui.card().classes("glass-card w-full"):
         ui.label("Seasons").classes("text-xl font-semibold text-slate-700 dark:text-slate-200 mb-4")
         if detail.metadata_error:
-            with ui.row().classes("w-full items-center gap-2 py-2 px-3 rounded bg-red-50 dark:bg-red-900/20"):
-                ui.icon("error_outline").classes("text-red-500 text-lg")
-                ui.label(detail.metadata_error).classes("text-sm text-red-600 dark:text-red-400")
+            with ui.row().classes("w-full items-center gap-2 py-2 px-3 rounded app-alert app-alert-danger"):
+                ui.icon("error_outline").classes("app-text-danger text-lg")
+                ui.label(detail.metadata_error).classes("text-sm app-text-danger")
         seasons_list(detail.seasons, expand_recent=False, collapse_year_groups=True)
 
     # Recent matches for this sport
@@ -350,10 +348,10 @@ def _sports_table() -> None:
 
         ui.button(
             "Enable", icon="check_circle", on_click=lambda: _bulk_action("enable", selection_state["selected"])
-        ).props("flat dense color=positive")
+        ).props("flat dense no-caps").classes("app-btn app-btn-outline")
         ui.button(
             "Disable", icon="cancel", on_click=lambda: _bulk_action("disable", selection_state["selected"])
-        ).props("flat dense color=warning")
+        ).props("flat dense no-caps").classes("app-btn app-btn-outline")
 
         ui.separator().props("vertical").classes("mx-2")
 
@@ -361,10 +359,10 @@ def _sports_table() -> None:
             "Clear History",
             icon="delete_sweep",
             on_click=lambda: _bulk_action("clear_history", selection_state["selected"]),
-        ).props("flat dense color=negative")
+        ).props("flat dense no-caps").classes("app-btn app-btn-danger")
         ui.button(
             "Reprocess", icon="refresh", on_click=lambda: _bulk_action("reprocess", selection_state["selected"])
-        ).props("flat dense color=info")
+        ).props("flat dense no-caps").classes("app-btn app-btn-outline")
 
         ui.space()
 
@@ -438,7 +436,7 @@ def _sports_table() -> None:
         """
         <q-td :props="props">
             <a :href="'/sports/' + props.row.id"
-               class="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+               class="app-link hover:underline font-medium">
                 {{ props.value }}
             </a>
         </q-td>
@@ -557,8 +555,8 @@ def _bulk_action(action: str, sport_ids: list[str]) -> None:
             with ui.row().classes("w-full justify-end gap-2"):
                 ui.button("Cancel", on_click=dialog.close).props("flat")
                 ui.button("Clear History", on_click=lambda: _do_clear_history(sport_ids, dialog)).props(
-                    "color=negative"
-                )
+                    "no-caps"
+                ).classes("app-btn app-btn-danger")
 
         dialog.open()
 
@@ -576,7 +574,9 @@ def _bulk_action(action: str, sport_ids: list[str]) -> None:
 
             with ui.row().classes("w-full justify-end gap-2"):
                 ui.button("Cancel", on_click=dialog.close).props("flat")
-                ui.button("Reprocess", on_click=lambda: _do_reprocess(sport_ids, dialog)).props("color=primary")
+                ui.button("Reprocess", on_click=lambda: _do_reprocess(sport_ids, dialog)).props("no-caps").classes(
+                    "app-btn app-btn-primary"
+                )
 
         dialog.open()
 
@@ -815,7 +815,7 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
                         ui.label(pattern).classes(pattern_class + " flex-1")
 
                         # Default badge
-                        ui.badge("default", color="blue").classes("flex-none")
+                        ui.badge("default").classes("flex-none app-badge app-badge-muted")
 
             # Custom globs section
             ui.label("Custom Patterns").classes("text-sm font-semibold text-slate-600 dark:text-slate-400 mt-4 mb-2")
@@ -844,13 +844,13 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
                         ui.label(pattern).classes(pattern_class + " flex-1")
 
                         # Custom badge
-                        ui.badge("custom", color="green").classes("flex-none")
+                        ui.badge("custom").classes("flex-none app-badge app-chip-active")
 
                         # Remove button
                         ui.button(
                             icon="close",
                             on_click=lambda _, p=pattern: remove_custom_glob(p),
-                        ).props("flat round dense size=sm").classes("text-red-500")
+                        ).props("flat round dense size=sm").classes("app-text-danger")
             else:
                 ui.label("No custom patterns added yet").classes("text-sm text-slate-400 dark:text-slate-500 italic")
 
@@ -862,13 +862,15 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
                     on_change=lambda e: state.update({"new_glob": e.value}),
                 ).classes("flex-1").bind_value(state, "new_glob")
 
-                ui.button("Add", icon="add", on_click=add_custom_glob).props("color=primary")
+                ui.button("Add", icon="add", on_click=add_custom_glob).props("no-caps").classes(
+                    "app-btn app-btn-primary"
+                )
 
             # Save button (shown when modified)
             if state["modified"]:
                 with ui.row().classes("w-full justify-end mt-4"):
-                    ui.button("Save Changes", icon="save", on_click=save_changes).props("color=primary").classes(
-                        "animate-pulse"
+                    ui.button("Save Changes", icon="save", on_click=save_changes).props("no-caps").classes(
+                        "app-btn app-btn-primary animate-pulse"
                     )
 
     # Render the card
@@ -923,11 +925,7 @@ def _recent_matches_card(sport_id: str) -> None:
                     # Status icon
                     status = "matched" if record.status != "error" else "error"
                     icon_name = "check_circle" if status == "matched" else "error"
-                    icon_color = (
-                        "text-green-600 dark:text-green-400"
-                        if status == "matched"
-                        else "text-red-600 dark:text-red-400"
-                    )
+                    icon_color = "app-text-success" if status == "matched" else "app-text-danger"
                     ui.icon(icon_name).classes(f"{icon_color}")
 
                     # Episode code
@@ -978,7 +976,7 @@ def _pattern_tester() -> None:
             "Test Match",
             icon="play_arrow",
             on_click=lambda: _test_pattern(state["filename"], state["sport_id"], result_container),
-        ).props("color=primary")
+        ).props("no-caps").classes("app-btn app-btn-primary")
 
     result_container = ui.column().classes("w-full mt-4")
 
@@ -989,12 +987,12 @@ def _test_pattern(filename: str, sport_id: str, container: ui.column) -> None:
 
     if not filename or not sport_id:
         with container:
-            ui.label("Please enter a filename and select a sport").classes("text-amber-600 dark:text-amber-400")
+            ui.label("Please enter a filename and select a sport").classes("app-text-warning")
         return
 
     if not gui_state.config:
         with container:
-            ui.label("Configuration not loaded").classes("text-red-600 dark:text-red-400")
+            ui.label("Configuration not loaded").classes("app-text-danger")
         return
 
     sport = None
@@ -1005,7 +1003,7 @@ def _test_pattern(filename: str, sport_id: str, container: ui.column) -> None:
 
     if not sport:
         with container:
-            ui.label(f"Sport '{sport_id}' not found").classes("text-red-600 dark:text-red-400")
+            ui.label(f"Sport '{sport_id}' not found").classes("app-text-danger")
         return
 
     # Show loading indicator
@@ -1053,7 +1051,7 @@ def _test_pattern(filename: str, sport_id: str, container: ui.column) -> None:
             container.clear()
             with container:
                 if error:
-                    ui.label(error).classes("text-red-600 dark:text-red-400")
+                    ui.label(error).classes("app-text-danger")
                 elif detection:
                     _render_match_result(detection, trace, diagnostics)
                 else:
@@ -1063,7 +1061,7 @@ def _test_pattern(filename: str, sport_id: str, container: ui.column) -> None:
             LOGGER.exception("Pattern test error: %s", e)
             container.clear()
             with container:
-                ui.label(f"Error testing pattern: {e}").classes("text-red-600 dark:text-red-400")
+                ui.label(f"Error testing pattern: {e}").classes("app-text-danger")
         finally:
             executor.shutdown(wait=False)
 
@@ -1076,10 +1074,10 @@ def _render_match_result(
     diagnostics: list[tuple[str, str]],
 ) -> None:
     """Render a successful match result."""
-    with ui.card().classes("w-full bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"):
+    with ui.card().classes("w-full app-alert app-alert-success"):
         with ui.row().classes("items-center gap-2 mb-2"):
-            ui.icon("check_circle").classes("text-green-600 dark:text-green-400 text-2xl")
-            ui.label("Match Found").classes("text-xl font-semibold text-green-800 dark:text-green-300")
+            ui.icon("check_circle").classes("app-text-success text-2xl")
+            ui.label("Match Found").classes("text-xl font-semibold text-slate-100")
 
         with ui.column().classes("gap-2"):
             season = detection.get("season")
@@ -1119,10 +1117,10 @@ def _render_no_match(
     trace: dict[str, Any],
 ) -> None:
     """Render a no-match result."""
-    with ui.card().classes("w-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"):
+    with ui.card().classes("w-full app-alert app-alert-warning"):
         with ui.row().classes("items-center gap-2 mb-2"):
-            ui.icon("warning").classes("text-amber-600 dark:text-amber-400 text-2xl")
-            ui.label("No Match").classes("text-xl font-semibold text-amber-800 dark:text-amber-300")
+            ui.icon("warning").classes("app-text-warning text-2xl")
+            ui.label("No Match").classes("text-xl font-semibold text-slate-100")
 
         ui.label("The filename did not match any patterns for this sport.").classes(
             "text-slate-600 dark:text-slate-400"
@@ -1149,10 +1147,10 @@ def _render_diagnostics(diagnostics: list[tuple[str, str]]) -> None:
         with ui.column().classes("gap-1"):
             for severity, message in diagnostics:
                 color = {
-                    "error": "text-red-600 dark:text-red-400",
-                    "warning": "text-amber-600 dark:text-amber-400",
-                    "info": "text-blue-600 dark:text-blue-400",
-                }.get(severity, "text-slate-600 dark:text-slate-400")
+                    "error": "app-text-danger",
+                    "warning": "app-text-warning",
+                    "info": "app-text-accent",
+                }.get(severity, "app-text-muted")
 
                 with ui.row().classes("gap-2"):
                     ui.label(f"[{severity.upper()}]").classes(f"font-mono text-xs w-20 {color}")

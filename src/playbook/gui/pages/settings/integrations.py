@@ -64,11 +64,9 @@ def _render_plex_section(state: SettingsFormState) -> None:
                 # Check for env vars
                 has_plex_env = any(os.environ.get(v) for v in ["PLEX_URL", "PLEX_TOKEN"])
                 if has_plex_env:
-                    with ui.row().classes("w-full items-center gap-2 p-2 rounded bg-blue-50 dark:bg-blue-900/20 mb-4"):
-                        ui.icon("info").classes("text-blue-500")
-                        ui.label("Plex settings detected from environment variables").classes(
-                            "text-sm text-blue-700 dark:text-blue-300"
-                        )
+                    with ui.row().classes("w-full items-center gap-2 mb-4 app-alert app-alert-info"):
+                        ui.icon("info").classes("app-text-accent")
+                        ui.label("Plex settings detected from environment variables").classes("text-sm text-slate-300")
 
                 # Connection Settings
                 ui.label("Connection Settings").classes("text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2")
@@ -383,7 +381,7 @@ def _render_rewrite_rules(state: SettingsFormState, path: str) -> None:
                         return delete_rule
 
                     ui.button(icon="delete", on_click=make_delete_handler(idx)).props("flat dense").classes(
-                        "text-red-500"
+                        "app-text-danger"
                     )
 
             # Add new rule button

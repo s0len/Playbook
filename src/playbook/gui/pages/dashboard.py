@@ -86,10 +86,10 @@ def _stats_cards() -> None:
         # Fallback to in-memory events
         return sum(1 for e in gui_state.recent_events if e.action == "error")
 
-    stats_card("Processed", get_processed, color="green", icon="check_circle")
-    stats_card("Events", get_events_count, color="blue", icon="notifications")
-    stats_card("Active Sports", get_sports_count, color="purple", icon="emoji_events")
-    stats_card("Errors", get_errors, color="red", icon="error")
+    stats_card("Processed", get_processed, color="success", icon="check_circle")
+    stats_card("Events", get_events_count, color="accent", icon="notifications")
+    stats_card("Active Sports", get_sports_count, color="muted", icon="emoji_events")
+    stats_card("Errors", get_errors, color="danger", icon="error")
 
 
 def _quick_actions_card() -> None:
@@ -183,7 +183,7 @@ def _status_card() -> None:
                         if current != last_status[0]:
                             last_status[0] = current
                             if current:
-                                status_icon.classes(replace="text-green-500 animate-pulse text-sm")
+                                status_icon.classes(replace="app-text-success animate-pulse text-sm")
                                 status_label.text = "Processing..."
                             else:
                                 status_icon.classes(replace="text-slate-400 text-sm")

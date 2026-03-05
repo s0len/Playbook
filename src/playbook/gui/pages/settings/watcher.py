@@ -46,11 +46,9 @@ def watcher_tab(state: SettingsFormState) -> None:
             )
 
             if watcher_enabled:
-                with ui.row().classes("w-full items-center gap-2 mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded"):
-                    ui.icon("check_circle").classes("text-green-600 dark:text-green-400")
-                    ui.label("File watcher is enabled and will monitor for changes").classes(
-                        "text-sm text-green-700 dark:text-green-300"
-                    )
+                with ui.row().classes("w-full items-center gap-2 mt-2 app-alert app-alert-success"):
+                    ui.icon("check_circle").classes("app-text-success")
+                    ui.label("File watcher is enabled and will monitor for changes").classes("text-sm text-slate-200")
             else:
                 with ui.row().classes("w-full items-center gap-2 mt-2 p-2 bg-slate-50 dark:bg-slate-800 rounded"):
                     ui.icon("info").classes("text-slate-500")

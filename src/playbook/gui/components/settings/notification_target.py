@@ -258,8 +258,8 @@ def notification_target_editor(
                 refresh_editor()
 
             with ui.row().classes("w-full justify-end gap-2 mt-3"):
-                ui.button("Cancel", on_click=dialog.close).props("outline")
-                ui.button("Save", icon="save", on_click=save_target).props("color=primary")
+                ui.button("Cancel", on_click=dialog.close).props("outline no-caps").classes("app-btn app-btn-outline")
+                ui.button("Save", icon="save", on_click=save_target).props("no-caps").classes("app-btn app-btn-primary")
 
         dialog.open()
 
@@ -270,14 +270,14 @@ def notification_target_editor(
         with ui.row().classes("w-full items-center justify-between"):
             with ui.row().classes("items-center gap-2"):
                 ui.label("Notification Targets").classes("text-sm font-semibold text-slate-200")
-                ui.badge(str(len(targets))).props("color=grey-7").classes("text-xs")
+                ui.badge(str(len(targets))).classes("text-xs app-badge app-badge-muted")
 
             if not disabled:
                 ui.button(icon="add", on_click=lambda: _open_target_dialog()).props("flat dense")
 
         if discord_env_key:
             with ui.row().classes("items-center gap-2"):
-                ui.icon("check_circle").classes("text-green-500 text-sm")
+                ui.icon("check_circle").classes("app-text-success text-sm")
                 ui.label(f"Detected Discord webhook env: {discord_env_key}").classes("text-xs text-slate-400")
 
         if not targets:
@@ -300,9 +300,10 @@ def notification_target_editor(
                         with ui.row().classes("items-center gap-2"):
                             ui.icon(type_config["icon"]).classes("text-slate-300")
                             ui.label(type_config["label"]).classes("text-lg font-medium text-slate-100")
-                            ui.badge("Enabled" if enabled else "Disabled").props(
-                                f"color={'positive' if enabled else 'grey'}"
-                            ).classes("text-xs")
+                            badge_class = "app-badge app-badge-muted"
+                            if enabled:
+                                badge_class = "app-badge app-chip-active"
+                            ui.badge("Enabled" if enabled else "Disabled").classes(f"text-xs {badge_class}")
                         ui.label(_target_summary(target)).classes("text-xs text-slate-400 break-all")
 
                     if not disabled:
@@ -325,7 +326,7 @@ def notification_target_editor(
                                 _set_targets(updated)
                                 refresh_editor()
 
-                            ui.button(icon="delete", on_click=_delete).props("flat dense color=negative")
+                            ui.button(icon="delete", on_click=_delete).props("flat dense").classes("app-text-danger")
 
     with container:
         _render_editor()

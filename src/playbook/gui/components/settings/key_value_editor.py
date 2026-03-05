@@ -75,12 +75,12 @@ def key_value_editor(
             with ui.row().classes("items-center gap-2"):
                 ui.label(label).classes("text-sm font-semibold text-slate-700 dark:text-slate-200")
                 if is_modified:
-                    ui.icon("edit").classes("text-amber-500 text-xs")
+                    ui.icon("edit").classes("app-text-warning text-xs")
             if not disabled:
                 ui.button(
                     icon="add",
                     on_click=lambda: add_row("", 0 if value_type == "number" else ""),
-                ).props("flat dense").classes("text-blue-600")
+                ).props("flat dense").classes("app-text-accent")
 
         if description:
             ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400")
@@ -144,7 +144,7 @@ def key_value_editor(
                 ui.button(
                     icon="delete",
                     on_click=lambda k=key: remove_row(k),
-                ).props("flat dense color=negative").classes("text-red-500")
+                ).props("flat dense").classes("app-text-danger")
 
     def add_row(new_key: str, new_value: Any) -> None:
         """Add a new key-value pair."""

@@ -59,7 +59,7 @@ def settings_card(
                             with ui.row().classes("items-center gap-2"):
                                 ui.label(title).classes("text-lg font-semibold text-slate-700 dark:text-slate-200")
                                 if modified:
-                                    ui.badge("Modified").props("color=warning").classes("text-xs")
+                                    ui.badge("Modified").classes("text-xs app-badge app-badge-muted")
                             if description:
                                 ui.label(description).classes("text-sm text-slate-500 dark:text-slate-400")
 
@@ -75,7 +75,7 @@ def settings_card(
                     with ui.row().classes("items-center gap-2"):
                         ui.label(title).classes("text-lg font-semibold text-slate-700 dark:text-slate-200")
                         if modified:
-                            ui.badge("Modified").props("color=warning").classes("text-xs")
+                            ui.badge("Modified").classes("text-xs app-badge app-badge-muted")
                     if description:
                         ui.label(description).classes("text-sm text-slate-500 dark:text-slate-400")
 
