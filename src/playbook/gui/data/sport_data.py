@@ -272,13 +272,17 @@ def get_sports_overview() -> list[SportOverview]:
     database and does NOT make network requests to load metadata. Total episode
     counts are not available in the list view to avoid blocking the UI.
 
+    Variants that share the same (name, show_slug) are merged into a single
+    row with summed matched counts (e.g. NFL 2025 + NFL 2026 → one NFL row).
+
     Returns:
         List of SportOverview for the sports list page
     """
     if not gui_state.config:
         return []
 
-    overviews = []
+    # Group variants by (name, show_slug) to merge cross-year duplicates
+    merged: dict[tuple[str, str], SportOverview] = {}
 
     for sport in gui_state.config.sports:
         # Get processed records count from local database only (fast)
@@ -290,25 +294,26 @@ def get_sports_overview() -> list[SportOverview]:
             except Exception as e:
                 LOGGER.warning("Failed to get processed records for %s: %s", sport.id, e)
 
-        # Note: total_count is 0 here - we don't load metadata in the list view
-        # to avoid blocking network requests. Full counts are shown in detail view.
-        # For display, prefer show_slug, fall back to template
         display_slug = sport.show_slug or sport.show_slug_template or ""
+        merge_key = (sport.name, display_slug)
 
-        overview = SportOverview(
-            sport_id=sport.id,
-            sport_name=sport.name,
-            show_slug=display_slug,
-            enabled=sport.enabled,
-            link_mode=sport.link_mode,
-            pattern_count=len(sport.patterns),
-            extensions=sport.source_extensions,
-            matched_count=matched_count,
-            total_count=0,  # Not loaded in list view for performance
-        )
-        overviews.append(overview)
+        if merge_key in merged:
+            # Add matched count to existing entry
+            merged[merge_key].matched_count += matched_count
+        else:
+            merged[merge_key] = SportOverview(
+                sport_id=sport.id,
+                sport_name=sport.name,
+                show_slug=display_slug,
+                enabled=sport.enabled,
+                link_mode=sport.link_mode,
+                pattern_count=len(sport.patterns),
+                extensions=sport.source_extensions,
+                matched_count=matched_count,
+                total_count=0,
+            )
 
-    return overviews
+    return list(merged.values())
 
 
 def _load_show_metadata(sport_config) -> tuple:

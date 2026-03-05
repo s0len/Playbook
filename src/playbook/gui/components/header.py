@@ -12,9 +12,6 @@ NAV_ITEMS = [
     ("/", "dashboard", "Dashboard"),
     ("/sports", "emoji_events", "Sports"),
     ("/unmatched", "help_outline", "Unmatched"),
-]
-
-BOTTOM_ITEMS = [
     ("/config", "settings", "Settings"),
     ("/logs", "article", "Logs"),
 ]
@@ -37,22 +34,14 @@ def header(current_path: str = "/") -> None:
                 ui.image("/icon.png").classes("w-8 h-8 rounded-xl object-cover")
                 ui.label("Playbook").classes("text-base font-semibold text-white/90")
 
-            # Main navigation items
+            # Navigation items
             with ui.column().classes("w-full gap-1"):
                 for path, icon_name, label in NAV_ITEMS:
                     _sidebar_item(path, icon_name, label, _is_active(path, current_path))
 
-            # Separator
-            ui.element("div").classes("sidebar-separator my-3")
-
             ui.space()
 
-            # Bottom items (Settings, Logs)
-            with ui.column().classes("w-full gap-1"):
-                for path, icon_name, label in BOTTOM_ITEMS:
-                    _sidebar_item(path, icon_name, label, _is_active(path, current_path))
-
-            # Status indicator
+            # Status indicator at very bottom
             _status_indicator()
 
 
