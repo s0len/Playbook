@@ -458,6 +458,11 @@ body.body--dark a:hover {
     justify-content: flex-start;
 }
 
+.settings-sidebar .q-btn {
+    width: 100%;
+    text-align: left;
+}
+
 .settings-subnav-item {
     display: flex;
     align-items: center;
@@ -465,7 +470,8 @@ body.body--dark a:hover {
     width: 100%;
     transition: all 0.15s ease;
     border-radius: 8px;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.62);
+    background: transparent;
 }
 
 .settings-subnav-item:hover {
@@ -474,13 +480,13 @@ body.body--dark a:hover {
 }
 
 .settings-subnav-item-active {
-    background: var(--accent-soft) !important;
-    color: var(--accent-color) !important;
+    background: rgba(255, 255, 255, 0.14) !important;
+    color: #f8fafc !important;
 }
 
 body.body--dark .settings-subnav-item-active {
-    background: var(--accent-soft) !important;
-    color: var(--accent-color) !important;
+    background: rgba(255, 255, 255, 0.14) !important;
+    color: #f8fafc !important;
 }
 
 .settings-content {
@@ -551,23 +557,37 @@ body.body--dark .settings-toggle .q-toggle__inner {
     color: var(--accent-color);
 }
 
-/* Quasar primary color alignment */
-body.body--dark .q-btn.bg-primary,
-body.body--dark .q-btn--standard.bg-primary,
-body.body--dark .q-badge.bg-primary,
-body.body--dark .text-primary,
-body.body--dark .q-toggle__inner--truthy,
-body.body--dark .q-checkbox__inner--truthy {
-    background-color: var(--accent-color) !important;
+/* Buttons scoped to settings header actions */
+.settings-action-primary {
+    background: var(--accent-color) !important;
     color: #111114 !important;
-    border-color: var(--accent-color) !important;
+    border: 1px solid var(--accent-color) !important;
 }
 
-body.body--dark .q-btn.text-primary,
-body.body--dark .q-icon.text-primary,
+.settings-action-primary:hover {
+    background: var(--accent-hover) !important;
+    border-color: var(--accent-hover) !important;
+}
+
+.settings-action-secondary {
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    background: transparent !important;
+}
+
+.settings-action-secondary:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
 body.body--dark .q-toggle__inner,
 body.body--dark .q-radio__inner,
 body.body--dark .q-checkbox__inner {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+body.body--dark .q-toggle__inner--truthy,
+body.body--dark .q-radio__inner--truthy,
+body.body--dark .q-checkbox__inner--truthy {
     color: var(--accent-color) !important;
 }
 

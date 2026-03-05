@@ -16,10 +16,7 @@ def themes_tab(state) -> None:
                 state,
                 "settings.theme",
                 "Theme",
-                options=[
-                    {"label": "Swizzin", "value": "swizzin"},
-                    {"label": "Catppuccin", "value": "catppuccin"},
-                ],
+                options={"swizzin": "Swizzin", "catppuccin": "Catppuccin"},
                 description="Theme updates immediately in the current session",
                 on_change=lambda value: apply_color_theme(str(value or "swizzin")),
             )

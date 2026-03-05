@@ -449,17 +449,6 @@ class Processor:
                         stats.cancelled = True
                         break
 
-                    watcher_settings = self.config.settings.file_watcher
-                    if not matches_include_ignore_patterns(
-                        source_path,
-                        watcher_settings.include,
-                        watcher_settings.ignore,
-                    ):
-                        stats.register_ignored(
-                            f"Excluded by include/ignore patterns: {source_path.name}",
-                        )
-                        continue
-
                     is_sample_file = should_suppress_sample_ignored(source_path)
                     handled, diagnostics, match_attempts = self._process_single_file(
                         source_path,
@@ -468,6 +457,18 @@ class Processor:
                         is_sample_file=is_sample_file,
                     )
                     if not handled:
+                        watcher_settings = self.config.settings.file_watcher
+                        if not matches_include_ignore_patterns(
+                            source_path,
+                            watcher_settings.include,
+                            watcher_settings.ignore,
+                        ):
+                            stats.register_ignored(
+                                f"Excluded by include/ignore patterns: {source_path.name}",
+                            )
+                            progress.advance(task_id, 1)
+                            continue
+
                         if is_sample_file:
                             stats.register_ignored(suppressed_reason="sample")
                         else:

@@ -80,14 +80,14 @@ def settings_page() -> None:
                     "Reset",
                     icon="undo",
                     on_click=lambda: _reset_changes(state),
-                ).props("outline")
+                ).props("outline no-caps").classes("settings-action-secondary")
 
                 # Save button
                 ui.button(
                     "Save",
                     icon="save",
                     on_click=lambda: _save_changes(state),
-                ).props("color=primary")
+                ).props("no-caps").classes("settings-action-primary")
 
         # Main content area
         with ui.row().classes("w-full gap-8 items-start settings-main-layout"):
@@ -108,15 +108,6 @@ def settings_page() -> None:
                 """Render the content for the active tab."""
                 content_container.clear()
                 with content_container:
-                    # Breadcrumb
-                    active_label = next(
-                        (label for tid, label, _ in SETTINGS_TABS if tid == state.active_tab), "Settings"
-                    )
-                    with ui.row().classes("items-center gap-2 mb-3 px-1"):
-                        ui.label("Settings").classes("text-sm text-slate-500 dark:text-slate-400")
-                        ui.icon("chevron_right").classes("text-slate-400")
-                        ui.label(active_label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
-
                     # Tab content
                     renderer = TAB_RENDERERS.get(state.active_tab, general_tab)
                     renderer(state)
@@ -170,7 +161,7 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
         .classes(f"w-full justify-start px-3 py-2 rounded-lg text-left {btn_classes}")
         .props("flat no-caps")
     ):
-        with ui.row().classes("w-full items-center gap-3"):
+        with ui.row().classes("w-full items-center gap-3 justify-start"):
             ui.icon(tab_icon).classes("text-lg w-5 text-center")
             ui.label(tab_label).classes("text-sm flex-1 text-left")
             if has_modifications:
