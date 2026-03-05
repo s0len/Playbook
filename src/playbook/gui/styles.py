@@ -651,6 +651,55 @@ body.body--dark .settings-toggle .q-toggle__inner {
     background: rgba(255, 255, 255, 0.08) !important;
 }
 
+/* App-wide chips and badges */
+.app-chip {
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.72) !important;
+    background: transparent !important;
+    padding: 4px 8px;
+}
+
+.app-chip .q-btn__content,
+.app-chip .q-icon {
+    color: inherit !important;
+}
+
+.app-chip:hover {
+    background: rgba(255, 255, 255, 0.07) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.app-chip-active {
+    background: var(--accent-soft) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    color: var(--accent-color) !important;
+}
+
+.app-badge {
+    border-radius: 6px;
+    border: 1px solid transparent;
+}
+
+.app-badge-muted {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    color: rgba(255, 255, 255, 0.86) !important;
+}
+
+/* Semantic icon tones */
+.app-stat-icon-accent {
+    color: var(--accent-color) !important;
+}
+
+.app-stat-icon-warning {
+    color: #fbbf24 !important;
+}
+
+.app-stat-icon-muted {
+    color: rgba(255, 255, 255, 0.56) !important;
+}
+
 body.body--dark .q-toggle__inner,
 body.body--dark .q-radio__inner,
 body.body--dark .q-checkbox__inner {
