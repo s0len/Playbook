@@ -394,6 +394,7 @@ class Settings:
     source_dir: Path
     destination_dir: Path
     cache_dir: Path
+    state_dir: Path | None = None
     dry_run: bool = False
     skip_existing: bool = True
     default_destination: DestinationTemplates = field(default_factory=DestinationTemplates)
@@ -1333,6 +1334,8 @@ def _build_settings(data: dict[str, Any]) -> Settings:
     source_dir = Path(data.get("source_dir", "/data/source")).expanduser()
     destination_dir = Path(data.get("destination_dir", "/data/destination")).expanduser()
     cache_dir = Path(data.get("cache_dir", "/data/cache")).expanduser()
+    state_dir_raw = data.get("state_dir")
+    state_dir = Path(state_dir_raw).expanduser() if state_dir_raw else cache_dir
     watcher_settings = _build_watcher_settings(data.get("file_watcher", {}) or {})
     kometa_trigger = _build_kometa_trigger_settings(data.get("kometa_trigger", {}) or {})
 
@@ -1362,6 +1365,7 @@ def _build_settings(data: dict[str, Any]) -> Settings:
         source_dir=source_dir,
         destination_dir=destination_dir,
         cache_dir=cache_dir,
+        state_dir=state_dir,
         dry_run=bool(data.get("dry_run", False)),
         skip_existing=bool(data.get("skip_existing", True)),
         default_destination=destination_defaults,

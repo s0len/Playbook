@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import shutil
 import time
 from collections.abc import Iterable, Mapping
 from datetime import datetime
@@ -54,21 +55,30 @@ class Processor:
         trace_options: TraceOptions | None = None,
     ) -> None:
         self.config = config
+        state_dir = self._resolve_state_dir(self.config)
         if not self.config.settings.dry_run:
             ensure_directory(self.config.settings.destination_dir)
             ensure_directory(self.config.settings.cache_dir)
+            ensure_directory(state_dir)
         self.metadata_fingerprints = MetadataFingerprintStore(self.config.settings.cache_dir)
-        main_db_path = self.config.settings.cache_dir / "playbook.db"
-        manual_override_db_path = self.config.settings.cache_dir.parent / "playbook-manual-overrides.db"
+        main_db_path = state_dir / "playbook.db"
+        manual_override_db_path = state_dir / "playbook-manual-overrides.db"
+        legacy_main_db_path = self.config.settings.cache_dir / "playbook.db"
+        self._migrate_state_databases_if_needed(
+            legacy_main_db_path=legacy_main_db_path,
+            legacy_manual_override_db_path=self.config.settings.cache_dir.parent / "playbook-manual-overrides.db",
+            main_db_path=main_db_path,
+            manual_override_db_path=manual_override_db_path,
+        )
         self.processed_store = ProcessedFileStore(main_db_path)
         self.unmatched_store = UnmatchedFileStore(main_db_path)
         self.manual_override_store = ManualOverrideStore(manual_override_db_path)
-        self._migrate_legacy_manual_overrides(main_db_path)
+        self._migrate_legacy_manual_overrides(legacy_main_db_path)
         self.trace_options = trace_options or TraceOptions()
         settings = self.config.settings
         self.notification_service = NotificationService(
             settings.notifications,
-            cache_dir=settings.cache_dir,
+            cache_dir=state_dir,
             destination_dir=settings.destination_dir,
             enabled=enable_notifications,
             integrations=settings.integrations,
@@ -97,11 +107,12 @@ class Processor:
         """
         self.config = new_config
         settings = new_config.settings
+        state_dir = self._resolve_state_dir(new_config)
 
         # Rebuild notification service with new settings
         self.notification_service = NotificationService(
             settings.notifications,
-            cache_dir=settings.cache_dir,
+            cache_dir=state_dir,
             destination_dir=settings.destination_dir,
             enabled=self._enable_notifications,
             integrations=settings.integrations,
@@ -112,6 +123,60 @@ class Processor:
         self._plex_sync = create_plex_sync_from_config(new_config)
 
         LOGGER.info("Reloaded processor services after configuration change")
+
+    @staticmethod
+    def _resolve_state_dir(config: AppConfig) -> Path:
+        state_dir = config.settings.state_dir
+        return state_dir if state_dir is not None else config.settings.cache_dir
+
+    def _migrate_state_databases_if_needed(
+        self,
+        *,
+        legacy_main_db_path: Path,
+        legacy_manual_override_db_path: Path,
+        main_db_path: Path,
+        manual_override_db_path: Path,
+    ) -> None:
+        """Copy legacy state databases into the configured state directory.
+
+        This migration is safe and non-destructive: it only copies when the new
+        destination file does not already exist.
+        """
+
+        migrations = [
+            (legacy_main_db_path, main_db_path, "Processed/Unmatched DB"),
+            (legacy_manual_override_db_path, manual_override_db_path, "Manual Overrides DB"),
+        ]
+        for source, destination, label in migrations:
+            if source.resolve() == destination.resolve():
+                continue
+            if not source.exists() or destination.exists():
+                continue
+            try:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, destination)
+                LOGGER.info(
+                    self._format_log(
+                        "State Database Migrated",
+                        {
+                            "Type": label,
+                            "From": source,
+                            "To": destination,
+                        },
+                    )
+                )
+            except Exception as exc:  # noqa: BLE001
+                LOGGER.warning(
+                    self._format_log(
+                        "State Database Migration Failed",
+                        {
+                            "Type": label,
+                            "From": source,
+                            "To": destination,
+                            "Reason": str(exc),
+                        },
+                    )
+                )
 
     def request_cancel(self) -> None:
         """Request cancellation of the current processing run.

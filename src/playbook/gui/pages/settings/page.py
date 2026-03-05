@@ -136,7 +136,13 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
 
     # Check if tab has modified fields
     tab_prefixes = {
-        "general": ["settings.source_dir", "settings.destination_dir", "settings.cache_dir", "settings.dry_run"],
+        "general": [
+            "settings.source_dir",
+            "settings.destination_dir",
+            "settings.cache_dir",
+            "settings.state_dir",
+            "settings.dry_run",
+        ],
         "quality": ["settings.quality_profile"],
         "notifications": ["settings.notifications"],
         "watcher": ["settings.file_watcher"],

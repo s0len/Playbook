@@ -6,6 +6,7 @@ Provides a polymorphic form for different notification target types.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
@@ -84,6 +85,27 @@ NOTIFICATION_TYPES = {
 }
 
 
+def _preferred_discord_env_key() -> str | None:
+    """Return Discord webhook env key when present."""
+    for key in ("DISCORD_WEBHOOK_URL",):
+        raw = os.environ.get(key)
+        if raw and raw.strip():
+            return key
+    return None
+
+
+def _default_target_for_type(target_type: str) -> dict[str, Any]:
+    """Create a new target payload with sensible defaults."""
+    normalized = target_type.strip().lower()
+    target: dict[str, Any] = {
+        "type": normalized,
+        "enabled": True,
+    }
+    if normalized == "discord":
+        target["webhook_env"] = _preferred_discord_env_key() or "DISCORD_WEBHOOK_URL"
+    return target
+
+
 def notification_target_editor(
     state: SettingsFormState,
     path: str,
@@ -118,6 +140,7 @@ def notification_target_editor(
         targets = state.get_value(path, []) or []
         if not isinstance(targets, list):
             targets = []
+        discord_env_key = _preferred_discord_env_key()
 
         # Header with add button
         with ui.row().classes("w-full items-center justify-between"):
@@ -127,7 +150,17 @@ def notification_target_editor(
 
             if not disabled:
                 with ui.button(icon="add", on_click=lambda: add_target()).props("flat dense"):
-                    ui.tooltip("Add notification target")
+                    if discord_env_key:
+                        ui.tooltip(f"Add target (Discord prefilled from {discord_env_key})")
+                    else:
+                        ui.tooltip("Add notification target")
+
+        if discord_env_key:
+            with ui.row().classes("items-center gap-2"):
+                ui.icon("check_circle").classes("text-green-500 text-sm")
+                ui.label(f"Detected Discord webhook env: {discord_env_key}").classes(
+                    "text-xs text-slate-500 dark:text-slate-400"
+                )
 
         # Render each target
         if targets:
@@ -138,7 +171,18 @@ def notification_target_editor(
                 ui.label("No notification targets configured").classes(
                     "text-sm text-slate-500 dark:text-slate-400 italic"
                 )
-                ui.label("Click '+' to add a notification target").classes("text-xs text-slate-400 dark:text-slate-500")
+                if discord_env_key and not disabled:
+                    with ui.row().classes("w-full items-center justify-between mt-2 gap-3"):
+                        ui.label("Discord is ready from environment. Add it with one click.").classes(
+                            "text-xs text-slate-500 dark:text-slate-400"
+                        )
+                        ui.button(text="Add Discord", icon="chat", on_click=lambda: add_target("discord")).props(
+                            "dense color=primary"
+                        )
+                else:
+                    ui.label("Click '+' to add a notification target").classes(
+                        "text-xs text-slate-400 dark:text-slate-500"
+                    )
 
     def _render_target(idx: int, target: dict) -> None:
         """Render a single notification target."""
@@ -227,17 +271,13 @@ def notification_target_editor(
             if disabled:
                 inp.disable()
 
-    def add_target() -> None:
+    def add_target(target_type: str = "discord") -> None:
         """Add a new notification target."""
         targets = state.get_value(path, []) or []
         if not isinstance(targets, list):
             targets = []
 
-        new_target = {
-            "type": "discord",
-            "enabled": True,
-            "webhook_url": "",
-        }
+        new_target = _default_target_for_type(target_type)
         targets.append(new_target)
         state.set_value(path, targets)
         if on_change:
@@ -269,11 +309,9 @@ def notification_target_editor(
         targets = state.get_value(path, []) or []
         if 0 <= idx < len(targets):
             old_target = targets[idx]
-            # Keep enabled state, reset other fields
-            targets[idx] = {
-                "type": new_type,
-                "enabled": old_target.get("enabled", True),
-            }
+            defaults = _default_target_for_type(new_type)
+            defaults["enabled"] = old_target.get("enabled", True)
+            targets[idx] = defaults
             state.set_value(path, targets)
             if on_change:
                 on_change(targets)

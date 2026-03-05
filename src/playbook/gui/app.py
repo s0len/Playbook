@@ -162,8 +162,9 @@ def run_with_gui(
     gui_state.unmatched_store = processor.unmatched_store
     gui_state.manual_override_store = processor.manual_override_store
 
-    # Set NiceGUI storage path to cache directory (avoids permission issues in containers)
-    storage_path = app_config.settings.cache_dir / ".nicegui"
+    # Set NiceGUI storage path to persistent state directory
+    state_dir = app_config.settings.state_dir or app_config.settings.cache_dir
+    storage_path = state_dir / ".nicegui"
     storage_path.mkdir(parents=True, exist_ok=True)
     app.storage.path = storage_path
     LOGGER.debug("NiceGUI storage path: %s", storage_path)

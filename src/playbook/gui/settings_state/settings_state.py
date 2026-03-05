@@ -82,6 +82,9 @@ class SettingsFormState:
         try:
             yaml_text = yaml_path.read_text(encoding="utf-8")
             data = yaml.safe_load(yaml_text) or {}
+            settings = data.get("settings")
+            if isinstance(settings, dict) and not settings.get("state_dir") and settings.get("cache_dir"):
+                settings["state_dir"] = settings.get("cache_dir")
             self.original_data = data
             self.form_data = copy.deepcopy(data)
             self.modified_paths = set()
@@ -101,7 +104,10 @@ class SettingsFormState:
             config_path: Optional path to associate with this config
         """
         self.original_data = copy.deepcopy(data)
-        self.form_data = copy.deepcopy(data)
+        settings = self.original_data.get("settings")
+        if isinstance(settings, dict) and not settings.get("state_dir") and settings.get("cache_dir"):
+            settings["state_dir"] = settings.get("cache_dir")
+        self.form_data = copy.deepcopy(self.original_data)
         self.modified_paths = set()
         self.validation_errors = {}
         self.config_path = config_path

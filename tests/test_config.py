@@ -49,6 +49,7 @@ def test_load_config_expands_variants_and_merges_patterns(tmp_path) -> None:
 
     assert config.settings.source_dir == tmp_path / "source"
     assert config.settings.destination_dir == tmp_path / "dest"
+    assert config.settings.state_dir == tmp_path / "cache"
 
     sport_ids = [sport.id for sport in config.sports]
     assert sport_ids == ["formula1_2024", "formula1_pro"]
@@ -102,6 +103,27 @@ def test_file_watcher_settings_defaults_and_overrides(tmp_path) -> None:
     assert watcher.ignore == ["*.part", "*.tmp"]
     assert watcher.debounce_seconds == 2.5
     assert watcher.reconcile_interval == 60
+
+
+def test_state_dir_override(tmp_path) -> None:
+    config_path = tmp_path / "playbook.yaml"
+    write_yaml(
+        config_path,
+        f"""
+        settings:
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
+          state_dir: "{tmp_path / "state"}"
+
+        sports:
+          - id: demo
+            show_slug: demo
+        """,
+    )
+
+    config = load_config(config_path)
+    assert config.settings.state_dir == tmp_path / "state"
 
 
 def test_kometa_trigger_settings_round_trip(tmp_path) -> None:
