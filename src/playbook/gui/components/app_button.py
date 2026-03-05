@@ -23,6 +23,8 @@ def app_button(
     accidental Quasar primary styling from leaking into custom themes.
     """
     button = ui.button(text, icon=icon, on_click=on_click)
+    # Force flat button mode so Quasar does not inject standard primary skin.
+    button.props("flat")
 
     # Remove framework default color utility classes explicitly.
     def strip_framework_classes() -> None:
