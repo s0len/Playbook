@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from nicegui import ui
 
+from ...components.app_button import app_button
 from ...components.settings import settings_card, settings_select
 from ...styles import apply_color_theme
 
@@ -82,10 +83,8 @@ def _theme_option_card(
                 ui.element("div").classes("w-4 h-4 rounded-full border border-white/20").style(f"background:{swatch}")
 
         action_label = "Selected" if selected else f"Use {title}"
-        action_class = "app-btn app-btn-outline" if selected else "app-btn app-btn-primary"
-        ui.button(action_label, on_click=lambda t=key: _set_theme(state, t)).props("no-caps").classes(
-            f"mt-4 {action_class}"
-        )
+        action_variant = "outline" if selected else "primary"
+        app_button(action_label, on_click=lambda t=key: _set_theme(state, t), variant=action_variant).classes("mt-4")
 
 
 def _set_theme(state, theme: str) -> None:

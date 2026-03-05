@@ -11,7 +11,7 @@ import logging
 
 from nicegui import ui
 
-from ..components import activity_feed, stats_card
+from ..components import activity_feed, app_button, stats_card
 from ..state import gui_state
 from ..utils import safe_timer
 
@@ -99,24 +99,20 @@ def _quick_actions_card() -> None:
 
         with ui.column().classes("w-full gap-2"):
             # Run/Stop button (dynamic based on processing state)
-            run_button = (
-                ui.button(
-                    "Run Now",
-                    icon="play_arrow",
-                    on_click=_trigger_run,
-                )
-                .classes("w-full app-btn app-btn-primary")
-                .props("no-caps")
+            run_button = app_button(
+                "Run Now",
+                icon="play_arrow",
+                on_click=_trigger_run,
+                variant="primary",
+                classes="w-full",
             )
 
-            stop_button = (
-                ui.button(
-                    "Stop Processing",
-                    icon="stop",
-                    on_click=_stop_processing,
-                )
-                .classes("w-full app-btn app-btn-danger")
-                .props("no-caps")
+            stop_button = app_button(
+                "Stop Processing",
+                icon="stop",
+                on_click=_stop_processing,
+                variant="danger",
+                classes="w-full",
             )
             stop_button.set_visibility(False)
 
@@ -142,25 +138,31 @@ def _quick_actions_card() -> None:
             update_buttons()
 
             # Clear processed cache button
-            ui.button(
+            app_button(
                 "Clear Processed Cache",
                 icon="delete_sweep",
                 on_click=_clear_cache,
-            ).classes("w-full app-btn app-btn-outline").props("no-caps")
+                variant="outline",
+                classes="w-full",
+            )
 
             # Clear manual matches button
-            ui.button(
+            app_button(
                 "Clear Manual Matches",
                 icon="rule_folder",
                 on_click=_clear_manual_matches,
-            ).classes("w-full app-btn app-btn-outline").props("no-caps")
+                variant="outline",
+                classes="w-full",
+            )
 
             # Refresh Metadata button
-            ui.button(
+            app_button(
                 "Refresh Metadata",
                 icon="refresh",
                 on_click=_refresh_metadata,
-            ).classes("w-full app-btn app-btn-outline").props("no-caps")
+                variant="outline",
+                classes="w-full",
+            )
 
 
 def _status_card() -> None:

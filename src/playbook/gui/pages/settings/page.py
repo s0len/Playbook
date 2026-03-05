@@ -13,6 +13,7 @@ from pathlib import Path
 
 from nicegui import ui
 
+from ...components.app_button import app_button
 from ...settings_state.settings_state import SETTINGS_TABS, SettingsFormState
 from ...state import gui_state
 from ...utils import safe_notify
@@ -76,18 +77,21 @@ def settings_page() -> None:
                 state.register_callback(lambda t, d: update_modified_indicator())
 
                 # Reset button
-                ui.button(
+                app_button(
                     "Reset",
                     icon="undo",
                     on_click=lambda: _reset_changes(state),
-                ).props("outline no-caps").classes("settings-action-secondary")
+                    variant="outline",
+                    props="outline",
+                ).classes("settings-action-secondary")
 
                 # Save button
-                ui.button(
+                app_button(
                     "Save",
                     icon="save",
                     on_click=lambda: _save_changes(state),
-                ).props("no-caps").classes("settings-action-primary")
+                    variant="primary",
+                ).classes("settings-action-primary")
 
         # Main content area
         with ui.row().classes("w-full gap-8 items-start settings-main-layout"):

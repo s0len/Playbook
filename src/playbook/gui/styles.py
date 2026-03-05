@@ -24,8 +24,6 @@ PLAYBOOK_CSS = """
     --accent-color: #34d399;
     --accent-hover: #2cb783;
     --accent-soft: rgba(52, 211, 153, 0.2);
-    --q-primary: #34d399;
-    --q-info: #34d399;
 }
 
 body.body--dark {
@@ -40,8 +38,6 @@ body.body--dark {
     --accent-color: #34d399;
     --accent-hover: #2cb783;
     --accent-soft: rgba(52, 211, 153, 0.2);
-    --q-primary: #34d399;
-    --q-info: #34d399;
 }
 
 body.body--dark.theme-swizzin {
@@ -54,8 +50,6 @@ body.body--dark.theme-catppuccin {
     --accent-color: #cba6f7;
     --accent-hover: #b78de8;
     --accent-soft: rgba(203, 166, 247, 0.24);
-    --q-primary: #cba6f7;
-    --q-info: #cba6f7;
 }
 
 /* ===== Theme Transitions ===== */
@@ -483,6 +477,11 @@ a:hover {
     color: inherit !important;
 }
 
+.settings-subnav-item.text-primary,
+.settings-subnav-item .text-primary {
+    color: inherit !important;
+}
+
 .settings-subnav-item:hover {
     background: rgba(255, 255, 255, 0.08) !important;
     color: rgba(255, 255, 255, 0.9) !important;
@@ -586,6 +585,10 @@ body.body--dark .settings-toggle .q-toggle__inner {
     border: 1px solid var(--accent-color) !important;
 }
 
+.settings-action-primary.bg-primary {
+    background: var(--accent-color) !important;
+}
+
 .settings-action-primary .q-btn__content,
 .settings-action-primary .q-icon {
     color: #f8fafc !important;
@@ -599,6 +602,10 @@ body.body--dark .settings-toggle .q-toggle__inner {
 .settings-action-secondary {
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     color: rgba(255, 255, 255, 0.85) !important;
+    background: transparent !important;
+}
+
+.settings-action-secondary.bg-primary {
     background: transparent !important;
 }
 
@@ -618,10 +625,24 @@ body.body--dark .settings-toggle .q-toggle__inner {
     letter-spacing: 0.01em;
 }
 
+/* Neutralize Quasar default primary utility classes on semantic buttons. */
+.app-btn.bg-primary {
+    background: transparent !important;
+}
+
+.app-btn.text-white,
+.app-btn .text-white {
+    color: inherit !important;
+}
+
 .app-btn-primary {
     background: var(--accent-color) !important;
     border: 1px solid var(--accent-color) !important;
     color: #f8fafc !important;
+}
+
+.app-btn-primary.bg-primary {
+    background: var(--accent-color) !important;
 }
 
 .app-btn-primary .q-btn__content,
@@ -640,6 +661,10 @@ body.body--dark .settings-toggle .q-toggle__inner {
     color: #fca5a5 !important;
 }
 
+.app-btn-danger.bg-primary {
+    background: rgba(239, 68, 68, 0.12) !important;
+}
+
 .app-btn-danger .q-btn__content,
 .app-btn-danger .q-icon {
     color: #fca5a5 !important;
@@ -653,6 +678,10 @@ body.body--dark .settings-toggle .q-toggle__inner {
     background: rgba(255, 255, 255, 0.03) !important;
     border: 1px solid rgba(255, 255, 255, 0.16) !important;
     color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.app-btn-outline.bg-primary {
+    background: rgba(255, 255, 255, 0.03) !important;
 }
 
 .app-btn-outline .q-btn__content,

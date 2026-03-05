@@ -17,7 +17,7 @@ from typing import Any
 
 from nicegui import context, ui
 
-from ..components import progress_bar, seasons_list, status_chip
+from ..components import app_button, progress_bar, seasons_list, status_chip
 from ..data import get_sport_detail, get_sports_overview
 from ..state import gui_state
 from ..utils import safe_notify
@@ -346,23 +346,37 @@ def _sports_table() -> None:
     with action_bar:
         selection_label = ui.label("0 selected").classes("font-medium text-slate-700 dark:text-slate-200 mr-4")
 
-        ui.button(
-            "Enable", icon="check_circle", on_click=lambda: _bulk_action("enable", selection_state["selected"])
-        ).props("flat dense no-caps").classes("app-btn app-btn-outline")
-        ui.button(
-            "Disable", icon="cancel", on_click=lambda: _bulk_action("disable", selection_state["selected"])
-        ).props("flat dense no-caps").classes("app-btn app-btn-outline")
+        app_button(
+            "Enable",
+            icon="check_circle",
+            on_click=lambda: _bulk_action("enable", selection_state["selected"]),
+            variant="outline",
+            props="flat dense",
+        )
+        app_button(
+            "Disable",
+            icon="cancel",
+            on_click=lambda: _bulk_action("disable", selection_state["selected"]),
+            variant="outline",
+            props="flat dense",
+        )
 
         ui.separator().props("vertical").classes("mx-2")
 
-        ui.button(
+        app_button(
             "Clear History",
             icon="delete_sweep",
             on_click=lambda: _bulk_action("clear_history", selection_state["selected"]),
-        ).props("flat dense no-caps").classes("app-btn app-btn-danger")
-        ui.button(
-            "Reprocess", icon="refresh", on_click=lambda: _bulk_action("reprocess", selection_state["selected"])
-        ).props("flat dense no-caps").classes("app-btn app-btn-outline")
+            variant="danger",
+            props="flat dense",
+        )
+        app_button(
+            "Reprocess",
+            icon="refresh",
+            on_click=lambda: _bulk_action("reprocess", selection_state["selected"]),
+            variant="outline",
+            props="flat dense",
+        )
 
         ui.space()
 
@@ -554,9 +568,7 @@ def _bulk_action(action: str, sport_ids: list[str]) -> None:
 
             with ui.row().classes("w-full justify-end gap-2"):
                 ui.button("Cancel", on_click=dialog.close).props("flat")
-                ui.button("Clear History", on_click=lambda: _do_clear_history(sport_ids, dialog)).props(
-                    "no-caps"
-                ).classes("app-btn app-btn-danger")
+                app_button("Clear History", on_click=lambda: _do_clear_history(sport_ids, dialog), variant="danger")
 
         dialog.open()
 
@@ -574,9 +586,7 @@ def _bulk_action(action: str, sport_ids: list[str]) -> None:
 
             with ui.row().classes("w-full justify-end gap-2"):
                 ui.button("Cancel", on_click=dialog.close).props("flat")
-                ui.button("Reprocess", on_click=lambda: _do_reprocess(sport_ids, dialog)).props("no-caps").classes(
-                    "app-btn app-btn-primary"
-                )
+                app_button("Reprocess", on_click=lambda: _do_reprocess(sport_ids, dialog), variant="primary")
 
         dialog.open()
 
@@ -862,15 +872,13 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
                     on_change=lambda e: state.update({"new_glob": e.value}),
                 ).classes("flex-1").bind_value(state, "new_glob")
 
-                ui.button("Add", icon="add", on_click=add_custom_glob).props("no-caps").classes(
-                    "app-btn app-btn-primary"
-                )
+                app_button("Add", icon="add", on_click=add_custom_glob, variant="primary")
 
             # Save button (shown when modified)
             if state["modified"]:
                 with ui.row().classes("w-full justify-end mt-4"):
-                    ui.button("Save Changes", icon="save", on_click=save_changes).props("no-caps").classes(
-                        "app-btn app-btn-primary animate-pulse"
+                    app_button("Save Changes", icon="save", on_click=save_changes, variant="primary").classes(
+                        "animate-pulse"
                     )
 
     # Render the card
@@ -972,11 +980,12 @@ def _pattern_tester() -> None:
             on_change=lambda e: state.update({"sport_id": e.value}),
         ).classes("w-48")
 
-        ui.button(
+        app_button(
             "Test Match",
             icon="play_arrow",
             on_click=lambda: _test_pattern(state["filename"], state["sport_id"], result_container),
-        ).props("no-caps").classes("app-btn app-btn-primary")
+            variant="primary",
+        )
 
     result_container = ui.column().classes("w-full mt-4")
 

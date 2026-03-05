@@ -9,6 +9,8 @@ from urllib.parse import urlparse
 
 from nicegui import ui
 
+from ..app_button import app_button
+
 if TYPE_CHECKING:
     from playbook.gui.settings_state.settings_state import SettingsFormState
 
@@ -258,8 +260,8 @@ def notification_target_editor(
                 refresh_editor()
 
             with ui.row().classes("w-full justify-end gap-2 mt-3"):
-                ui.button("Cancel", on_click=dialog.close).props("outline no-caps").classes("app-btn app-btn-outline")
-                ui.button("Save", icon="save", on_click=save_target).props("no-caps").classes("app-btn app-btn-primary")
+                app_button("Cancel", on_click=dialog.close, variant="outline", props="outline")
+                app_button("Save", icon="save", on_click=save_target, variant="primary")
 
         dialog.open()
 

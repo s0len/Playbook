@@ -14,6 +14,7 @@ from pathlib import Path
 import yaml
 from nicegui import ui
 
+from ..components.app_button import app_button
 from ..state import gui_state
 
 LOGGER = logging.getLogger(__name__)
@@ -42,29 +43,30 @@ def config_page() -> None:
                 save_indicator = ui.label("").classes("text-sm")
 
                 # Validate button
-                validate_btn = ui.button(
+                validate_btn = app_button(
                     "Validate",
                     icon="check_circle",
                     on_click=lambda: _validate_config(editor.value, validation_panel, state, validate_btn),
-                ).props("outline")
+                    variant="outline",
+                    props="outline",
+                )
 
                 # Save button
-                save_btn = (
-                    ui.button(
-                        "Save",
-                        icon="save",
-                        on_click=lambda: _save_config(editor.value, state, save_btn, save_indicator),
-                    )
-                    .props("no-caps")
-                    .classes("app-btn app-btn-primary")
+                save_btn = app_button(
+                    "Save",
+                    icon="save",
+                    on_click=lambda: _save_config(editor.value, state, save_btn, save_indicator),
+                    variant="primary",
                 )
 
                 # Reset button
-                ui.button(
+                app_button(
                     "Reset",
                     icon="undo",
                     on_click=lambda: _reset_config(editor, original_text, state),
-                ).props("outline")
+                    variant="outline",
+                    props="outline",
+                )
 
         # Main content: Editor + Validation panel
         with ui.row().classes("w-full gap-4"):
@@ -202,10 +204,10 @@ def _validate_config(yaml_text: str, panel: ui.column, state: dict, button: ui.b
 
     # Update button
     if state["valid"]:
-        button.classes(replace="q-btn app-btn app-btn-outline")
+        button.classes(remove="app-btn-danger").classes(add="app-btn-outline")
         ui.notify("Configuration is valid", type="positive")
     else:
-        button.classes(replace="q-btn app-btn app-btn-danger")
+        button.classes(remove="app-btn-outline").classes(add="app-btn-danger")
         ui.notify("Configuration has errors", type="negative")
 
 

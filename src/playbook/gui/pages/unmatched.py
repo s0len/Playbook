@@ -15,6 +15,7 @@ from datetime import datetime
 
 from nicegui import ui
 
+from ..components.app_button import app_button
 from ..state import gui_state
 from ..utils import safe_notify
 
@@ -63,11 +64,13 @@ def unmatched_page() -> None:
         with ui.row().classes("w-full items-center justify-between"):
             ui.label("Unmatched Files").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
             with ui.row().classes("gap-2"):
-                ui.button(
+                app_button(
                     "Rescan",
                     icon="refresh",
                     on_click=lambda: _trigger_rescan(refresh_page),
-                ).props("flat dense no-caps").classes("app-btn app-btn-outline")
+                    variant="outline",
+                    props="flat dense",
+                )
 
         # Stats overview
         state.stats_container = ui.row().classes("w-full gap-4 flex-wrap")
@@ -339,23 +342,32 @@ def _file_card(record, state, refresh_page) -> None:
 
             # Action buttons
             with ui.column().classes("gap-2"):
-                ui.button(
+                app_button(
                     "Details",
                     icon="info",
                     on_click=lambda r=record: _show_details_dialog(r),
-                ).props("flat dense no-caps").classes("text-sm app-btn app-btn-outline")
+                    variant="outline",
+                    classes="text-sm",
+                    props="flat dense",
+                )
 
-                ui.button(
+                app_button(
                     "Match",
                     icon="link",
                     on_click=lambda r=record, rp=refresh_page: _show_manual_match_dialog_v2(r, rp),
-                ).props("flat dense no-caps").classes("text-sm app-btn app-btn-outline")
+                    variant="outline",
+                    classes="text-sm",
+                    props="flat dense",
+                )
 
-                ui.button(
+                app_button(
                     "Hide",
                     icon="visibility_off",
                     on_click=lambda r=record, rp=refresh_page: _hide_file_v2(r.source_path, rp),
-                ).props("flat dense no-caps").classes("text-sm app-btn app-btn-outline")
+                    variant="outline",
+                    classes="text-sm",
+                    props="flat dense",
+                )
 
 
 def _format_file_size(size_bytes: int) -> str:
@@ -925,10 +937,8 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
 
             # Actions
             with ui.row().classes("w-full justify-end gap-2"):
-                ui.button("Cancel", on_click=dialog.close).props("flat no-caps").classes("app-btn app-btn-outline")
-                ui.button("Match & Process", icon="link", on_click=do_manual_match).props("no-caps").classes(
-                    "app-btn app-btn-primary"
-                )
+                app_button("Cancel", on_click=dialog.close, variant="outline", props="flat")
+                app_button("Match & Process", icon="link", on_click=do_manual_match, variant="primary")
 
     dialog.open()
 
