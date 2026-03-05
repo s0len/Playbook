@@ -167,7 +167,7 @@ def notification_target_editor(
             for idx, target in enumerate(targets):
                 _render_target(idx, target)
         else:
-            with ui.card().classes("w-full p-4 bg-slate-50 dark:bg-slate-800"):
+            with ui.card().classes("w-full p-4 settings-inline-card"):
                 ui.label("No notification targets configured").classes(
                     "text-sm text-slate-500 dark:text-slate-400 italic"
                 )
@@ -189,7 +189,7 @@ def notification_target_editor(
         target_type = target.get("type", "webhook")
         type_config = NOTIFICATION_TYPES.get(target_type, NOTIFICATION_TYPES["webhook"])
 
-        with ui.card().classes("w-full p-4"):
+        with ui.card().classes("w-full p-4 settings-inline-card"):
             # Header row with type and actions
             with ui.row().classes("w-full items-center justify-between mb-3"):
                 with ui.row().classes("items-center gap-2"):
@@ -222,7 +222,7 @@ def notification_target_editor(
                     options={k: v["label"] for k, v in NOTIFICATION_TYPES.items()},
                     value=target_type,
                     on_change=on_type_change,
-                ).classes("w-48 mb-3").props("outlined dense label='Type'")
+                ).classes("w-48 mb-3 settings-input").props("outlined dense label='Type'")
 
             # Type-specific fields - render each field directly
             for field_def in type_config["fields"]:
@@ -246,7 +246,7 @@ def notification_target_editor(
                 value=current_value or (options[0] if options else ""),
                 on_change=on_select_change,
                 label=field_label,
-            ).classes("w-full mb-2").props("outlined dense")
+            ).classes("w-full mb-2 settings-input").props("outlined dense")
         else:
             input_props = "outlined dense"
             if field_type == "password":
@@ -264,7 +264,7 @@ def notification_target_editor(
                     placeholder=field_def.get("placeholder", ""),
                     on_change=on_input_change,
                 )
-                .classes("w-full mb-2")
+                .classes("w-full mb-2 settings-input")
                 .props(input_props)
             )
 

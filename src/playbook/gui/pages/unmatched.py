@@ -58,7 +58,7 @@ def unmatched_page() -> None:
         # Refresh results
         refresh_results()
 
-    with ui.column().classes("w-full max-w-6xl mx-auto p-4 gap-6"):
+    with ui.column().classes("w-full p-6 gap-6 view-shell"):
         # Page title with refresh button
         with ui.row().classes("w-full items-center justify-between"):
             ui.label("Unmatched Files").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")

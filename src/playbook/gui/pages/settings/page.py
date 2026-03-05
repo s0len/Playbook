@@ -49,10 +49,14 @@ def settings_page() -> None:
     else:
         ui.notify("No configuration file loaded", type="warning")
 
-    with ui.column().classes("w-full max-w-7xl mx-auto p-4 gap-4"):
+    with ui.column().classes("w-full p-6 gap-5 settings-page-shell"):
         # Page header
-        with ui.row().classes("w-full items-center justify-between"):
-            ui.label("Settings").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
+        with ui.row().classes("w-full items-start justify-between border-b border-white/6 pb-5"):
+            with ui.column().classes("gap-1"):
+                ui.label("Settings").classes("text-4xl font-bold text-slate-100")
+                ui.label("Manage your Playbook behavior, integrations, and processing rules").classes(
+                    "text-sm text-slate-400"
+                )
 
             # Action buttons
             with ui.row().classes("items-center gap-2"):
@@ -84,9 +88,9 @@ def settings_page() -> None:
                 ).props("color=primary")
 
         # Main content area
-        with ui.row().classes("w-full gap-6"):
+        with ui.row().classes("w-full gap-8 items-start settings-main-layout"):
             # Sidebar navigation
-            sidebar_container = ui.column().classes("w-48 shrink-0 gap-1 settings-sidebar")
+            sidebar_container = ui.column().classes("w-56 shrink-0 gap-1 settings-sidebar")
 
             def render_sidebar() -> None:
                 """Render the sidebar navigation."""
@@ -106,7 +110,7 @@ def settings_page() -> None:
                     active_label = next(
                         (label for tid, label, _ in SETTINGS_TABS if tid == state.active_tab), "Settings"
                     )
-                    with ui.row().classes("items-center gap-2 mb-4 px-1"):
+                    with ui.row().classes("items-center gap-2 mb-3 px-1"):
                         ui.label("Settings").classes("text-sm text-slate-500 dark:text-slate-400")
                         ui.icon("chevron_right").classes("text-slate-400")
                         ui.label(active_label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
@@ -153,13 +157,15 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
         any(path.startswith(prefix) for prefix in tab_prefixes.get(tab_id, [])) for path in state.modified_paths
     )
 
-    # Button styling
-    btn_classes = "settings-tab-active" if is_active else "settings-tab"
+    # Match main sidebar structure with settings-specific palette
+    btn_classes = "settings-subnav-item"
+    if is_active:
+        btn_classes += " settings-subnav-item-active"
 
     with (
         ui.button(on_click=lambda t=tab_id: state.set_active_tab(t))
         .classes(f"w-full justify-start px-3 py-2 rounded-lg text-left {btn_classes}")
-        .props("flat")
+        .props("flat no-caps")
     ):
         with ui.row().classes("w-full items-center gap-3"):
             ui.icon(tab_icon).classes("text-lg w-5 text-center")

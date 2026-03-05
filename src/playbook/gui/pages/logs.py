@@ -26,7 +26,7 @@ def logs_page() -> None:
         "paused": False,
     }
 
-    with ui.column().classes("w-full max-w-6xl mx-auto p-4 gap-4"):
+    with ui.column().classes("w-full p-6 gap-4 view-shell"):
         # Header
         ui.label("Logs").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
         ui.label("Real-time application logs.").classes("text-sm text-slate-500 dark:text-slate-400 -mt-2")

@@ -100,6 +100,6 @@ def settings_section_header(
     with ui.row().classes("items-center gap-2 mt-2"):
         if icon:
             ui.icon(icon).classes("text-slate-400 dark:text-slate-500 text-lg")
-        ui.label(title).classes("text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide")
+        ui.label(title).classes("text-sm font-semibold text-slate-600 dark:text-slate-300")
     if description:
         ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400 mb-2")

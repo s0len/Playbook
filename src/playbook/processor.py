@@ -12,7 +12,12 @@ from rich.progress import Progress
 
 from .config import AppConfig
 from .destination_builder import build_destination, build_match_context, format_relative_destination
-from .file_discovery import gather_source_files, matches_globs, should_suppress_sample_ignored
+from .file_discovery import (
+    gather_source_files,
+    matches_globs,
+    matches_include_ignore_patterns,
+    should_suppress_sample_ignored,
+)
 from .kometa_trigger import build_kometa_trigger
 from .logging_utils import render_fields_block
 from .match_handler import handle_match
@@ -443,6 +448,17 @@ class Processor:
                         )
                         stats.cancelled = True
                         break
+
+                    watcher_settings = self.config.settings.file_watcher
+                    if not matches_include_ignore_patterns(
+                        source_path,
+                        watcher_settings.include,
+                        watcher_settings.ignore,
+                    ):
+                        stats.register_ignored(
+                            f"Excluded by include/ignore patterns: {source_path.name}",
+                        )
+                        continue
 
                     is_sample_file = should_suppress_sample_ignored(source_path)
                     handled, diagnostics, match_attempts = self._process_single_file(

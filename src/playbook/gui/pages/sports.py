@@ -27,7 +27,7 @@ LOGGER = logging.getLogger(__name__)
 
 def sports_page() -> None:
     """Render the sports management page with list view."""
-    with ui.column().classes("w-full max-w-6xl mx-auto p-4 gap-6"):
+    with ui.column().classes("w-full p-6 gap-6 view-shell"):
         # Page title
         ui.label("Sports").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
 
@@ -61,7 +61,7 @@ def sport_detail_page(sport_id: str) -> None:
                 sport_name = sport.name
                 break
 
-    with ui.column().classes("w-full max-w-6xl mx-auto p-4 gap-6"):
+    with ui.column().classes("w-full p-6 gap-6 view-shell"):
         # Back button and header
         with ui.row().classes("w-full items-center gap-4"):
             ui.button(icon="arrow_back", on_click=lambda: ui.navigate.to("/sports")).props("flat round").classes(

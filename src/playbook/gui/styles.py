@@ -24,12 +24,12 @@ PLAYBOOK_CSS = """
 }
 
 body.body--dark {
-    --bg-primary: #0b0b0f;
-    --bg-card: #12121a;
-    --bg-card-solid: #12121a;
-    --text-primary: #f0f0f8;
-    --text-secondary: #a0a0b8;
-    --text-muted: #60607a;
+    --bg-primary: #141416;
+    --bg-card: #2a2a2d;
+    --bg-card-solid: #252528;
+    --text-primary: #e7e7ea;
+    --text-secondary: #b5b5bc;
+    --text-muted: #8f8f98;
     --border-color: rgba(255, 255, 255, 0.07);
     --shadow-color: rgba(0, 0, 0, 0.5);
     --accent-color: #00d4d4;
@@ -54,19 +54,15 @@ body {
 /* ===== Glassmorphism Cards ===== */
 .glass-card {
     background: var(--bg-card) !important;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--border-color);
-    box-shadow: 0 8px 32px var(--shadow-color);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
     border-radius: 12px;
 }
 
 body.body--dark .glass-card {
-    background: #12121a !important;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    background: #2a2a2d !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
 }
 
 .glass-card.q-card {
@@ -426,45 +422,71 @@ body.body--dark a:hover {
 }
 
 /* ===== Settings Page Styles ===== */
+.settings-page-shell {
+    min-height: calc(100vh - 32px);
+}
+
+.settings-main-layout {
+    align-items: flex-start;
+}
+
 .settings-sidebar {
     border-right: 1px solid var(--border-color);
-    padding-right: 8px;
+    padding-right: 14px;
+    min-height: 70vh;
 }
 
-.settings-tab {
+.settings-subnav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
     transition: all 0.15s ease;
     border-radius: 8px;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.6);
 }
 
-.settings-tab:hover {
-    background: rgba(148, 163, 184, 0.12);
-    color: var(--text-primary);
+.settings-subnav-item:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.88);
 }
 
-.settings-tab-active {
-    background: rgba(0, 212, 212, 0.15);
-    color: #00d4d4 !important;
+.settings-subnav-item-active {
+    background: rgba(255, 255, 255, 0.14) !important;
+    color: #ffffff !important;
 }
 
-body.body--dark .settings-tab-active {
-    background: rgba(0, 212, 212, 0.15);
-    color: #00d4d4;
+body.body--dark .settings-subnav-item-active {
+    background: rgba(255, 255, 255, 0.14) !important;
+    color: #ffffff !important;
 }
 
 .settings-content {
-    gap: 16px;
+    gap: 14px;
+    max-width: none;
 }
 
 .settings-surface {
-    background: #0e0e16 !important;
-    border: 1px solid rgba(255, 255, 255, 0.06) !important;
-    box-shadow: none !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.06)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.25) !important;
+}
+
+.view-shell {
+    min-height: calc(100vh - 24px);
 }
 
 .settings-surface .q-expansion-item,
 .settings-surface .q-expansion-item__container {
     border-radius: 8px;
+}
+
+.settings-inline-card {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 10px !important;
+    box-shadow: none !important;
 }
 
 /* Settings form inputs */
