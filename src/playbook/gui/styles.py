@@ -21,6 +21,9 @@ PLAYBOOK_CSS = """
     --text-muted: #64748b;
     --border-color: rgba(148, 163, 184, 0.2);
     --shadow-color: rgba(31, 38, 135, 0.1);
+    --accent-color: #34d399;
+    --accent-hover: #2cb783;
+    --accent-soft: rgba(52, 211, 153, 0.2);
 }
 
 body.body--dark {
@@ -32,7 +35,21 @@ body.body--dark {
     --text-muted: #8f8f98;
     --border-color: rgba(255, 255, 255, 0.07);
     --shadow-color: rgba(0, 0, 0, 0.5);
-    --accent-color: #00d4d4;
+    --accent-color: #34d399;
+    --accent-hover: #2cb783;
+    --accent-soft: rgba(52, 211, 153, 0.2);
+}
+
+body.body--dark.theme-swizzin {
+    --accent-color: #34d399;
+    --accent-hover: #2cb783;
+    --accent-soft: rgba(52, 211, 153, 0.2);
+}
+
+body.body--dark.theme-catppuccin {
+    --accent-color: #cba6f7;
+    --accent-hover: #b78de8;
+    --accent-soft: rgba(203, 166, 247, 0.24);
 }
 
 /* ===== Theme Transitions ===== */
@@ -223,8 +240,8 @@ body.body--dark .status-chip-error {
 }
 
 .sidebar-nav-item-active {
-    background: rgba(0, 212, 212, 0.15) !important;
-    color: #00d4d4 !important;
+    background: var(--accent-soft) !important;
+    color: var(--accent-color) !important;
 }
 
 /* Sidebar separator */
@@ -371,12 +388,12 @@ body.body--dark ::-webkit-scrollbar-thumb {
 
 /* ===== Focus States ===== */
 *:focus-visible {
-    outline: 2px solid #00d4d4;
+    outline: 2px solid var(--accent-color);
     outline-offset: 2px;
 }
 
 body.body--dark *:focus-visible {
-    outline-color: #00d4d4;
+    outline-color: var(--accent-color);
 }
 
 /* ===== Quasar Component Overrides for Dark Mode ===== */
@@ -414,11 +431,11 @@ a.text-blue-600 {
 
 body.body--dark a.text-blue-600,
 body.body--dark a {
-    color: #00d4d4;
+    color: var(--accent-color);
 }
 
 body.body--dark a:hover {
-    color: #00b8b8;
+    color: var(--accent-hover);
 }
 
 /* ===== Settings Page Styles ===== */
@@ -434,6 +451,11 @@ body.body--dark a:hover {
     border-right: 1px solid var(--border-color);
     padding-right: 14px;
     min-height: 70vh;
+    align-items: stretch;
+}
+
+.settings-sidebar .q-btn .q-btn__content {
+    justify-content: flex-start;
 }
 
 .settings-subnav-item {
@@ -452,13 +474,13 @@ body.body--dark a:hover {
 }
 
 .settings-subnav-item-active {
-    background: rgba(255, 255, 255, 0.14) !important;
-    color: #ffffff !important;
+    background: var(--accent-soft) !important;
+    color: var(--accent-color) !important;
 }
 
 body.body--dark .settings-subnav-item-active {
-    background: rgba(255, 255, 255, 0.14) !important;
-    color: #ffffff !important;
+    background: var(--accent-soft) !important;
+    color: var(--accent-color) !important;
 }
 
 .settings-content {
@@ -489,6 +511,10 @@ body.body--dark .settings-subnav-item-active {
     box-shadow: none !important;
 }
 
+.settings-modal-card {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.08)) !important;
+}
+
 /* Settings form inputs */
 .settings-input .q-field__control {
     min-height: 40px;
@@ -506,7 +532,7 @@ body.body--dark .settings-input .q-field__control::before {
 
 body.body--dark .settings-input.q-field--focused .q-field__control::before,
 body.body--dark .settings-input.q-field--focused .q-field__control::after {
-    border-color: #00d4d4 !important;
+    border-color: var(--accent-color) !important;
 }
 
 body.body--dark .settings-input .q-field__native,
@@ -522,7 +548,27 @@ body.body--dark .settings-input .q-select__dropdown-icon {
 }
 
 body.body--dark .settings-toggle .q-toggle__inner {
-    color: #00d4d4;
+    color: var(--accent-color);
+}
+
+/* Quasar primary color alignment */
+body.body--dark .q-btn.bg-primary,
+body.body--dark .q-btn--standard.bg-primary,
+body.body--dark .q-badge.bg-primary,
+body.body--dark .text-primary,
+body.body--dark .q-toggle__inner--truthy,
+body.body--dark .q-checkbox__inner--truthy {
+    background-color: var(--accent-color) !important;
+    color: #111114 !important;
+    border-color: var(--accent-color) !important;
+}
+
+body.body--dark .q-btn.text-primary,
+body.body--dark .q-icon.text-primary,
+body.body--dark .q-toggle__inner,
+body.body--dark .q-radio__inner,
+body.body--dark .q-checkbox__inner {
+    color: var(--accent-color) !important;
 }
 
 /* Key-value editor */
@@ -568,9 +614,15 @@ THEME_INIT_SCRIPT = """
 (function() {
     // Check localStorage for theme preference (default to dark)
     var theme = localStorage.getItem('playbook-theme');
+    var colorTheme = localStorage.getItem('playbook-color-theme') || 'swizzin';
     if (theme !== 'light') {
         // Default to dark mode if no preference or preference is 'dark'
         document.body.classList.add('body--dark');
+    }
+    if (colorTheme === 'catppuccin') {
+        document.body.classList.add('theme-catppuccin');
+    } else {
+        document.body.classList.add('theme-swizzin');
     }
     // Enable transitions after a brief delay to prevent FOUC
     setTimeout(function() {
@@ -590,3 +642,21 @@ def setup_page_styles() -> None:
     """Set up all page styles."""
     inject_styles()
     inject_theme_init_script()
+
+
+def apply_color_theme(theme_name: str) -> None:
+    """Apply GUI color theme class to document body."""
+    normalized = theme_name.strip().lower() if theme_name else "swizzin"
+    if normalized not in {"swizzin", "catppuccin"}:
+        normalized = "swizzin"
+    ui.run_javascript(
+        """
+        document.body.classList.remove('theme-swizzin', 'theme-catppuccin');
+        document.body.classList.add('theme-"""
+        + normalized
+        + """');
+        localStorage.setItem('playbook-color-theme', '"""
+        + normalized
+        + """');
+        """
+    )

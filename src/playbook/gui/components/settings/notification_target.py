@@ -1,14 +1,11 @@
-"""
-Notification target editor component.
-
-Provides a polymorphic form for different notification target types.
-"""
+"""Notification target editor component with card list + modal editing."""
 
 from __future__ import annotations
 
 import os
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlparse
 
 from nicegui import ui
 
@@ -16,7 +13,6 @@ if TYPE_CHECKING:
     from playbook.gui.settings_state.settings_state import SettingsFormState
 
 
-# Notification target types and their fields
 NOTIFICATION_TYPES = {
     "discord": {
         "label": "Discord",
@@ -86,7 +82,6 @@ NOTIFICATION_TYPES = {
 
 
 def _preferred_discord_env_key() -> str | None:
-    """Return Discord webhook env key when present."""
     for key in ("DISCORD_WEBHOOK_URL",):
         raw = os.environ.get(key)
         if raw and raw.strip():
@@ -95,7 +90,6 @@ def _preferred_discord_env_key() -> str | None:
 
 
 def _default_target_for_type(target_type: str) -> dict[str, Any]:
-    """Create a new target payload with sensible defaults."""
     normalized = target_type.strip().lower()
     target: dict[str, Any] = {
         "type": normalized,
@@ -106,6 +100,39 @@ def _default_target_for_type(target_type: str) -> dict[str, Any]:
     return target
 
 
+def _masked_value(raw_value: str) -> str:
+    value = raw_value.strip()
+    if not value:
+        return ""
+    try:
+        parsed = urlparse(value)
+        if not parsed.scheme:
+            return "configured"
+        host = parsed.netloc or "configured"
+        return f"{parsed.scheme}://{host}/..."
+    except Exception:  # noqa: BLE001
+        return "configured"
+
+
+def _target_summary(target: dict[str, Any]) -> str:
+    target_type = (target.get("type") or "").lower()
+    if target_type == "discord":
+        webhook_env = str(target.get("webhook_env") or "").strip()
+        webhook_url = str(target.get("webhook_url") or "").strip()
+        mentions = str(target.get("mentions") or "").strip()
+        source = webhook_env if webhook_env else _masked_value(webhook_url)
+        summary = f"Source: {source or 'not configured'}"
+        if mentions:
+            summary += f" - Mentions: {mentions}"
+        return summary
+
+    for key in ("url", "smtp_host", "to_addr", "library_name", "library_id"):
+        value = str(target.get(key) or "").strip()
+        if value:
+            return f"{key.replace('_', ' ').title()}: {_masked_value(value) if key == 'url' else value}"
+    return "Not configured"
+
+
 def notification_target_editor(
     state: SettingsFormState,
     path: str,
@@ -113,221 +140,193 @@ def notification_target_editor(
     disabled: bool = False,
     on_change: Callable[[list[dict]], None] | None = None,
 ) -> ui.column:
-    """Create a notification target list editor.
-
-    Manages a list of notification targets where each target can be
-    a different type (discord, webhook, autoscan, email).
-
-    Args:
-        state: SettingsFormState instance
-        path: Dotted path to the targets list
-        disabled: Whether the editor is disabled
-        on_change: Optional callback when targets change
-
-    Returns:
-        The NiceGUI column container
-    """
+    """Create a notification target list editor."""
     container = ui.column().classes("w-full gap-4")
 
+    def _get_targets() -> list[dict[str, Any]]:
+        raw = state.get_value(path, []) or []
+        return raw if isinstance(raw, list) else []
+
+    def _set_targets(targets: list[dict[str, Any]]) -> None:
+        state.set_value(path, targets)
+        if on_change:
+            on_change(targets)
+
     def refresh_editor() -> None:
-        """Rebuild the editor UI."""
         container.clear()
         with container:
             _render_editor()
 
+    def _open_target_dialog(index: int | None = None) -> None:
+        targets = _get_targets()
+        is_new = index is None
+        working = dict(targets[index]) if index is not None else _default_target_for_type("discord")
+
+        with ui.dialog() as dialog, ui.card().classes("glass-card settings-surface w-[780px] max-w-[96vw] p-5"):
+            with ui.row().classes("w-full items-start justify-between mb-3"):
+                with ui.column().classes("gap-0"):
+                    ui.label("New Notification Target" if is_new else "Edit Notification Target").classes(
+                        "text-2xl font-semibold text-slate-100"
+                    )
+                    ui.label("Update delivery settings for this target").classes("text-sm text-slate-400")
+                ui.button(icon="close", on_click=dialog.close).props("flat round dense")
+
+            form_container = ui.column().classes("w-full gap-3")
+
+            def render_form() -> None:
+                form_container.clear()
+                with form_container:
+                    current_type = str(working.get("type", "discord"))
+                    type_options = {key: value["label"] for key, value in NOTIFICATION_TYPES.items()}
+
+                    def on_type_change(e) -> None:
+                        new_type = str(e.value or "discord")
+                        defaults = _default_target_for_type(new_type)
+                        defaults["enabled"] = working.get("enabled", True)
+                        working.clear()
+                        working.update(defaults)
+                        render_form()
+
+                    ui.select(type_options, value=current_type, on_change=on_type_change).classes(
+                        "w-64 settings-input"
+                    ).props("outlined dense label='Type'")
+
+                    enabled = bool(working.get("enabled", True))
+
+                    def on_enabled_change(e) -> None:
+                        working["enabled"] = bool(e.value)
+
+                    with ui.row().classes("w-full items-center justify-between rounded-lg border border-white/10 p-3"):
+                        with ui.column().classes("gap-0"):
+                            ui.label("Enabled").classes("text-sm font-medium text-slate-200")
+                            ui.label("Toggle delivery for this target").classes("text-xs text-slate-400")
+                        ui.switch(value=enabled, on_change=on_enabled_change).classes("settings-toggle")
+
+                    for field_def in NOTIFICATION_TYPES.get(current_type, NOTIFICATION_TYPES["webhook"])["fields"]:
+                        key = field_def["key"]
+                        label = field_def["label"]
+                        field_type = field_def.get("type", "text")
+                        placeholder = field_def.get("placeholder", "")
+                        current_value = working.get(key, "")
+
+                        if field_type == "select":
+                            options = field_def.get("options", [])
+
+                            def on_select_change(e, k=key) -> None:
+                                working[k] = e.value
+
+                            ui.select(
+                                options,
+                                value=current_value or (options[0] if options else ""),
+                                on_change=on_select_change,
+                            ).classes("w-full settings-input").props(f"outlined dense label='{label}'")
+                            continue
+
+                        input_props = "outlined dense"
+                        if field_type == "password":
+                            input_props += ' type="password"'
+                        elif field_type == "number":
+                            input_props += ' type="number"'
+
+                        def on_input_change(e, k=key) -> None:
+                            working[k] = e.value
+
+                        ui.input(
+                            value=str(current_value) if current_value else "",
+                            label=label,
+                            placeholder=placeholder,
+                            on_change=on_input_change,
+                        ).classes("w-full settings-input").props(input_props)
+
+            render_form()
+
+            def save_target() -> None:
+                current_type = str(working.get("type", "discord"))
+                fields = NOTIFICATION_TYPES.get(current_type, NOTIFICATION_TYPES["webhook"])["fields"]
+                for field in fields:
+                    if field.get("required") and not str(working.get(field["key"], "")).strip():
+                        ui.notify(f"{field['label']} is required", type="warning")
+                        return
+
+                updated = _get_targets()
+                if index is None:
+                    updated.append(dict(working))
+                else:
+                    updated[index] = dict(working)
+                _set_targets(updated)
+                dialog.close()
+                refresh_editor()
+
+            with ui.row().classes("w-full justify-end gap-2 mt-3"):
+                ui.button("Cancel", on_click=dialog.close).props("outline")
+                ui.button("Save", icon="save", on_click=save_target).props("color=primary")
+
+        dialog.open()
+
     def _render_editor() -> None:
-        """Render the editor content."""
-        targets = state.get_value(path, []) or []
-        if not isinstance(targets, list):
-            targets = []
+        targets = _get_targets()
         discord_env_key = _preferred_discord_env_key()
 
-        # Header with add button
         with ui.row().classes("w-full items-center justify-between"):
             with ui.row().classes("items-center gap-2"):
-                ui.label("Notification Targets").classes("text-sm font-semibold text-slate-700 dark:text-slate-200")
+                ui.label("Notification Targets").classes("text-sm font-semibold text-slate-200")
                 ui.badge(str(len(targets))).props("color=grey-7").classes("text-xs")
 
             if not disabled:
-                with ui.button(icon="add", on_click=lambda: add_target()).props("flat dense"):
-                    if discord_env_key:
-                        ui.tooltip(f"Add target (Discord prefilled from {discord_env_key})")
-                    else:
-                        ui.tooltip("Add notification target")
+                ui.button(icon="add", on_click=lambda: _open_target_dialog()).props("flat dense")
 
         if discord_env_key:
             with ui.row().classes("items-center gap-2"):
                 ui.icon("check_circle").classes("text-green-500 text-sm")
-                ui.label(f"Detected Discord webhook env: {discord_env_key}").classes(
-                    "text-xs text-slate-500 dark:text-slate-400"
-                )
+                ui.label(f"Detected Discord webhook env: {discord_env_key}").classes("text-xs text-slate-400")
 
-        # Render each target
-        if targets:
-            for idx, target in enumerate(targets):
-                _render_target(idx, target)
-        else:
+        if not targets:
             with ui.card().classes("w-full p-4 settings-inline-card"):
-                ui.label("No notification targets configured").classes(
-                    "text-sm text-slate-500 dark:text-slate-400 italic"
-                )
-                if discord_env_key and not disabled:
-                    with ui.row().classes("w-full items-center justify-between mt-2 gap-3"):
-                        ui.label("Discord is ready from environment. Add it with one click.").classes(
-                            "text-xs text-slate-500 dark:text-slate-400"
-                        )
-                        ui.button(text="Add Discord", icon="chat", on_click=lambda: add_target("discord")).props(
-                            "dense color=primary"
-                        )
-                else:
-                    ui.label("Click '+' to add a notification target").classes(
-                        "text-xs text-slate-400 dark:text-slate-500"
-                    )
-
-    def _render_target(idx: int, target: dict) -> None:
-        """Render a single notification target."""
-        target_type = target.get("type", "webhook")
-        type_config = NOTIFICATION_TYPES.get(target_type, NOTIFICATION_TYPES["webhook"])
-
-        with ui.card().classes("w-full p-4 settings-inline-card"):
-            # Header row with type and actions
-            with ui.row().classes("w-full items-center justify-between mb-3"):
-                with ui.row().classes("items-center gap-2"):
-                    ui.icon(type_config["icon"]).classes("text-slate-500")
-                    ui.label(type_config["label"]).classes("font-medium text-slate-700 dark:text-slate-200")
-                    if target.get("enabled", True) is False:
-                        ui.badge("Disabled").props("color=grey").classes("text-xs")
-
+                ui.label("No notification targets configured").classes("text-sm text-slate-400 italic")
                 if not disabled:
-                    with ui.row().classes("gap-1"):
-                        # Toggle enabled
-                        enabled = target.get("enabled", True)
-                        ui.button(
-                            icon="visibility" if enabled else "visibility_off",
-                            on_click=lambda i=idx: toggle_target(i),
-                        ).props("flat dense").classes("text-slate-500")
-                        # Delete
-                        ui.button(
-                            icon="delete",
-                            on_click=lambda i=idx: remove_target(i),
-                        ).props("flat dense color=negative")
+                    ui.button(text="Add Notification Target", icon="add", on_click=lambda: _open_target_dialog()).props(
+                        "flat dense"
+                    )
+            return
 
-            # Target type selector
-            if not disabled:
+        for idx, target in enumerate(targets):
+            target_type = str(target.get("type", "webhook")).lower()
+            type_config = NOTIFICATION_TYPES.get(target_type, NOTIFICATION_TYPES["webhook"])
+            enabled = bool(target.get("enabled", True))
 
-                def on_type_change(e, i=idx) -> None:
-                    update_target_type(i, e.value)
+            with ui.card().classes("w-full p-4 settings-inline-card"):
+                with ui.row().classes("w-full items-start justify-between gap-3"):
+                    with ui.column().classes("gap-1 flex-1 min-w-0"):
+                        with ui.row().classes("items-center gap-2"):
+                            ui.icon(type_config["icon"]).classes("text-slate-300")
+                            ui.label(type_config["label"]).classes("text-lg font-medium text-slate-100")
+                            ui.badge("Enabled" if enabled else "Disabled").props(
+                                f"color={'positive' if enabled else 'grey'}"
+                            ).classes("text-xs")
+                        ui.label(_target_summary(target)).classes("text-xs text-slate-400 break-all")
 
-                ui.select(
-                    options={k: v["label"] for k, v in NOTIFICATION_TYPES.items()},
-                    value=target_type,
-                    on_change=on_type_change,
-                ).classes("w-48 mb-3 settings-input").props("outlined dense label='Type'")
+                    if not disabled:
+                        with ui.row().classes("gap-1"):
+                            ui.button(icon="edit", on_click=lambda i=idx: _open_target_dialog(i)).props("flat dense")
 
-            # Type-specific fields - render each field directly
-            for field_def in type_config["fields"]:
-                _render_field(idx, target, field_def)
+                            def _toggle(i=idx) -> None:
+                                updated = _get_targets()
+                                updated[i]["enabled"] = not bool(updated[i].get("enabled", True))
+                                _set_targets(updated)
+                                refresh_editor()
 
-    def _render_field(idx: int, target: dict, field_def: dict) -> None:
-        """Render a single field for a notification target."""
-        field_key = field_def["key"]
-        field_type = field_def.get("type", "text")
-        field_label = field_def["label"]
-        current_value = target.get(field_key, "")
+                            ui.button(icon="visibility" if enabled else "visibility_off", on_click=_toggle).props(
+                                "flat dense"
+                            )
 
-        if field_type == "select":
-            options = field_def.get("options", [])
+                            def _delete(i=idx) -> None:
+                                updated = _get_targets()
+                                updated.pop(i)
+                                _set_targets(updated)
+                                refresh_editor()
 
-            def on_select_change(e, i=idx, k=field_key) -> None:
-                update_target_field(i, k, e.value)
+                            ui.button(icon="delete", on_click=_delete).props("flat dense color=negative")
 
-            ui.select(
-                options=options,
-                value=current_value or (options[0] if options else ""),
-                on_change=on_select_change,
-                label=field_label,
-            ).classes("w-full mb-2 settings-input").props("outlined dense")
-        else:
-            input_props = "outlined dense"
-            if field_type == "password":
-                input_props += ' type="password"'
-            elif field_type == "number":
-                input_props += ' type="number"'
-
-            def on_input_change(e, i=idx, k=field_key) -> None:
-                update_target_field(i, k, e.value)
-
-            inp = (
-                ui.input(
-                    value=str(current_value) if current_value else "",
-                    label=field_label,
-                    placeholder=field_def.get("placeholder", ""),
-                    on_change=on_input_change,
-                )
-                .classes("w-full mb-2 settings-input")
-                .props(input_props)
-            )
-
-            if disabled:
-                inp.disable()
-
-    def add_target(target_type: str = "discord") -> None:
-        """Add a new notification target."""
-        targets = state.get_value(path, []) or []
-        if not isinstance(targets, list):
-            targets = []
-
-        new_target = _default_target_for_type(target_type)
-        targets.append(new_target)
-        state.set_value(path, targets)
-        if on_change:
-            on_change(targets)
-        refresh_editor()
-
-    def remove_target(idx: int) -> None:
-        """Remove a notification target."""
-        targets = state.get_value(path, []) or []
-        if 0 <= idx < len(targets):
-            targets.pop(idx)
-            state.set_value(path, targets)
-            if on_change:
-                on_change(targets)
-        refresh_editor()
-
-    def toggle_target(idx: int) -> None:
-        """Toggle a target's enabled state."""
-        targets = state.get_value(path, []) or []
-        if 0 <= idx < len(targets):
-            targets[idx]["enabled"] = not targets[idx].get("enabled", True)
-            state.set_value(path, targets)
-            if on_change:
-                on_change(targets)
-        refresh_editor()
-
-    def update_target_type(idx: int, new_type: str) -> None:
-        """Update a target's type."""
-        targets = state.get_value(path, []) or []
-        if 0 <= idx < len(targets):
-            old_target = targets[idx]
-            defaults = _default_target_for_type(new_type)
-            defaults["enabled"] = old_target.get("enabled", True)
-            targets[idx] = defaults
-            state.set_value(path, targets)
-            if on_change:
-                on_change(targets)
-        refresh_editor()
-
-    def update_target_field(idx: int, field_key: str, value: Any) -> None:
-        """Update a field within a target."""
-        targets = state.get_value(path, []) or []
-        if 0 <= idx < len(targets):
-            targets[idx][field_key] = value
-            state.set_value(path, targets)
-            if on_change:
-                on_change(targets)
-        # Don't refresh - just update state
-
-    # Initial render
     with container:
         _render_editor()
 

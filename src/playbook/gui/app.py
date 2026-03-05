@@ -19,7 +19,7 @@ from .components.header import header
 from .log_handler import install_gui_log_handler
 from .pages import dashboard, logs, settings, sports, unmatched
 from .state import gui_state
-from .styles import setup_page_styles
+from .styles import apply_color_theme, setup_page_styles
 from .utils import suppress_nicegui_disconnect_errors
 
 if TYPE_CHECKING:
@@ -97,6 +97,12 @@ def _page_wrapper(page_fn: callable, current_path: str = "/") -> None:
 
     # Force dark mode (light mode removed)
     ui.dark_mode(True)
+
+    # Apply selected GUI color theme
+    selected_theme = "swizzin"
+    if gui_state.config and gui_state.config.settings:
+        selected_theme = getattr(gui_state.config.settings, "theme", "swizzin") or "swizzin"
+    apply_color_theme(str(selected_theme))
 
     # Add sidebar
     header(current_path=current_path)

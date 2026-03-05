@@ -22,6 +22,7 @@ from .general import general_tab
 from .integrations import integrations_tab
 from .notifications import notifications_tab
 from .quality import quality_tab
+from .themes import themes_tab
 from .watcher import watcher_tab
 
 LOGGER = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ TAB_RENDERERS = {
     "application": application_tab,
     "general": general_tab,
     "quality": quality_tab,
+    "themes": themes_tab,
     "notifications": notifications_tab,
     "watcher": watcher_tab,
     "integrations": integrations_tab,
@@ -148,6 +150,7 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
             "settings.dry_run",
         ],
         "quality": ["settings.quality_profile"],
+        "themes": ["settings.theme"],
         "notifications": ["settings.notifications"],
         "watcher": ["settings.file_watcher"],
         "integrations": ["settings.plex_sync", "settings.kometa_trigger", "settings.tvsportsdb"],

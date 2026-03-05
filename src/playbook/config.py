@@ -395,6 +395,7 @@ class Settings:
     destination_dir: Path
     cache_dir: Path
     state_dir: Path | None = None
+    theme: str = "swizzin"
     dry_run: bool = False
     skip_existing: bool = True
     default_destination: DestinationTemplates = field(default_factory=DestinationTemplates)
@@ -1336,6 +1337,9 @@ def _build_settings(data: dict[str, Any]) -> Settings:
     cache_dir = Path(data.get("cache_dir", "/data/cache")).expanduser()
     state_dir_raw = data.get("state_dir")
     state_dir = Path(state_dir_raw).expanduser() if state_dir_raw else cache_dir
+    theme = str(data.get("theme", "swizzin")).strip().lower() or "swizzin"
+    if theme not in {"swizzin", "catppuccin"}:
+        theme = "swizzin"
     watcher_settings = _build_watcher_settings(data.get("file_watcher", {}) or {})
     kometa_trigger = _build_kometa_trigger_settings(data.get("kometa_trigger", {}) or {})
 
@@ -1366,6 +1370,7 @@ def _build_settings(data: dict[str, Any]) -> Settings:
         destination_dir=destination_dir,
         cache_dir=cache_dir,
         state_dir=state_dir,
+        theme=theme,
         dry_run=bool(data.get("dry_run", False)),
         skip_existing=bool(data.get("skip_existing", True)),
         default_destination=destination_defaults,

@@ -98,11 +98,14 @@ def application_tab(state: SettingsFormState) -> None:
 
             cache_dir = "N/A"
             state_dir = "N/A"
+            theme_name = "N/A"
             if gui_state.config and gui_state.config.settings:
                 cache_dir = str(gui_state.config.settings.cache_dir)
                 state_dir = str(gui_state.config.settings.state_dir or gui_state.config.settings.cache_dir)
+                theme_name = str(gui_state.config.settings.theme)
             _info_row("CACHE DIR", cache_dir)
             _info_row("STATE DIR", state_dir)
+            _info_row("THEME", theme_name)
 
             db_path = "N/A"
             if gui_state.processed_store and hasattr(gui_state.processed_store, "db_path"):

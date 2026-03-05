@@ -419,6 +419,7 @@ def apply_runtime_overrides(config: AppConfig, args: argparse.Namespace) -> None
     dest_override = os.getenv("DESTINATION_DIR")
     cache_override = os.getenv("CACHE_DIR")
     state_override = os.getenv("STATE_DIR")
+    theme_override = os.getenv("GUI_THEME") or os.getenv("PLAYBOOK_THEME")
     if source_override:
         config.settings.source_dir = Path(source_override)
     if dest_override:
@@ -427,6 +428,8 @@ def apply_runtime_overrides(config: AppConfig, args: argparse.Namespace) -> None
         config.settings.cache_dir = Path(cache_override)
     if state_override:
         config.settings.state_dir = Path(state_override)
+    if theme_override:
+        config.settings.theme = theme_override.strip().lower()
 
     watch_enabled = config.settings.file_watcher.enabled
     if getattr(args, "watch", False):

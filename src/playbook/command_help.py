@@ -129,6 +129,7 @@ RUN_COMMAND_HELP = CommandHelp(
         ("DESTINATION_DIR", "Library root where organized files are created"),
         ("CACHE_DIR", "Metadata cache directory (default: /data/cache)"),
         ("STATE_DIR", "Persistent state directory for sqlite databases (defaults to CACHE_DIR)"),
+        ("GUI_THEME", "GUI color theme: swizzin or catppuccin (default: swizzin)"),
         ("DRY_RUN", "When true, logs actions without writing files (true/false/1/0)"),
         ("VERBOSE", "Enable debug-level console logging (true/false/1/0)"),
         ("DEBUG", "Alias for VERBOSE (true/false/1/0)"),

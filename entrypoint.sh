@@ -34,6 +34,7 @@ settings:
   destination_dir: /data/destination
   cache_dir: /data/cache
   state_dir: /config/state
+  theme: swizzin
   dry_run: false
   skip_existing: true
   link_mode: hardlink

@@ -50,6 +50,7 @@ def test_load_config_expands_variants_and_merges_patterns(tmp_path) -> None:
     assert config.settings.source_dir == tmp_path / "source"
     assert config.settings.destination_dir == tmp_path / "dest"
     assert config.settings.state_dir == tmp_path / "cache"
+    assert config.settings.theme == "swizzin"
 
     sport_ids = [sport.id for sport in config.sports]
     assert sport_ids == ["formula1_2024", "formula1_pro"]
@@ -124,6 +125,27 @@ def test_state_dir_override(tmp_path) -> None:
 
     config = load_config(config_path)
     assert config.settings.state_dir == tmp_path / "state"
+
+
+def test_theme_override(tmp_path) -> None:
+    config_path = tmp_path / "playbook.yaml"
+    write_yaml(
+        config_path,
+        f"""
+        settings:
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
+          theme: catppuccin
+
+        sports:
+          - id: demo
+            show_slug: demo
+        """,
+    )
+
+    config = load_config(config_path)
+    assert config.settings.theme == "catppuccin"
 
 
 def test_kometa_trigger_settings_round_trip(tmp_path) -> None:
