@@ -30,6 +30,7 @@ def app_button(
     def strip_framework_classes() -> None:
         button.classes(remove="bg-primary")
         button.classes(remove="text-white")
+        button.classes(remove="text-primary")
 
     strip_framework_classes()
     ui.timer(0.05, strip_framework_classes, once=True)

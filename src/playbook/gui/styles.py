@@ -493,6 +493,11 @@ a:hover {
     color: inherit !important;
 }
 
+.settings-sidebar .q-btn.settings-subnav-item.text-primary,
+.settings-sidebar .q-btn.settings-subnav-item .text-primary {
+    color: inherit !important;
+}
+
 .settings-subnav-item:hover {
     background: rgba(255, 255, 255, 0.08) !important;
     color: rgba(255, 255, 255, 0.9) !important;

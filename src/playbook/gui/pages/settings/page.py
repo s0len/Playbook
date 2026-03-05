@@ -165,7 +165,12 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
         .classes(f"w-full justify-start px-3 py-2 rounded-lg text-left {btn_classes}")
         .props("flat no-caps")
     )
-    tab_button.classes(remove="text-primary")
+
+    def strip_primary_class() -> None:
+        tab_button.classes(remove="text-primary")
+
+    strip_primary_class()
+    ui.timer(0.05, strip_primary_class, once=True)
 
     with tab_button:
         with ui.row().classes("w-full items-center gap-3 justify-start"):
