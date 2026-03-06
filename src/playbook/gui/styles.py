@@ -759,6 +759,16 @@ body.body--dark .q-btn--flat {
 
 /* Quasar may inject text/bg utility classes on chip-like buttons. */
 @layer quasar_importants {
+    .q-btn.text-primary,
+    .q-btn .text-primary {
+        color: inherit !important;
+    }
+
+    .q-btn.bg-primary:not(.app-btn) {
+        background: transparent !important;
+        background-color: transparent !important;
+    }
+
     .q-btn.app-chip.text-primary,
     .q-btn.app-chip .text-primary,
     .q-chip.app-chip.text-primary,
@@ -810,6 +820,18 @@ body.body--dark .q-btn--flat {
 
 /* Force semantic badge variants in the same high-priority layer. */
 @layer quasar_importants {
+    .q-badge.app-badge.bg-primary {
+        background: transparent !important;
+        background-color: transparent !important;
+    }
+
+    .q-badge.app-badge.app-chip-active {
+        background: var(--accent-soft) !important;
+        background-color: var(--accent-soft) !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        color: var(--accent-color) !important;
+    }
+
     .q-badge.app-badge.app-badge-muted {
         background: rgba(255, 255, 255, 0.12) !important;
         background-color: rgba(255, 255, 255, 0.12) !important;

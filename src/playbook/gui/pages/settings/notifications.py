@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from nicegui import ui
 
+from ...components.app_button import neutralize_button_utilities
 from ...components.settings import (
     notification_target_editor,
     settings_card,
@@ -135,7 +136,9 @@ def _render_throttle_editor(state: SettingsFormState) -> None:
                                 state.set_value("settings.notifications.throttle", data)
                             refresh()
 
-                        ui.button(icon="delete", on_click=on_delete).props("flat dense").classes("app-text-danger")
+                        neutralize_button_utilities(
+                            ui.button(icon="delete", on_click=on_delete).props("flat dense")
+                        ).classes("app-text-danger")
         else:
             ui.label("No rate limits configured").classes("text-sm text-slate-500 italic")
 
@@ -159,7 +162,9 @@ def _render_throttle_editor(state: SettingsFormState) -> None:
                 state.set_value("settings.notifications.throttle", data)
                 refresh()
 
-            ui.button("Add", icon="add", on_click=add_throttle).props("flat dense").classes("app-text-accent")
+            neutralize_button_utilities(
+                ui.button("Add", icon="add", on_click=add_throttle).props("flat dense")
+            ).classes("app-text-accent")
 
     with container:
         _render_throttle_content()
@@ -200,7 +205,9 @@ def _render_mentions_editor(state: SettingsFormState) -> None:
                                 state.set_value("settings.notifications.mentions", data)
                             refresh()
 
-                        ui.button(icon="delete", on_click=on_delete).props("flat dense").classes("app-text-danger")
+                        neutralize_button_utilities(
+                            ui.button(icon="delete", on_click=on_delete).props("flat dense")
+                        ).classes("app-text-danger")
         else:
             ui.label("No mentions configured").classes("text-sm text-slate-500 italic")
 
@@ -224,7 +231,9 @@ def _render_mentions_editor(state: SettingsFormState) -> None:
                 state.set_value("settings.notifications.mentions", data)
                 refresh()
 
-            ui.button("Add", icon="add", on_click=add_mention).props("flat dense").classes("app-text-accent")
+            neutralize_button_utilities(ui.button("Add", icon="add", on_click=add_mention).props("flat dense")).classes(
+                "app-text-accent"
+            )
 
     with container:
         _render_mentions_content()

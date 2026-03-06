@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 
 from nicegui import ui
 
-from ..app_button import app_button
+from ..app_button import app_button, neutralize_button_utilities
 
 if TYPE_CHECKING:
     from playbook.gui.settings_state.settings_state import SettingsFormState
@@ -171,7 +171,7 @@ def notification_target_editor(
                         "text-2xl font-semibold text-slate-100"
                     )
                     ui.label("Update delivery settings for this target").classes("text-sm text-slate-400")
-                ui.button(icon="close", on_click=dialog.close).props("flat round dense")
+                neutralize_button_utilities(ui.button(icon="close", on_click=dialog.close).props("flat round dense"))
 
             form_container = ui.column().classes("w-full gap-3")
 
@@ -275,7 +275,9 @@ def notification_target_editor(
                 ui.badge(str(len(targets))).classes("text-xs app-badge app-badge-muted")
 
             if not disabled:
-                ui.button(icon="add", on_click=lambda: _open_target_dialog()).props("flat dense")
+                neutralize_button_utilities(
+                    ui.button(icon="add", on_click=lambda: _open_target_dialog()).props("flat dense")
+                )
 
         if discord_env_key:
             with ui.row().classes("items-center gap-2"):
@@ -286,8 +288,10 @@ def notification_target_editor(
             with ui.card().classes("w-full p-4 settings-inline-card"):
                 ui.label("No notification targets configured").classes("text-sm text-slate-400 italic")
                 if not disabled:
-                    ui.button(text="Add Notification Target", icon="add", on_click=lambda: _open_target_dialog()).props(
-                        "flat dense"
+                    neutralize_button_utilities(
+                        ui.button(
+                            text="Add Notification Target", icon="add", on_click=lambda: _open_target_dialog()
+                        ).props("flat dense")
                     )
             return
 
@@ -310,7 +314,11 @@ def notification_target_editor(
 
                     if not disabled:
                         with ui.row().classes("gap-1"):
-                            ui.button(icon="edit", on_click=lambda i=idx: _open_target_dialog(i)).props("flat dense")
+                            neutralize_button_utilities(
+                                ui.button(icon="edit", on_click=lambda i=idx: _open_target_dialog(i)).props(
+                                    "flat dense"
+                                )
+                            )
 
                             def _toggle(i=idx) -> None:
                                 updated = _get_targets()
@@ -318,8 +326,10 @@ def notification_target_editor(
                                 _set_targets(updated)
                                 refresh_editor()
 
-                            ui.button(icon="visibility" if enabled else "visibility_off", on_click=_toggle).props(
-                                "flat dense"
+                            neutralize_button_utilities(
+                                ui.button(icon="visibility" if enabled else "visibility_off", on_click=_toggle).props(
+                                    "flat dense"
+                                )
                             )
 
                             def _delete(i=idx) -> None:
@@ -328,7 +338,9 @@ def notification_target_editor(
                                 _set_targets(updated)
                                 refresh_editor()
 
-                            ui.button(icon="delete", on_click=_delete).props("flat dense").classes("app-text-danger")
+                            neutralize_button_utilities(
+                                ui.button(icon="delete", on_click=_delete).props("flat dense")
+                            ).classes("app-text-danger")
 
     with container:
         _render_editor()

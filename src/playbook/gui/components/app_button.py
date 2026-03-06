@@ -26,7 +26,17 @@ def app_button(
     # Force flat button mode so Quasar does not inject standard primary skin.
     button.props("flat")
 
-    # Remove framework default color utility classes explicitly.
+    neutralize_button_utilities(button)
+    button.props("no-caps")
+    if props:
+        button.props(props)
+    button.classes(f"app-btn app-btn-{variant} {classes}".strip())
+    return button
+
+
+def neutralize_button_utilities(button: ui.button) -> ui.button:
+    """Strip Quasar default utility classes from a button instance."""
+
     def strip_framework_classes() -> None:
         button.classes(remove="bg-primary")
         button.classes(remove="text-white")
@@ -34,8 +44,4 @@ def app_button(
 
     strip_framework_classes()
     ui.timer(0.05, strip_framework_classes, once=True)
-    button.props("no-caps")
-    if props:
-        button.props(props)
-    button.classes(f"app-btn app-btn-{variant} {classes}".strip())
     return button
