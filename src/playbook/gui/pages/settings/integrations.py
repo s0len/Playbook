@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from nicegui import ui
 
+from ...components.app_button import neutralize_button_utilities
 from ...components.settings import (
     list_editor,
     settings_card,
@@ -380,9 +381,9 @@ def _render_rewrite_rules(state: SettingsFormState, path: str) -> None:
 
                         return delete_rule
 
-                    ui.button(icon="delete", on_click=make_delete_handler(idx)).props("flat dense").classes(
-                        "app-text-danger"
-                    )
+                    neutralize_button_utilities(
+                        ui.button(icon="delete", on_click=make_delete_handler(idx)).props("flat dense")
+                    ).classes("app-text-danger")
 
             # Add new rule button
             def add_rule() -> None:
@@ -391,6 +392,8 @@ def _render_rewrite_rules(state: SettingsFormState, path: str) -> None:
                 state.set_value(path, current)
                 refresh_rules()
 
-            ui.button("Add Rewrite Rule", icon="add", on_click=add_rule).props("flat dense").classes("mt-2")
+            neutralize_button_utilities(
+                ui.button("Add Rewrite Rule", icon="add", on_click=add_rule).props("flat dense")
+            ).classes("mt-2")
 
     refresh_rules()

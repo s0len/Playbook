@@ -13,7 +13,7 @@ from pathlib import Path
 
 from nicegui import ui
 
-from ...components.app_button import app_button
+from ...components.app_button import app_button, neutralize_button_utilities
 from ...settings_state.settings_state import SETTINGS_TABS, SettingsFormState
 from ...state import gui_state
 from ...utils import safe_notify
@@ -160,17 +160,10 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
     if is_active:
         btn_classes += " settings-subnav-item-active"
 
-    tab_button = (
-        ui.button(on_click=lambda t=tab_id: state.set_active_tab(t))
-        .classes(f"w-full justify-start px-3 py-2 rounded-lg text-left {btn_classes}")
-        .props("flat no-caps")
+    tab_button = neutralize_button_utilities(
+        ui.button(on_click=lambda t=tab_id: state.set_active_tab(t)).props("flat no-caps")
     )
-
-    def strip_primary_class() -> None:
-        tab_button.classes(remove="text-primary")
-
-    strip_primary_class()
-    ui.timer(0.05, strip_primary_class, once=True)
+    tab_button.classes(f"w-full justify-start px-3 py-2 rounded-lg text-left {btn_classes}")
 
     with tab_button:
         with ui.row().classes("w-full items-center gap-3 justify-start"):

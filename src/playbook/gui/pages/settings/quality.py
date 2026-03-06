@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from nicegui import ui
 
+from ...components.app_button import neutralize_button_utilities
 from ...components.settings import (
     settings_card,
     settings_input,
@@ -357,10 +358,12 @@ def quality_tab(state: SettingsFormState) -> None:
                             .classes("flex-1")
                             .props('outlined dense label="Test Filename"')
                         )
-                        ui.button(
-                            "Calculate",
-                            icon="calculate",
-                            on_click=lambda: _calculate_score(state, test_input.value),
+                        neutralize_button_utilities(
+                            ui.button(
+                                "Calculate",
+                                icon="calculate",
+                                on_click=lambda: _calculate_score(state, test_input.value),
+                            )
                         )
 
     # Initial render

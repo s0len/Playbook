@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING, Any
 
 from nicegui import ui
 
+from ..app_button import neutralize_button_utilities
+
 if TYPE_CHECKING:
     from playbook.gui.settings_state.settings_state import SettingsFormState
 
@@ -77,10 +79,12 @@ def key_value_editor(
                 if is_modified:
                     ui.icon("edit").classes("app-text-warning text-xs")
             if not disabled:
-                ui.button(
-                    icon="add",
-                    on_click=lambda: add_row("", 0 if value_type == "number" else ""),
-                ).props("flat dense").classes("app-text-accent")
+                neutralize_button_utilities(
+                    ui.button(
+                        icon="add",
+                        on_click=lambda: add_row("", 0 if value_type == "number" else ""),
+                    ).props("flat dense")
+                ).classes("app-text-accent")
 
         if description:
             ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400")
@@ -90,10 +94,12 @@ def key_value_editor(
             with ui.row().classes("gap-1 flex-wrap"):
                 for preset_key, preset_value in presets.items():
                     if preset_key not in data:
-                        ui.button(
-                            f"+ {preset_key}",
-                            on_click=lambda k=preset_key, v=preset_value: add_row(k, v),
-                        ).props("flat dense size=sm").classes("text-xs")
+                        neutralize_button_utilities(
+                            ui.button(
+                                f"+ {preset_key}",
+                                on_click=lambda k=preset_key, v=preset_value: add_row(k, v),
+                            ).props("flat dense size=sm")
+                        ).classes("text-xs")
 
         # Table of current values
         if data:
@@ -141,10 +147,12 @@ def key_value_editor(
 
             # Delete button
             if not disabled:
-                ui.button(
-                    icon="delete",
-                    on_click=lambda k=key: remove_row(k),
-                ).props("flat dense").classes("app-text-danger")
+                neutralize_button_utilities(
+                    ui.button(
+                        icon="delete",
+                        on_click=lambda k=key: remove_row(k),
+                    ).props("flat dense")
+                ).classes("app-text-danger")
 
     def add_row(new_key: str, new_value: Any) -> None:
         """Add a new key-value pair."""

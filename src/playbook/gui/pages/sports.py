@@ -18,6 +18,7 @@ from typing import Any
 from nicegui import context, ui
 
 from ..components import app_button, progress_bar, seasons_list, status_chip
+from ..components.app_button import neutralize_button_utilities
 from ..data import get_sport_detail, get_sports_overview
 from ..state import gui_state
 from ..utils import safe_notify
@@ -35,9 +36,9 @@ def sports_page() -> None:
         with ui.card().classes("glass-card w-full"):
             with ui.row().classes("items-center justify-between mb-4"):
                 ui.label("Configured Sports").classes("text-xl font-semibold text-slate-700 dark:text-slate-200")
-                ui.button(icon="refresh", on_click=lambda: ui.navigate.to("/sports")).props("flat round dense").classes(
-                    "text-slate-500"
-                )
+                neutralize_button_utilities(
+                    ui.button(icon="refresh", on_click=lambda: ui.navigate.to("/sports")).props("flat round dense")
+                ).classes("text-slate-500")
 
             _sports_table()
 
@@ -64,9 +65,9 @@ def sport_detail_page(sport_id: str) -> None:
     with ui.column().classes("w-full p-6 gap-6 view-shell"):
         # Back button and header
         with ui.row().classes("w-full items-center gap-4"):
-            ui.button(icon="arrow_back", on_click=lambda: ui.navigate.to("/sports")).props("flat round").classes(
-                "text-slate-600 dark:text-slate-400"
-            )
+            neutralize_button_utilities(
+                ui.button(icon="arrow_back", on_click=lambda: ui.navigate.to("/sports")).props("flat round")
+            ).classes("text-slate-600 dark:text-slate-400")
             ui.label(sport_name).classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
 
         content_container = ui.column().classes("w-full gap-6")
@@ -380,8 +381,10 @@ def _sports_table() -> None:
 
         ui.space()
 
-        ui.button("Clear Selection", icon="close", on_click=lambda: table.run_method("clearSelection")).props(
-            "flat dense"
+        neutralize_button_utilities(
+            ui.button("Clear Selection", icon="close", on_click=lambda: table.run_method("clearSelection")).props(
+                "flat dense"
+            )
         ).classes("text-slate-500")
 
     # Create table with custom rendering
@@ -567,7 +570,7 @@ def _bulk_action(action: str, sport_ids: list[str]) -> None:
             )
 
             with ui.row().classes("w-full justify-end gap-2"):
-                ui.button("Cancel", on_click=dialog.close).props("flat")
+                neutralize_button_utilities(ui.button("Cancel", on_click=dialog.close).props("flat"))
                 app_button("Clear History", on_click=lambda: _do_clear_history(sport_ids, dialog), variant="danger")
 
         dialog.open()
@@ -585,7 +588,7 @@ def _bulk_action(action: str, sport_ids: list[str]) -> None:
             )
 
             with ui.row().classes("w-full justify-end gap-2"):
-                ui.button("Cancel", on_click=dialog.close).props("flat")
+                neutralize_button_utilities(ui.button("Cancel", on_click=dialog.close).props("flat"))
                 app_button("Reprocess", on_click=lambda: _do_reprocess(sport_ids, dialog), variant="primary")
 
         dialog.open()
@@ -857,10 +860,12 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
                         ui.badge("custom").classes("flex-none app-badge app-chip-active")
 
                         # Remove button
-                        ui.button(
-                            icon="close",
-                            on_click=lambda _, p=pattern: remove_custom_glob(p),
-                        ).props("flat round dense size=sm").classes("app-text-danger")
+                        neutralize_button_utilities(
+                            ui.button(
+                                icon="close",
+                                on_click=lambda _, p=pattern: remove_custom_glob(p),
+                            ).props("flat round dense size=sm")
+                        ).classes("app-text-danger")
             else:
                 ui.label("No custom patterns added yet").classes("text-sm text-slate-400 dark:text-slate-500 italic")
 

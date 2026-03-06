@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 
 from nicegui import ui
 
+from ..app_button import neutralize_button_utilities
+
 if TYPE_CHECKING:
     from playbook.gui.settings_state.settings_state import SettingsFormState
 
@@ -105,7 +107,9 @@ def list_editor(
                         add_list_item(str(value))
                         new_input.value = ""
 
-                ui.button(icon="add", on_click=add_item).props("flat dense").classes("app-text-accent")
+                neutralize_button_utilities(ui.button(icon="add", on_click=add_item).props("flat dense")).classes(
+                    "app-text-accent"
+                )
 
     def _render_item(idx: int, item: str) -> None:
         """Render a single list item."""
@@ -114,22 +118,28 @@ def list_editor(
             if not disabled:
                 # Move up
                 if idx > 0:
-                    ui.button(
-                        icon="keyboard_arrow_up",
-                        on_click=lambda i=idx: move_item(i, i - 1),
-                    ).props("flat dense size=sm")
+                    neutralize_button_utilities(
+                        ui.button(
+                            icon="keyboard_arrow_up",
+                            on_click=lambda i=idx: move_item(i, i - 1),
+                        ).props("flat dense size=sm")
+                    )
                 # Move down
                 items = state.get_value(path, []) or []
                 if idx < len(items) - 1:
-                    ui.button(
-                        icon="keyboard_arrow_down",
-                        on_click=lambda i=idx: move_item(i, i + 1),
-                    ).props("flat dense size=sm")
+                    neutralize_button_utilities(
+                        ui.button(
+                            icon="keyboard_arrow_down",
+                            on_click=lambda i=idx: move_item(i, i + 1),
+                        ).props("flat dense size=sm")
+                    )
                 # Delete
-                ui.button(
-                    icon="close",
-                    on_click=lambda i=idx: remove_item(i),
-                ).props("flat dense size=sm").classes("app-text-danger")
+                neutralize_button_utilities(
+                    ui.button(
+                        icon="close",
+                        on_click=lambda i=idx: remove_item(i),
+                    ).props("flat dense size=sm")
+                ).classes("app-text-danger")
 
     def add_list_item(value: str) -> None:
         """Add a new item to the list."""

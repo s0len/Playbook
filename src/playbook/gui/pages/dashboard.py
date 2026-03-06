@@ -12,6 +12,7 @@ import logging
 from nicegui import ui
 
 from ..components import activity_feed, app_button, stats_card
+from ..components.app_button import neutralize_button_utilities
 from ..state import gui_state
 from ..utils import safe_timer
 
@@ -249,7 +250,9 @@ def _status_card() -> None:
 
 def _refresh_button() -> None:
     """Create a small refresh button."""
-    ui.button(icon="refresh", on_click=lambda: None).props("flat dense").classes("text-slate-500 dark:text-slate-400")
+    neutralize_button_utilities(ui.button(icon="refresh", on_click=lambda: None).props("flat dense")).classes(
+        "text-slate-500 dark:text-slate-400"
+    )
 
 
 async def _trigger_run() -> None:
