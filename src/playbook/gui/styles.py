@@ -493,6 +493,16 @@ a:hover {
     color: inherit !important;
 }
 
+@layer quasar_importants {
+    .settings-subnav-item.text-primary,
+    .settings-subnav-item .text-primary,
+    .settings-subnav-item .q-icon,
+    .settings-subnav-item .q-btn__content,
+    .settings-subnav-item .q-btn__content span {
+        color: inherit !important;
+    }
+}
+
 .settings-sidebar .q-btn.settings-subnav-item.text-primary,
 .settings-sidebar .q-btn.settings-subnav-item .text-primary {
     color: inherit !important;
