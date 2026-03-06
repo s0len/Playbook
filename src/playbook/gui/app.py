@@ -158,6 +158,22 @@ def run_with_gui(
     if dry_run:
         app_config.settings.dry_run = True
 
+    # Apply environment variable overrides (same as cli.py _apply_overrides)
+    import os
+
+    source_override = os.getenv("SOURCE_DIR")
+    dest_override = os.getenv("DESTINATION_DIR")
+    cache_override = os.getenv("CACHE_DIR")
+    state_override = os.getenv("STATE_DIR")
+    if source_override:
+        app_config.settings.source_dir = Path(source_override)
+    if dest_override:
+        app_config.settings.destination_dir = Path(dest_override)
+    if cache_override:
+        app_config.settings.cache_dir = Path(cache_override)
+    if state_override:
+        app_config.settings.state_dir = Path(state_override)
+
     # Create processor
     LOGGER.info("Initializing Processor")
     processor = Processor(
