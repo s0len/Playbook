@@ -4,7 +4,7 @@ import fnmatch
 import logging
 import os
 from collections import defaultdict
-from datetime import datetime
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -105,7 +105,7 @@ class NotificationService:
             destination_dir,
         )
         self._throttle_map = settings.throttle
-        self._last_sent: dict[str, datetime] = {}
+        self._daily_sent: dict[tuple[str, str], int] = {}
         self._summary_mode = getattr(settings, "summary_mode", False)
         self._scan_summary = ScanSummary()
 
@@ -137,17 +137,18 @@ class NotificationService:
             )
             return
 
-        throttle_seconds = self._resolve_throttle(event.sport_id)
-        last_event = self._last_sent.get(event.sport_id)
-        if throttle_seconds and last_event:
-            delta = (event.timestamp - last_event).total_seconds()
-            if delta < throttle_seconds:
-                LOGGER.debug(
-                    "Skipping notification for %s due to throttle (%ss remaining)",
-                    event.sport_id,
-                    round(throttle_seconds - delta, 2),
-                )
-                return
+        daily_limit = self._resolve_throttle(event.sport_id)
+        day_key = self._notification_day_key(event)
+        sent_today = self._daily_sent.get((event.sport_id, day_key), 0)
+        if daily_limit > 0 and sent_today >= daily_limit:
+            LOGGER.debug(
+                "Skipping notification for %s due to daily limit (%s/%s for %s)",
+                event.sport_id,
+                sent_today,
+                daily_limit,
+                day_key,
+            )
+            return
 
         successes: list[str] = []
         for target in self._targets:
@@ -160,8 +161,8 @@ class NotificationService:
             else:
                 successes.append(target.name)
 
-        self._last_sent[event.sport_id] = event.timestamp
         if successes:
+            self._daily_sent[(event.sport_id, day_key)] = sent_today + 1
             LOGGER.debug(
                 "Notification dispatched | sport=%s episode=%s event=%s targets=%s",
                 event.sport_id,
@@ -454,14 +455,23 @@ class NotificationService:
         if not self._throttle_map:
             return 0
 
+        default = self._throttle_map.get("default")
+        default_limit = max(0, int(default)) if default is not None else None
+
         # 1) Exact sport id match.
         if sport_id in self._throttle_map:
-            return max(0, int(self._throttle_map[sport_id]))
+            sport_limit = max(0, int(self._throttle_map[sport_id]))
+            if default_limit is None:
+                return sport_limit
+            return min(sport_limit, default_limit)
 
         # 2) Parent prefixes (e.g. "premier_league" for "premier_league_2025").
         for candidate in self._sport_prefixes(sport_id):
             if candidate in self._throttle_map:
-                return max(0, int(self._throttle_map[candidate]))
+                sport_limit = max(0, int(self._throttle_map[candidate]))
+                if default_limit is None:
+                    return sport_limit
+                return min(sport_limit, default_limit)
 
         # 3) Wildcard patterns.
         wildcard_matches = [
@@ -471,11 +481,20 @@ class NotificationService:
         ]
         if wildcard_matches:
             wildcard_matches.sort(key=lambda item: len(item[0]), reverse=True)
-            return max(0, int(wildcard_matches[0][1]))
+            sport_limit = max(0, int(wildcard_matches[0][1]))
+            if default_limit is None:
+                return sport_limit
+            return min(sport_limit, default_limit)
 
         # 4) Default fallback.
-        default = self._throttle_map.get("default")
-        return max(0, int(default)) if default is not None else 0
+        return default_limit if default_limit is not None else 0
+
+    @staticmethod
+    def _notification_day_key(event: NotificationEvent) -> str:
+        timestamp = event.timestamp
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=UTC)
+        return timestamp.astimezone(UTC).date().isoformat()
 
     @staticmethod
     def _is_wildcard(value: str) -> bool:

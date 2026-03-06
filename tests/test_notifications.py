@@ -255,7 +255,7 @@ def test_notification_service_throttle_supports_variant_ids(tmp_path) -> None:
     settings = NotificationSettings(
         batch_daily=False,
         flush_time=dt.time(hour=0, minute=0),
-        throttle={"premier_league": 30, "default": 5},
+        throttle={"premier_league": 30, "default": 60},
         targets=[_DEFAULT_TARGET],
     )
     service = NotificationService(
@@ -272,7 +272,7 @@ def test_notification_service_throttle_supports_wildcards(tmp_path) -> None:
     settings = NotificationSettings(
         batch_daily=False,
         flush_time=dt.time(hour=0, minute=0),
-        throttle={"formula1_*": 12, "default": 5},
+        throttle={"formula1_*": 12, "default": 60},
         targets=[_DEFAULT_TARGET],
     )
     service = NotificationService(
@@ -289,7 +289,7 @@ def test_notification_service_throttle_prefers_specific_wildcard(tmp_path) -> No
     settings = NotificationSettings(
         batch_daily=False,
         flush_time=dt.time(hour=0, minute=0),
-        throttle={"formula1_*": 12, "formula1_2025*": 25, "default": 5},
+        throttle={"formula1_*": 12, "formula1_2025*": 25, "default": 60},
         targets=[_DEFAULT_TARGET],
     )
     service = NotificationService(
@@ -300,6 +300,89 @@ def test_notification_service_throttle_prefers_specific_wildcard(tmp_path) -> No
     )
 
     assert service._resolve_throttle("formula1_2025_sprint") == 25
+
+
+def test_notification_service_throttle_applies_default_and_sport_limit(tmp_path) -> None:
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        throttle={"formula1": 25, "default": 10},
+        targets=[_DEFAULT_TARGET],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    assert service._resolve_throttle("formula1") == 10
+
+
+def test_notification_service_throttle_limits_notifications_per_day(tmp_path, monkeypatch) -> None:
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        throttle={"demo": 1},
+        targets=[_DEFAULT_TARGET],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    calls: list[dict[str, Any]] = []
+
+    def fake_request(method, url, json=None, timeout=None, headers=None):
+        calls.append({"method": method, "url": url, "json": json})
+        return FakeResponse(204)
+
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
+
+    first = _build_event()
+    first.timestamp = dt.datetime(2026, 3, 6, 9, 0, tzinfo=dt.UTC)
+    second = _build_event(destination="Demo-2.mkv")
+    second.timestamp = dt.datetime(2026, 3, 6, 10, 0, tzinfo=dt.UTC)
+
+    service.notify(first)
+    service.notify(second)
+
+    assert len(calls) == 1
+
+
+def test_notification_service_throttle_resets_next_day(tmp_path, monkeypatch) -> None:
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        throttle={"demo": 1},
+        targets=[_DEFAULT_TARGET],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    calls: list[dict[str, Any]] = []
+
+    def fake_request(method, url, json=None, timeout=None, headers=None):
+        calls.append({"method": method, "url": url, "json": json})
+        return FakeResponse(204)
+
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
+
+    first = _build_event()
+    first.timestamp = dt.datetime(2026, 3, 6, 9, 0, tzinfo=dt.UTC)
+    second = _build_event(destination="Demo-next-day.mkv")
+    second.timestamp = dt.datetime(2026, 3, 7, 9, 0, tzinfo=dt.UTC)
+
+    service.notify(first)
+    service.notify(second)
+
+    assert len(calls) == 2
 
 
 def test_discord_target_reads_webhook_from_env(tmp_path, monkeypatch) -> None:
