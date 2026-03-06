@@ -1384,3 +1384,6 @@ samples:
       - value: "Formula1.2026.Australia.Grand.Prix.Weekend.Warmup.HLG.2160p.WEB.h265-BILLIE.mkv"
         expect_season: "Australian Grand Prix"
         expect_episode: "Weekend Warm Up"
+      - value: "Formula1.2026.Australia.Grand.Prix.Practice.One.HLG.2160p.WEB.h265-BILLIE.mkv"
+        expect_season: "Australian Grand Prix"
+        expect_episode: "Free Practice 1"
