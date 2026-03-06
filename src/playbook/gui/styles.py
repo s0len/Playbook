@@ -649,6 +649,13 @@ body.body--dark .settings-toggle .q-toggle__inner {
     border-radius: 8px;
     font-weight: 600;
     letter-spacing: 0.01em;
+    align-items: flex-start !important;
+}
+
+.app-btn .q-btn__content {
+    width: 100%;
+    justify-content: flex-start !important;
+    text-align: left;
 }
 
 /* Neutralize Quasar default primary utility classes on semantic buttons. */
