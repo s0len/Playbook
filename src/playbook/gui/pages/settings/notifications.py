@@ -104,7 +104,7 @@ def _render_throttle_editor(state: SettingsFormState) -> None:
             _render_throttle_content()
 
     def _render_throttle_content() -> None:
-        ui.label("Configure per-sport throttling to limit notifications").classes(
+        ui.label("Configure per-sport throttling in seconds between notifications").classes(
             "text-sm text-slate-600 dark:text-slate-400"
         )
 
@@ -128,7 +128,7 @@ def _render_throttle_editor(state: SettingsFormState) -> None:
                         ui.input(value=str(limit), on_change=on_limit_change).classes("w-24").props(
                             'outlined dense type="number"'
                         )
-                        ui.label("per day").classes("text-xs text-slate-500")
+                        ui.label("seconds").classes("text-xs text-slate-500")
 
                         def on_delete(sid=sport_id) -> None:
                             data = state.get_value("settings.notifications.throttle", {}) or {}
@@ -144,7 +144,7 @@ def _render_throttle_editor(state: SettingsFormState) -> None:
         # Add new rate limit
         with ui.row().classes("w-full items-end gap-2 mt-2"):
             new_sport = ui.input(label="Sport ID", placeholder="formula1").classes("flex-1").props("outlined dense")
-            new_limit = ui.input(label="Limit", value="10").classes("w-24").props('outlined dense type="number"')
+            new_limit = ui.input(label="Seconds", value="10").classes("w-24").props('outlined dense type="number"')
 
             def add_throttle() -> None:
                 sport_id = new_sport.value.strip() if new_sport.value else ""

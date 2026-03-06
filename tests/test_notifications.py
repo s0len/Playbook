@@ -251,6 +251,57 @@ def test_notification_service_mentions_support_wildcards(tmp_path, monkeypatch) 
     assert payload["content"].startswith("<@&999> [NEW]")
 
 
+def test_notification_service_throttle_supports_variant_ids(tmp_path) -> None:
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        throttle={"premier_league": 30, "default": 5},
+        targets=[_DEFAULT_TARGET],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    assert service._resolve_throttle("premier_league_2025_26") == 30
+
+
+def test_notification_service_throttle_supports_wildcards(tmp_path) -> None:
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        throttle={"formula1_*": 12, "default": 5},
+        targets=[_DEFAULT_TARGET],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    assert service._resolve_throttle("formula1_2026") == 12
+
+
+def test_notification_service_throttle_prefers_specific_wildcard(tmp_path) -> None:
+    settings = NotificationSettings(
+        batch_daily=False,
+        flush_time=dt.time(hour=0, minute=0),
+        throttle={"formula1_*": 12, "formula1_2025*": 25, "default": 5},
+        targets=[_DEFAULT_TARGET],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    assert service._resolve_throttle("formula1_2025_sprint") == 25
+
+
 def test_discord_target_reads_webhook_from_env(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("PLAYBOOK_DISCORD_WEBHOOK", "https://discord.test/env")
     settings = NotificationSettings(

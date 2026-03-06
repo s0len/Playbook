@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fnmatch
 import logging
 import os
 from collections import defaultdict
@@ -452,7 +453,38 @@ class NotificationService:
     def _resolve_throttle(self, sport_id: str) -> int:
         if not self._throttle_map:
             return 0
+
+        # 1) Exact sport id match.
         if sport_id in self._throttle_map:
             return max(0, int(self._throttle_map[sport_id]))
+
+        # 2) Parent prefixes (e.g. "premier_league" for "premier_league_2025").
+        for candidate in self._sport_prefixes(sport_id):
+            if candidate in self._throttle_map:
+                return max(0, int(self._throttle_map[candidate]))
+
+        # 3) Wildcard patterns.
+        wildcard_matches = [
+            (pattern, value)
+            for pattern, value in self._throttle_map.items()
+            if self._is_wildcard(pattern) and fnmatch.fnmatchcase(sport_id, pattern)
+        ]
+        if wildcard_matches:
+            wildcard_matches.sort(key=lambda item: len(item[0]), reverse=True)
+            return max(0, int(wildcard_matches[0][1]))
+
+        # 4) Default fallback.
         default = self._throttle_map.get("default")
         return max(0, int(default)) if default is not None else 0
+
+    @staticmethod
+    def _is_wildcard(value: str) -> bool:
+        return any(char in value for char in "*?[")
+
+    @staticmethod
+    def _sport_prefixes(sport_id: str) -> list[str]:
+        parts = sport_id.split("_")
+        prefixes: list[str] = []
+        for end in range(len(parts) - 1, 0, -1):
+            prefixes.append("_".join(parts[:end]))
+        return prefixes
