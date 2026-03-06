@@ -449,6 +449,10 @@ class Processor:
                         stats.cancelled = True
                         break
 
+                    # Yield the GIL briefly so other threads (e.g. the GUI
+                    # health-check endpoint) can run without being starved.
+                    time.sleep(0)
+
                     is_sample_file = should_suppress_sample_ignored(source_path)
                     handled, diagnostics, match_attempts = self._process_single_file(
                         source_path,

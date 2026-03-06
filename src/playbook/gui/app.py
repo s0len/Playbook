@@ -67,6 +67,12 @@ def create_app() -> None:
         """Unmatched files management page."""
         _page_wrapper(unmatched.unmatched_page, "/unmatched")
 
+    # Health check endpoint — must respond instantly even under heavy load
+    @app.get("/healthz")
+    async def healthz() -> dict:
+        """Lightweight liveness probe endpoint."""
+        return {"status": "ok"}
+
     # API endpoints for programmatic access
     @app.get("/api/stats")
     def api_stats() -> dict:
