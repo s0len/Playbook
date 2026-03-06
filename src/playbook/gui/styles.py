@@ -203,6 +203,17 @@ body.body--dark .status-chip-error {
     border-left: 3px solid #ef4444;
 }
 
+.episode-row .q-btn.episode-row-action-btn.bg-primary {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+.episode-row .q-btn.episode-row-action-btn.text-primary,
+.episode-row .q-btn.episode-row-action-btn .text-primary,
+.episode-row .q-btn.episode-row-action-btn .q-icon {
+    color: inherit !important;
+}
+
 /* ===== Season Section ===== */
 .season-section {
     border: 1px solid var(--border-color);

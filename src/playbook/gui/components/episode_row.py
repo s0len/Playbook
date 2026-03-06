@@ -68,9 +68,15 @@ def episode_row(
 
         # View button for matched episodes
         if episode.status == "matched" and on_click:
-            ui.button(icon="visibility", on_click=lambda: on_click(episode)).props("flat dense round").classes(
-                "text-slate-500 dark:text-slate-400"
-            )
+            view_button = ui.button(icon="visibility", on_click=lambda: on_click(episode)).props("flat dense round")
+
+            def strip_framework_classes() -> None:
+                view_button.classes(remove="text-primary")
+                view_button.classes(remove="bg-primary")
+
+            strip_framework_classes()
+            ui.timer(0.05, strip_framework_classes, once=True)
+            view_button.classes("episode-row-action-btn text-slate-500 dark:text-slate-400")
 
     if on_click and episode.status == "matched":
         row.on("click", lambda: on_click(episode))
