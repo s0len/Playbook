@@ -15,7 +15,7 @@ from datetime import datetime
 
 from nicegui import ui
 
-from ..components.app_button import app_button
+from ..components.app_button import app_button, neutralize_button_utilities
 from ..state import gui_state
 from ..utils import safe_notify
 
@@ -210,7 +210,7 @@ def _render_category_toggles(state, on_filter_change, refresh_toggles) -> None:
 
             return handler
 
-        btn = ui.button(label, icon=icon, on_click=make_toggle_handler(category, state))
+        btn = neutralize_button_utilities(ui.button(label, icon=icon, on_click=make_toggle_handler(category, state)))
         btn.props("flat dense no-caps")
         btn.classes(f"text-sm app-chip {'app-chip-active' if is_active else ''}")
 
@@ -264,19 +264,23 @@ def _render_results_content(state, refresh_results, refresh_page) -> None:
                         state.page += 1
                         refresh_results()
 
-                ui.button(
-                    icon="chevron_left",
-                    on_click=go_prev,
-                ).props("flat round dense")
+                neutralize_button_utilities(
+                    ui.button(
+                        icon="chevron_left",
+                        on_click=go_prev,
+                    ).props("flat round dense")
+                )
 
                 ui.label(f"Page {state.page + 1} of {total_pages}").classes(
                     "text-sm text-slate-600 dark:text-slate-400"
                 )
 
-                ui.button(
-                    icon="chevron_right",
-                    on_click=go_next,
-                ).props("flat round dense")
+                neutralize_button_utilities(
+                    ui.button(
+                        icon="chevron_right",
+                        on_click=go_next,
+                    ).props("flat round dense")
+                )
 
     if not records:
         with ui.card().classes("glass-card w-full p-8"):
@@ -467,7 +471,7 @@ def _show_details_dialog(record) -> None:
             # Header
             with ui.row().classes("w-full items-center justify-between"):
                 ui.label("Match Analysis").classes("text-xl font-semibold text-slate-800 dark:text-slate-100")
-                ui.button(icon="close", on_click=dialog.close).props("flat round dense")
+                neutralize_button_utilities(ui.button(icon="close", on_click=dialog.close).props("flat round dense"))
 
             ui.separator()
 
@@ -518,7 +522,7 @@ def _show_details_dialog(record) -> None:
 
             # Close button
             with ui.row().classes("w-full justify-end"):
-                ui.button("Close", on_click=dialog.close).props("flat")
+                neutralize_button_utilities(ui.button("Close", on_click=dialog.close).props("flat"))
 
     dialog.open()
 
@@ -872,7 +876,7 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
             # Header
             with ui.row().classes("w-full items-center justify-between"):
                 ui.label("Manual Match").classes("text-xl font-semibold text-slate-800 dark:text-slate-100")
-                ui.button(icon="close", on_click=dialog.close).props("flat round dense")
+                neutralize_button_utilities(ui.button(icon="close", on_click=dialog.close).props("flat round dense"))
 
             ui.separator()
 

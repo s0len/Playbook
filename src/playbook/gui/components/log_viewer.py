@@ -7,6 +7,7 @@ from __future__ import annotations
 from nicegui import ui
 
 from ..state import LogEntry, gui_state
+from .app_button import neutralize_button_utilities
 
 
 def log_viewer(
@@ -154,6 +155,8 @@ def log_filters(
         ).classes("flex-1 min-w-48")
 
         # Clear button
-        ui.button(icon="delete", on_click=lambda: gui_state.log_buffer.clear()).props("flat").classes("text-gray-500")
+        neutralize_button_utilities(
+            ui.button(icon="delete", on_click=lambda: gui_state.log_buffer.clear()).props("flat")
+        ).classes("text-gray-500")
 
     return row

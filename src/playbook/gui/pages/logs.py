@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from nicegui import ui
 
+from ..components.app_button import neutralize_button_utilities
 from ..components.log_viewer import log_line
 from ..state import LogEntry, gui_state
 from ..utils import safe_timer
@@ -66,10 +67,12 @@ def logs_page() -> None:
                 ).props("dense outlined").classes("w-36")
 
                 # Clear button
-                ui.button(
-                    "Clear",
-                    on_click=lambda: _clear_logs(),
-                ).props("flat dense").classes("text-slate-500 dark:text-slate-400 text-xs")
+                neutralize_button_utilities(
+                    ui.button(
+                        "Clear",
+                        on_click=lambda: _clear_logs(),
+                    ).props("flat dense")
+                ).classes("text-slate-500 dark:text-slate-400 text-xs")
 
                 # Auto-scroll toggle
                 with ui.row().classes("items-center gap-1.5"):

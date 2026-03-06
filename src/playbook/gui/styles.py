@@ -203,6 +203,17 @@ body.body--dark .status-chip-error {
     border-left: 3px solid #ef4444;
 }
 
+.episode-row .q-btn.episode-row-action-btn.bg-primary {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+.episode-row .q-btn.episode-row-action-btn.text-primary,
+.episode-row .q-btn.episode-row-action-btn .text-primary,
+.episode-row .q-btn.episode-row-action-btn .q-icon {
+    color: inherit !important;
+}
+
 /* ===== Season Section ===== */
 .season-section {
     border: 1px solid var(--border-color);
@@ -493,6 +504,16 @@ a:hover {
     color: inherit !important;
 }
 
+@layer quasar_importants {
+    .settings-subnav-item.text-primary,
+    .settings-subnav-item .text-primary,
+    .settings-subnav-item .q-icon,
+    .settings-subnav-item .q-btn__content,
+    .settings-subnav-item .q-btn__content span {
+        color: inherit !important;
+    }
+}
+
 .settings-sidebar .q-btn.settings-subnav-item.text-primary,
 .settings-sidebar .q-btn.settings-subnav-item .text-primary {
     color: inherit !important;
@@ -639,6 +660,13 @@ body.body--dark .settings-toggle .q-toggle__inner {
     border-radius: 8px;
     font-weight: 600;
     letter-spacing: 0.01em;
+    align-items: flex-start !important;
+}
+
+.app-btn .q-btn__content {
+    width: 100%;
+    justify-content: flex-start !important;
+    text-align: left;
 }
 
 /* Neutralize Quasar default primary utility classes on semantic buttons. */
@@ -729,6 +757,32 @@ body.body--dark .q-btn--flat {
     padding: 4px 8px;
 }
 
+/* Quasar may inject text/bg utility classes on chip-like buttons. */
+@layer quasar_importants {
+    .q-btn.text-primary,
+    .q-btn .text-primary {
+        color: inherit !important;
+    }
+
+    .q-btn.bg-primary:not(.app-btn) {
+        background: transparent !important;
+        background-color: transparent !important;
+    }
+
+    .q-btn.app-chip.text-primary,
+    .q-btn.app-chip .text-primary,
+    .q-chip.app-chip.text-primary,
+    .q-chip.app-chip .text-primary {
+        color: inherit !important;
+    }
+
+    .q-btn.app-chip.bg-primary,
+    .q-chip.app-chip.bg-primary {
+        background: transparent !important;
+        background-color: transparent !important;
+    }
+}
+
 .app-chip .q-btn__content,
 .app-chip .q-icon {
     color: inherit !important;
@@ -762,6 +816,49 @@ body.body--dark .q-btn--flat {
 .q-badge.app-badge.text-primary,
 .q-badge.app-badge .text-primary {
     color: inherit !important;
+}
+
+/* Force semantic badge variants in the same high-priority layer. */
+@layer quasar_importants {
+    .q-badge.app-badge.bg-primary {
+        background: transparent !important;
+        background-color: transparent !important;
+    }
+
+    .q-badge.app-badge.app-chip-active {
+        background: var(--accent-soft) !important;
+        background-color: var(--accent-soft) !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        color: var(--accent-color) !important;
+    }
+
+    .q-badge.app-badge.app-badge-muted {
+        background: rgba(255, 255, 255, 0.12) !important;
+        background-color: rgba(255, 255, 255, 0.12) !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        color: rgba(255, 255, 255, 0.86) !important;
+    }
+
+    .q-badge.app-badge.app-badge-warning {
+        background: rgba(251, 191, 36, 0.14) !important;
+        background-color: rgba(251, 191, 36, 0.14) !important;
+        border-color: rgba(251, 191, 36, 0.28) !important;
+        color: #fcd34d !important;
+    }
+
+    .q-badge.app-badge.app-badge-success {
+        background: rgba(74, 222, 128, 0.14) !important;
+        background-color: rgba(74, 222, 128, 0.14) !important;
+        border-color: rgba(74, 222, 128, 0.3) !important;
+        color: #86efac !important;
+    }
+
+    .q-badge.app-badge.app-badge-danger {
+        background: rgba(248, 113, 113, 0.14) !important;
+        background-color: rgba(248, 113, 113, 0.14) !important;
+        border-color: rgba(248, 113, 113, 0.3) !important;
+        color: #fca5a5 !important;
+    }
 }
 
 .app-badge-muted {

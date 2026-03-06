@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 import yaml
 from nicegui import ui
 
-from ...components.app_button import app_button
+from ...components.app_button import app_button, neutralize_button_utilities
 from ...components.settings import settings_card
 
 if TYPE_CHECKING:
@@ -152,14 +152,18 @@ def _render_backup_row(state: SettingsFormState, backup_path: Path) -> None:
         ui.icon("description").classes("text-slate-400")
         ui.label(display_time).classes("flex-1 text-sm text-slate-700 dark:text-slate-200")
         ui.label(f"{size_kb:.1f} KB").classes("text-xs text-slate-500 dark:text-slate-400")
-        ui.button(
-            icon="restore",
-            on_click=lambda p=backup_path: _restore_backup(state, p),
-        ).props("flat dense").classes("app-text-accent")
-        ui.button(
-            icon="delete",
-            on_click=lambda p=backup_path: _delete_backup(p),
-        ).props("flat dense").classes("app-text-danger")
+        neutralize_button_utilities(
+            ui.button(
+                icon="restore",
+                on_click=lambda p=backup_path: _restore_backup(state, p),
+            ).props("flat dense")
+        ).classes("app-text-accent")
+        neutralize_button_utilities(
+            ui.button(
+                icon="delete",
+                on_click=lambda p=backup_path: _delete_backup(p),
+            ).props("flat dense")
+        ).classes("app-text-danger")
 
 
 def _render_import_export_section(state: SettingsFormState) -> None:

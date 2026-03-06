@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from nicegui import ui
 
+from .app_button import neutralize_button_utilities
 from .status_chip import status_icon
 
 if TYPE_CHECKING:
@@ -68,9 +69,10 @@ def episode_row(
 
         # View button for matched episodes
         if episode.status == "matched" and on_click:
-            ui.button(icon="visibility", on_click=lambda: on_click(episode)).props("flat dense round").classes(
-                "text-slate-500 dark:text-slate-400"
+            view_button = neutralize_button_utilities(
+                ui.button(icon="visibility", on_click=lambda: on_click(episode)).props("flat dense round")
             )
+            view_button.classes("episode-row-action-btn text-slate-500 dark:text-slate-400")
 
     if on_click and episode.status == "matched":
         row.on("click", lambda: on_click(episode))
@@ -164,7 +166,7 @@ def episode_detail_dialog(episode: EpisodeMatchStatus) -> None:
                     ui.label(episode.air_date.strftime("%b %d, %Y")).classes(
                         "text-sm text-slate-500 dark:text-slate-400"
                     )
-            ui.button(icon="close", on_click=dialog.close).props("flat round dense")
+            neutralize_button_utilities(ui.button(icon="close", on_click=dialog.close).props("flat round dense"))
 
         # Destination
         _detail_row("Destination", episode.record.destination_path, mono=True)

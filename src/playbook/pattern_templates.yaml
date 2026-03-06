@@ -129,12 +129,24 @@ pattern_sets:
           Free Practice 1:
             - FP1
             - Free.Practice.1
+            - Practice.One
+            - Practice One
+            - Practice.1
+            - Practice 1
           Free Practice 2:
             - FP2
             - Free.Practice.2
+            - Practice.Two
+            - Practice Two
+            - Practice.2
+            - Practice 2
           Free Practice 3:
             - FP3
             - Free.Practice.3
+            - Practice.Three
+            - Practice Three
+            - Practice.3
+            - Practice 3
           Sprint Qualifying:
             - Sprint.Qualifying
             - Sprint.Shootout
@@ -7180,4 +7192,3 @@ default_sports:
     variants:
       - year: 2025
         show_slug: "wta-2025"
-
