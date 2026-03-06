@@ -38,8 +38,34 @@ def _tokens_match(candidate: str, target: str) -> bool:
         return False
     if candidate == target:
         return True
-    if candidate.startswith(target) or target.startswith(candidate):
+    if candidate.startswith(target):
         return True
+
+    if target.startswith(candidate):
+        suffix = target[len(candidate) :]
+        if suffix and suffix[0].isdigit():
+            return True
+        noisy_suffix_markers = (
+            "dnu",
+            "mwr",
+            "proper",
+            "repack",
+            "web",
+            "h264",
+            "h265",
+            "x264",
+            "x265",
+            "hevc",
+            "aac",
+            "ddp",
+            "hdr",
+            "hlg",
+            "f1tv",
+            "fightbb",
+        )
+        if any(suffix.startswith(marker) for marker in noisy_suffix_markers):
+            return True
+
     return tokens_close(candidate, target)
 
 
