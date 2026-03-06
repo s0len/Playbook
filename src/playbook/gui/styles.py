@@ -780,6 +780,37 @@ body.body--dark .q-btn--flat {
     color: inherit !important;
 }
 
+/* Force semantic badge variants in the same high-priority layer. */
+@layer quasar_importants {
+    .q-badge.app-badge.app-badge-muted {
+        background: rgba(255, 255, 255, 0.12) !important;
+        background-color: rgba(255, 255, 255, 0.12) !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        color: rgba(255, 255, 255, 0.86) !important;
+    }
+
+    .q-badge.app-badge.app-badge-warning {
+        background: rgba(251, 191, 36, 0.14) !important;
+        background-color: rgba(251, 191, 36, 0.14) !important;
+        border-color: rgba(251, 191, 36, 0.28) !important;
+        color: #fcd34d !important;
+    }
+
+    .q-badge.app-badge.app-badge-success {
+        background: rgba(74, 222, 128, 0.14) !important;
+        background-color: rgba(74, 222, 128, 0.14) !important;
+        border-color: rgba(74, 222, 128, 0.3) !important;
+        color: #86efac !important;
+    }
+
+    .q-badge.app-badge.app-badge-danger {
+        background: rgba(248, 113, 113, 0.14) !important;
+        background-color: rgba(248, 113, 113, 0.14) !important;
+        border-color: rgba(248, 113, 113, 0.3) !important;
+        color: #fca5a5 !important;
+    }
+}
+
 .app-badge-muted {
     background: rgba(255, 255, 255, 0.12) !important;
     background-color: rgba(255, 255, 255, 0.12) !important;
