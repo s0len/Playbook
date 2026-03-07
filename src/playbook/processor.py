@@ -474,6 +474,11 @@ class Processor:
                         continue
 
                     is_sample_file = should_suppress_sample_ignored(source_path)
+                    if is_sample_file:
+                        stats.register_ignored(suppressed_reason="sample")
+                        progress.advance(task_id, 1)
+                        continue
+
                     handled, diagnostics, match_attempts = self._process_single_file(
                         source_path,
                         runtimes,
@@ -481,12 +486,9 @@ class Processor:
                         is_sample_file=is_sample_file,
                     )
                     if not handled:
-                        if is_sample_file:
-                            stats.register_ignored(suppressed_reason="sample")
-                        else:
-                            detail = self._format_ignored_detail(source_path, diagnostics)
-                            sport_id = next((sport for _, _, sport in diagnostics if sport), None)
-                            stats.register_ignored(detail, sport_id=sport_id)
+                        detail = self._format_ignored_detail(source_path, diagnostics)
+                        sport_id = next((sport for _, _, sport in diagnostics if sport), None)
+                        stats.register_ignored(detail, sport_id=sport_id)
 
                         # Record unmatched file for GUI tracking (skip in dry-run mode)
                         if not self.config.settings.dry_run:
