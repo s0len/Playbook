@@ -10,13 +10,13 @@ from typing import TYPE_CHECKING
 
 from nicegui import ui
 
-from ...components.app_button import neutralize_button_utilities
 from ...components.settings import (
     notification_target_editor,
     settings_card,
     settings_input,
     settings_toggle,
 )
+from ...state import gui_state
 
 if TYPE_CHECKING:
     from ...settings_state.settings_state import SettingsFormState
@@ -95,145 +95,104 @@ def notifications_tab(state: SettingsFormState) -> None:
                     ui.label("Sport IDs: formula1, nhl, nba, ufc, etc.").classes("text-slate-600 dark:text-slate-400")
 
 
+def _get_sport_ids() -> list[str]:
+    """Get all enabled sport IDs from the running config."""
+    if gui_state.config and gui_state.config.sports:
+        return [s.id for s in gui_state.config.sports if s.enabled]
+    return []
+
+
+def _get_sport_name(sport_id: str) -> str:
+    """Get the display name for a sport ID."""
+    if gui_state.config and gui_state.config.sports:
+        for s in gui_state.config.sports:
+            if s.id == sport_id:
+                return s.name
+    return sport_id
+
+
 def _render_throttle_editor(state: SettingsFormState) -> None:
-    """Render the throttle/rate limit editor."""
-    container = ui.column().classes("w-full gap-4")
+    """Render the throttle/rate limit editor.
 
-    def refresh() -> None:
-        container.clear()
-        with container:
-            _render_throttle_content()
+    Shows all configured sports pre-populated. Each sport gets a number
+    input for its daily limit. Empty/0 means no limit for that sport.
+    """
+    throttle_data = state.get_value("settings.notifications.throttle", {}) or {}
+    sport_ids = _get_sport_ids()
 
-    def _render_throttle_content() -> None:
-        ui.label("Configure per-sport daily notification limits").classes("text-sm text-slate-600 dark:text-slate-400")
+    ui.label("Configure per-sport daily notification limits").classes("text-sm text-slate-600 dark:text-slate-400")
 
-        throttle_data = state.get_value("settings.notifications.throttle", {}) or {}
+    # Default limit row
+    with ui.row().classes("w-full items-center gap-2"):
+        ui.label("default").classes("flex-1 text-sm font-medium text-slate-300")
 
-        if throttle_data:
-            with ui.column().classes("w-full gap-2"):
-                for sport_id in list(throttle_data.keys()):
-                    limit = throttle_data[sport_id]
-                    with ui.row().classes("w-full items-center gap-2"):
-                        ui.label(sport_id).classes("flex-1 text-sm font-mono")
-
-                        def on_limit_change(e, sid=sport_id) -> None:
-                            try:
-                                data = state.get_value("settings.notifications.throttle", {}) or {}
-                                data[sid] = int(e.value) if e.value else 0
-                                state.set_value("settings.notifications.throttle", data)
-                            except ValueError:
-                                pass
-
-                        ui.input(value=str(limit), on_change=on_limit_change).classes("w-24").props(
-                            'outlined dense type="number"'
-                        )
-                        ui.label("per day").classes("text-xs text-slate-500")
-
-                        def on_delete(sid=sport_id) -> None:
-                            data = state.get_value("settings.notifications.throttle", {}) or {}
-                            if sid in data:
-                                del data[sid]
-                                state.set_value("settings.notifications.throttle", data)
-                            refresh()
-
-                        neutralize_button_utilities(
-                            ui.button(icon="delete", on_click=on_delete).props("flat dense")
-                        ).classes("app-text-danger")
-        else:
-            ui.label("No rate limits configured").classes("text-sm text-slate-500 italic")
-
-        # Add new rate limit
-        with ui.row().classes("w-full items-end gap-2 mt-2"):
-            new_sport = ui.input(label="Sport ID", placeholder="formula1").classes("flex-1").props("outlined dense")
-            new_limit = ui.input(label="Limit", value="10").classes("w-24").props('outlined dense type="number"')
-
-            def add_throttle() -> None:
-                sport_id = new_sport.value.strip() if new_sport.value else ""
-                if not sport_id:
-                    ui.notify("Please enter a sport ID", type="warning")
-                    return
-                try:
-                    limit_val = int(new_limit.value) if new_limit.value else 10
-                except ValueError:
-                    limit_val = 10
-
+        def on_default_change(e) -> None:
+            try:
                 data = state.get_value("settings.notifications.throttle", {}) or {}
-                data[sport_id] = limit_val
+                data["default"] = int(e.value) if e.value else 0
                 state.set_value("settings.notifications.throttle", data)
-                refresh()
+            except ValueError:
+                pass
 
-            neutralize_button_utilities(
-                ui.button("Add", icon="add", on_click=add_throttle).props("flat dense")
-            ).classes("app-text-accent")
+        default_val = throttle_data.get("default", 5)
+        ui.input(value=str(default_val), on_change=on_default_change).classes("w-24").props(
+            'outlined dense type="number"'
+        )
+        ui.label("per day").classes("text-xs text-slate-500")
 
-    with container:
-        _render_throttle_content()
+    # One row per sport
+    with ui.column().classes("w-full gap-2"):
+        for sid in sport_ids:
+            with ui.row().classes("w-full items-center gap-2"):
+                ui.label(_get_sport_name(sid)).classes("flex-1 text-sm text-slate-400")
+
+                def on_limit_change(e, sport_id=sid) -> None:
+                    try:
+                        data = state.get_value("settings.notifications.throttle", {}) or {}
+                        val = int(e.value) if e.value else 0
+                        if val > 0:
+                            data[sport_id] = val
+                        else:
+                            data.pop(sport_id, None)
+                        state.set_value("settings.notifications.throttle", data)
+                    except ValueError:
+                        pass
+
+                current = throttle_data.get(sid, "")
+                ui.input(
+                    value=str(current) if current else "",
+                    placeholder="default",
+                    on_change=on_limit_change,
+                ).classes("w-24").props('outlined dense type="number"')
+                ui.label("per day").classes("text-xs text-slate-500")
 
 
 def _render_mentions_editor(state: SettingsFormState) -> None:
-    """Render the mentions editor."""
-    container = ui.column().classes("w-full gap-4")
+    """Render the mentions editor.
 
-    def refresh() -> None:
-        container.clear()
-        with container:
-            _render_mentions_content()
+    Shows all configured sports pre-populated. Each sport gets a text
+    input for its Discord mention. Empty means no mention for that sport.
+    """
+    mentions_data = state.get_value("settings.notifications.mentions", {}) or {}
+    sport_ids = _get_sport_ids()
 
-    def _render_mentions_content() -> None:
-        mentions_data = state.get_value("settings.notifications.mentions", {}) or {}
+    with ui.column().classes("w-full gap-3"):
+        for sid in sport_ids:
+            with ui.row().classes("w-full items-center gap-2"):
+                ui.label(_get_sport_name(sid)).classes("w-40 shrink-0 text-sm text-slate-400 truncate")
 
-        if mentions_data:
-            with ui.column().classes("w-full gap-3"):
-                for sport_id in list(mentions_data.keys()):
-                    mention = mentions_data[sport_id]
-                    with ui.row().classes("w-full items-center gap-2"):
-                        ui.label(sport_id).classes("w-40 shrink-0 text-sm font-mono truncate")
+                def on_mention_change(e, sport_id=sid) -> None:
+                    data = state.get_value("settings.notifications.mentions", {}) or {}
+                    val = (e.value or "").strip()
+                    if val:
+                        data[sport_id] = val
+                    else:
+                        data.pop(sport_id, None)
+                    state.set_value("settings.notifications.mentions", data)
 
-                        def on_mention_change(e, sid=sport_id) -> None:
-                            data = state.get_value("settings.notifications.mentions", {}) or {}
-                            data[sid] = e.value or ""
-                            state.set_value("settings.notifications.mentions", data)
-
-                        ui.input(value=mention, placeholder="<@&ROLE_ID>", on_change=on_mention_change).classes(
-                            "flex-1"
-                        ).props("outlined dense")
-
-                        def on_delete(sid=sport_id) -> None:
-                            data = state.get_value("settings.notifications.mentions", {}) or {}
-                            if sid in data:
-                                del data[sid]
-                                state.set_value("settings.notifications.mentions", data)
-                            refresh()
-
-                        neutralize_button_utilities(
-                            ui.button(icon="delete", on_click=on_delete).props("flat dense")
-                        ).classes("app-text-danger")
-        else:
-            ui.label("No mentions configured").classes("text-sm text-slate-500 italic")
-
-        # Add new mention
-        with ui.row().classes("w-full items-end gap-2 mt-2"):
-            new_sport = ui.input(label="Sport ID", placeholder="formula1").classes("w-40").props("outlined dense")
-            new_mention = ui.input(label="Mention", placeholder="<@&ROLE_ID>").classes("flex-1").props("outlined dense")
-
-            def add_mention() -> None:
-                sport_id = new_sport.value.strip() if new_sport.value else ""
-                mention_val = new_mention.value.strip() if new_mention.value else ""
-                if not sport_id:
-                    ui.notify("Please enter a sport ID", type="warning")
-                    return
-                if not mention_val:
-                    ui.notify("Please enter a mention", type="warning")
-                    return
-
-                data = state.get_value("settings.notifications.mentions", {}) or {}
-                data[sport_id] = mention_val
-                state.set_value("settings.notifications.mentions", data)
-                refresh()
-
-            neutralize_button_utilities(ui.button("Add", icon="add", on_click=add_mention).props("flat dense")).classes(
-                "app-text-accent"
-            )
-
-    with container:
-        _render_mentions_content()
+                current = mentions_data.get(sid, "")
+                ui.input(
+                    value=current,
+                    placeholder="<@&ROLE_ID>",
+                    on_change=on_mention_change,
+                ).classes("flex-1").props("outlined dense")
