@@ -407,6 +407,8 @@ class Settings:
     integrations: IntegrationsSettings = field(default_factory=IntegrationsSettings)  # New unified integrations
     tvsportsdb: TVSportsDBConfig = field(default_factory=TVSportsDBConfig)
     quality_profile: QualityProfile = field(default_factory=QualityProfile)  # Global quality profile
+    include_patterns: list[str] = field(default_factory=list)  # Only process files matching these globs
+    ignore_patterns: list[str] = field(default_factory=list)  # Skip files matching these globs
     disabled_sports: list[str] = field(default_factory=list)  # Sport IDs to exclude from defaults
     use_default_sports: bool = True  # Whether to auto-include default sports
     force_reprocess: bool = False  # Bypass database check for processed files
@@ -1356,6 +1358,17 @@ def _build_settings(data: dict[str, Any]) -> Settings:
     tvsportsdb = _build_tvsportsdb_config(data.get("tvsportsdb", {}) or {})
     quality_profile = _build_quality_profile(data.get("quality_profile", {}) or {})
 
+    # Parse top-level include/ignore patterns and merge with legacy file_watcher patterns
+    include_patterns = _ensure_string_list(data.get("include_patterns"), field_name="include_patterns")
+    ignore_patterns = _ensure_string_list(data.get("ignore_patterns"), field_name="ignore_patterns")
+    # Backward compat: merge file_watcher.include/ignore into top-level lists (deduplicated)
+    for pat in watcher_settings.include:
+        if pat not in include_patterns:
+            include_patterns.append(pat)
+    for pat in watcher_settings.ignore:
+        if pat not in ignore_patterns:
+            ignore_patterns.append(pat)
+
     # Parse disabled_sports list
     disabled_sports_raw = data.get("disabled_sports", []) or []
     if not isinstance(disabled_sports_raw, list):
@@ -1382,6 +1395,8 @@ def _build_settings(data: dict[str, Any]) -> Settings:
         integrations=integrations,
         tvsportsdb=tvsportsdb,
         quality_profile=quality_profile,
+        include_patterns=include_patterns,
+        ignore_patterns=ignore_patterns,
         disabled_sports=disabled_sports,
         use_default_sports=use_default_sports,
     )

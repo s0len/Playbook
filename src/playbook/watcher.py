@@ -75,7 +75,13 @@ class _FileChangeHandler(FileSystemEventHandler):  # type: ignore[misc]
 class FileWatcherLoop:
     """Watches the filesystem for changes and triggers processor runs."""
 
-    def __init__(self, processor: Processor, settings: WatcherSettings) -> None:
+    def __init__(
+        self,
+        processor: Processor,
+        settings: WatcherSettings,
+        include_patterns: Sequence[str] | None = None,
+        ignore_patterns: Sequence[str] | None = None,
+    ) -> None:
         if Observer is None:
             raise WatchdogUnavailableError(
                 "Filesystem watcher mode requires the 'watchdog' dependency. Install via 'pip install watchdog'."
@@ -83,7 +89,10 @@ class FileWatcherLoop:
         self._processor = processor
         self._settings = settings
         self._queue: Queue[Path] = Queue()
-        self._handler = _FileChangeHandler(self._queue, settings.include, settings.ignore)
+        # Use top-level patterns when provided, fall back to watcher-level for backward compat
+        include = list(include_patterns) if include_patterns is not None else list(settings.include)
+        ignore = list(ignore_patterns) if ignore_patterns is not None else list(settings.ignore)
+        self._handler = _FileChangeHandler(self._queue, include, ignore)
         self._observer = Observer()
         self._roots = self._resolve_roots()
         for root in self._roots:
