@@ -29,6 +29,33 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
+def _persist_env_overrides(config_path: Path, overrides: dict) -> None:
+    """Write env var overrides into the YAML config file.
+
+    Uses safe YAML round-trip: load, update settings dict, write back.
+    Only updates keys whose env var is set.
+    """
+    import yaml
+
+    try:
+        raw = config_path.read_text(encoding="utf-8")
+        data = yaml.safe_load(raw) or {}
+        settings = data.setdefault("settings", {})
+        changed = False
+        for _env_var, (attr, value) in overrides.items():
+            if value and str(settings.get(attr, "")) != value:
+                settings[attr] = value
+                changed = True
+        if changed:
+            config_path.write_text(
+                yaml.dump(data, default_flow_style=False, allow_unicode=True, sort_keys=False),
+                encoding="utf-8",
+            )
+            LOGGER.info("Persisted env var overrides to %s", config_path)
+    except Exception:
+        LOGGER.debug("Could not persist env overrides to config file", exc_info=True)
+
+
 def create_app() -> None:
     """Create and configure the NiceGUI application with all routes."""
 
@@ -158,21 +185,24 @@ def run_with_gui(
     if dry_run:
         app_config.settings.dry_run = True
 
-    # Apply environment variable overrides (same as cli.py _apply_overrides)
+    # Apply environment variable overrides and persist them to the config file
+    # so the YAML always reflects the actual running values.
     import os
 
-    source_override = os.getenv("SOURCE_DIR")
-    dest_override = os.getenv("DESTINATION_DIR")
-    cache_override = os.getenv("CACHE_DIR")
-    state_override = os.getenv("STATE_DIR")
-    if source_override:
-        app_config.settings.source_dir = Path(source_override)
-    if dest_override:
-        app_config.settings.destination_dir = Path(dest_override)
-    if cache_override:
-        app_config.settings.cache_dir = Path(cache_override)
-    if state_override:
-        app_config.settings.state_dir = Path(state_override)
+    _env_overrides = {
+        "SOURCE_DIR": ("source_dir", os.getenv("SOURCE_DIR")),
+        "DESTINATION_DIR": ("destination_dir", os.getenv("DESTINATION_DIR")),
+        "CACHE_DIR": ("cache_dir", os.getenv("CACHE_DIR")),
+        "STATE_DIR": ("state_dir", os.getenv("STATE_DIR")),
+    }
+    _config_changed = False
+    for _env_var, (attr, value) in _env_overrides.items():
+        if value:
+            setattr(app_config.settings, attr, Path(value))
+            _config_changed = True
+
+    if _config_changed:
+        _persist_env_overrides(config_path, _env_overrides)
 
     # Create processor
     LOGGER.info("Initializing Processor")
