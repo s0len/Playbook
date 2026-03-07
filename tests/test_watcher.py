@@ -62,8 +62,6 @@ def watcher_settings():
     return WatcherSettings(
         enabled=True,
         paths=[],
-        include=["*.mkv", "*.mp4"],
-        ignore=["*.tmp", "*.part"],
         debounce_seconds=5.0,
         reconcile_interval=900,
     )
@@ -75,8 +73,6 @@ def minimal_watcher_settings():
     return WatcherSettings(
         enabled=True,
         paths=[],
-        include=[],
-        ignore=[],
         debounce_seconds=1.0,
         reconcile_interval=0,
     )
@@ -515,9 +511,9 @@ class TestFileWatcherLoopInit:
             assert isinstance(loop._handler, _FileChangeHandler)
             assert loop._observer is mock_observer
 
-            # Verify handler was created with correct patterns
-            assert loop._handler._include == watcher_settings.include
-            assert loop._handler._ignore == watcher_settings.ignore
+            # Verify handler was created with correct patterns (empty by default)
+            assert loop._handler._include == []
+            assert loop._handler._ignore == []
 
     def test_initialization_schedules_observer_for_each_root(self, mock_processor, watcher_settings, mock_observer, tmp_path):
         """Test that FileWatcherLoop schedules observer for each root directory."""

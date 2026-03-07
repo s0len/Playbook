@@ -88,6 +88,19 @@ class SettingsFormState:
                     settings["state_dir"] = settings.get("cache_dir")
                 if not settings.get("theme"):
                     settings["theme"] = "swizzin"
+                # Migrate legacy file_watcher.include/ignore to top-level
+                fw = settings.get("file_watcher")
+                if isinstance(fw, dict):
+                    for old_key, new_key in [("include", "include_patterns"), ("ignore", "ignore_patterns")]:
+                        if old_key in fw:
+                            existing = settings.get(new_key, []) or []
+                            migrated = fw.pop(old_key)
+                            if isinstance(migrated, str):
+                                migrated = [migrated]
+                            for pat in (migrated or []):
+                                if pat not in existing:
+                                    existing.append(pat)
+                            settings[new_key] = existing
             self.original_data = data
             self.form_data = copy.deepcopy(data)
             self.modified_paths = set()
@@ -113,6 +126,19 @@ class SettingsFormState:
                 settings["state_dir"] = settings.get("cache_dir")
             if not settings.get("theme"):
                 settings["theme"] = "swizzin"
+            # Migrate legacy file_watcher.include/ignore to top-level
+            fw = settings.get("file_watcher")
+            if isinstance(fw, dict):
+                for old_key, new_key in [("include", "include_patterns"), ("ignore", "ignore_patterns")]:
+                    if old_key in fw:
+                        existing = settings.get(new_key, []) or []
+                        migrated = fw.pop(old_key)
+                        if isinstance(migrated, str):
+                            migrated = [migrated]
+                        for pat in (migrated or []):
+                            if pat not in existing:
+                                existing.append(pat)
+                        settings[new_key] = existing
         self.form_data = copy.deepcopy(self.original_data)
         self.modified_paths = set()
         self.validation_errors = {}

@@ -439,17 +439,6 @@ class Processor:
                     )
                 )
 
-            # Merge top-level and watcher-level patterns (dedup) for filtering
-            _watcher = self.config.settings.file_watcher
-            _effective_include = list(self.config.settings.include_patterns)
-            _effective_ignore = list(self.config.settings.ignore_patterns)
-            for _p in _watcher.include:
-                if _p not in _effective_include:
-                    _effective_include.append(_p)
-            for _p in _watcher.ignore:
-                if _p not in _effective_ignore:
-                    _effective_ignore.append(_p)
-
             with Progress(disable=not LOGGER.isEnabledFor(logging.INFO)) as progress:
                 task_id = progress.add_task("Processing", total=file_count)
                 for source_path in filtered_source_files:
@@ -475,8 +464,8 @@ class Processor:
                     # excluded files (e.g. samples) never enter the pipeline.
                     if not matches_include_ignore_patterns(
                         source_path,
-                        _effective_include,
-                        _effective_ignore,
+                        self.config.settings.include_patterns,
+                        self.config.settings.ignore_patterns,
                     ):
                         stats.register_ignored(
                             f"Excluded by include/ignore patterns: {source_path.name}",

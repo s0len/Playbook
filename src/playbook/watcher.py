@@ -89,10 +89,11 @@ class FileWatcherLoop:
         self._processor = processor
         self._settings = settings
         self._queue: Queue[Path] = Queue()
-        # Use top-level patterns when provided, fall back to watcher-level for backward compat
-        include = list(include_patterns) if include_patterns is not None else list(settings.include)
-        ignore = list(ignore_patterns) if ignore_patterns is not None else list(settings.ignore)
-        self._handler = _FileChangeHandler(self._queue, include, ignore)
+        self._handler = _FileChangeHandler(
+            self._queue,
+            list(include_patterns or []),
+            list(ignore_patterns or []),
+        )
         self._observer = Observer()
         self._roots = self._resolve_roots()
         for root in self._roots:
