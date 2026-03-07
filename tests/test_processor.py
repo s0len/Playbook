@@ -618,7 +618,7 @@ def test_watcher_ignore_patterns_do_not_create_unmatched_records(tmp_path, monke
         cache_dir=tmp_path / "cache",
         dry_run=False,
     )
-    settings.file_watcher.ignore = ["*.tmp"]
+    settings.ignore_patterns = ["*.tmp"]
     settings.source_dir.mkdir(parents=True)
     settings.destination_dir.mkdir(parents=True)
     settings.cache_dir.mkdir(parents=True)

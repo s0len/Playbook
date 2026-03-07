@@ -16,7 +16,6 @@ from ...components.settings import (
     settings_input,
     settings_toggle,
 )
-from ...components.settings.list_editor import glob_pattern_editor
 
 if TYPE_CHECKING:
     from ...settings_state.settings_state import SettingsFormState
@@ -71,32 +70,6 @@ def watcher_tab(state: SettingsFormState) -> None:
                 placeholder="/path/to/watch",
                 disabled=not watcher_enabled,
             )
-
-        # Include/Exclude Patterns Section
-        with settings_card(
-            "File Patterns",
-            icon="filter_list",
-            description="Control which files trigger processing",
-            disabled=not watcher_enabled,
-        ):
-            with ui.row().classes("w-full gap-6"):
-                with ui.column().classes("flex-1"):
-                    glob_pattern_editor(
-                        state,
-                        "settings.file_watcher.include",
-                        "Include Patterns",
-                        description="Only process files matching these patterns (empty = all files)",
-                        disabled=not watcher_enabled,
-                    )
-
-                with ui.column().classes("flex-1"):
-                    glob_pattern_editor(
-                        state,
-                        "settings.file_watcher.ignore",
-                        "Ignore Patterns",
-                        description="Skip files matching these patterns",
-                        disabled=not watcher_enabled,
-                    )
 
         # Timing Settings Section
         with settings_card(

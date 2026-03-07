@@ -41,6 +41,30 @@ TAB_RENDERERS = {
 }
 
 
+_ENV_OVERRIDE_MAP = {
+    "SOURCE_DIR": "settings.source_dir",
+    "DESTINATION_DIR": "settings.destination_dir",
+    "CACHE_DIR": "settings.cache_dir",
+    "STATE_DIR": "settings.state_dir",
+}
+
+
+def _apply_env_overrides_to_form(state: SettingsFormState) -> None:
+    """Overlay environment variable overrides into the form data.
+
+    This ensures the GUI displays the actual running values, not
+    just what's in the YAML file on disk.
+    """
+    import os
+
+    for env_var, form_path in _ENV_OVERRIDE_MAP.items():
+        value = os.getenv(env_var)
+        if value:
+            state.set_value(form_path, value)
+            # Reset modification tracking since this is the effective default
+            state.modified_paths.discard(form_path)
+
+
 def settings_page() -> None:
     """Render the Settings page with tabbed navigation."""
     # Initialize settings state
@@ -49,6 +73,8 @@ def settings_page() -> None:
     # Load current configuration
     if gui_state.config_path:
         state.load_from_yaml(gui_state.config_path)
+        # Overlay env var overrides so the GUI shows what's actually running
+        _apply_env_overrides_to_form(state)
     else:
         ui.notify("No configuration file loaded", type="warning")
 

@@ -538,7 +538,12 @@ def _execute_run(args: argparse.Namespace) -> int:
     watcher_settings = config.settings.file_watcher
     if watcher_settings.enabled:
         try:
-            FileWatcherLoop(processor, watcher_settings).run_forever()
+            FileWatcherLoop(
+                processor,
+                watcher_settings,
+                include_patterns=config.settings.include_patterns,
+                ignore_patterns=config.settings.ignore_patterns,
+            ).run_forever()
         except WatchdogUnavailableError as exc:
             LOGGER.error("%s", exc)
             return 1

@@ -322,8 +322,6 @@ class NotificationSettings:
 class WatcherSettings:
     enabled: bool = False
     paths: list[str] = field(default_factory=list)
-    include: list[str] = field(default_factory=list)
-    ignore: list[str] = field(default_factory=list)
     debounce_seconds: float = 5.0
     reconcile_interval: int = 900
 
@@ -407,6 +405,8 @@ class Settings:
     integrations: IntegrationsSettings = field(default_factory=IntegrationsSettings)  # New unified integrations
     tvsportsdb: TVSportsDBConfig = field(default_factory=TVSportsDBConfig)
     quality_profile: QualityProfile = field(default_factory=QualityProfile)  # Global quality profile
+    include_patterns: list[str] = field(default_factory=list)  # Only process files matching these globs
+    ignore_patterns: list[str] = field(default_factory=list)  # Skip files matching these globs
     disabled_sports: list[str] = field(default_factory=list)  # Sport IDs to exclude from defaults
     use_default_sports: bool = True  # Whether to auto-include default sports
     force_reprocess: bool = False  # Bypass database check for processed files
@@ -697,9 +697,15 @@ def _ensure_string_list(value: Any, *, field_name: str) -> list[str]:
     return result
 
 
-def _build_watcher_settings(data: dict[str, Any]) -> WatcherSettings:
+def _build_watcher_settings(data: dict[str, Any]) -> tuple[WatcherSettings, list[str], list[str]]:
+    """Build watcher settings and extract any legacy include/ignore patterns.
+
+    Returns:
+        (settings, migrated_include, migrated_ignore) — legacy patterns that
+        should be merged into the top-level include_patterns / ignore_patterns.
+    """
     if not data:
-        return WatcherSettings()
+        return WatcherSettings(), [], []
     if not isinstance(data, dict):
         raise ValueError("'file_watcher' must be provided as a mapping when specified")
 
@@ -717,14 +723,22 @@ def _build_watcher_settings(data: dict[str, Any]) -> WatcherSettings:
     if reconcile < 0:
         raise ValueError("'file_watcher.reconcile_interval' must be greater than or equal to 0")
 
-    return WatcherSettings(
+    # Migrate legacy include/ignore from file_watcher to top-level
+    migrated_include = _ensure_string_list(data.get("include"), field_name="file_watcher.include")
+    migrated_ignore = _ensure_string_list(data.get("ignore"), field_name="file_watcher.ignore")
+    if migrated_include or migrated_ignore:
+        _get_logger().warning(
+            "file_watcher.include/ignore are deprecated — move them to top-level "
+            "include_patterns/ignore_patterns in your config. They have been auto-migrated for this run."
+        )
+
+    settings = WatcherSettings(
         enabled=bool(data.get("enabled", False)),
         paths=_ensure_string_list(data.get("paths"), field_name="file_watcher.paths"),
-        include=_ensure_string_list(data.get("include"), field_name="file_watcher.include"),
-        ignore=_ensure_string_list(data.get("ignore"), field_name="file_watcher.ignore"),
         debounce_seconds=debounce,
         reconcile_interval=reconcile,
     )
+    return settings, migrated_include, migrated_ignore
 
 
 def _build_plex_sync_settings(data: dict[str, Any]) -> PlexSyncSettings:
@@ -1340,7 +1354,7 @@ def _build_settings(data: dict[str, Any]) -> Settings:
     theme = str(data.get("theme", "swizzin")).strip().lower() or "swizzin"
     if theme not in {"swizzin", "catppuccin"}:
         theme = "swizzin"
-    watcher_settings = _build_watcher_settings(data.get("file_watcher", {}) or {})
+    watcher_settings, migrated_include, migrated_ignore = _build_watcher_settings(data.get("file_watcher", {}) or {})
     kometa_trigger = _build_kometa_trigger_settings(data.get("kometa_trigger", {}) or {})
 
     # Parse legacy plex_metadata_sync (for backwards compatibility)
@@ -1355,6 +1369,16 @@ def _build_settings(data: dict[str, Any]) -> Settings:
 
     tvsportsdb = _build_tvsportsdb_config(data.get("tvsportsdb", {}) or {})
     quality_profile = _build_quality_profile(data.get("quality_profile", {}) or {})
+
+    # Parse top-level include/ignore patterns, merging any auto-migrated legacy ones
+    include_patterns = _ensure_string_list(data.get("include_patterns"), field_name="include_patterns")
+    ignore_patterns = _ensure_string_list(data.get("ignore_patterns"), field_name="ignore_patterns")
+    for pat in migrated_include:
+        if pat not in include_patterns:
+            include_patterns.append(pat)
+    for pat in migrated_ignore:
+        if pat not in ignore_patterns:
+            ignore_patterns.append(pat)
 
     # Parse disabled_sports list
     disabled_sports_raw = data.get("disabled_sports", []) or []
@@ -1382,6 +1406,8 @@ def _build_settings(data: dict[str, Any]) -> Settings:
         integrations=integrations,
         tvsportsdb=tvsportsdb,
         quality_profile=quality_profile,
+        include_patterns=include_patterns,
+        ignore_patterns=ignore_patterns,
         disabled_sports=disabled_sports,
         use_default_sports=use_default_sports,
     )

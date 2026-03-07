@@ -538,8 +538,43 @@ def handle_match(
 
     # Check if destination exists and handle skip/overwrite logic
     replace_existing = False
+    mismatch_corrected = False
     if destination.exists():
-        if skip_existing:
+        # Before applying skip/quality logic, check if the occupying file
+        # was matched to a DIFFERENT episode (mismatch self-correction).
+        if skip_existing and processed_store is not None:
+            from .reconciliation import detect_destination_mismatch
+
+            is_mismatch, mismatch_record = detect_destination_mismatch(
+                destination,
+                match_episode_index=match.episode.index,
+                match_season_index=match.season.index,
+                match_show_id=match.show.key,
+                processed_store=processed_store,
+            )
+            if is_mismatch and mismatch_record is not None:
+                logger.info(
+                    render_fields_block(
+                        "Mismatch Detected — Correcting",
+                        {
+                            "Destination": destination,
+                            "Current Occupant": Path(mismatch_record.source_path).name,
+                            "Occupant Episode": f"S{mismatch_record.season_index:02d}"
+                            f"E{mismatch_record.episode_index:02d}",
+                            "Correct Match": match.source_path.name,
+                            "Correct Episode": f"S{match.season.index:02d}E{match.episode.index:02d}",
+                        },
+                        pad_top=True,
+                    )
+                )
+                replace_existing = True
+                mismatch_corrected = True
+                # Delete the mismatch record so its source file re-enters the
+                # processing pipeline on the next run and can match correctly.
+                if not dry_run:
+                    processed_store.delete_by_source(mismatch_record.source_path)
+
+        if skip_existing and not mismatch_corrected:
             # Use quality-based upgrade decision if profile is enabled
             if quality_profile is not None and quality_profile.enabled:
                 should_upgrade, quality_info, quality_score_obj, quality_upgrade_reason = should_upgrade_with_quality(

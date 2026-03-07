@@ -17,6 +17,7 @@ from ...components.settings import (
     settings_select,
     settings_toggle,
 )
+from ...components.settings.list_editor import glob_pattern_editor
 
 if TYPE_CHECKING:
     from ...settings_state.settings_state import SettingsFormState
@@ -84,6 +85,29 @@ def general_tab(state: SettingsFormState) -> None:
                         "Link Mode",
                         options=["hardlink", "symlink", "copy"],
                         description="How to create destination files",
+                    )
+
+        # File Patterns Section
+        with settings_card(
+            "File Patterns",
+            icon="filter_list",
+            description="Control which files are processed (applies to all modes)",
+        ):
+            with ui.row().classes("w-full gap-6"):
+                with ui.column().classes("flex-1"):
+                    glob_pattern_editor(
+                        state,
+                        "settings.include_patterns",
+                        "Include Patterns",
+                        description="Only process files matching these patterns (empty = all files)",
+                    )
+
+                with ui.column().classes("flex-1"):
+                    glob_pattern_editor(
+                        state,
+                        "settings.ignore_patterns",
+                        "Ignore Patterns",
+                        description="Skip files matching these patterns",
                     )
 
         # Template Settings Section

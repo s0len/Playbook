@@ -387,6 +387,13 @@ class Processor:
         run_started = time.perf_counter()
         scan_started_at = datetime.now()
 
+        # Layer 1: Reconcile stale DB records (destination deleted from disk)
+        from .reconciliation import reconcile_stale_records
+
+        stale_count = reconcile_stale_records(self.processed_store)
+        if stale_count:
+            stats.extra["reconciled_stale"] = stale_count
+
         try:
             all_source_files = list(self._gather_source_files(stats))
             filtered_source_files: list[Path] = []
@@ -449,7 +456,29 @@ class Processor:
                         stats.cancelled = True
                         break
 
+                    # Yield the GIL briefly so other threads (e.g. the GUI
+                    # health-check endpoint) can run without being starved.
+                    time.sleep(0)
+
+                    # Apply include/ignore patterns BEFORE matching so that
+                    # excluded files (e.g. samples) never enter the pipeline.
+                    if not matches_include_ignore_patterns(
+                        source_path,
+                        self.config.settings.include_patterns,
+                        self.config.settings.ignore_patterns,
+                    ):
+                        stats.register_ignored(
+                            f"Excluded by include/ignore patterns: {source_path.name}",
+                        )
+                        progress.advance(task_id, 1)
+                        continue
+
                     is_sample_file = should_suppress_sample_ignored(source_path)
+                    if is_sample_file:
+                        stats.register_ignored(suppressed_reason="sample")
+                        progress.advance(task_id, 1)
+                        continue
+
                     handled, diagnostics, match_attempts = self._process_single_file(
                         source_path,
                         runtimes,
@@ -457,24 +486,9 @@ class Processor:
                         is_sample_file=is_sample_file,
                     )
                     if not handled:
-                        watcher_settings = self.config.settings.file_watcher
-                        if not matches_include_ignore_patterns(
-                            source_path,
-                            watcher_settings.include,
-                            watcher_settings.ignore,
-                        ):
-                            stats.register_ignored(
-                                f"Excluded by include/ignore patterns: {source_path.name}",
-                            )
-                            progress.advance(task_id, 1)
-                            continue
-
-                        if is_sample_file:
-                            stats.register_ignored(suppressed_reason="sample")
-                        else:
-                            detail = self._format_ignored_detail(source_path, diagnostics)
-                            sport_id = next((sport for _, _, sport in diagnostics if sport), None)
-                            stats.register_ignored(detail, sport_id=sport_id)
+                        detail = self._format_ignored_detail(source_path, diagnostics)
+                        sport_id = next((sport for _, _, sport in diagnostics if sport), None)
+                        stats.register_ignored(detail, sport_id=sport_id)
 
                         # Record unmatched file for GUI tracking (skip in dry-run mode)
                         if not self.config.settings.dry_run:

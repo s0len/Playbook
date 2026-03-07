@@ -103,13 +103,23 @@ settings:
     # min_score: 100  # Reject files below this score
 
   ####################################################################
+  # FILE PATTERNS - Control which files are processed
+  ####################################################################
+  include_patterns:       # Only process files matching these (empty = all)
+    - "**/*.mkv"
+    - "**/*.mp4"
+    - "**/*.ts"
+    - "**/*.avi"
+  ignore_patterns:        # Skip files matching these
+    - "*sample*"
+    - "*.part"
+    - "*.tmp"
+
+  ####################################################################
   # FILE WATCHER - React to filesystem events (optional)
   ####################################################################
   file_watcher:
     enabled: false
-    ignore:
-      - "*.part"
-      - "*.tmp"
     debounce_seconds: 5
 
   ####################################################################

@@ -653,8 +653,30 @@ class TestConfigSchemaSettings:
         report = validate_config_data(config)
         assert report.is_valid is True
 
-    def test_file_watcher_include_as_array(self):
-        """Test that file_watcher.include accepts array of strings."""
+    def test_include_patterns_as_array(self):
+        """Test that include_patterns accepts array of strings."""
+        config = {
+            "sports": [],
+            "settings": {
+                "include_patterns": ["*.mkv", "*.mp4"],
+            },
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_ignore_patterns_as_array(self):
+        """Test that ignore_patterns accepts array of strings."""
+        config = {
+            "sports": [],
+            "settings": {
+                "ignore_patterns": ["*.tmp", "*.bak"],
+            },
+        }
+        report = validate_config_data(config)
+        assert report.is_valid is True
+
+    def test_legacy_file_watcher_include_migrated(self):
+        """Test that legacy file_watcher.include is auto-migrated."""
         config = {
             "sports": [],
             "settings": {
@@ -666,21 +688,8 @@ class TestConfigSchemaSettings:
         report = validate_config_data(config)
         assert report.is_valid is True
 
-    def test_file_watcher_include_as_string(self):
-        """Test that file_watcher.include accepts a single string."""
-        config = {
-            "sports": [],
-            "settings": {
-                "file_watcher": {
-                    "include": "*.mkv",
-                },
-            },
-        }
-        report = validate_config_data(config)
-        assert report.is_valid is True
-
-    def test_file_watcher_ignore_as_array(self):
-        """Test that file_watcher.ignore accepts array of strings."""
+    def test_legacy_file_watcher_ignore_migrated(self):
+        """Test that legacy file_watcher.ignore is auto-migrated."""
         config = {
             "sports": [],
             "settings": {

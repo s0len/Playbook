@@ -100,10 +100,11 @@ def test_file_watcher_settings_defaults_and_overrides(tmp_path) -> None:
 
     assert watcher.enabled is True
     assert watcher.paths == [str(source_dir), "relative-folder"]
-    assert watcher.include == ["*.mkv"]
-    assert watcher.ignore == ["*.part", "*.tmp"]
     assert watcher.debounce_seconds == 2.5
     assert watcher.reconcile_interval == 60
+    # Legacy file_watcher.include/ignore are auto-migrated to top-level
+    assert config.settings.include_patterns == ["*.mkv"]
+    assert config.settings.ignore_patterns == ["*.part", "*.tmp"]
 
 
 def test_state_dir_override(tmp_path) -> None:
