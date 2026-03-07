@@ -387,6 +387,13 @@ class Processor:
         run_started = time.perf_counter()
         scan_started_at = datetime.now()
 
+        # Layer 1: Reconcile stale DB records (destination deleted from disk)
+        from .reconciliation import reconcile_stale_records
+
+        stale_count = reconcile_stale_records(self.processed_store)
+        if stale_count:
+            stats.extra["reconciled_stale"] = stale_count
+
         try:
             all_source_files = list(self._gather_source_files(stats))
             filtered_source_files: list[Path] = []

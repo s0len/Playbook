@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import date
+from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
@@ -247,8 +248,14 @@ def get_sport_detail(sport_id: str) -> SportDetail | None:
             best_record = episode_records[0] if episode_records else None
 
             if best_record:
-                status: MatchStatus = "matched" if best_record.status != "error" else "error"
-                matched_in_season += 1
+                if best_record.status == "error":
+                    status: MatchStatus = "error"
+                elif not Path(best_record.destination_path).exists():
+                    # DB says matched but file is gone from disk — treat as missing
+                    status = "missing"
+                else:
+                    status = "matched"
+                    matched_in_season += 1
             else:
                 status = "missing"
 
