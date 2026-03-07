@@ -137,22 +137,30 @@ class NotificationService:
             )
             return
 
+        # Separate infrastructure targets (plex_scan, autoscan) from user-facing ones.
+        # Infrastructure targets always fire — they should never be rate-limited.
+        _INFRA_TARGETS = {"plex_scan", "autoscan"}
+
         daily_limit = self._resolve_throttle(event.sport_id)
         day_key = self._notification_day_key(event)
         sent_today = self._daily_sent.get((event.sport_id, day_key), 0)
-        if daily_limit > 0 and sent_today >= daily_limit:
+        throttled = daily_limit > 0 and sent_today >= daily_limit
+
+        if throttled:
             LOGGER.debug(
-                "Skipping notification for %s due to daily limit (%s/%s for %s)",
+                "Rate limit reached for %s (%s/%s for %s) — only infrastructure targets will fire",
                 event.sport_id,
                 sent_today,
                 daily_limit,
                 day_key,
             )
-            return
 
         successes: list[str] = []
         for target in self._targets:
             if not target.enabled():
+                continue
+            is_infra = target.name in _INFRA_TARGETS
+            if throttled and not is_infra:
                 continue
             try:
                 target.send(event)
@@ -161,7 +169,9 @@ class NotificationService:
             else:
                 successes.append(target.name)
 
-        if successes:
+        # Only count user-facing dispatches toward the daily limit
+        user_successes = [s for s in successes if s not in _INFRA_TARGETS]
+        if user_successes:
             self._daily_sent[(event.sport_id, day_key)] = sent_today + 1
             LOGGER.debug(
                 "Notification dispatched | sport=%s episode=%s event=%s targets=%s",
