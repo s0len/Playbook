@@ -615,7 +615,7 @@ def handle_match(
                             event.action = "skipped"
                             event.skip_reason = skip_message
                             event.event_type = "skipped"
-                            return event, False, None, quality_info, quality_score_obj
+                            return event, False, match.sport.id, quality_info, quality_score_obj
 
                     logger.debug(
                         render_fields_block(
@@ -657,7 +657,7 @@ def handle_match(
                 event.action = "skipped"
                 event.skip_reason = skip_message
                 event.event_type = "skipped"
-                return event, False, None, quality_info, quality_score_obj
+                return event, False, match.sport.id, quality_info, quality_score_obj
 
     # Handle replace existing destination
     if replace_existing:
@@ -693,7 +693,7 @@ def handle_match(
                 event.action = "error"
                 event.skip_reason = f"failed-to-remove: {exc}"
                 event.event_type = "error"
-                return event, False, None, quality_info, quality_score_obj
+                return event, False, match.sport.id, quality_info, quality_score_obj
 
     # Build processing details fields
     quality_summary = format_quality_summary(quality_info, quality_score_obj)
@@ -760,8 +760,8 @@ def handle_match(
             event.action = "skipped"
             event.skip_reason = failure_message
             event.event_type = "skipped"
-            return event, False, None, quality_info, quality_score_obj
+            return event, False, match.sport.id, quality_info, quality_score_obj
         event.action = "error"
         event.skip_reason = failure_message
         event.event_type = "error"
-        return event, False, None, quality_info, quality_score_obj
+        return event, False, match.sport.id, quality_info, quality_score_obj
