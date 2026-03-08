@@ -21,7 +21,6 @@ settings:
 
   # Execution behavior
   dry_run: false
-  skip_existing: true
   link_mode: hardlink  # hardlink | copy | symlink
 
   # Disable specific sports by ID (all enabled by default)

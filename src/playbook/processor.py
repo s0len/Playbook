@@ -1010,7 +1010,6 @@ class Processor:
             stats,
             stale_destinations=self._state.stale_destinations,
             stale_records=self._state.stale_records,
-            skip_existing=settings.skip_existing,
             dry_run=settings.dry_run,
             link_mode=link_mode,
             format_destination_fn=self._format_relative_destination,

@@ -510,7 +510,6 @@ class TestConfigSchemaSettings:
                 "destination_dir": "/destination",
                 "cache_dir": "/cache",
                 "dry_run": True,
-                "skip_existing": False,
                 "link_mode": "hardlink",
                 "destination": {
                     "root_template": "{sport_id}",
@@ -956,17 +955,6 @@ class TestConfigSchemaSettings:
             "sports": [],
             "settings": {
                 "dry_run": True,
-            },
-        }
-        report = validate_config_data(config)
-        assert report.is_valid is True
-
-    def test_skip_existing_boolean_type(self):
-        """Test that skip_existing accepts boolean type."""
-        config = {
-            "sports": [],
-            "settings": {
-                "skip_existing": False,
             },
         }
         report = validate_config_data(config)
@@ -2366,7 +2354,6 @@ class TestValidateConfigDataIntegration:
                 "destination_dir": "/media/destination",
                 "cache_dir": "/media/cache",
                 "dry_run": False,
-                "skip_existing": True,
                 "link_mode": "hardlink",
                 "destination": {
                     "root_template": "{sport_id}",
