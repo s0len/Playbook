@@ -98,7 +98,13 @@ def notifications_tab(state: SettingsFormState) -> None:
 def _get_sport_ids() -> list[str]:
     """Get all enabled sport IDs from the running config."""
     if gui_state.config and gui_state.config.sports:
-        return [s.id for s in gui_state.config.sports if s.enabled]
+        seen: set[str] = set()
+        result: list[str] = []
+        for s in gui_state.config.sports:
+            if s.enabled and s.id not in seen:
+                seen.add(s.id)
+                result.append(s.id)
+        return result
     return []
 
 
