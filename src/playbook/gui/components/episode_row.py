@@ -5,6 +5,7 @@ Episode row component for the Playbook GUI.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -17,6 +18,8 @@ if TYPE_CHECKING:
     from playbook.persistence import ProcessedFileRecord
 
     from ..data.sport_data import EpisodeMatchStatus
+
+LOGGER = logging.getLogger(__name__)
 
 
 def episode_row(
@@ -173,18 +176,40 @@ def episode_detail_dialog(episode: EpisodeMatchStatus) -> None:
         ui.separator().classes("my-2")
 
         # File candidates table
-        with ui.column().classes("w-full gap-0"):
-            header_text = f"Tracked Files ({len(all_records)})" if len(all_records) > 1 else "Source File"
-            ui.label(header_text).classes("text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2")
+        candidates_container = ui.column().classes("w-full gap-0")
 
-            for idx, record in enumerate(all_records):
-                is_active = record.source_path == episode.record.source_path
-                _file_candidate_row(record, rank=idx + 1, is_active=is_active)
+        def render_candidates() -> None:
+            candidates_container.clear()
+            with candidates_container:
+                header_text = f"Tracked Files ({len(all_records)})" if len(all_records) > 1 else "Source File"
+                ui.label(header_text).classes("text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2")
+
+                for idx, record in enumerate(all_records):
+                    is_active = record.source_path == episode.record.source_path
+                    on_promote = None
+                    if not is_active and len(all_records) > 1:
+
+                        def make_promote_handler(rec=record):
+                            def handler():
+                                _promote_file(rec, episode, dialog)
+
+                            return handler
+
+                        on_promote = make_promote_handler()
+                    _file_candidate_row(record, rank=idx + 1, is_active=is_active, on_promote=on_promote)
+
+        render_candidates()
 
     dialog.open()
 
 
-def _file_candidate_row(record: ProcessedFileRecord, *, rank: int, is_active: bool) -> None:
+def _file_candidate_row(
+    record: ProcessedFileRecord,
+    *,
+    rank: int,
+    is_active: bool,
+    on_promote: callable | None = None,
+) -> None:
     """Render a single file candidate row with quality details."""
     border_class = "border-l-4 border-white/20" if is_active else "border-l-4 border-transparent"
     bg_class = "app-alert app-alert-success" if is_active else ""
@@ -213,10 +238,17 @@ def _file_candidate_row(record: ProcessedFileRecord, *, rank: int, is_active: bo
                 "copied": "app-badge-muted",
                 "symlinked": "app-badge-muted",
                 "skipped": "app-badge-warning",
+                "superseded": "app-badge-warning",
                 "error": "app-badge-danger",
             }
             chip_class = status_classes.get(record.status, "app-badge-muted")
             ui.badge(record.status).classes(f"app-badge {chip_class}")
+
+            # Make Primary button for non-active candidates
+            if on_promote:
+                neutralize_button_utilities(
+                    ui.button("Make Primary", icon="swap_horiz", on_click=on_promote).props("flat dense no-caps")
+                ).classes("text-xs text-slate-400 hover:text-slate-200")
 
         # Quality tags row
         quality = _parse_quality_info(record)
@@ -234,6 +266,58 @@ def _file_candidate_row(record: ProcessedFileRecord, *, rank: int, is_active: bo
             )
             if record.error_message:
                 ui.label(record.error_message).classes("text-xs app-text-danger")
+
+
+def _promote_file(record: ProcessedFileRecord, episode: EpisodeMatchStatus, dialog) -> None:
+    """Promote a file to be the primary (active) link for an episode.
+
+    Replaces the destination file with a link to the selected source.
+    """
+    from ..state import gui_state
+
+    source = Path(record.source_path)
+    destination = Path(record.destination_path)
+
+    if not source.exists():
+        ui.notify(f"Source file not found: {source.name}", type="negative")
+        return
+
+    # Determine link mode from config
+    link_mode = "hardlink"
+    if gui_state.config and gui_state.config.settings:
+        link_mode = gui_state.config.settings.link_mode or "hardlink"
+
+    try:
+        # Remove existing destination
+        if destination.exists():
+            destination.unlink()
+
+        # Create new link
+        from playbook.utils import link_file
+
+        result = link_file(source, destination, mode=link_mode)
+        if not result.created:
+            ui.notify(f"Failed to link file: {result.reason}", type="negative")
+            return
+
+        # Update the store: mark promoted file as linked, demote old primary to superseded
+        store = gui_state.processed_store
+        if store:
+            old_primary = episode.record
+            if old_primary and old_primary.source_path != record.source_path:
+                store.update_status(old_primary.source_path, "superseded")
+            store.update_status(record.source_path, "linked")
+
+        ui.notify(f"Switched primary to {source.name}", type="positive")
+        LOGGER.info("Promoted %s as primary for %s", source.name, destination)
+
+        # Close and refresh page
+        dialog.close()
+        ui.navigate.reload()
+
+    except Exception as e:
+        LOGGER.exception("Failed to promote file: %s", e)
+        ui.notify(f"Error: {e}", type="negative")
 
 
 def _detail_row(label: str, value: str, *, mono: bool = False) -> None:
