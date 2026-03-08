@@ -395,7 +395,6 @@ class Settings:
     state_dir: Path | None = None
     theme: str = "swizzin"
     dry_run: bool = False
-    skip_existing: bool = True
     default_destination: DestinationTemplates = field(default_factory=DestinationTemplates)
     link_mode: str = "hardlink"
     notifications: NotificationSettings = field(default_factory=NotificationSettings)
@@ -1396,7 +1395,6 @@ def _build_settings(data: dict[str, Any]) -> Settings:
         state_dir=state_dir,
         theme=theme,
         dry_run=bool(data.get("dry_run", False)),
-        skip_existing=bool(data.get("skip_existing", True)),
         default_destination=destination_defaults,
         link_mode=data.get("link_mode", "hardlink"),
         notifications=notifications,

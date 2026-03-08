@@ -199,7 +199,7 @@ Under the hood, Playbook follows this flow:
 2. **Normalization**: structured dataclasses infer round numbers, preserve summaries, and attach aliases.
 3. **Matching**: regex capture groups, alias tables, and fuzzy matching link filenames to metadata episodes.
 4. **Templating**: rich context feeds customizable templates for root folders, season directories, and filenames.
-5. **Action**: files are hardlinked (default), copied, or symlinked into the library, respecting `skip_existing` and priority rules.
+5. **Action**: files are hardlinked (default), copied, or symlinked into the library, with quality-based upgrade rules.
 
 ## Configuration Deep Dive
 
@@ -214,7 +214,6 @@ Start with `config/playbook.sample.yaml`. The schema mirrors `playbook.config` d
 | `cache_dir` | Metadata cache directory (`metadata/<hash>.json`). Safe to delete to force refetch. | `/data/cache` |
 | `state_dir` | Persistent state directory for SQLite DBs and durable runtime state. | `/config/state` |
 | `dry_run` | When `true`, logs intent but skips filesystem writes. | `false` |
-| `skip_existing` | Leave destination files untouched unless a higher-priority release arrives. | `true` |
 | `link_mode` | Default link behavior: `hardlink`, `copy`, or `symlink`. | `hardlink` |
 | `notifications.batch_daily` | When `true`, queue per-sport notifications for the day and edit a single Discord message instead of posting every file. | `false` |
 | `notifications.flush_time` | Local time boundary (`HH:MM`) used to roll daily batches forward. Entries before this time count toward the previous day. | `"00:00"` |

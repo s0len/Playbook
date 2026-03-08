@@ -95,19 +95,42 @@ def notifications_tab(state: SettingsFormState) -> None:
                     ui.label("Sport IDs: formula1, nhl, nba, ufc, etc.").classes("text-slate-600 dark:text-slate-400")
 
 
+def _get_base_sport_id(sport_id: str) -> str:
+    """Extract the base sport ID by stripping trailing year suffixes (e.g. ufc_2025 → ufc)."""
+    import re
+
+    return re.sub(r"_\d{4}$", "", sport_id)
+
+
 def _get_sport_ids() -> list[str]:
-    """Get all enabled sport IDs from the running config."""
+    """Get unique base sport IDs from the running config.
+
+    Variants like ufc_2024, ufc_2025 are collapsed to a single 'ufc' entry
+    since the throttle engine already supports parent-prefix matching.
+    """
     if gui_state.config and gui_state.config.sports:
-        return [s.id for s in gui_state.config.sports if s.enabled]
+        seen: set[str] = set()
+        result: list[str] = []
+        for s in gui_state.config.sports:
+            base_id = _get_base_sport_id(s.id)
+            if s.enabled and base_id not in seen:
+                seen.add(base_id)
+                result.append(base_id)
+        return result
     return []
 
 
 def _get_sport_name(sport_id: str) -> str:
-    """Get the display name for a sport ID."""
+    """Get the display name for a base sport ID.
+
+    Strips trailing year from the name (e.g. 'UFC 2025' → 'UFC').
+    """
+    import re
+
     if gui_state.config and gui_state.config.sports:
         for s in gui_state.config.sports:
-            if s.id == sport_id:
-                return s.name
+            if _get_base_sport_id(s.id) == sport_id:
+                return re.sub(r"\s+\d{4}$", "", s.name)
     return sport_id
 
 

@@ -518,6 +518,24 @@ class ProcessedFileStore:
         conn.commit()
         return cursor.rowcount > 0
 
+    def update_status(self, source_path: str, status: str) -> bool:
+        """Update the status of an existing record by source path.
+
+        Args:
+            source_path: The source file path to update
+            status: The new status (linked, copied, symlinked, skipped, error)
+
+        Returns:
+            True if a record was updated, False otherwise
+        """
+        conn = self._get_connection()
+        cursor = conn.execute(
+            "UPDATE processed_files SET status = ? WHERE source_path = ?",
+            (status, source_path),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+
     def get_recent(self, limit: int = 100) -> list[ProcessedFileRecord]:
         """Get most recently processed files.
 
@@ -662,21 +680,21 @@ class ProcessedFileStore:
         return cursor.rowcount
 
     def delete_old_destination_records(self, destination_path: str, keep_source: str) -> int:
-        """Delete old records for a destination, keeping only the specified source.
+        """Mark old records for a destination as superseded, keeping only the specified source active.
 
-        This should be called when a file is replaced to clean up stale records
-        from previous sources that pointed to the same destination.
+        This should be called when a file is replaced so superseded records remain
+        visible in the GUI for comparison and re-promotion.
 
         Args:
             destination_path: The destination file path
             keep_source: The source path to keep (the new replacement file)
 
         Returns:
-            Number of old records deleted
+            Number of old records marked as superseded
         """
         conn = self._get_connection()
         cursor = conn.execute(
-            "DELETE FROM processed_files WHERE destination_path = ? AND source_path != ?",
+            "UPDATE processed_files SET status = 'superseded' WHERE destination_path = ? AND source_path != ?",
             (destination_path, keep_source),
         )
         conn.commit()

@@ -71,13 +71,6 @@ def general_tab(state: SettingsFormState) -> None:
                         "Dry Run",
                         description="Simulate processing without creating links",
                     )
-                    settings_toggle(
-                        state,
-                        "settings.skip_existing",
-                        "Skip Existing",
-                        description="Skip files that already have a destination link",
-                    )
-
                 with ui.column().classes("flex-1 gap-4"):
                     settings_select(
                         state,

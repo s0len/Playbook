@@ -276,6 +276,25 @@ pattern_sets:
         season_dir_template: "{season_round:02d} {season_title}"
         filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
 
+      - description: Formula 1 BILLIE bare Grand Prix (Race)
+        # Example: Formula1.2026.Australia.Grand.Prix.1080p.WEB.h264-BILLIE.mkv
+        # Example: Formula1.2026.Australia.Grand.Prix.DV.HDR.2160p.WEB.h265-BILLIE.mkv
+        # BILLIE names Race files as just "Grand.Prix" with no session suffix.
+        # Must be placed before the generic pattern to match first.
+        regex: >-
+          (?i)^Formula\.?1\.(?P<year>\d{4})\.(?P<season_slug>[^.]+(?:\.[^.]+)*?)\.(?P<session>Grand\.Prix)\.(?:DV\.)?(?:HDR\.)?(?:HLG\.)?(?:2160|1080|720)[pi]?\.
+        season_selector:
+          mode: title
+          group: season_slug
+        episode_selector:
+          group: session
+        session_aliases:
+          Race:
+            - Grand.Prix
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_round:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
       - description: Formula 1 generic dot-separated releases (no Round number)
         # Example: Formula1.2026.Australia.Grand.Prix.Weekend.Warmup.HLG.2160p.WEB.h265-BILLIE.mkv
         # Release-group-agnostic pattern for files that go straight from year to location+session

@@ -10,7 +10,6 @@ Every Playbook deployment runs from a single YAML file. Start by copying `config
 | `destination_dir` | Library root where organized folders/files are created. | `/data/destination` |
 | `cache_dir` | Metadata cache directory (`metadata/<hash>.json`). Safe to delete to force refetch. | `/data/cache` |
 | `dry_run` | When `true`, logs intent but skips filesystem writes. | `false` |
-| `skip_existing` | Leave destination files untouched unless a higher-priority release arrives. | `true` |
 | `link_mode` | Default link behavior: `hardlink`, `copy`, or `symlink`. | `hardlink` |
 | `use_default_sports` | Auto-enable all built-in sports. Set `false` to only use explicitly defined sports. | `true` |
 | `disabled_sports` | List of sport base IDs to exclude from defaults (e.g., `[formula_e, moto2]`). | `[]` |

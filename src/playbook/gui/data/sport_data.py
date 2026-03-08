@@ -570,9 +570,10 @@ def _get_records_by_episode(sport_id: str) -> dict[tuple[str, int, int], list[Pr
         for r in records:
             key = (r.show_id, r.season_index, r.episode_index)
             result.setdefault(key, []).append(r)
-        # Sort each episode's records by quality_score descending (best first)
+        # Sort each episode's records: active statuses first, then by quality_score descending
+        _ACTIVE_STATUSES = {"linked", "copied", "symlinked"}
         for key in result:
-            result[key].sort(key=lambda r: r.quality_score or 0, reverse=True)
+            result[key].sort(key=lambda r: (r.status not in _ACTIVE_STATUSES, -(r.quality_score or 0)))
         return result
     except Exception as e:
         LOGGER.warning("Failed to get processed records for %s: %s", sport_id, e)

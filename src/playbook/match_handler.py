@@ -454,7 +454,6 @@ def handle_match(
     *,
     stale_destinations: dict[str, Path],
     stale_records: dict[str, ProcessedFileRecord],
-    skip_existing: bool,
     dry_run: bool,
     link_mode: str,
     format_destination_fn,
@@ -477,7 +476,6 @@ def handle_match(
         stats: Processing statistics to update.
         stale_destinations: Dictionary of old destination paths to clean up.
         stale_records: Dictionary of stale records from metadata changes.
-        skip_existing: If True, skip files with existing destinations.
         dry_run: If True, don't actually create links.
         link_mode: Link mode ("symlink", "hardlink", or "copy").
         format_destination_fn: Function to format destination paths for display.
@@ -542,7 +540,7 @@ def handle_match(
     if destination.exists():
         # Before applying skip/quality logic, check if the occupying file
         # was matched to a DIFFERENT episode (mismatch self-correction).
-        if skip_existing and processed_store is not None:
+        if processed_store is not None:
             from .reconciliation import detect_destination_mismatch
 
             is_mismatch, mismatch_record = detect_destination_mismatch(
@@ -574,7 +572,7 @@ def handle_match(
                 if not dry_run:
                     processed_store.delete_by_source(mismatch_record.source_path)
 
-        if skip_existing and not mismatch_corrected:
+        if not mismatch_corrected:
             # Use quality-based upgrade decision if profile is enabled
             if quality_profile is not None and quality_profile.enabled:
                 should_upgrade, quality_info, quality_score_obj, quality_upgrade_reason = should_upgrade_with_quality(
@@ -615,7 +613,7 @@ def handle_match(
                             event.action = "skipped"
                             event.skip_reason = skip_message
                             event.event_type = "skipped"
-                            return event, False, None, quality_info, quality_score_obj
+                            return event, False, match.sport.id, quality_info, quality_score_obj
 
                     logger.debug(
                         render_fields_block(
@@ -657,7 +655,7 @@ def handle_match(
                 event.action = "skipped"
                 event.skip_reason = skip_message
                 event.event_type = "skipped"
-                return event, False, None, quality_info, quality_score_obj
+                return event, False, match.sport.id, quality_info, quality_score_obj
 
     # Handle replace existing destination
     if replace_existing:
@@ -693,7 +691,7 @@ def handle_match(
                 event.action = "error"
                 event.skip_reason = f"failed-to-remove: {exc}"
                 event.event_type = "error"
-                return event, False, None, quality_info, quality_score_obj
+                return event, False, match.sport.id, quality_info, quality_score_obj
 
     # Build processing details fields
     quality_summary = format_quality_summary(quality_info, quality_score_obj)
@@ -760,8 +758,8 @@ def handle_match(
             event.action = "skipped"
             event.skip_reason = failure_message
             event.event_type = "skipped"
-            return event, False, None, quality_info, quality_score_obj
+            return event, False, match.sport.id, quality_info, quality_score_obj
         event.action = "error"
         event.skip_reason = failure_message
         event.event_type = "error"
-        return event, False, None, quality_info, quality_score_obj
+        return event, False, match.sport.id, quality_info, quality_score_obj
