@@ -363,6 +363,10 @@ body.body--dark .q-table__container {
     background: rgba(255, 255, 255, 0.05);
 }
 
+.log-line-message {
+    white-space: nowrap;
+}
+
 /* ===== Expansion Panels ===== */
 .q-expansion-item {
     border-radius: 8px;
@@ -1024,6 +1028,234 @@ body.body--dark .list-editor-item {
 
 body.body--dark .list-editor-item:hover {
     background: rgba(148, 163, 184, 0.12);
+}
+
+/* ===== Mobile Hamburger Button ===== */
+.mobile-hamburger {
+    position: fixed !important;
+    top: 10px;
+    left: 10px;
+    z-index: 2000;
+    display: none !important;
+    background: rgba(14, 14, 22, 0.9) !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+}
+
+.mobile-hamburger .q-btn__content,
+.mobile-hamburger .q-icon {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* ===== Responsive: Tablet and below (< 1024px) ===== */
+@media (max-width: 1023px) {
+    .mobile-hamburger {
+        display: inline-flex !important;
+    }
+
+    /* Settings layout: stack sidebar and content */
+    .settings-main-layout {
+        flex-direction: column !important;
+    }
+
+    .settings-sidebar {
+        width: 100% !important;
+        min-height: auto !important;
+        border-right: none !important;
+        border-bottom: 1px solid var(--border-color) !important;
+        padding-right: 0 !important;
+        padding-bottom: 12px !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        gap: 4px !important;
+    }
+
+    .settings-sidebar .settings-subnav-item {
+        white-space: nowrap;
+        min-width: auto;
+    }
+
+    /* Settings header: stack on tablet */
+    .settings-header-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+    }
+}
+
+/* ===== Responsive: Phone (< 768px) ===== */
+@media (max-width: 768px) {
+    /* Reduce page padding and spacing */
+    .view-shell {
+        padding: 12px !important;
+        padding-top: 56px !important;
+        gap: 12px !important;
+    }
+
+    .settings-page-shell {
+        padding: 12px !important;
+        padding-top: 56px !important;
+        gap: 12px !important;
+    }
+
+    /* Smaller page titles */
+    .text-3xl.font-bold {
+        font-size: 1.5rem !important;
+    }
+
+    .text-4xl.font-bold {
+        font-size: 1.75rem !important;
+    }
+
+    /* Cards: tighter padding */
+    .glass-card.q-card {
+        padding: 10px !important;
+    }
+
+    /* Stats cards: 2-column grid */
+    .stats-grid {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+
+    .stats-grid .stat-card {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .stat-card .text-3xl {
+        font-size: 1.5rem !important;
+    }
+
+    /* Dashboard: stack activity feed and quick actions */
+    .dashboard-main {
+        flex-direction: column !important;
+    }
+
+    .dashboard-main > * {
+        width: 100% !important;
+        min-width: 0 !important;
+        flex: none !important;
+    }
+
+    /* Log messages: allow wrapping on mobile */
+    .log-line-message {
+        white-space: normal !important;
+        word-break: break-word !important;
+    }
+
+    /* Log container: less padding */
+    .log-container {
+        padding: 8px !important;
+    }
+
+    /* Log toolbar: tighter layout */
+    .log-toolbar {
+        gap: 6px !important;
+    }
+
+    .log-toolbar .min-w-48 {
+        min-width: 0 !important;
+    }
+
+    /* Log level/sport selects: full width on mobile */
+    .log-toolbar .w-32,
+    .log-toolbar .w-36 {
+        width: 48% !important;
+    }
+
+    /* Unmatched file cards: stack layout */
+    .file-card-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    .file-card-actions {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        width: 100% !important;
+        gap: 6px !important;
+        padding-top: 8px !important;
+        border-top: 1px solid var(--border-color);
+        margin-top: 8px;
+    }
+
+    /* Unmatched stat cards: 2-column grid */
+    .unmatched-stats-grid {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+
+    .unmatched-stats-grid .glass-card {
+        min-width: 0 !important;
+    }
+
+    /* Sport table: responsive */
+    .modern-table {
+        overflow-x: auto !important;
+    }
+
+    .modern-table .q-table {
+        min-width: 500px;
+    }
+
+    /* Hide less important table columns on mobile */
+    .sports-table td:nth-child(4),
+    .sports-table th:nth-child(4),
+    .sports-table td:nth-child(5),
+    .sports-table th:nth-child(5),
+    .sports-table td:nth-child(7),
+    .sports-table th:nth-child(7) {
+        display: none !important;
+    }
+
+    /* Hide toggle label text on mobile (keep just the switch) */
+    .sports-table .q-toggle__label {
+        display: none !important;
+    }
+
+    /* Hide checkbox column on small phones */
+    .sports-table td:nth-child(1),
+    .sports-table th:nth-child(1) {
+        display: none !important;
+    }
+
+    /* Dialogs: full width on mobile */
+    .q-dialog .q-card {
+        max-width: 100vw !important;
+        width: 100% !important;
+        margin: 8px !important;
+    }
+
+    /* Filter sections: tighter spacing */
+    .filter-row {
+        gap: 8px !important;
+    }
+
+    .filter-row .w-48 {
+        width: 100% !important;
+    }
+
+    .filter-row .min-w-48 {
+        min-width: 0 !important;
+    }
+
+    /* Settings action buttons: wrap */
+    .settings-header-actions {
+        width: 100% !important;
+        justify-content: flex-end !important;
+    }
 }
 """
 

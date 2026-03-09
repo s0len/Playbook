@@ -34,7 +34,7 @@ def logs_page() -> None:
 
         # Toolbar
         with ui.card().classes("glass-card w-full"):
-            with ui.row().classes("w-full gap-3 items-center flex-wrap"):
+            with ui.row().classes("w-full gap-3 items-center flex-wrap log-toolbar"):
                 # Connection indicator
                 with ui.row().classes("items-center gap-1.5 mr-2"):
                     ui.icon("circle").classes("text-[8px] app-text-success")

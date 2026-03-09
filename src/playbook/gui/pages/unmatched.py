@@ -99,7 +99,7 @@ def _render_stats_content() -> None:
         LOGGER.warning("Failed to get unmatched stats: %s", e)
         return
 
-    with ui.row().classes("w-full gap-4 flex-wrap"):
+    with ui.row().classes("w-full gap-4 flex-wrap unmatched-stats-grid"):
         # Total unmatched
         total = stats.get("total", 0)
         hidden = stats.get("hidden", 0)
@@ -152,7 +152,7 @@ def _filters_section_v2(state, on_filter_change) -> None:
             _render_category_toggles(state, on_filter_change, refresh_toggles)
 
         # Search and sport filter
-        with ui.row().classes("w-full gap-4 flex-wrap"):
+        with ui.row().classes("w-full gap-4 flex-wrap filter-row"):
             # Use on_change parameter for real-time filtering as user types
             def on_search_change(e):
                 state.search_query = e.sender.value or ""
@@ -303,7 +303,7 @@ def _file_card(record, state, refresh_page) -> None:
     record: UnmatchedFileRecord
 
     with ui.card().classes("glass-card w-full"):
-        with ui.row().classes("w-full items-start gap-4"):
+        with ui.row().classes("w-full items-start gap-4 file-card-row"):
             # File icon based on category
             icon_map = {
                 "video": ("movie", "accent"),
@@ -316,7 +316,7 @@ def _file_card(record, state, refresh_page) -> None:
             ui.icon(icon_name).classes(f"text-2xl mt-1 app-stat-icon app-stat-icon-{icon_tone}")
 
             # Main content
-            with ui.column().classes("flex-1 gap-1"):
+            with ui.column().classes("flex-1 gap-1 min-w-0"):
                 # Filename
                 ui.label(record.filename).classes("text-base font-medium text-slate-800 dark:text-slate-100 break-all")
 
@@ -345,7 +345,7 @@ def _file_card(record, state, refresh_page) -> None:
                         ui.badge(record.best_match_sport).classes("text-xs app-badge app-badge-muted")
 
             # Action buttons
-            with ui.column().classes("gap-2"):
+            with ui.row().classes("gap-2 file-card-actions"):
                 app_button(
                     "Details",
                     icon="info",
