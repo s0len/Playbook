@@ -80,7 +80,7 @@ def settings_page() -> None:
 
     with ui.column().classes("w-full p-6 gap-5 settings-page-shell"):
         # Page header
-        with ui.row().classes("w-full items-start justify-between border-b border-white/6 pb-5"):
+        with ui.row().classes("w-full items-start justify-between border-b border-white/6 pb-5 settings-header-row"):
             with ui.column().classes("gap-1"):
                 ui.label("Settings").classes("text-4xl font-bold text-slate-100")
                 ui.label("Manage your Playbook behavior, integrations, and processing rules").classes(
@@ -88,7 +88,7 @@ def settings_page() -> None:
                 )
 
             # Action buttons
-            with ui.row().classes("items-center gap-2"):
+            with ui.row().classes("items-center gap-2 settings-header-actions"):
                 # Modified indicator
                 modified_indicator = ui.label("").classes("text-sm text-slate-400")
 

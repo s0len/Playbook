@@ -416,7 +416,7 @@ def _sports_table() -> None:
         rows=rows,
         row_key="id",
         selection="multiple",  # Enable multi-select
-    ).classes("w-full modern-table")
+    ).classes("w-full modern-table sports-table")
 
     # Status toggle slot
     table.add_slot(

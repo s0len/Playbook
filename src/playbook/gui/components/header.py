@@ -23,11 +23,12 @@ def header(current_path: str = "/") -> None:
     Args:
         current_path: The current page path for active state highlighting
     """
-    with (
-        ui.left_drawer(value=True)
-        .props("persistent show-if-above width=200 bordered=false")
+    drawer = (
+        ui.left_drawer(value=False)
+        .props("show-if-above width=200 bordered=false breakpoint=1024")
         .classes("playbook-sidebar")
-    ):
+    )
+    with drawer:
         with ui.column().classes("w-full h-full p-4 gap-0"):
             # Logo section
             with ui.link(target="/").classes("no-underline flex items-center gap-3 mb-6"):
@@ -37,12 +38,15 @@ def header(current_path: str = "/") -> None:
             # Navigation items
             with ui.column().classes("w-full gap-1"):
                 for path, icon_name, label in NAV_ITEMS:
-                    _sidebar_item(path, icon_name, label, _is_active(path, current_path))
+                    _sidebar_item(path, icon_name, label, _is_active(path, current_path), drawer)
 
             ui.space()
 
             # Status indicator at very bottom
             _status_indicator()
+
+    # Mobile hamburger button (fixed position, visible only on small screens via CSS)
+    ui.button(icon="menu", on_click=drawer.toggle).props("flat round dense").classes("mobile-hamburger")
 
 
 def _is_active(nav_path: str, current_path: str) -> bool:
@@ -52,10 +56,16 @@ def _is_active(nav_path: str, current_path: str) -> bool:
     return current_path == nav_path or current_path.startswith(nav_path + "/")
 
 
-def _sidebar_item(target: str, icon_name: str, label: str, is_active: bool) -> None:
+def _sidebar_item(target: str, icon_name: str, label: str, is_active: bool, drawer=None) -> None:
     """Render a single sidebar nav item with icon + text."""
     cls = "sidebar-nav-item" + (" sidebar-nav-item-active" if is_active else "")
-    with ui.link(target=target).classes("no-underline w-full"):
+
+    def on_click():
+        # Close drawer on mobile after navigation
+        if drawer is not None:
+            drawer.run_method("hide")
+
+    with ui.link(target=target).classes("no-underline w-full").on("click", on_click):
         with ui.element("div").classes(cls):
             ui.icon(icon_name).classes("text-[20px]")
             ui.label(label).classes("text-sm")

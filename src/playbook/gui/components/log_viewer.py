@@ -100,7 +100,7 @@ def log_line(entry: LogEntry) -> None:
     badge_cls, msg_cls = LEVEL_STYLES.get(entry.level, ("app-alert app-alert-info app-text-muted", "app-text-muted"))
     time_str = entry.timestamp.strftime("%H:%M:%S")
 
-    with ui.row().classes("w-full gap-2 items-center py-0.5 hover:bg-white/5 px-1"):
+    with ui.row().classes("w-full gap-2 items-start py-0.5 hover:bg-white/5 px-1"):
         # Timestamp
         ui.label(time_str).classes("text-xs app-text-muted shrink-0 font-mono")
         # Level badge
@@ -108,7 +108,7 @@ def log_line(entry: LogEntry) -> None:
             f"w-12 text-center text-[10px] font-semibold rounded px-1 py-0.5 shrink-0 {badge_cls}"
         )
         # Message
-        ui.label(entry.message).classes(f"text-xs whitespace-nowrap font-mono {msg_cls}")
+        ui.label(entry.message).classes(f"text-xs font-mono log-line-message {msg_cls}")
 
 
 def log_filters(

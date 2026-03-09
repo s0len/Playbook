@@ -38,13 +38,13 @@ def dashboard_page() -> None:
         ui.label("Dashboard").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
 
         # Stats cards row
-        with ui.row().classes("w-full gap-4 flex-wrap"):
+        with ui.row().classes("w-full gap-4 flex-wrap stats-grid"):
             _stats_cards()
 
         # Main content: Activity feed + Quick actions
-        with ui.row().classes("w-full gap-4"):
+        with ui.row().classes("w-full gap-4 dashboard-main"):
             # Activity feed (left, wider)
-            with ui.card().classes("glass-card flex-1 min-w-96"):
+            with ui.card().classes("glass-card flex-1"):
                 with ui.row().classes("items-center justify-between mb-2"):
                     ui.label("Recent Activity").classes("text-xl font-semibold text-slate-700 dark:text-slate-200")
                     _refresh_button()
