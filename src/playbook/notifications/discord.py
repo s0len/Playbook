@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import fnmatch
 import logging
 import time
 from datetime import datetime
@@ -12,15 +11,27 @@ from requests import Response
 from requests.exceptions import RequestException
 
 from ..config import NotificationSettings
-from .batcher import NotificationBatcher
-from .types import BatchRequest, NotificationEvent, NotificationTarget
-from .utils import _excerpt_response, _trim
+from .types import NotificationEvent, NotificationTarget
+from .utils import _excerpt_response, _trim, replace_reason_label, resolve_sport_match
 
 LOGGER = logging.getLogger(__name__)
 
 
+def _format_file_size(size_bytes: int | None) -> str | None:
+    """Format file size as human-readable string."""
+    if size_bytes is None:
+        return None
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    if size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    if size_bytes < 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+    return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+
+
 class DiscordTarget(NotificationTarget):
-    """Discord webhook notification target with batch support and mentions."""
+    """Discord webhook notification target with mentions."""
 
     name = "discord"
 
@@ -28,19 +39,11 @@ class DiscordTarget(NotificationTarget):
         self,
         webhook_url: str | None,
         *,
-        cache_dir: Path,
         settings: NotificationSettings,
-        batch: bool | None = None,
         mentions: dict[str, str] | None = None,
     ) -> None:
         self.webhook_url = webhook_url.strip() if isinstance(webhook_url, str) else None
         self._settings = settings
-        use_batch = batch if batch is not None else settings.batch_daily
-        self._batcher: NotificationBatcher | None
-        if self.enabled() and use_batch:
-            self._batcher = NotificationBatcher(cache_dir, settings)
-        else:
-            self._batcher = None
         self._mentions_override = dict(mentions or {})
 
     def enabled(self) -> bool:
@@ -49,23 +52,7 @@ class DiscordTarget(NotificationTarget):
     def send(self, event: NotificationEvent) -> None:
         if not self.enabled():
             return
-
-        now = event.timestamp
-        if self._batcher is not None:
-            request = self._batcher.prepare_event(event, now)
-            payload = self._build_batch_payload(request, now)
-            response = self._send_with_retries(
-                request.action,
-                self._message_url(request.message_id),
-                payload,
-            )
-            if response is not None and request.action == "POST":
-                message_id = self._extract_message_id(response)
-                if message_id:
-                    self._batcher.register_message_id(request.sport_id, request.bucket_date, message_id)
-            return
-
-        payload = self._build_single_payload(event, now)
+        payload = self._build_payload(event, event.timestamp)
         self._send_with_retries("POST", self.webhook_url, payload)
 
     def send_embed(self, embed: dict[str, Any]) -> None:
@@ -73,18 +60,15 @@ class DiscordTarget(NotificationTarget):
         if not self.enabled():
             return
 
-        # Add timestamp if not present
         if "timestamp" not in embed:
             embed["timestamp"] = datetime.now().isoformat()
-
-        # Add footer if not present
         if "footer" not in embed:
             embed["footer"] = {"text": "Playbook"}
 
         payload = {"embeds": [embed]}
         self._send_with_retries("POST", self.webhook_url, payload)
 
-    def _build_single_payload(self, event: NotificationEvent, now: datetime) -> dict[str, Any]:
+    def _build_payload(self, event: NotificationEvent, now: datetime) -> dict[str, Any]:
         embed: dict[str, Any] = {
             "title": _trim(f"{event.show_title} – {event.session}", 256),
             "color": self._embed_color(event),
@@ -93,69 +77,10 @@ class DiscordTarget(NotificationTarget):
             "footer": {"text": "Playbook"},
         }
 
-        indicator = self._event_indicator(event.event_type)
+        indicator = self._event_indicator(event)
         prefix = f"{indicator} " if indicator else ""
         content = _trim(prefix + self._render_content(event), 2000)
         content = self._apply_mention_prefix(content, event.sport_id, limit=2000)
-        return {"content": content, "embeds": [embed]}
-
-    def _build_batch_payload(self, request: BatchRequest, now: datetime) -> dict[str, Any]:
-        events = request.events
-        total = len(events)
-        visible_events = events[-20:]
-
-        lines: list[str] = []
-        for item in visible_events:
-            action = item.get("action", "link")
-            indicator = self._event_indicator(item.get("event_type"))
-            season_part = f"{item.get('season')} – " if item.get("season") else ""
-            reason = f" [{item.get('skip_reason')}]" if item.get("skip_reason") else ""
-            destination_label = self._destination_label(item.get("destination"))
-            line = (
-                f"• {indicator + ' ' if indicator else ''}{season_part}{item.get('episode')} "
-                f"({item.get('session')}) [{action}]"
-                f"{' — ' + destination_label if destination_label else ''}{reason}"
-            )
-            lines.append(_trim(line, 190))
-
-        hidden_count = total - len(visible_events)
-        if hidden_count > 0:
-            lines.append(f"… and {hidden_count} more.")
-
-        description = _trim("\n".join(lines), 2048) if lines else None
-        latest_payload = events[-1]
-        latest_timestamp = latest_payload.get("timestamp") or now.isoformat()
-
-        fields = [
-            self._embed_field("Sport", request.sport_name, inline=True),
-            self._embed_field("Updates", str(total), inline=True),
-        ]
-        latest_value = _trim(
-            (
-                f"{self._event_indicator(latest_payload.get('event_type'))} "
-                f"{latest_payload.get('episode')} ({latest_payload.get('session')}) "
-                f"[{latest_payload.get('action')}]"
-                f"{' — ' + self._destination_label(latest_payload.get('destination')) if latest_payload.get('destination') else ''}"
-            ).strip(),
-            1024,
-        )
-        fields.append(self._embed_field("Latest", latest_value, inline=False))
-
-        embed: dict[str, Any] = {
-            "title": _trim(f"{request.sport_name} – {request.bucket_date.isoformat()}", 256),
-            "color": 0x5865F2,
-            "timestamp": latest_timestamp,
-            "fields": [field for field in fields if field is not None],
-            "footer": {"text": "Playbook"},
-        }
-        if description:
-            embed["description"] = description
-
-        content = _trim(
-            f"{request.sport_name} updates for {request.bucket_date.isoformat()}: {total} item{'s' if total != 1 else ''}",
-            limit=2000,
-        )
-        content = self._apply_mention_prefix(content, request.sport_id, limit=2000)
         return {"content": content, "embeds": [embed]}
 
     def _render_content(self, event: NotificationEvent) -> str:
@@ -163,12 +88,11 @@ class DiscordTarget(NotificationTarget):
         if event.event_type == "error":
             reason = f" — {event.skip_reason}" if event.skip_reason else ""
             return f"{base}{reason}"
-        if event.event_type == "changed" and event.replaced:
-            return f"{base} (updated existing copy)"
-        if event.event_type == "changed":
-            return f"{base} (updated)"
         if event.event_type == "dry-run":
             return f"{base} (dry run)"
+        if event.replaced and event.replace_reason:
+            label = self._replace_reason_label(event.replace_reason)
+            return f"{base} ({label})"
         if event.replaced:
             return f"{base} (replaced existing)"
         return base
@@ -179,22 +103,66 @@ class DiscordTarget(NotificationTarget):
             self._embed_field("Sport", event.sport_name, inline=True),
             self._embed_field("Season", event.season, inline=True),
             self._embed_field("Episode", event.episode, inline=True),
-            self._embed_field("Destination", destination_label, inline=False),
         ]
-        if event.skip_reason:
+
+        # Quality line
+        if event.quality_str:
+            fields.append(self._embed_field("Quality", event.quality_str, inline=False))
+
+        # Upgrade comparison for replacements
+        if event.replaced and event.replace_reason:
+            upgrade_text = self._format_upgrade_text(event)
+            if upgrade_text:
+                fields.append(self._embed_field("Upgrade", upgrade_text, inline=False))
+
+        # Mismatch explanation
+        if event.replace_reason == "mismatch_correction":
+            fields.append(self._embed_field("Reason", "Was linked to wrong episode — now fixed", inline=False))
+
+        fields.append(self._embed_field("Destination", destination_label, inline=False))
+        fields.append(self._embed_field("Source", event.source, inline=False))
+
+        if event.skip_reason and event.event_type in ("error", "skipped"):
             fields.append(self._embed_field("Reason", event.skip_reason, inline=False))
-        if event.trace_path:
-            fields.append(self._embed_field("Trace", event.trace_path, inline=False))
+
         return fields
 
+    def _format_upgrade_text(self, event: NotificationEvent) -> str | None:
+        """Format the upgrade comparison line."""
+        parts: list[str] = []
+
+        # Quality comparison
+        if event.old_quality_str and event.quality_str:
+            parts.append(f"{event.old_quality_str} → {event.quality_str}")
+        elif event.quality_str and event.replace_reason == "quality_upgrade":
+            parts.append(event.quality_str)
+
+        # Score comparison
+        if event.old_quality_score is not None and event.quality_score is not None:
+            delta = event.quality_score - event.old_quality_score
+            sign = "+" if delta > 0 else ""
+            parts.append(f"Score: {event.old_quality_score} → {event.quality_score} ({sign}{delta})")
+
+        # File size comparison
+        old_size = _format_file_size(event.old_file_size)
+        new_size = _format_file_size(event.file_size)
+        if old_size and new_size:
+            parts.append(f"Size: {old_size} → {new_size}")
+
+        return "\n".join(parts) if parts else None
+
     def _embed_color(self, event: NotificationEvent) -> int:
-        if event.action == "error":
-            return 0xED4245
+        if event.event_type == "error" or event.action == "error":
+            return 0xED4245  # Red
+        if event.event_type == "dry-run" or event.action == "dry-run":
+            return 0x95A5A6  # Grey
         if event.action == "skipped":
-            return 0xFEE75C
-        if event.action == "dry-run":
-            return 0x95A5A6
-        return 0x5865F2
+            return 0xFEE75C  # Yellow
+        if event.replaced:
+            if event.replace_reason == "mismatch_correction":
+                return 0xFEE75C  # Orange/yellow for mismatch fix
+            return 0x5865F2  # Blurple for upgrade/proper
+        return 0x57F287  # Green for new
 
     def _send_with_retries(self, method: str, url: str, payload: dict[str, Any]) -> Response | None:
         attempt = 0
@@ -234,11 +202,6 @@ class DiscordTarget(NotificationTarget):
         LOGGER.error("Discord notification failed after %d attempts due to rate limiting.", max_attempts)
         return None
 
-    def _message_url(self, message_id: str | None) -> str:
-        if not message_id:
-            return self.webhook_url
-        return f"{self.webhook_url}/messages/{message_id}"
-
     def _embed_field(self, name: str, value: str | None, *, inline: bool) -> dict[str, Any] | None:
         if value is None:
             return None
@@ -256,28 +219,9 @@ class DiscordTarget(NotificationTarget):
             return None
 
         if sport_id:
-            sport_id_str = str(sport_id)
-
-            # 1. Exact match
-            mention = mentions.get(sport_id_str)
-            if mention:
-                return mention
-
-            # 2. Parent prefixes (e.g., "premier_league" for "premier_league_2025_26")
-            for candidate in self._sport_prefixes(sport_id_str):
-                mention = mentions.get(candidate)
-                if mention:
-                    return mention
-
-            # 3. Wildcard patterns
-            wildcard_matches = [
-                (pattern, value)
-                for pattern, value in mentions.items()
-                if self._is_wildcard(pattern) and fnmatch.fnmatchcase(sport_id_str, pattern)
-            ]
-            if wildcard_matches:
-                wildcard_matches.sort(key=lambda item: len(item[0]), reverse=True)
-                return wildcard_matches[0][1]
+            match = resolve_sport_match(str(sport_id), mentions)
+            if match:
+                return match
 
         return mentions.get("default")
 
@@ -290,27 +234,27 @@ class DiscordTarget(NotificationTarget):
         return _trim(combined, limit)
 
     @staticmethod
-    def _is_wildcard(value: str) -> bool:
-        return any(char in value for char in "*?[")
-
-    @staticmethod
-    def _sport_prefixes(sport_id: str) -> list[str]:
-        parts = sport_id.split("_")
-        prefixes: list[str] = []
-        for end in range(len(parts) - 1, 0, -1):
-            prefixes.append("_".join(parts[:end]))
-        return prefixes
-
-    @staticmethod
-    def _event_indicator(event_type: str | None) -> str:
-        mapping = {
-            "new": "[NEW]",
-            "changed": "[UPDATED]",
-            "error": "[ERROR]",
-        }
-        if not event_type:
+    def _event_indicator(event: NotificationEvent) -> str:
+        if event.event_type == "error" or event.action == "error":
+            return "[ERROR]"
+        if event.event_type == "dry-run" or event.action == "dry-run":
+            return "[DRY-RUN]"
+        if event.action == "skipped":
             return ""
-        return mapping.get(str(event_type).lower(), "")
+        if event.replaced:
+            reason = event.replace_reason or ""
+            if reason == "proper_repack":
+                return "[PROPER]"
+            if reason == "mismatch_correction":
+                return "[FIX]"
+            if reason in ("quality_upgrade", "legacy"):
+                return "[UPGRADE]"
+            return "[UPGRADE]"
+        return "[NEW]"
+
+    @staticmethod
+    def _replace_reason_label(reason: str) -> str:
+        return replace_reason_label(reason)
 
     @staticmethod
     def _destination_label(value: str | None) -> str:
@@ -319,15 +263,6 @@ class DiscordTarget(NotificationTarget):
         path = Path(value)
         label = path.stem or path.name
         return label
-
-    @staticmethod
-    def _extract_message_id(response: Response) -> str | None:
-        try:
-            payload = response.json()
-        except ValueError:
-            return None
-        message_id = payload.get("id")
-        return str(message_id) if message_id else None
 
     @staticmethod
     def _retry_after_seconds(response: Response, fallback: float) -> float:

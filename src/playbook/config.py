@@ -310,12 +310,10 @@ class QualityProfile:
 
 @dataclass
 class NotificationSettings:
-    batch_daily: bool = False
-    flush_time: dt.time = field(default_factory=lambda: dt.time(hour=0, minute=0))
     targets: list[dict[str, Any]] = field(default_factory=list)
     throttle: dict[str, int] = field(default_factory=dict)
     mentions: dict[str, str] = field(default_factory=dict)
-    summary_mode: bool = False  # Send one summary notification per scan instead of per-file
+    scan_summary: bool = True  # Send a summary notification after each scan
 
 
 @dataclass
@@ -1290,14 +1288,6 @@ def _build_settings(data: dict[str, Any]) -> Settings:
     if not isinstance(notifications_raw, dict):
         raise ValueError("'notifications' must be provided as a mapping when specified")
 
-    try:
-        flush_time = _parse_time_of_day(
-            notifications_raw.get("flush_time", "00:00"),
-            field_name="notifications.flush_time",
-        )
-    except ValueError as exc:
-        raise ValueError(str(exc)) from exc
-
     targets_raw = notifications_raw.get("targets", []) or []
     if not isinstance(targets_raw, list):
         raise ValueError("'notifications.targets' must be provided as a list when specified")
@@ -1338,11 +1328,10 @@ def _build_settings(data: dict[str, Any]) -> Settings:
         mentions[key_str] = mention
 
     notifications = NotificationSettings(
-        batch_daily=bool(notifications_raw.get("batch_daily", False)),
-        flush_time=flush_time,
         targets=targets,
         throttle=throttle,
         mentions=mentions,
+        scan_summary=bool(notifications_raw.get("scan_summary", True)),
     )
 
     source_dir = Path(data.get("source_dir", "/data/source")).expanduser()

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fnmatch
 import logging
 from typing import Any
 
@@ -8,6 +9,67 @@ from requests import Response
 from .types import NotificationEvent
 
 LOGGER = logging.getLogger(__name__)
+
+
+# Shared constants and helpers used across notification targets
+
+REPLACE_REASON_LABELS: dict[str, str] = {
+    "quality_upgrade": "quality upgrade",
+    "proper_repack": "PROPER/REPACK",
+    "mismatch_correction": "mismatch corrected",
+    "legacy": "replaced existing",
+}
+
+
+def replace_reason_label(reason: str | None) -> str:
+    """Get a human-readable label for a replace reason."""
+    if not reason:
+        return "replaced existing"
+    return REPLACE_REASON_LABELS.get(reason, "replaced existing")
+
+
+def is_wildcard(value: str) -> bool:
+    """Check if a string contains wildcard characters."""
+    return any(char in value for char in "*?[")
+
+
+def sport_prefixes(sport_id: str) -> list[str]:
+    """Generate parent prefixes for a sport ID.
+
+    E.g. "premier_league_2025_26" -> ["premier_league_2025", "premier_league", "premier"]
+    """
+    parts = sport_id.split("_")
+    prefixes: list[str] = []
+    for end in range(len(parts) - 1, 0, -1):
+        prefixes.append("_".join(parts[:end]))
+    return prefixes
+
+
+def resolve_sport_match(sport_id: str, mapping: dict[str, Any]) -> Any | None:
+    """Resolve a value from a sport-keyed mapping using exact, prefix, and wildcard matching.
+
+    Returns the matched value, or None if no match found.
+    """
+    # 1. Exact match
+    if sport_id in mapping:
+        return mapping[sport_id]
+
+    # 2. Parent prefixes
+    for candidate in sport_prefixes(sport_id):
+        if candidate in mapping:
+            return mapping[candidate]
+
+    # 3. Wildcard patterns
+    wildcard_matches = [
+        (pattern, value)
+        for pattern, value in mapping.items()
+        if is_wildcard(pattern) and fnmatch.fnmatchcase(sport_id, pattern)
+    ]
+    if wildcard_matches:
+        wildcard_matches.sort(key=lambda item: len(item[0]), reverse=True)
+        return wildcard_matches[0][1]
+
+    return None
 
 
 def _normalize_mentions_map(value: Any) -> dict[str, str]:
@@ -50,6 +112,13 @@ def _flatten_event(event: NotificationEvent) -> dict[str, Any]:
         "trace_path": event.trace_path,
         "timestamp": event.timestamp.isoformat(),
         "event_type": event.event_type,
+        "replace_reason": event.replace_reason,
+        "quality_str": event.quality_str,
+        "old_quality_str": event.old_quality_str,
+        "quality_score": event.quality_score,
+        "old_quality_score": event.old_quality_score,
+        "file_size": event.file_size,
+        "old_file_size": event.old_file_size,
     }
     data.update(event.match_details or {})
     return data

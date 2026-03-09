@@ -404,6 +404,33 @@ def cleanup_old_destination(
         stale_destinations.pop(source_key, None)
 
 
+def format_quality_line(quality_info: QualityInfo | None) -> str | None:
+    """Format quality info as a compact human-readable line.
+
+    Example: "1080p · WEB-DL · x265 · AAC · F1TV"
+    """
+    if quality_info is None:
+        return None
+    parts: list[str] = []
+    if quality_info.resolution:
+        parts.append(quality_info.resolution)
+    if quality_info.source:
+        parts.append(quality_info.source.upper().replace("WEBDL", "WEB-DL").replace("WEBRIP", "WEBRip"))
+    if quality_info.codec:
+        parts.append(quality_info.codec)
+    if quality_info.audio:
+        parts.append(quality_info.audio.upper())
+    if quality_info.hdr_format:
+        parts.append(quality_info.hdr_format.upper())
+    if quality_info.broadcaster:
+        parts.append(quality_info.broadcaster.upper())
+    if quality_info.is_proper:
+        parts.append("PROPER")
+    if quality_info.is_repack:
+        parts.append("REPACK")
+    return " · ".join(parts) if parts else None
+
+
 def format_quality_summary(
     quality_info: QualityInfo | None,
     quality_score: QualityScore | None,
@@ -534,8 +561,46 @@ def handle_match(
         # Extract quality info even in legacy mode for logging purposes
         quality_info = extract_quality(match.source_path.name, captured_groups)
 
+    # Populate quality string on the event (always, even for skipped/new)
+    event.quality_str = format_quality_line(quality_info)
+    if quality_score_obj is not None:
+        event.quality_score = quality_score_obj.total
+
+    # Try to get source file size
+    try:
+        event.file_size = match.source_path.stat().st_size
+    except OSError:
+        pass
+
+    # Helper: look up old quality from persistence store
+    def _enrich_old_quality() -> None:
+        if processed_store is None:
+            return
+        old_record = processed_store.get_by_destination(str(destination))
+        if old_record is not None:
+            if old_record.quality_score is not None:
+                event.old_quality_score = old_record.quality_score
+            # Reconstruct old quality string from persisted quality_info JSON
+            if old_record.quality_info:
+                try:
+                    import json
+
+                    old_qi_data = json.loads(old_record.quality_info)
+                    old_qi = QualityInfo(**old_qi_data)
+                    event.old_quality_str = format_quality_line(old_qi)
+                except (json.JSONDecodeError, TypeError, KeyError):
+                    pass
+        # Try to get old file size from destination
+        try:
+            if destination.exists():
+                old_target = destination.resolve() if destination.is_symlink() else destination
+                event.old_file_size = old_target.stat().st_size
+        except OSError:
+            pass
+
     # Check if destination exists and handle skip/overwrite logic
     replace_existing = False
+    replace_reason: str | None = None
     mismatch_corrected = False
     if destination.exists():
         # Before applying skip/quality logic, check if the occupying file
@@ -566,7 +631,9 @@ def handle_match(
                     )
                 )
                 replace_existing = True
+                replace_reason = "mismatch_correction"
                 mismatch_corrected = True
+                _enrich_old_quality()
                 # Delete the mismatch record so its source file re-enters the
                 # processing pipeline on the next run and can match correctly.
                 if not dry_run:
@@ -578,8 +645,18 @@ def handle_match(
                 should_upgrade, quality_info, quality_score_obj, quality_upgrade_reason = should_upgrade_with_quality(
                     match, quality_profile, processed_store, captured_groups
                 )
+                # Re-populate quality fields after re-evaluation
+                event.quality_str = format_quality_line(quality_info)
+                if quality_score_obj is not None:
+                    event.quality_score = quality_score_obj.total
                 if should_upgrade:
                     replace_existing = True
+                    _enrich_old_quality()
+                    # Determine specific reason
+                    if quality_info and (quality_info.is_proper or quality_info.is_repack):
+                        replace_reason = "proper_repack"
+                    else:
+                        replace_reason = "quality_upgrade"
                     logger.debug(
                         render_fields_block(
                             "Quality Upgrade",
@@ -628,6 +705,8 @@ def handle_match(
                     )
             elif should_overwrite_existing(match):
                 replace_existing = True
+                _enrich_old_quality()
+                replace_reason = "legacy"
 
             if not replace_existing:
                 logger.debug(
@@ -656,6 +735,10 @@ def handle_match(
                 event.skip_reason = skip_message
                 event.event_type = "skipped"
                 return event, False, match.sport.id, quality_info, quality_score_obj
+
+    # Set replace reason on event
+    if replace_existing:
+        event.replace_reason = replace_reason
 
     # Handle replace existing destination
     if replace_existing:

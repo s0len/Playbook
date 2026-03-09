@@ -65,7 +65,7 @@ settings:
   # NOTIFICATIONS - Alerts for new files
   ####################################################################
   notifications:
-    summary_mode: false  # One summary per scan instead of per-file
+    scan_summary: true  # Send a summary notification after each scan with activity
     targets:
       - type: discord
         webhook_env: DISCORD_WEBHOOK_URL  # Or use webhook_url directly

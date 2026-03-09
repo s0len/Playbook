@@ -51,8 +51,6 @@ _DEFAULT_TARGET = {"type": "discord", "webhook_url": "https://discord.test/webho
 
 def test_notification_service_sends_discord_message(tmp_path, monkeypatch) -> None:
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         targets=[_DEFAULT_TARGET],
     )
     service = NotificationService(
@@ -90,8 +88,6 @@ def test_notification_service_sends_discord_message(tmp_path, monkeypatch) -> No
 
 def test_notification_service_mentions_opt_in_roles(tmp_path, monkeypatch) -> None:
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         mentions={"demo": "<@&42>"},
         targets=[_DEFAULT_TARGET],
     )
@@ -116,85 +112,9 @@ def test_notification_service_mentions_opt_in_roles(tmp_path, monkeypatch) -> No
     assert payload["content"].startswith("<@&42> [NEW] Demo Sport: Qualifying")
 
 
-def test_notification_service_batches_discord_messages(tmp_path, monkeypatch) -> None:
-    settings = NotificationSettings(
-        batch_daily=True,
-        flush_time=dt.time(hour=0, minute=0),
-        targets=[_DEFAULT_TARGET],
-    )
-    service = NotificationService(
-        settings,
-        cache_dir=tmp_path,
-        destination_dir=tmp_path,
-        enabled=True,
-    )
-
-    responses = [
-        FakeResponse(200, {"id": "message123"}),
-        FakeResponse(200, {"id": "message123"}),
-    ]
-    calls: list[dict[str, Any]] = []
-
-    def fake_request(method, url, json=None, timeout=None, headers=None):
-        calls.append({"method": method, "url": url, "json": json})
-        return responses.pop(0)
-
-    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
-
-    service.notify(_build_event(destination="Demo-1.mkv"))
-    service.notify(_build_event(destination="Demo-2.mkv"))
-
-    assert [call["method"] for call in calls] == ["POST", "PATCH"]
-    assert calls[0]["url"] == "https://discord.test/webhook"
-    assert calls[1]["url"].endswith("/messages/message123")
-    assert calls[1]["json"]["embeds"][0]["fields"][1]["value"] == "2"
-
-    state_path = tmp_path / "state" / "discord-batches.json"
-    assert state_path.exists()
-    state = json.loads(state_path.read_text())
-    assert state["demo"]["message_id"] == "message123"
-
-
-def test_notification_service_mentions_apply_to_batches(tmp_path, monkeypatch) -> None:
-    settings = NotificationSettings(
-        batch_daily=True,
-        flush_time=dt.time(hour=0, minute=0),
-        mentions={"default": "@here"},
-        targets=[_DEFAULT_TARGET],
-    )
-    service = NotificationService(
-        settings,
-        cache_dir=tmp_path,
-        destination_dir=tmp_path,
-        enabled=True,
-    )
-
-    responses = [
-        FakeResponse(200, {"id": "message123"}),
-        FakeResponse(200, {"id": "message123"}),
-    ]
-    calls: list[dict[str, Any]] = []
-
-    def fake_request(method, url, json=None, timeout=None, headers=None):
-        calls.append({"method": method, "url": url, "json": json})
-        return responses.pop(0)
-
-    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
-
-    service.notify(_build_event(destination="Demo-1.mkv"))
-    service.notify(_build_event(destination="Demo-2.mkv"))
-
-    first_payload = calls[0]["json"]
-    assert first_payload["content"].startswith("@here Demo Sport updates")
-
-    state_path = tmp_path / "state" / "discord-batches.json"
-    assert state_path.exists()
-
 
 def test_notification_service_mentions_handle_variant_ids(tmp_path, monkeypatch) -> None:
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         mentions={"premier_league": "<@&123>"},
         targets=[_DEFAULT_TARGET],
     )
@@ -223,8 +143,6 @@ def test_notification_service_mentions_handle_variant_ids(tmp_path, monkeypatch)
 
 def test_notification_service_mentions_support_wildcards(tmp_path, monkeypatch) -> None:
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         mentions={"formula1_*": "<@&999>", "default": "@here"},
         targets=[_DEFAULT_TARGET],
     )
@@ -253,8 +171,6 @@ def test_notification_service_mentions_support_wildcards(tmp_path, monkeypatch) 
 
 def test_notification_service_throttle_supports_variant_ids(tmp_path) -> None:
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         throttle={"premier_league": 30, "default": 60},
         targets=[_DEFAULT_TARGET],
     )
@@ -270,8 +186,6 @@ def test_notification_service_throttle_supports_variant_ids(tmp_path) -> None:
 
 def test_notification_service_throttle_supports_wildcards(tmp_path) -> None:
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         throttle={"formula1_*": 12, "default": 60},
         targets=[_DEFAULT_TARGET],
     )
@@ -287,8 +201,6 @@ def test_notification_service_throttle_supports_wildcards(tmp_path) -> None:
 
 def test_notification_service_throttle_prefers_specific_wildcard(tmp_path) -> None:
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         throttle={"formula1_*": 12, "formula1_2025*": 25, "default": 60},
         targets=[_DEFAULT_TARGET],
     )
@@ -304,8 +216,6 @@ def test_notification_service_throttle_prefers_specific_wildcard(tmp_path) -> No
 
 def test_notification_service_throttle_applies_default_and_sport_limit(tmp_path) -> None:
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         throttle={"formula1": 25, "default": 10},
         targets=[_DEFAULT_TARGET],
     )
@@ -321,8 +231,6 @@ def test_notification_service_throttle_applies_default_and_sport_limit(tmp_path)
 
 def test_notification_service_throttle_limits_notifications_per_day(tmp_path, monkeypatch) -> None:
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         throttle={"demo": 1},
         targets=[_DEFAULT_TARGET],
     )
@@ -354,8 +262,6 @@ def test_notification_service_throttle_limits_notifications_per_day(tmp_path, mo
 
 def test_notification_service_throttle_resets_next_day(tmp_path, monkeypatch) -> None:
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         throttle={"demo": 1},
         targets=[_DEFAULT_TARGET],
     )
@@ -388,8 +294,6 @@ def test_notification_service_throttle_resets_next_day(tmp_path, monkeypatch) ->
 def test_discord_target_reads_webhook_from_env(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("PLAYBOOK_DISCORD_WEBHOOK", "https://discord.test/env")
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         targets=[{"type": "discord", "webhook_env": "PLAYBOOK_DISCORD_WEBHOOK"}],
     )
     service = NotificationService(
@@ -415,8 +319,6 @@ def test_discord_target_reads_webhook_from_env(tmp_path, monkeypatch) -> None:
 def test_discord_target_skips_when_env_missing(tmp_path, monkeypatch) -> None:
     monkeypatch.delenv("PLAYBOOK_DISCORD_WEBHOOK", raising=False)
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         targets=[{"type": "discord", "webhook_env": "PLAYBOOK_DISCORD_WEBHOOK"}],
     )
     service = NotificationService(
@@ -436,8 +338,6 @@ def test_discord_target_skips_when_env_missing(tmp_path, monkeypatch) -> None:
 
 def test_discord_targets_support_per_target_mentions(tmp_path, monkeypatch) -> None:
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         mentions={"default": "@here"},
         targets=[
             {
@@ -475,8 +375,6 @@ def test_discord_targets_support_per_target_mentions(tmp_path, monkeypatch) -> N
 
 def test_notification_service_handles_rate_limiting(tmp_path, monkeypatch) -> None:
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         targets=[_DEFAULT_TARGET],
     )
     service = NotificationService(
@@ -508,8 +406,6 @@ def test_notification_service_handles_rate_limiting(tmp_path, monkeypatch) -> No
 
 def test_notification_service_skips_non_new_events(tmp_path, monkeypatch) -> None:
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         targets=[_DEFAULT_TARGET],
     )
     service = NotificationService(
@@ -529,8 +425,6 @@ def test_notification_service_skips_non_new_events(tmp_path, monkeypatch) -> Non
 def test_autoscan_target_posts_manual_trigger(tmp_path, monkeypatch) -> None:
     rewrite_from = str(tmp_path / "dest")
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         targets=[
             {
                 "type": "autoscan",
@@ -580,8 +474,6 @@ def test_autoscan_target_posts_manual_trigger(tmp_path, monkeypatch) -> None:
 def test_disabled_target_does_not_send_notifications(tmp_path, monkeypatch) -> None:
     """Targets with enabled=False should not send notifications."""
     settings = NotificationSettings(
-        batch_daily=False,
-        flush_time=dt.time(hour=0, minute=0),
         targets=[
             {"type": "discord", "webhook_url": "https://discord.test/webhook", "enabled": False},
         ],

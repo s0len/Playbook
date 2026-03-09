@@ -18,13 +18,8 @@ def test_sample_configuration_passes_validation() -> None:
     assert report.errors == []
 
 
-def test_validation_flags_invalid_flush_time_and_show_slug() -> None:
+def test_validation_flags_blank_show_slug() -> None:
     config = {
-        "settings": {
-            "notifications": {
-                "flush_time": "25:61",
-            }
-        },
         "sports": [
             {
                 "id": "test",
@@ -35,7 +30,6 @@ def test_validation_flags_invalid_flush_time_and_show_slug() -> None:
 
     report = validate_config_data(config)
     codes = {issue.code for issue in report.errors}
-    assert "flush-time" in codes
     assert "show-slug-blank" in codes
 
 
