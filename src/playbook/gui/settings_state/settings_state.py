@@ -97,7 +97,7 @@ class SettingsFormState:
                             migrated = fw.pop(old_key)
                             if isinstance(migrated, str):
                                 migrated = [migrated]
-                            for pat in (migrated or []):
+                            for pat in migrated or []:
                                 if pat not in existing:
                                     existing.append(pat)
                             settings[new_key] = existing
@@ -135,7 +135,7 @@ class SettingsFormState:
                         migrated = fw.pop(old_key)
                         if isinstance(migrated, str):
                             migrated = [migrated]
-                        for pat in (migrated or []):
+                        for pat in migrated or []:
                             if pat not in existing:
                                 existing.append(pat)
                         settings[new_key] = existing
