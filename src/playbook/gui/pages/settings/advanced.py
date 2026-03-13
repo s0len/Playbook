@@ -394,9 +394,9 @@ def _reset_to_sample(state: SettingsFormState) -> None:
     try:
         # Look for sample config
         sample_paths = [
-            Path(__file__).parent.parent.parent.parent.parent.parent.parent / "config" / "playbook.sample.yaml",
-            Path("/app/config/playbook.sample.yaml"),
-            Path("config/playbook.sample.yaml"),
+            Path(__file__).parent.parent.parent.parent.parent.parent.parent / "config" / "config.sample.yaml",
+            Path("/app/config/config.sample.yaml"),
+            Path("config/config.sample.yaml"),
         ]
 
         sample_content = None

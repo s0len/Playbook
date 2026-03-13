@@ -6,6 +6,7 @@ import requests
 from requests.exceptions import RequestException
 
 from .types import NotificationEvent, NotificationTarget
+from .utils import _flatten_event, replace_reason_label
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,17 +38,9 @@ class SlackTarget(NotificationTarget):
 
     def _render(self, event: NotificationEvent) -> str:
         if self.template:
-            return self.template.format(
-                sport=event.sport_name,
-                season=event.season,
-                session=event.session,
-                episode=event.episode,
-                destination=event.destination,
-                source=event.source,
-                action=event.action,
-                link_mode=event.link_mode,
-                skip_reason=event.skip_reason or "",
-            )
+            # Use full flattened event data so custom templates can reference any field
+            return self.template.format(**_flatten_event(event))
+
         base = f"{event.sport_name}: {event.episode} ({event.session})"
         if event.action == "error":
             return f":warning: Failed {base}{' - ' + event.skip_reason if event.skip_reason else ''}"
@@ -55,5 +48,14 @@ class SlackTarget(NotificationTarget):
             return f":information_source: Skipped {base}{' - ' + event.skip_reason if event.skip_reason else ''}"
         if event.action == "dry-run":
             return f":grey_question: [Dry-Run] {base} via {event.link_mode}"
-        replaced = " (replaced)" if event.replaced else ""
-        return f":white_check_mark: {base} {event.action} via {event.link_mode}{replaced} → {event.destination}"
+
+        # Build quality/replacement context
+        suffix = ""
+        if event.replaced and event.replace_reason:
+            suffix = f" ({replace_reason_label(event.replace_reason)})"
+        elif event.replaced:
+            suffix = " (replaced)"
+
+        quality_part = f"\n> Quality: {event.quality_str}" if event.quality_str else ""
+
+        return f":white_check_mark: {base} {event.action} via {event.link_mode}{suffix} → {event.destination}{quality_part}"

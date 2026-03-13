@@ -205,8 +205,8 @@ class ValidationFormatter:
         Returns:
             A formatted path string with redundant parts removed.
         """
-        # For paths like "settings.notifications.flush_time", we want to show
-        # just "notifications.flush_time" when displayed under Settings section
+        # For paths like "settings.notifications.scan_summary", we want to show
+        # just "notifications.scan_summary" when displayed under Settings section
         # For now, just return the path as-is (can be enhanced later)
         return path
 

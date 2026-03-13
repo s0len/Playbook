@@ -58,7 +58,7 @@ Examples for both live in [Getting Started](getting-started.md#option-c-kubernet
 ### Subcommands
 
 - `python -m playbook.cli validate-config --config … --diff-sample --show-trace`  
-  CI-friendly validation that enforces schema checks and surfaces diffs against `config/playbook.sample.yaml`.
+  CI-friendly validation that enforces schema checks and surfaces diffs against `config/config.sample.yaml`.
 - `python -m playbook.cli kometa-trigger --config … --mode docker`  
   Triggers Kometa once without running the processor. Useful when debugging trigger failures or forcing a metadata refresh after a manual ingest.
 
@@ -152,6 +152,6 @@ Switch `link_mode` to `copy` or `symlink` globally or per sport when working acr
 - Back up `playbook.yaml`, notification secrets, and metadata caches if you want to preserve warm-start performance. Everything else is auto-generated.
 - Before promoting a new version, run the container with `--dry-run --clear-processed-cache` against a staging copy of your downloads to confirm new pattern packs behave as expected.
 - Pin tags (e.g., `ghcr.io/s0len/playbook:v1.3.1`) in production deployments, then test `:latest` or `develop` in a sandbox before rolling forward.
-- Keep a copy of `playbook.sample.yaml` from the release you are running; diffs against the current sample file quickly highlight breaking config changes.
+- Keep a copy of `config.sample.yaml` from the release you are running; diffs against the current sample file quickly highlight breaking config changes.
 
 When you need to troubleshoot, jump to [Troubleshooting & FAQ](troubleshooting.md) for per-scenario guidance.

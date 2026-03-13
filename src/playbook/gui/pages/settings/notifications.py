@@ -13,7 +13,6 @@ from nicegui import ui
 from ...components.settings import (
     notification_target_editor,
     settings_card,
-    settings_input,
     settings_toggle,
 )
 from ...state import gui_state
@@ -33,32 +32,13 @@ def notifications_tab(state: SettingsFormState) -> None:
         with settings_card(
             "Notification Behavior", icon="notifications", description="Control how notifications are sent"
         ):
-            with ui.row().classes("w-full gap-6"):
-                with ui.column().classes("flex-1 gap-4"):
-                    settings_toggle(
-                        state,
-                        "settings.notifications.summary_mode",
-                        "Summary Mode",
-                        description="Send one summary notification per scan instead of per-file",
-                    )
-                    settings_toggle(
-                        state,
-                        "settings.notifications.batch_daily",
-                        "Batch Daily",
-                        description="Batch notifications and send once daily",
-                    )
-
-                with ui.column().classes("flex-1 gap-4"):
-                    # Flush time (only relevant when batch_daily is true)
-                    batch_enabled = state.get_value("settings.notifications.batch_daily", False)
-                    settings_input(
-                        state,
-                        "settings.notifications.flush_time",
-                        "Daily Send Time",
-                        description="Time to send daily batch (HH:MM format)",
-                        placeholder="00:00",
-                        disabled=not batch_enabled,
-                    )
+            with ui.column().classes("w-full gap-4"):
+                settings_toggle(
+                    state,
+                    "settings.notifications.scan_summary",
+                    "Scan Summary",
+                    description="Send a summary notification after each scan with activity",
+                )
 
         # Notification Targets
         with settings_card("Notification Targets", icon="send", description="Configure where notifications are sent"):

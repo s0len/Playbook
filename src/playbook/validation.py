@@ -60,8 +60,7 @@ CONFIG_SCHEMA: dict[str, Any] = {
                 "notifications": {
                     "type": "object",
                     "properties": {
-                        "batch_daily": {"type": "boolean"},
-                        "flush_time": {"type": "string", "pattern": _TIME_PATTERN},
+                        "scan_summary": {"type": "boolean"},
                     },
                     "additionalProperties": True,
                 },
@@ -425,21 +424,6 @@ def group_validation_issues(
 
 
 def _validate_semantics(data: dict[str, Any], report: ValidationReport) -> None:
-    settings = data.get("settings") or {}
-    notifications = settings.get("notifications") or {}
-    flush_time = notifications.get("flush_time")
-    if isinstance(flush_time, str):
-        problem = _parse_time(flush_time)
-        if problem:
-            report.errors.append(
-                ValidationIssue(
-                    severity="error",
-                    path="settings.notifications.flush_time",
-                    message=f"Invalid time '{flush_time}': {problem}",
-                    code="flush-time",
-                )
-            )
-
     sports = data.get("sports") or []
     seen_ids: dict[str, int] = {}
     for index, sport in enumerate(sports):

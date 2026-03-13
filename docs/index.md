@@ -30,7 +30,7 @@ The same YAML files that power matching also feed Kometa to set posters, summari
 
 **All sports are enabled by default!** Just configure your directories:
 
-1. Copy `config/playbook.sample.yaml` to `playbook.yaml`
+1. Copy `config/config.sample.yaml` to `playbook.yaml`
 2. Set `SOURCE_DIR` (where downloads land) and `DESTINATION_DIR` (Plex library)
 3. Run a dry-run to test: `playbook process --dry-run`
 4. Let it run automatically with `playbook watch` or Docker

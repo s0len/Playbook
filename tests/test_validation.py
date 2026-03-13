@@ -46,8 +46,7 @@ def valid_config_with_settings():
             "destination_dir": "/path/to/destination",
             "link_mode": "hardlink",
             "notifications": {
-                "batch_daily": True,
-                "flush_time": "14:30",
+                "scan_summary": True,
             },
             "file_watcher": {
                 "enabled": True,
@@ -293,8 +292,8 @@ class TestFormatJsonschemaPath:
 
     def test_multiple_string_elements(self):
         """Test path with multiple string elements."""
-        result = _format_jsonschema_path(["settings", "notifications", "flush_time"])
-        assert result == "settings.notifications.flush_time"
+        result = _format_jsonschema_path(["settings", "notifications", "scan_summary"])
+        assert result == "settings.notifications.scan_summary"
 
     def test_single_integer_element(self):
         """Test path with a single integer element (array index)."""
@@ -517,8 +516,7 @@ class TestConfigSchemaSettings:
                     "episode_template": "{title}.{ext}",
                 },
                 "notifications": {
-                    "batch_daily": True,
-                    "flush_time": "14:30",
+                    "scan_summary": True,
                 },
                 "file_watcher": {
                     "enabled": True,
@@ -739,70 +737,13 @@ class TestConfigSchemaSettings:
         report = validate_config_data(config)
         assert report.is_valid is False
 
-    def test_notifications_flush_time_valid_format(self):
-        """Test that notifications.flush_time accepts valid HH:MM format."""
+    def test_notifications_scan_summary_boolean(self):
+        """Test that notifications.scan_summary accepts boolean."""
         config = {
             "sports": [],
             "settings": {
                 "notifications": {
-                    "flush_time": "14:30",
-                },
-            },
-        }
-        report = validate_config_data(config)
-        assert report.is_valid is True
-
-    def test_notifications_flush_time_with_seconds(self):
-        """Test that notifications.flush_time accepts HH:MM:SS format."""
-        config = {
-            "sports": [],
-            "settings": {
-                "notifications": {
-                    "flush_time": "14:30:45",
-                },
-            },
-        }
-        report = validate_config_data(config)
-        assert report.is_valid is True
-
-    def test_notifications_flush_time_invalid_format(self):
-        """Test that invalid flush_time format fails validation."""
-        config = {
-            "sports": [],
-            "settings": {
-                "notifications": {
-                    "flush_time": "invalid",
-                },
-            },
-        }
-        report = validate_config_data(config)
-        assert report.is_valid is False
-        # Find the error related to flush_time
-        flush_errors = [e for e in report.errors if "flush_time" in e.path]
-        assert len(flush_errors) >= 1
-
-    def test_notifications_flush_time_invalid_hour(self):
-        """Test that flush_time with invalid hour fails validation."""
-        config = {
-            "sports": [],
-            "settings": {
-                "notifications": {
-                    "flush_time": "25:00",
-                },
-            },
-        }
-        report = validate_config_data(config)
-        assert report.is_valid is False
-        flush_errors = [e for e in report.errors if "flush_time" in e.path]
-        assert len(flush_errors) >= 1
-
-    def test_notifications_batch_daily_boolean(self):
-        """Test that notifications.batch_daily accepts boolean."""
-        config = {
-            "sports": [],
-            "settings": {
-                "notifications": {
-                    "batch_daily": True,
+                    "scan_summary": True,
                 },
             },
         }
@@ -2099,39 +2040,6 @@ class TestValidateSemantics:
         # Schema validation should catch non-string show_slug
         assert report.is_valid is False
 
-    def test_settings_flush_time_validation(self):
-        """Test that invalid flush_time triggers error."""
-        config = {
-            "sports": [],
-            "settings": {
-                "notifications": {
-                    "flush_time": "25:00"
-                }
-            }
-        }
-        report = ValidationReport()
-        _validate_semantics(config, report)
-
-        flush_errors = [e for e in report.errors if e.code == "flush-time"]
-        assert len(flush_errors) == 1
-        assert flush_errors[0].path == "settings.notifications.flush_time"
-
-    def test_valid_flush_time_no_error(self):
-        """Test that valid flush_time does not trigger error."""
-        config = {
-            "sports": [],
-            "settings": {
-                "notifications": {
-                    "flush_time": "14:30"
-                }
-            }
-        }
-        report = ValidationReport()
-        _validate_semantics(config, report)
-
-        flush_errors = [e for e in report.errors if e.code == "flush-time"]
-        assert len(flush_errors) == 0
-
     def test_empty_config_no_errors(self):
         """Test that minimal empty config produces no semantic errors."""
         config = {
@@ -2152,7 +2060,7 @@ class TestValidateSemantics:
             },
             "settings": {
                 "notifications": {
-                    "flush_time": "14:30:00"
+                    "scan_summary": True
                 }
             },
             "sports": [
@@ -2236,9 +2144,6 @@ class TestValidateConfigDataIntegration:
             ],
             "settings": {
                 "link_mode": "bad_mode",
-                "notifications": {
-                    "flush_time": "25:99"
-                },
                 "file_watcher": {
                     "debounce_seconds": -5
                 }
@@ -2247,7 +2152,7 @@ class TestValidateConfigDataIntegration:
         report = validate_config_data(config)
 
         assert report.is_valid is False
-        assert len(report.errors) >= 5
+        assert len(report.errors) >= 4
 
     def test_errors_have_correct_paths(self):
         """Test that errors include correct paths to problematic fields."""
@@ -2258,11 +2163,6 @@ class TestValidateConfigDataIntegration:
                     "show_slug": ""
                 }
             ],
-            "settings": {
-                "notifications": {
-                    "flush_time": "invalid"
-                }
-            }
         }
         report = validate_config_data(config)
 
@@ -2271,7 +2171,6 @@ class TestValidateConfigDataIntegration:
         error_paths = [e.path for e in report.errors]
         # show_slug empty string should be caught by schema minLength
         assert "sports[0].show_slug" in error_paths
-        assert "settings.notifications.flush_time" in error_paths
 
     def test_errors_have_correct_codes(self):
         """Test that errors include appropriate error codes."""
@@ -2361,8 +2260,7 @@ class TestValidateConfigDataIntegration:
                     "episode_template": "{title}.{ext}"
                 },
                 "notifications": {
-                    "batch_daily": True,
-                    "flush_time": "14:30:00"
+                    "scan_summary": True
                 },
                 "file_watcher": {
                     "enabled": True,

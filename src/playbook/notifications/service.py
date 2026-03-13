@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import fnmatch
 import logging
 import os
 from collections import defaultdict
@@ -15,7 +14,7 @@ from .email import EmailTarget
 from .plex_scan import PlexScanTarget
 from .slack import SlackTarget
 from .types import NotificationEvent, NotificationTarget
-from .utils import _normalize_mentions_map
+from .utils import _normalize_mentions_map, resolve_sport_match
 from .webhook import GenericWebhookTarget
 
 LOGGER = logging.getLogger(__name__)
@@ -44,30 +43,36 @@ class ScanSummary:
         if not self.events:
             return {}
 
-        # Count by sport and type
         lines = []
         total_new = 0
         total_replaced = 0
+        total_errors = 0
 
         for sport_id in sorted(self.by_sport.keys()):
             sport_events = self.by_sport[sport_id]
             sport_name = sport_events[0].sport_name if sport_events else sport_id
 
-            new_count = sum(1 for e in sport_events if e.event_type == "new" and not e.replaced)
-            replaced_count = sum(1 for e in sport_events if e.replaced)
-            changed_count = sum(1 for e in sport_events if e.event_type == "changed")
+            new_count = sum(1 for e in sport_events if not e.replaced and e.event_type in ("new", "changed"))
+            upgrade_count = sum(
+                1 for e in sport_events if e.replaced and e.replace_reason in ("quality_upgrade", "legacy")
+            )
+            proper_count = sum(1 for e in sport_events if e.replaced and e.replace_reason == "proper_repack")
+            fix_count = sum(1 for e in sport_events if e.replaced and e.replace_reason == "mismatch_correction")
             error_count = sum(1 for e in sport_events if e.event_type == "error")
 
-            total_new += new_count + changed_count
-            total_replaced += replaced_count
+            total_new += new_count
+            total_replaced += upgrade_count + proper_count + fix_count
+            total_errors += error_count
 
             parts = []
             if new_count:
                 parts.append(f"{new_count} new")
-            if replaced_count:
-                parts.append(f"{replaced_count} replaced")
-            if changed_count:
-                parts.append(f"{changed_count} changed")
+            if upgrade_count:
+                parts.append(f"{upgrade_count} upgraded")
+            if proper_count:
+                parts.append(f"{proper_count} proper/repack")
+            if fix_count:
+                parts.append(f"{fix_count} fixed")
             if error_count:
                 parts.append(f"{error_count} errors")
 
@@ -75,13 +80,46 @@ class ScanSummary:
                 lines.append(f"**{sport_name}**: {', '.join(parts)}")
 
         description = "\n".join(lines) if lines else "No files processed"
+        footer_parts = []
+        if total_new:
+            footer_parts.append(f"{total_new} new")
+        if total_replaced:
+            footer_parts.append(f"{total_replaced} replaced")
+        if total_errors:
+            footer_parts.append(f"{total_errors} errors")
 
         return {
             "title": "Playbook Scan Complete",
             "description": description,
-            "color": 0x5865F2,  # Discord blurple
-            "footer": {"text": f"Total: {total_new} new, {total_replaced} replaced"},
+            "color": 0x5865F2,
+            "footer": {"text": f"Total: {', '.join(footer_parts)}" if footer_parts else "No activity"},
         }
+
+    def format_text_summary(self) -> str:
+        """Format summary as plain text for non-Discord targets (Slack, Email, Webhook)."""
+        if not self.events:
+            return "Playbook Scan Complete — No files processed"
+
+        lines = ["Playbook Scan Complete", ""]
+        for sport_id in sorted(self.by_sport.keys()):
+            sport_events = self.by_sport[sport_id]
+            sport_name = sport_events[0].sport_name if sport_events else sport_id
+
+            new_count = sum(1 for e in sport_events if not e.replaced and e.event_type in ("new", "changed"))
+            replaced_count = sum(1 for e in sport_events if e.replaced)
+            error_count = sum(1 for e in sport_events if e.event_type == "error")
+
+            parts = []
+            if new_count:
+                parts.append(f"{new_count} new")
+            if replaced_count:
+                parts.append(f"{replaced_count} replaced")
+            if error_count:
+                parts.append(f"{error_count} errors")
+            if parts:
+                lines.append(f"  {sport_name}: {', '.join(parts)}")
+
+        return "\n".join(lines)
 
 
 class NotificationService:
@@ -106,8 +144,8 @@ class NotificationService:
         )
         self._throttle_map = settings.throttle
         self._daily_sent: dict[tuple[str, str], int] = {}
-        self._summary_mode = getattr(settings, "summary_mode", False)
         self._scan_summary = ScanSummary()
+        self._scan_summary_enabled = getattr(settings, "scan_summary", True)
 
     @property
     def enabled(self) -> bool:
@@ -126,16 +164,8 @@ class NotificationService:
             )
             return
 
-        # In summary mode, collect events instead of sending immediately
-        if self._summary_mode:
-            self._scan_summary.add(event)
-            LOGGER.debug(
-                "Collected notification for summary | sport=%s episode=%s event=%s",
-                event.sport_id,
-                event.episode,
-                event.event_type,
-            )
-            return
+        # Always collect for scan summary
+        self._scan_summary.add(event)
 
         # Separate infrastructure targets (plex_scan, autoscan) from user-facing ones.
         # Infrastructure targets always fire — they should never be rate-limited.
@@ -188,11 +218,13 @@ class NotificationService:
             )
 
     def send_summary(self) -> None:
-        """Send a summary notification for all collected events.
+        """Send a scan summary notification if there were any events.
 
-        Only used when summary_mode is enabled. Call at the end of each scan.
+        Called at the end of each scan. Only sends if scan_summary is enabled
+        and there were actual events during the scan.
         """
-        if not self._summary_mode:
+        if not self._scan_summary_enabled:
+            self._scan_summary.clear()
             return
 
         if not self._scan_summary:
@@ -200,25 +232,42 @@ class NotificationService:
             return
 
         LOGGER.info(
-            "Sending summary notification for %d events across %d sports",
+            "Sending scan summary notification for %d events across %d sports",
             len(self._scan_summary),
             len(self._scan_summary.by_sport),
         )
 
         embed = self._scan_summary.format_discord_embed()
+        text_summary = self._scan_summary.format_text_summary()
+
+        # Infrastructure targets (plex_scan, autoscan) don't need summaries
+        _INFRA_TARGETS = {"plex_scan", "autoscan"}
 
         successes: list[str] = []
         for target in self._targets:
-            if not target.enabled():
+            if not target.enabled() or target.name in _INFRA_TARGETS:
                 continue
             try:
-                # For Discord targets, send the embed directly
                 if hasattr(target, "send_embed"):
+                    # Discord — send rich embed
                     target.send_embed(embed)
                 else:
-                    # For other targets, create a simple text summary
-                    summary_text = self._format_text_summary()
-                    target.send_raw(summary_text) if hasattr(target, "send_raw") else None
+                    # Slack, Email, Webhook — send as a simple text event
+                    summary_event = NotificationEvent(
+                        sport_id="playbook",
+                        sport_name="Playbook",
+                        show_title="Scan Summary",
+                        season="",
+                        session="",
+                        episode=text_summary,
+                        summary=text_summary,
+                        destination="",
+                        source="",
+                        action="summary",
+                        link_mode="",
+                        event_type="summary",
+                    )
+                    target.send(summary_event)
             except Exception as exc:  # pragma: no cover
                 LOGGER.warning("Summary notification to %s failed: %s", target.name, exc)
             else:
@@ -228,15 +277,6 @@ class NotificationService:
 
         if successes:
             LOGGER.debug("Summary notification sent to: %s", ", ".join(successes))
-
-    def _format_text_summary(self) -> str:
-        """Format summary as plain text for non-Discord targets."""
-        lines = ["Playbook Scan Complete", ""]
-        for sport_id in sorted(self._scan_summary.by_sport.keys()):
-            events = self._scan_summary.by_sport[sport_id]
-            sport_name = events[0].sport_name if events else sport_id
-            lines.append(f"  {sport_name}: {len(events)} file(s)")
-        return "\n".join(lines)
 
     def _build_targets(
         self,
@@ -259,13 +299,10 @@ class NotificationService:
             if target_type == "discord":
                 webhook = self._discord_webhook_from(entry)
                 if webhook:
-                    batch = entry.get("batch")
                     mentions_override = _normalize_mentions_map(entry.get("mentions"))
                     target = DiscordTarget(
                         webhook,
-                        cache_dir=cache_dir,
                         settings=self._settings,
-                        batch=batch if batch is not None else entry.get("batch_daily"),
                         mentions=mentions_override if mentions_override else None,
                     )
                 else:
@@ -329,14 +366,10 @@ class NotificationService:
         return targets
 
     def _merge_plex_scan_config(self, target_config: dict[str, Any]) -> dict[str, Any]:
-        """Merge integrations.plex settings as defaults for plex_scan target.
-
-        Values in target_config take precedence over integrations settings.
-        """
+        """Merge integrations.plex settings as defaults for plex_scan target."""
         plex = self._integrations.plex
         merged: dict[str, Any] = {}
 
-        # Set defaults from integrations.plex (connection settings)
         if plex.url:
             merged["url"] = plex.url
         if plex.token:
@@ -345,25 +378,17 @@ class NotificationService:
             merged["library_id"] = plex.library_id
         if plex.library_name:
             merged["library_name"] = plex.library_name
-
-        # Set defaults from integrations.plex.scan_on_activity (feature-specific)
         if plex.scan_on_activity.rewrite:
             merged["rewrite"] = plex.scan_on_activity.rewrite
 
-        # Target-specific values override integrations defaults
         merged.update(target_config)
-
         return merged
 
     def _merge_autoscan_config(self, target_config: dict[str, Any]) -> dict[str, Any]:
-        """Merge integrations.autoscan settings as defaults for autoscan target.
-
-        Values in target_config take precedence over integrations settings.
-        """
+        """Merge integrations.autoscan settings as defaults for autoscan target."""
         autoscan = self._integrations.autoscan
         merged: dict[str, Any] = {}
 
-        # Set defaults from integrations.autoscan
         if autoscan.url:
             merged["url"] = autoscan.url
         if autoscan.trigger:
@@ -377,9 +402,7 @@ class NotificationService:
         if autoscan.rewrite:
             merged["rewrite"] = autoscan.rewrite
 
-        # Target-specific values override integrations defaults
         merged.update(target_config)
-
         return merged
 
     def _auto_create_integration_targets(
@@ -389,15 +412,9 @@ class NotificationService:
         has_explicit_plex: bool,
         has_explicit_autoscan: bool,
     ) -> list[NotificationTarget]:
-        """Auto-create targets from integrations when scan_on_activity/enabled is true.
-
-        This allows users to configure integrations in one place and have them
-        automatically trigger on file activity without duplicating config in
-        notifications.targets.
-        """
+        """Auto-create targets from integrations when scan_on_activity/enabled is true."""
         auto_targets: list[NotificationTarget] = []
 
-        # Auto-create Plex scan target if scan_on_activity.enabled and no explicit target
         plex = self._integrations.plex
         if plex.scan_on_activity.enabled and not has_explicit_plex:
             config = {
@@ -415,7 +432,6 @@ class NotificationService:
             else:
                 LOGGER.debug("Plex scan_on_activity enabled but target not functional (missing url/token/library)")
 
-        # Auto-create Autoscan target if enabled and no explicit target
         autoscan = self._integrations.autoscan
         if autoscan.enabled and not has_explicit_autoscan:
             if autoscan.url:
@@ -468,35 +484,14 @@ class NotificationService:
         default = self._throttle_map.get("default")
         default_limit = max(0, int(default)) if default is not None else None
 
-        # 1) Exact sport id match.
-        if sport_id in self._throttle_map:
-            sport_limit = max(0, int(self._throttle_map[sport_id]))
+        # Use shared sport matching (exact -> prefix -> wildcard)
+        match = resolve_sport_match(sport_id, {k: v for k, v in self._throttle_map.items() if k != "default"})
+        if match is not None:
+            sport_limit = max(0, int(match))
             if default_limit is None:
                 return sport_limit
             return min(sport_limit, default_limit)
 
-        # 2) Parent prefixes (e.g. "premier_league" for "premier_league_2025").
-        for candidate in self._sport_prefixes(sport_id):
-            if candidate in self._throttle_map:
-                sport_limit = max(0, int(self._throttle_map[candidate]))
-                if default_limit is None:
-                    return sport_limit
-                return min(sport_limit, default_limit)
-
-        # 3) Wildcard patterns.
-        wildcard_matches = [
-            (pattern, value)
-            for pattern, value in self._throttle_map.items()
-            if self._is_wildcard(pattern) and fnmatch.fnmatchcase(sport_id, pattern)
-        ]
-        if wildcard_matches:
-            wildcard_matches.sort(key=lambda item: len(item[0]), reverse=True)
-            sport_limit = max(0, int(wildcard_matches[0][1]))
-            if default_limit is None:
-                return sport_limit
-            return min(sport_limit, default_limit)
-
-        # 4) Default fallback.
         return default_limit if default_limit is not None else 0
 
     @staticmethod
@@ -505,15 +500,3 @@ class NotificationService:
         if timestamp.tzinfo is None:
             timestamp = timestamp.replace(tzinfo=UTC)
         return timestamp.astimezone(UTC).date().isoformat()
-
-    @staticmethod
-    def _is_wildcard(value: str) -> bool:
-        return any(char in value for char in "*?[")
-
-    @staticmethod
-    def _sport_prefixes(sport_id: str) -> list[str]:
-        parts = sport_id.split("_")
-        prefixes: list[str] = []
-        for end in range(len(parts) - 1, 0, -1):
-            prefixes.append("_".join(parts[:end]))
-        return prefixes

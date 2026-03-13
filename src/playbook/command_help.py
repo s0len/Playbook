@@ -237,7 +237,7 @@ VALIDATE_CONFIG_COMMAND_HELP = CommandHelp(
         ),
         (
             "Automated testing: validate sample config in unit tests",
-            "python -m playbook.cli validate-config --config ./config/playbook.sample.yaml",
+            "python -m playbook.cli validate-config --config ./config/config.sample.yaml",
         ),
         (
             "Multi-environment: validate all configs in a loop (dev, staging, prod)",

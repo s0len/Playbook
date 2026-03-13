@@ -6,7 +6,7 @@ from email.message import EmailMessage
 from typing import Any
 
 from .types import NotificationEvent, NotificationTarget
-from .utils import _flatten_event
+from .utils import _flatten_event, replace_reason_label
 
 LOGGER = logging.getLogger(__name__)
 
@@ -73,6 +73,12 @@ class EmailTarget(NotificationTarget):
             f"Destination: {event.destination}",
             f"Source: {event.source}",
         ]
+        if event.quality_str:
+            lines.append(f"Quality: {event.quality_str}")
+        if event.replaced and event.replace_reason:
+            lines.append(f"Replace Reason: {replace_reason_label(event.replace_reason).title()}")
+        if event.old_quality_str and event.quality_str:
+            lines.append(f"Upgrade: {event.old_quality_str} → {event.quality_str}")
         if event.skip_reason:
             lines.append(f"Reason: {event.skip_reason}")
         if event.trace_path:

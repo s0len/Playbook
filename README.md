@@ -17,10 +17,11 @@ Sports releases are messy:
 - Manual renaming and moving every day
 
 Playbook fixes that by combining:
-- Metadata-driven matching (show/season/episode model)
-- Built-in sport pattern packs (F1, MotoGP, UFC, NFL, NBA, NHL, Premier League, and more)
+- Metadata-driven matching via TVSportsDB API (show/season/episode model)
+- Built-in sport pattern packs (F1, Formula E, MotoGP, UFC, NFL, NBA, NHL, Premier League, Champions League, IndyCar, WSBK, WTA, Figure Skating, and more)
 - Smart linking (`hardlink`, `copy`, `symlink`) into your Plex structure
-- Optional notifications and Plex/Kometa integrations
+- Quality-based upgrade scoring (resolution, framerate, codec, source, release group)
+- Optional notifications (Discord, Slack, Webhook, Email) and Plex/Autoscan integrations
 
 ## TL;DR Quick Start (Docker Compose)
 
@@ -86,10 +87,10 @@ docker run -d \
 
 ## Storage Model (Important)
 
-Playbook now separates persistent state from cache:
+Playbook separates persistent state from cache:
 
-- `state_dir` (default: `/config/state`): SQLite databases and durable app state.
-- `cache_dir` (default: `/data/cache`): metadata cache and trace artifacts.
+- `state_dir` (default: `/config/state`): SQLite databases and durable app state. **Must persist** across restarts.
+- `cache_dir` (default: `/data/cache`): Metadata cache and trace artifacts. Disposable/temporary.
 
 This means you can keep `cache_dir` disposable/temporary while preserving match history and manual overrides in `state_dir`.
 
@@ -104,11 +105,13 @@ This means you can keep `cache_dir` disposable/temporary while preserving match 
 - [Architecture at a Glance](#architecture-at-a-glance)
 - [Configuration Deep Dive](#configuration-deep-dive)
 - [Run Modes & CLI](#run-modes--cli)
+- [Plex Library Setup](#plex-library-setup)
+- [Adding New Sports](#adding-new-sports)
 - [Troubleshooting & FAQ](#troubleshooting--faq)
 
 ## Kubernetes (Flux HelmRelease)
 
-Use the [bjw-s/app-template](https://github.com/bjw-s/helm-charts/tree/main/charts/other/app-template) chart with Flux to keep a cluster deployment reconciled. The example below mirrors the Docker settings and keeps persistent state under `/config`:
+Use the [bjw-s/app-template](https://github.com/bjw-s/helm-charts/tree/main/charts/other/app-template) chart with Flux to keep a cluster deployment reconciled. The example below mirrors the Docker settings and keeps persistent state under `/settings`:
 
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
@@ -121,89 +124,161 @@ spec:
   chartRef:
     kind: OCIRepository
     name: app-template
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+
   values:
+    serviceAccount:
+      playbook: {}
+
     controllers:
-      main:
+      playbook:
+        serviceAccount:
+          identifier: playbook
         type: deployment
+        annotations:
+          reloader.stakater.com/auto: "true"
         containers:
           app:
             image:
               repository: ghcr.io/s0len/playbook
-              tag: develop@sha256:586d8e06fae7d156d47130ed18b1a619a47d2c5378345e3f074ee6c282f09f02
+              tag: develop  # Pin to a digest for production: tag: develop@sha256:...
               pullPolicy: Always
             env:
-              WATCH_MODE: true
-              LOG_LEVEL: INFO
-              CONFIG_PATH: /config/config.yaml
-              CACHE_DIR: /data/cache
-              STATE_DIR: /config/state
-              LOG_DIR: /settings/logs
+              CONFIG_PATH: /settings/config.yaml
               SOURCE_DIR: /data/torrents/sport
               DESTINATION_DIR: /data/media/sport
+              CACHE_DIR: /settings/cache
+              STATE_DIR: /settings/state
+              LOG_DIR: /tmp
+              LOG_LEVEL: INFO
+              GUI_PORT: &port 8765
+              PLEX_URL: http://plex:32400
+              PLEX_LIBRARY_NAME: Sport
             envFrom:
               - secretRef:
-                  name: playbook-secret
+                  name: playbook-secret  # DISCORD_WEBHOOK_URL, PLEX_TOKEN, etc.
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: *port
+                  initialDelaySeconds: 10
+                  periodSeconds: 5
+                  failureThreshold: 30
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: *port
+                  periodSeconds: 15
+                  failureThreshold: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: *port
+                  periodSeconds: 10
+                  failureThreshold: 3
+
+    service:
+      app:
+        controller: *app
+        ports:
+          http:
+            port: *port
+
+    route:
+      app:
+        hostnames:
+          - "{{ .Release.Name }}.${SECRET_DOMAIN}"
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+            sectionName: https
+
+    defaultPodOptions:
+      automountServiceAccountToken: true
+      enableServiceLinks: false
+      securityContext:
+        runAsUser: 568
+        runAsGroup: 568
+        runAsNonRoot: true
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+
     persistence:
       settings:
-        existingClaim: playbook-settings
+        existingClaim: playbook-settings   # 1Gi ceph-block PVC
         globalMounts:
           - path: /settings
+      tmp:
+        type: emptyDir
+        medium: Memory
+        globalMounts:
+          - path: /tmp
       data:
         type: nfs
         server: "${TRUENAS_IP}"
         path: /mnt/rust/data
         globalMounts:
           - path: /data
-      config:
-        type: configMap
-        name: playbook-configmap
-        globalMounts:
-          - path: /config/config.yaml
-            subPath: config.yaml
-            readOnly: true
 ```
 
 Quick checklist:
 
-- Create a `playbook-secret` with any sensitive values (`kubectl create secret generic ... --from-literal=API_TOKEN=...`).
-- Mount a `playbook-configmap` containing your `config.yaml` (or use an `externalSecret`).
-- Backing storage: persist `/config` (for `state_dir`) and choose persistent or ephemeral storage for `/data/cache`.
+- Create a `playbook-secret` with sensitive values (`kubectl create secret generic playbook-secret --from-literal=DISCORD_WEBHOOK_URL=... --from-literal=PLEX_TOKEN=...`), or use an ExternalSecret backed by 1Password/Vault/etc.
+- Persist `/settings` (PVC) for the SQLite state databases. Cache lives under the same PVC in this example.
 - Enable `file_watcher.enabled` (or set `WATCH_MODE=true`) to keep Playbook running continuously; leave it disabled for ad-hoc batch runs.
-- Add `reloader.stakater.com/auto: "true"` (already in the example) to hot-reload when the config map changes.
+- Add `reloader.stakater.com/auto: "true"` to hot-reload when the config map or secrets change.
+- Set `fsGroupChangePolicy: OnRootMismatch` for Ceph RBD PVCs to avoid slow recursive permission changes.
 
 ## Architecture at a Glance
 
 Under the hood, Playbook follows this flow:
 
 ```text
-┌────────────────┐    fetch + cache     ┌─────────────────────┐
-│ Remote YAML    │ ───────────────────▶ │ Metadata Normalizer │
-└────────────────┘                      └────────┬────────────┘
-                                               │ normalized Show/Season/Episode
-                                       ┌───────▼────────┐
-   source files + globs + aliases       │ Matching Engine │
-──────────────────────────────────────▶ │  (regex + TTL)  │
-                                       └───────┬────────┘
-                                               │ context (season, episode, templates)
-                                       ┌───────▼────────┐
-                                       │ Templating     │
-                                       │ & Sanitization │
-                                       └───────┬────────┘
-                                               │ destination path
-                                       ┌───────▼────────┐
-                                       │ Link/Copy/Sym  │
-                                       └────────────────┘
+┌─────────────────┐   fetch + cache    ┌─────────────────────┐
+│ TVSportsDB API  │ ──────────────────▶ │ Metadata Normalizer │
+└─────────────────┘                     └────────┬────────────┘
+                                                 │ normalized Show/Season/Episode
+                                         ┌───────▼────────┐
+   source files + globs + aliases        │ Matching Engine │
+────────────────────────────────────────▶│  (regex + fuzzy)│
+                                         └───────┬────────┘
+                                                 │ context (season, episode, templates)
+                                         ┌───────▼────────┐
+                                         │ Templating     │
+                                         │ & Sanitization │
+                                         └───────┬────────┘
+                                                 │ destination path
+                                         ┌───────▼────────┐
+                                         │ Link/Copy/Sym  │
+                                         └────────────────┘
 ```
 
-1. **Metadata fetch & cache**: remote YAML is downloaded with `requests`, cached on disk, and refreshed when TTLs expire.
-2. **Normalization**: structured dataclasses infer round numbers, preserve summaries, and attach aliases.
-3. **Matching**: regex capture groups, alias tables, and fuzzy matching link filenames to metadata episodes.
+1. **Metadata fetch & cache**: Playbook fetches show/season/episode data from the [TVSportsDB](https://tvsportsdb.com) REST API via `httpx`, caches responses in a SQLite store with TTL and ETag support. Legacy YAML URL metadata is still supported for backwards compatibility.
+2. **Normalization**: structured dataclasses infer round numbers, preserve summaries, and attach aliases (including team aliases for sports like NHL and Premier League).
+3. **Matching**: regex capture groups, alias tables, and fuzzy matching (rapidfuzz) link filenames to metadata episodes.
 4. **Templating**: rich context feeds customizable templates for root folders, season directories, and filenames.
 5. **Action**: files are hardlinked (default), copied, or symlinked into the library, with quality-based upgrade rules.
 
 ## Configuration Deep Dive
 
-Start with `config/playbook.sample.yaml`. The schema mirrors `playbook.config` dataclasses.
+Start with `config/config.sample.yaml`. The schema mirrors `playbook.config` dataclasses.
 
 ### 1. Global Settings
 
@@ -211,133 +286,228 @@ Start with `config/playbook.sample.yaml`. The schema mirrors `playbook.config` d
 |-------|-------------|---------|
 | `source_dir` | Root directory containing downloads to normalize. | `/data/source` |
 | `destination_dir` | Library root where organized folders/files are created. | `/data/destination` |
-| `cache_dir` | Metadata cache directory (`metadata/<hash>.json`). Safe to delete to force refetch. | `/data/cache` |
+| `cache_dir` | Metadata cache directory. Safe to delete to force refetch. | `/var/cache/playbook` |
 | `state_dir` | Persistent state directory for SQLite DBs and durable runtime state. | `/config/state` |
+| `theme` | GUI color theme. | `swizzin` |
 | `dry_run` | When `true`, logs intent but skips filesystem writes. | `false` |
 | `link_mode` | Default link behavior: `hardlink`, `copy`, or `symlink`. | `hardlink` |
-| `notifications.batch_daily` | When `true`, queue per-sport notifications for the day and edit a single Discord message instead of posting every file. | `false` |
-| `notifications.flush_time` | Local time boundary (`HH:MM`) used to roll daily batches forward. Entries before this time count toward the previous day. | `"00:00"` |
-| `notifications.mentions` | Map `sport_id` (supports glob patterns, plus `default`) to a Discord mention string (role ID, `@here`, etc.) to prepend to matching notifications. | `{}` |
-| `file_watcher.enabled` | When `true`, Playbook keeps running and reacts to filesystem events; when `false`, the CLI performs a single pass and exits. | `false` |
-| `file_watcher.paths` | Directories to observe; defaults to `source_dir` when empty. Relative entries resolve under `source_dir`. | `[]` |
-| `file_watcher.include` / `ignore` | Glob filters to allow/skip events (e.g. ignore `*.part`). | `[]` / `["*.part","*.tmp"]` |
-| `file_watcher.debounce_seconds` | Minimum seconds between watcher-triggered runs. Batches bursts of events into a single processor pass. | `5` |
-| `file_watcher.reconcile_interval` | Forces a full scan every _N_ seconds even if no events arrive, ensuring missed events are caught. | `900` |
+| `use_default_sports` | Auto-load all built-in sports from pattern templates. | `true` |
+| `disabled_sports` | List of sport IDs to exclude from defaults (e.g. `["formula_e", "moto2"]`). | `[]` |
+| `force_reprocess` | Bypass processed-file database and reprocess all files. | `false` |
+| `include_patterns` | Only process files matching these globs (empty = all). E.g. `["**/*.mkv", "**/*.mp4"]`. | `[]` |
+| `ignore_patterns` | Skip files matching these globs. E.g. `["*sample*", "*.part"]`. | `[]` |
+| `file_watcher.enabled` | When `true`, Playbook keeps running and reacts to filesystem events; when `false`, a single pass and exit. | `false` |
+| `file_watcher.paths` | Directories to observe; defaults to `source_dir` when empty. | `[]` |
+| `file_watcher.debounce_seconds` | Minimum seconds between watcher-triggered runs. | `5` |
+| `file_watcher.reconcile_interval` | Forces a full scan every _N_ seconds even if no events arrive. | `900` |
 | `destination.*` | Default templates for root folder, season folder, and filename. | See sample |
 
-Define Discord notifications under `notifications.targets`: each entry describes a destination (single-event or batched) and can have its own mention overrides. Enable `notifications.batch_daily` if you prefer a rolling per-day embed instead of individual posts. Use `notifications.flush_time` to control when the “day” ends (useful for overnight events).
+### 2. Integrations
 
-Use `notifications.mentions` to opt specific Discord roles or users into certain sports. Entries are keyed by the sport’s ID (plus an optional `default` fallback) and the value is any mentionable string (`<@&ROLE_ID>`, `@here`, etc.). Keys can include shell-style wildcards (e.g. `formula1_*`), and Playbook automatically falls back to the base ID before any variant suffix (`premier_league` also covers `premier_league_2025_26`). Mentions are prepended to both single-event and batched messages, so subscribers only get pinged for the sports they care about:
+The `integrations` section configures direct connections to media servers. These are separate from notifications — integrations interact with APIs, while notifications alert users.
+
+#### Plex Integration
+
+```yaml
+settings:
+  integrations:
+    plex:
+      url: ${PLEX_URL:-http://plex:32400}
+      token: ${PLEX_TOKEN:-}
+      library_name: ${PLEX_LIBRARY_NAME:-Sports}
+
+      # Sync metadata (titles, summaries, posters) from TVSportsDB to Plex
+      metadata_sync:
+        enabled: false
+        timeout: 15
+        scan_wait: 5        # Seconds to wait after triggering library scan
+        lock_poster_fields: false  # Prevent Plex from overwriting custom posters
+
+      # Trigger Plex partial library scan when files are linked
+      scan_on_activity:
+        enabled: false
+        rewrite: []          # Path mapping if Plex sees different mount paths
+          # - from: /data/destination
+          #   to: /mnt/plex/media
+```
+
+**Metadata Sync** pushes titles, sort titles, summaries, posters, and backgrounds from TVSportsDB to Plex. It uses fingerprint-based change detection to only update what has changed, and preserves Plex title casing.
+
+**Scan on Activity** triggers partial Plex library scans via the Plex API whenever files are linked, so Plex picks up new files immediately without waiting for scheduled scans.
+
+#### Autoscan Integration
+
+```yaml
+settings:
+  integrations:
+    autoscan:
+      enabled: false
+      url: ${AUTOSCAN_URL:-http://autoscan:3030}
+      trigger: manual
+      username: ${AUTOSCAN_USERNAME:-}
+      password: ${AUTOSCAN_PASSWORD:-}
+      rewrite: []
+```
+
+Autoscan support mirrors the [manual trigger endpoint](https://github.com/Cloudbox/autoscan?tab=readme-ov-file#manual): Playbook issues a `POST /triggers/<name>?dir=...` call with the directory that just received a processed file.
+
+### 3. Notifications
+
+```yaml
+settings:
+  notifications:
+    scan_summary: true     # Send a summary after each scan with activity
+    targets:
+      - type: discord
+        webhook_env: DISCORD_WEBHOOK_URL
+        # mentions:
+        #   formula1: "<@&123456789>"
+      # - type: slack
+      #   webhook_url: https://hooks.slack.com/...
+      # - type: webhook
+      #   url: https://example.com/webhook
+      # - type: email
+      #   smtp_host: smtp.gmail.com
+      # - type: plex_scan      # Alternative way to configure Plex scans
+      # - type: autoscan       # Alternative way to configure Autoscan
+```
+
+Supported `type` values:
+
+- `discord` — Rich embeds with optional per-sport mentions
+- `slack` — Simple text payload, optional template
+- `webhook` — Generic JSON payload, fully templatable
+- `email` — SMTP with configurable subject/body templates
+- `autoscan` — Ping Autoscan to rescan a directory (alternative to `integrations.autoscan`)
+- `plex_scan` (or `plex`) — Trigger Plex partial library scans (alternative to `integrations.plex.scan_on_activity`)
+
+> **Note:** If you configure Plex or Autoscan under `integrations`, Playbook auto-creates the corresponding notification targets. You only need entries under `notifications.targets` if you want to override settings or use multiple targets.
+
+#### Discord mentions
+
+Use `notifications.mentions` to opt specific Discord roles or users into certain sports. Entries are keyed by the sport's ID (plus an optional `default` fallback) and the value is any mentionable string (`<@&ROLE_ID>`, `@here`, etc.). Keys can include shell-style wildcards (e.g. `formula1_*`), and Playbook automatically falls back to the base ID before any variant suffix (`premier_league` also covers `premier_league_2025_26`). Mentions are prepended to notification messages, so subscribers only get pinged for the sports they care about:
 
 ```yaml
 notifications:
   mentions:
     premier_league: "<@&123456789012345678>"
     formula1: "<@&222333444555666777>"   # Automatically applies to formula1_2025, formula1_2026, etc.
-    default: "@everyone"           # optional fallback when no explicit entry exists
-
-notifications:
-  targets:
-    - type: discord
-      webhook_env: DISCORD_WEBHOOK_URL      # Keep secrets in env vars/Secrets, not the config file.
-      # webhook_url: ${DISCORD_WEBHOOK_URL} # Optional inline expansion if you already template configs elsewhere.
-      mentions:
-        formula1: "<@&999>"        # Overrides/extends the global mentions for this webhook only.
-    - type: discord
-      webhook_url: https://discord.com/api/webhooks/alt
-      mentions:
-        premier_league: "<@&1234>"
+    default: "@everyone"                 # optional fallback when no explicit entry exists
 ```
 
 `webhook_env` tells Playbook to read the runtime environment for the URL, so you can mount a Kubernetes/Docker secret as env vars without ever writing the secret into the ConfigMap. If you already have your own templating flow you can continue to use `webhook_url` with `${VAR}` substitution; both options are supported.
 
-Older releases supported `settings.discord_webhook_url`; that field has been removed. If it still exists in your config you'll get a startup error — move the value into `notifications.targets` as shown above.
+### 4. Quality Profile
 
-#### Notification targets & Autoscan
-
-`notifications.targets` lets you fan out the same event to multiple destinations. Supported `type` values today are:
-
-- `discord` (single event or rolling daily embed, as above)
-- `slack` (simple text payload, optional template)
-- `webhook` (generic JSON payload, fully templatable)
-- `email` (SMTP with configurable subject/body templates)
-- `autoscan` (new) — ping the Autoscan manual trigger so Plex/Emby/Jellyfin rescans a directory as soon as Playbook links a file
-
-Autoscan support mirrors the [manual trigger endpoint](https://github.com/Cloudbox/autoscan?tab=readme-ov-file#manual): Playbook issues a `POST /triggers/<name>?dir=...` call with the directory that just received a processed file. Add a block like this under `notifications.targets`:
+Playbook can score files and automatically upgrade to higher-quality releases when better versions appear.
 
 ```yaml
-notifications:
-  targets:
-    - type: autoscan
-      url: http://autoscan:3030          # Base Autoscan URL (http/s)
-      trigger: manual                    # Optional when using the default manual endpoint
-      username: ${AUTOSCAN_USERNAME:-}   # Optional basic-auth credentials
-      password: ${AUTOSCAN_PASSWORD:-}
-      rewrite:
-        - from: ${DESTINATION_DIR:-/data/destination}
-          to: /mnt/unionfs/Media         # Rewrite Playbook’s path to what Autoscan/Plex can see
-      timeout: 10                        # Seconds before the request is considered failed (default 10)
-      verify_ssl: true                   # ⚠️ SECURITY WARNING: Setting false disables SSL/TLS verification and exposes you to MITM attacks - only for development with self-signed certs
+settings:
+  quality_profile:
+    enabled: false
+    scoring:
+      resolution:
+        2160p: 400
+        1080p: 300
+        720p: 200
+      source:
+        webdl: 90
+        webrip: 70
+        hdtv: 50
+      frame_rate:
+        "60": 100
+        "50": 75
+      codec:
+        x265: 25
+        x264: 0
+      bit_depth:
+        "10": 25
+      audio:
+        atmos: 40
+        ddp51: 25
+        aac: 0
+      broadcaster:
+        f1tv: 50
+        sky: 30
+      release_group: {}
+        # mwr: 50
+        # verum: 40
+      proper_bonus: 50
+      repack_bonus: 50
+      hdr_bonus: 50
+    # cutoff: 350     # Stop upgrading at this score
+    # min_score: 100  # Reject files below this score
 ```
 
-Every successful `new`/`changed` event sends the parent directory of the destination file as a `dir` query parameter. Add more rewrite entries if Autoscan lives inside a container with different mount points.
+Scoring dimensions: `resolution`, `source`, `frame_rate`, `codec`, `bit_depth`, `audio`, `broadcaster`, `release_group`, plus bonuses for `proper`, `repack`, and `hdr`. Quality profiles can be set globally or overridden per-sport.
 
-Enable `file_watcher.enabled` to react to filesystem events instead of relying on periodic scans. The watcher listens for `create`, `modify`, and `move` events under `source_dir` (or the directories listed in `file_watcher.paths`). Globs in `include`/`ignore` cull noisy files, `debounce_seconds` batches rapid-fire events into a single processor run, and `reconcile_interval` guarantees a periodic full scan just in case the platform drops events.
+### 5. TVSportsDB
 
-### 2. Sport Entries
-
-Each sport defines metadata, source detection, and matching behavior. Example below uses the Formula 1 2025 feed [^f1].
+Playbook fetches metadata from the [TVSportsDB](https://tvsportsdb.com) REST API. Configuration is optional — defaults work for most users:
 
 ```yaml
-- id: formula1_2025
-  name: Formula 1 2025
-  enabled: true
-  metadata:
-    url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/formula1/2025.yaml
-    show_key: Formula1 2025
-    ttl_hours: 12
-    season_overrides:
-      Pre-Season Testing:
-        season_number: 0
-        round: 0
-  source_globs:
-    - "Formula.1.*"
-  source_extensions:
-    - .mkv
-    - .mp4
-  allow_unmatched: false
-  file_patterns:
-    - regex: "(?i)^Formula\\.1\\.(?P<year>\\d{4})\\.Round(?P<round>\\d{2})\\.(?P<location>[^.]+)\\.(?P<session>[^.]+)"
-      description: Canonical multi-session weekend releases
-      season_selector:
-        mode: round
-        group: round
-      episode_selector:
-        group: session
-      session_aliases:
-        Race: ["Race"]
-        Sprint: ["Sprint.Race", "Sprint"]
-        Qualifying: ["Qualifying", "Quali"]
-        Free Practice 1: ["FP1", "Free.Practice.1"]
+settings:
+  tvsportsdb:
+    base_url: http://localhost:8000   # Default API endpoint
+    ttl_hours: 2                      # Cache TTL
+    timeout: 30                       # Request timeout in seconds
+```
+
+Sports reference metadata via `show_slug` or `show_slug_template` instead of raw YAML URLs:
+
+```yaml
+sports:
+  - id: formula1
+    show_slug_template: "formula-1-{year}"   # Dynamic: year captured from filename
+  - id: nba
+    show_slug: "nba-2025-2026"               # Static: single season
+```
+
+> **Legacy:** The `metadata.url` / `metadata.show_key` format still works for backwards compatibility but is deprecated.
+
+### 6. Sport Entries
+
+All built-in sports are **enabled by default** — most users only need to configure directories and integrations. To customize, add entries to the `sports` list:
+
+```yaml
+sports:
+  - id: formula1
+    quality_profile:
+      enabled: true
+      scoring:
+        release_group:
+          mwr: 100
+          smcgill1969: 80
+
+  - id: my_custom_sport
+    name: My Sport
+    show_slug: "my-sport-2025"
+    source_globs: ["MySport.*"]
+    pattern_sets: [my_sport]
 ```
 
 Key fields:
 
 - `enabled`: toggle sports on/off without deleting them.
-- `source_globs` / `source_extensions`: coarse filters before pattern matching.
+- `show_slug` / `show_slug_template`: TVSportsDB metadata reference.
+- `source_globs` / `extra_source_globs` / `disabled_source_globs`: control which files are considered for this sport.
+- `source_extensions`: file extensions to match (default: `.mkv`, `.mp4`, `.ts`, `.m4v`, `.avi`).
 - `allow_unmatched`: downgrade pattern failures to informational logs (no warnings).
 - `link_mode`: override global link behavior for a specific sport.
+- `quality_profile`: per-sport quality scoring override.
+- `team_alias_map`: TVSportsDB team alias map for team-based sports (e.g. NHL, Premier League).
+- `season_overrides`: force season numbers for exhibitions/pre-season events.
 
-### 3. Pattern Matching
+### 7. Pattern Matching
 
 - **`regex`** – Must supply the capture groups consumed by selectors and templates (e.g., `round`, `session`, `location`).
-- **`season_selector`** – Maps captures to a season. Supported modes: `round`, `key`, `title`, `sequential`. Add `offset` or `mapping` for fine-grained control.
-- **`episode_selector`** – Chooses which capture identifies an episode. `allow_fallback_to_title` lets the matcher fall back to fuzzy title comparisons, and `default_value` forces a canonical session when the regex doesn’t capture one (useful for release groups that omit `Prelims`/`Main Card` tags).
+- **`season_selector`** – Maps captures to a season. Supported modes: `round`, `key`, `title`, `sequential`, `date`. Add `offset` or `mapping` for fine-grained control.
+- **`episode_selector`** – Chooses which capture identifies an episode. `allow_fallback_to_title` lets the matcher fall back to fuzzy title comparisons, and `default_value` forces a canonical session when the regex doesn't capture one (useful for release groups that omit `Prelims`/`Main Card` tags).
 - **`session_aliases`** – Augment metadata aliases with release-specific tokens (case-insensitive, normalized).
 - **`priority`** – Lower numbers win when multiple patterns match the same file (defaults to `100`).
 - **`destination_*` overrides** – Apply sport- or pattern-specific templates without touching global settings.
 
-Built-in templates: the project now ships curated pattern sets for Formula 1, MotoGP, Moto2, Moto3, Isle of Man TT, NFL, and UFC. Reference them from a sport entry via:
+Built-in pattern sets: the project ships curated pattern packs for Formula 1, Formula E, IndyCar, MotoGP, Moto2, Moto3, World Superbike, World Supersport, World Supersport 300, Isle of Man TT, UFC, NFL, NBA, NHL, Premier League, UEFA Champions League, ISU Figure Skating, Figure Skating Grand Prix, and WTA. Reference them from a sport entry via:
 
 ```yaml
 pattern_sets:
@@ -346,7 +516,7 @@ pattern_sets:
 
 You can still inline `file_patterns` (alone or in addition to templates) for overrides or experiments. Review `src/playbook/pattern_templates.yaml` for the complete list and structure.
 
-### 4. Destination Templating
+### 8. Destination Templating
 
 Templates accept rich context built from the match:
 
@@ -361,7 +531,7 @@ Templates accept rich context built from the match:
 
 Filename components are sanitized automatically (lowercasing dangerous characters, trimming whitespace, removing forbidden characters).
 
-### 5. Variants & Reuse
+### 9. Variants & Reuse
 
 Reuse a base sport definition across seasons or release groups using `variants`:
 
@@ -393,14 +563,36 @@ Each variant inherits the base config, tweaks fields from the variant block, and
 | `--log-level LEVEL` | `LOG_LEVEL` | `INFO` (or `DEBUG` with `--verbose`) | File log level. |
 | `--console-level LEVEL` | `CONSOLE_LEVEL` | matches file level | Console log level. |
 | `--log-file PATH` | `LOG_FILE` / `LOG_DIR` | `./playbook.log` | Rotates to `*.previous` on start. |
-| `--clear-processed-cache` | `CLEAR_PROCESSED_CACHE` | `false` | Truthy to reset processed file cache before processing. |
-| `--watch` | `WATCH_MODE=true` | `settings.file_watcher.enabled` | Force filesystem watcher mode (keep Playbook running). |
+| `--clear-processed-cache` | `CLEAR_PROCESSED_CACHE` | `false` | Reset processed file cache before processing. |
+| `--force-reprocess` | `FORCE_REPROCESS` | `false` | Bypass processed-file database and reprocess all files. |
+| `--trace-matches` / `--explain` | — | `false` | Capture detailed match traces as JSON artifacts. |
+| `--trace-output PATH` | — | `cache_dir/traces` | Directory for trace JSON files (implies `--trace-matches`). |
+| `--watch` | `WATCH_MODE=true` | `settings.file_watcher.enabled` | Force filesystem watcher mode. |
 | `--no-watch` | `WATCH_MODE=false` | `false` | Disable watcher mode even if the config enables it. |
-| `--gui` | `GUI_ENABLED=true` | `true` | Force-enable GUI mode. |
-| `--no-gui` | `GUI_ENABLED=false` | `false` | Disable GUI mode and run CLI-only processing. |
+| `--gui` | `GUI_ENABLED=true` | `true` | Enable web GUI mode (enabled by default). |
+| `--no-gui` | `GUI_ENABLED=false` | `false` | Disable GUI and run CLI-only processing. |
 | `--gui-port PORT` | `GUI_PORT` | `8765` | GUI web port. |
+| `--gui-host HOST` | `GUI_HOST` | `0.0.0.0` | Host to bind GUI to. |
+| `--examples` | — | — | Show cookbook-style examples for any subcommand and exit. |
 
 Environment variables always win over config defaults, and CLI flags win over environment variables.
+
+Additional environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `SOURCE_DIR` | Override `settings.source_dir` |
+| `DESTINATION_DIR` | Override `settings.destination_dir` |
+| `CACHE_DIR` | Override `settings.cache_dir` |
+| `STATE_DIR` | Override `settings.state_dir` |
+| `GUI_THEME` / `PLAYBOOK_THEME` | Override `settings.theme` |
+| `PLEX_URL` | Plex server URL (fallback for integrations config) |
+| `PLEX_TOKEN` | Plex authentication token |
+| `PLEX_LIBRARY_NAME` | Plex library name |
+| `PLEX_LIBRARY_ID` | Plex library section ID |
+| `DISCORD_WEBHOOK_URL` | Discord webhook (used by `webhook_env` default) |
+| `PLAIN_CONSOLE_LOGS` | Force plain-text console output (no Rich formatting) |
+| `RICH_CONSOLE_LOGS` | Force Rich console output even in non-interactive terminals |
 
 #### Getting Help
 
@@ -413,12 +605,10 @@ playbook --help
 # Command-specific help with brief examples
 playbook run --help
 playbook validate-config --help
-playbook kometa-trigger --help
 
 # Extended examples and usage patterns
 playbook run --examples
 playbook validate-config --examples
-playbook kometa-trigger --examples
 ```
 
 The help output includes:
@@ -437,23 +627,24 @@ Preflight your YAML before running the processor:
 python -m playbook.cli validate-config --config /config/config.yaml --diff-sample
 ```
 
-The validator enforces the JSON schema, confirms referenced pattern sets exist, and then calls the same loader used by the runtime. Add `--show-trace` to surface Python tracebacks for deeper debugging. `--diff-sample` compares your file to `config/playbook.sample.yaml` to highlight customizations.
+The validator enforces the JSON schema, confirms referenced pattern sets exist, and then calls the same loader used by the runtime. Add `--show-trace` to surface Python tracebacks for deeper debugging. `--diff-sample` compares your file to `config/config.sample.yaml` to highlight customizations. Use `--no-suggestions` for cleaner output without fix suggestions.
 
 Continuous mode example:
 
 ```bash
 docker run -d \
   -e WATCH_MODE=true \
-  ghcr.io/s0len/playbook:latest --watch
+  -p 8765:8765 \
+  ghcr.io/s0len/playbook:latest
 ```
 
 Playbook stays alive and reruns automatically whenever the watcher observes filesystem changes (or when the reconcile timer forces a full scan). Use `--no-watch` (or `WATCH_MODE=false`) for single-pass batch runs.
 
 ## Logging & Observability
 
-- Log entries now use a multi-line block layout (timestamp + header + aligned key/value pairs) so dense sections breathe.
+- Log entries use a multi-line block layout (timestamp + header + aligned key/value pairs) so dense sections breathe.
 - INFO-level runs show grouped counts per sport/source; add `--verbose`/`LOG_LEVEL=DEBUG` to expand into per-file diagnostics.
-- Each pass ends with a `Run Recap` block (duration, totals, Kometa trigger state, destination samples) for quick scanning.
+- Each pass ends with a `Run Recap` block (duration, totals, destination samples) for quick scanning.
 - On each run, the previous log rotates to `playbook.log.previous`, and `LOG_DIR=/var/log/playbook` keeps files persistent.
 
 ## Directory Conventions
@@ -470,129 +661,6 @@ Formula 1 2025/
 ```
 
 Hardlinks preserve disk space; switch to `copy` or `symlink` when cross-filesystem moves are required.
-
-## Plex Metadata via Kometa
-
-Playbook only handles **file and folder layout**. To get rich titles, posters and collections in Plex, you can pair it with [Kometa](https://github.com/Kometa-Team/Kometa) and the same YAML metadata feeds.
-
-### Example Kometa config
-
-Add something like this to your Kometa `config.yml` (library name can be whatever you use for sports, e.g. `Sport`):
-
-```yaml
-libraries:
-  Sport:
-    metadata_files:
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/formula1/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/formula-e/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/indycar-series/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/isle-of-man-tt.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/moto2/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/moto3/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/motogp/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/nba/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/nfl/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/premier-league/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/uefa-champions-league/2025-2026.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/ufc/2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/womens-uefa-euro.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/wsbk-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/wssp-2025.yaml
-      - url: https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/wssp300-2025.yaml
-```
-
-### Triggering Kometa After Ingests
-
-Playbook can nudge Kometa automatically after each ingest cycle. Configure it once under `settings.kometa_trigger` and it will fire once at the end of every processor run whenever at least one brand-new file was linked, so duplicate runs are avoided automatically.
-
-#### Kubernetes CronJob trigger
-
-Use this when Playbook and Kometa live in the same cluster:
-
-```yaml
-settings:
-  kometa_trigger:
-    enabled: true
-    mode: kubernetes
-    namespace: media
-    cronjob_name: kometa-sport
-    job_name_prefix: kometa-sport-triggered-by-playbook
-```
-
-Playbook clones the CronJob's `jobTemplate` so Kometa uses the exact same Pod spec you already trust. Jobs are labeled `trigger=playbook`, which makes it easy to monitor and tail logs:
-
-```bash
-kubectl -n media get jobs -l trigger=playbook
-kubectl -n media logs job/kometa-sport-triggered-by-playbook-20241121-123456-abcd
-```
-
-If a Job already exists (e.g., Kometa is still running from a previous batch), Playbook logs the conflict and waits for the next ingest cycle.
-
-#### Docker Run trigger
-
-No Kubernetes? Set `mode: docker` and Playbook will shell out to `docker run` (or `podman`, etc.) with whatever libraries and config path you provide:
-
-```yaml
-settings:
-  kometa_trigger:
-    enabled: true
-    mode: docker
-    docker:
-      binary: docker
-      image: kometateam/kometa
-      config_path: /srv/media/Kometa/config   # host path
-      libraries: "Sports|TV Shows - 4K"
-      extra_args:
-        - --config
-        - /config/config.yml
-```
-
-Under the hood Playbook runs a command similar to:
-
-```bash
-docker run --rm \
-  -v "/srv/media/Kometa/config:/config:rw" \
-  kometateam/kometa \
-  --run-libraries "Sports|TV Shows - 4K" \
-  --config /config/config.yml
-```
-
-Add any additional Kometa CLI flags to `docker.extra_args`, and mount a different config path/container path if needed. Logs from the container are captured and surfaced in `playbook.log`, so failures stand out quickly.
-
-##### Docker prerequisites inside the Playbook container
-
-- Mount the Docker socket so the daemon is reachable: `-v /var/run/docker.sock:/var/run/docker.sock`.
-- Mount the client binaries into the container (paths vary, discover them with `command -v docker` and `command -v com.docker.cli` on macOS):
-
-  ```bash
-  -v $(command -v docker):/usr/local/bin/docker \
-  -v $(command -v com.docker.cli):/usr/local/bin/com.docker.cli
-  ```
-
-Without these mounts the trigger will log clear errors (look for `Kometa docker trigger requires...`).
-
-Already running Kometa in Docker Compose? Set `docker.container_name` (plus optional `exec_python` / `exec_script`) and Playbook will switch to `docker exec` instead of launching a new container:
-
-```bash
-docker exec kometa \
-  python3 /app/kometa/kometa.py \
-  --config /config/config.yml \
-  --library "Sports" \
-  --run
-```
-
-All other fields (`libraries`, `extra_args`, environment overrides) still apply, so you can reuse the same knobs regardless of whether you spin up a fresh container or exec into an existing one.
-For absolute control you can provide `docker.exec_command` (a list such as `["python3", "/app/kometa/kometa.py"]`), in which case Playbook appends your `libraries`/`extra_args` without any shell gymnastics.
-
-#### Manual trigger CLI
-
-Need to test the integration without running the full ingest loop? Use the dedicated CLI helper:
-
-```bash
-python -m playbook.cli kometa-trigger --config /config/config.yaml --mode docker
-```
-
-It loads your config, instantiates the trigger, and logs the full docker command/output to `playbook.log` (or whatever `--log-file` you specify), making it easy to diagnose missing mounts or permissions.
 
 ## Downloading Sports with Autobrr
 
@@ -654,38 +722,74 @@ UFC releases must now include the matchup slug (e.g., `UFC 322 Della Maddalena v
 
 ## Plex Library Setup
 
-To let Plex correctly index everything that Playbook creates, set up a dedicated **TV library** that points at your Playbook destination directory.
+Playbook handles **file and folder layout**. To get rich metadata (titles, summaries, posters, artwork) in Plex, use the **TVSportsDB metadata agent**. This is a custom Plex metadata provider that pulls everything directly from [TVSportsDB](https://tvsportsdb.com) — no extra tools needed.
+
+### 1. Add the TVSportsDB metadata provider
+
+Requires Plex Media Server **1.43.0+** (2024 or newer). No plugin installation required.
+
+1. In Plex, go to **Settings → Metadata Agents**.
+2. Click the **add provider** button and enter: `https://api.tvsportsdb.com/plex`
+3. Click the **add agent** button to confirm.
+4. **Restart Plex** for the changes to take effect.
+
+For the full setup guide with screenshots, see [tvsportsdb.com/setup/plex](https://tvsportsdb.com/setup/plex).
+
+### 2. Create your sports library
 
 1. In the Plex web UI, go to **Libraries → Add Library**.
 2. Choose:
    - **Library type:** `TV Shows`
-   - **Name:** e.g. `Sport`, `Sports`, or whatever fits your setup.
-3. Click **Next** and under **Add folders**, select the **same folder** you configured as `DESTINATION_DIR` for Playbook (or the sports subfolder inside it).
+   - **Name:** e.g. `Sport`
+3. Click **Next** and under **Add folders**, select your `DESTINATION_DIR`.
 4. Click **Advanced** and set:
-
-   - **Scanner:** `Plex Series Scanner`  
-   - **Agent:** `Personal Media Shows`  
+   - **Scanner:** `Plex Series Scanner`
+   - **Agent:** `TVSportsDB`
    - **Episode sorting:** `Newest first`
+5. Save the library.
 
-5. Save the library, then run a **Scan Library Files** once Playbook has populated the destination folder.
+Once Playbook populates the destination folder, Plex will automatically pick up shows with titles, summaries, posters, and backgrounds from TVSportsDB.
 
-Using `TV Shows` + `Plex Series Scanner` + `Personal Media Shows` ensures Plex treats each sport/season/session as proper TV episodes, while Kometa applies all the rich metadata on top.
+### Troubleshooting metadata
 
-## Extending to New Sports
+- **Missing metadata:** Verify your filenames match the expected format (`Show - S01E01 - Title.ext`). Use Plex's **Fix Match** feature to manually search for the correct show.
+- **Incorrect matches:** Right-click the item → **Fix Match** → search for the correct show name, then refresh metadata.
+- **Show not found:** Confirm the show exists in the [TVSportsDB database](https://tvsportsdb.com). If it's missing, request it via the site.
 
-1. Start from `playbook.sample.yaml` and enable the sport by listing the appropriate `pattern_sets` (e.g., `formula1`, `motogp`).
-2. Update the `metadata.url` / `show_key`, along with `source_globs` and `source_extensions` for your release group.
-3. If no template exists yet (or you need tweaks), copy the closest set from `pattern_templates.yaml` into the `pattern_sets:` section of your config and adjust the regex/aliases.
-4. Run `--dry-run --verbose` and review both console output and `playbook.log` for skipped/ignored diagnostics.
-5. Iterate on patterns, aliases, and templates until every file links where you expect—then consider opening a PR to upstream the new template.
+Playbook also supports pushing metadata directly via the Plex API using `integrations.plex.metadata_sync` — see the [Configuration Deep Dive](#2-integrations) for details.
+
+## Adding New Sports
+
+Adding a new sport is a two-step process: first add the metadata to TVSportsDB, then configure Playbook to match files against it.
+
+### 1. Add metadata to TVSportsDB
+
+All show/season/episode metadata lives in [TVSportsDB](https://tvsportsdb.com). If the sport you want isn't there yet:
+
+1. Go to [tvsportsdb.com](https://tvsportsdb.com) and request the sport or add it yourself.
+2. Make sure the show has seasons and episodes populated with titles and aliases that match how release groups name their files.
+
+### 2. Configure Playbook
+
+Once the sport exists in TVSportsDB:
+
+1. Add a sport entry to your `config.yaml` with a `show_slug` or `show_slug_template` pointing to the TVSportsDB show.
+2. Either reference an existing `pattern_sets` pack or write custom `file_patterns` with regex that captures the groups your release files use.
+3. Run `--dry-run --verbose` to test matching without writing files.
+4. Iterate on patterns and aliases until every file links where you expect.
+
+If you build a pattern pack that works well, consider opening a PR to add it to `pattern_templates.yaml` so others can use it too.
 
 ## Troubleshooting & FAQ
 
-- **Nothing gets processed:** Confirm the `source_dir` is mounted, readable, and matches your `source_globs`. Enable `DEBUG` to see ignored reasons.
-- **Metadata looks stale:** Delete the cache directory (`rm -rf /var/cache/playbook/metadata`) or lower `ttl_hours`.
-- **Hardlinks fail:** Set `link_mode: copy` (globally or per sport) when crossing filesystems or writing to SMB/NFS shares.
-- **Pattern matches but wrong season:** Adjust `season_selector` mappings or use `season_overrides` to force numbers for exhibitions/pre-season events.
-- **Need to re-run immediately:** Run `python -m playbook.cli --no-watch ...` (or set `WATCH_MODE=false`) to perform an on-demand single pass even if your watcher deployment is already running.
+- **Nothing gets processed:** Confirm `source_dir` is mounted and readable. Check that `source_globs` and `include_patterns` match your files. Run with `LOG_LEVEL=DEBUG` to see why files are being skipped.
+- **Files processed but not appearing in Plex:** Verify `destination_dir` is the same path Plex is scanning. If using Docker/NFS, check mount paths match. Enable `integrations.plex.scan_on_activity` or trigger a manual library scan.
+- **Metadata looks stale:** Lower `ttl_hours` in `settings.tvsportsdb` or delete `cache_dir` contents to force a refetch from the TVSportsDB API.
+- **Hardlinks fail:** Set `link_mode: copy` (globally or per sport) when source and destination are on different filesystems, or when writing to SMB/NFS shares.
+- **Pattern matches but wrong season:** Adjust `season_selector` mappings or use `season_overrides` to force season numbers for exhibitions/pre-season events.
+- **File was already processed and won't re-run:** Playbook tracks processed files in a SQLite database under `state_dir`. Use `--force-reprocess` (or `FORCE_REPROCESS=true`) to bypass the database check, or `--clear-processed-cache` to wipe the database entirely.
+- **Quality upgrade not happening:** Ensure `quality_profile.enabled: true` is set globally or on the sport. Check that the new file actually scores higher — run with `--trace-matches` to see scoring details.
+- **Need to re-run immediately:** Use `--no-watch` (or `WATCH_MODE=false`) to force a single processing pass even if your watcher deployment is already running.
 
 ## Development
 
@@ -694,25 +798,17 @@ git clone https://github.com/s0len/playbook.git
 cd playbook
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e .[dev,gui]
+pre-commit install
 ```
 
-- Run the CLI locally: `python -m playbook.cli --config config/playbook.sample.yaml --dry-run --verbose`.
+- Run the CLI locally: `python -m playbook.cli --config config/config.sample.yaml --dry-run --verbose`.
 - Build the container image: `docker build -t playbook:dev .`.
-- Follow standard Python formatting (e.g., `ruff`, `black`) to keep diffs tidy.
-- Install test tooling: `pip install -r requirements-dev.txt`.
+- Lint and format: `ruff check .` / `ruff format .`.
 - Run the automated tests: `pytest`.
-- Bootstrap a brand-new sandbox (e.g., Cursor/MCP agents) and run the full test suite in one step: `bash scripts/bootstrap_and_test.sh`.
+- Bootstrap a brand-new sandbox and run the full test suite: `bash scripts/bootstrap_and_test.sh`.
 - Validate filename samples: edit `tests/data/pattern_samples.yaml` and run `pytest tests/test_pattern_samples.py` to confirm new or modified patterns resolve correctly.
 - Open a draft pull request early—sample configs and matching logic benefit from collaborative review.
-
-## Roadmap
-
-- Additional pattern packs (MotoGP, IndyCar, NBA, NFL, NHL) with ready-to-use regex + alias tables.
-- Optional webhook/websocket triggers to react to new downloads instantly.
-- Strategy plugins for bespoke numbering or archive workflows.
-- Web UI to inspect matches, stats, and activity history.
-- Telemetry toggles for Prometheus/Grafana dashboards.
 
 ## License
 
@@ -746,6 +842,3 @@ Bundle the `figure_skating_grand_prix` pattern set with the [Figure Skating Gran
 - `Figure Skating Grand Prix Espoo 2025 Exhibition Gala 23 11 720pEN50fps ES`
 - `Figure Skating Grand Prix Final 2025 Women Free Program 06 12 1080pEN50fps.mkv`
 
----
-
-[^f1]: Formula 1 2025 metadata feed – [raw YAML](https://raw.githubusercontent.com/s0len/meta-manager-config/refs/heads/main/metadata/formula1/2025.yaml)

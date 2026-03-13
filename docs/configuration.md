@@ -1,6 +1,6 @@
 # Configuration Guide
 
-Every Playbook deployment runs from a single YAML file. Start by copying `config/playbook.sample.yaml`, then enable sports, pattern sets, and integrations one section at a time. This guide mirrors the dataclasses under `src/playbook/config.py`.
+Every Playbook deployment runs from a single YAML file. Start by copying `config/config.sample.yaml`, then enable sports, pattern sets, and integrations one section at a time. This guide mirrors the dataclasses under `src/playbook/config.py`.
 
 ## 1. Global Settings
 
@@ -282,6 +282,6 @@ Each variant inherits fields from the parent, tweaks whatever is listed inside t
 
 1. Run `python -m playbook.cli validate-config --config /config/playbook.yaml --diff-sample` to catch schema errors early.
 2. Add `--show-trace` if you need full Python tracebacks.
-3. Commit sample configs to version control and watch the diff returned by the validator to understand exactly what deviated from `playbook.sample.yaml`.
+3. Commit sample configs to version control and watch the diff returned by the validator to understand exactly what deviated from `config.sample.yaml`.
 
 Ready to operate the organizer? Continue to [Operations & Run Modes](operations.md).
