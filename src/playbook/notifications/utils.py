@@ -72,6 +72,18 @@ def resolve_sport_match(sport_id: str, mapping: dict[str, Any]) -> Any | None:
     return None
 
 
+def normalize_mention(value: str) -> str:
+    """Normalize a single Discord mention value.
+
+    If the value is a bare numeric ID (Discord snowflake), wrap it as a role mention <@&ID>.
+    Existing mention formats like <@USER_ID>, <@&ROLE_ID>, or <#CHANNEL_ID> are left as-is.
+    """
+    stripped = value.strip()
+    if stripped.isdigit():
+        return f"<@&{stripped}>"
+    return stripped
+
+
 def _normalize_mentions_map(value: Any) -> dict[str, str]:
     """Normalize a raw mentions configuration into a dictionary of string-to-string mappings."""
     if not value:
@@ -89,7 +101,7 @@ def _normalize_mentions_map(value: Any) -> dict[str, str]:
         mention = str(raw_value).strip()
         if not mention:
             continue
-        mentions[key_str] = mention
+        mentions[key_str] = normalize_mention(mention)
     return mentions
 
 

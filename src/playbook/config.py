@@ -1326,6 +1326,9 @@ def _build_settings(data: dict[str, Any]) -> Settings:
         key_str = str(key).strip()
         if not key_str:
             continue
+        # Auto-wrap bare Discord snowflake IDs as role mentions
+        if mention.isdigit():
+            mention = f"<@&{mention}>"
         mentions[key_str] = mention
 
     notifications = NotificationSettings(

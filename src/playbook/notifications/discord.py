@@ -13,7 +13,7 @@ from requests.exceptions import RequestException
 
 from ..config import NotificationSettings
 from .types import NotificationEvent, NotificationTarget
-from .utils import _excerpt_response, _trim, replace_reason_label, resolve_sport_match
+from .utils import _excerpt_response, _trim, normalize_mention, replace_reason_label, resolve_sport_match
 
 LOGGER = logging.getLogger(__name__)
 
@@ -222,9 +222,10 @@ class DiscordTarget(NotificationTarget):
         if sport_id:
             match = resolve_sport_match(str(sport_id), mentions)
             if match:
-                return match
+                return normalize_mention(str(match))
 
-        return mentions.get("default")
+        raw = mentions.get("default")
+        return normalize_mention(str(raw)) if raw else None
 
     def _apply_mention_prefix(self, text: str, sport_id: str | None, *, limit: int) -> str:
         mention = self._mention_for_sport(sport_id)
