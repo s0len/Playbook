@@ -1918,13 +1918,21 @@ pattern_sets:
       - "UEFA-Champions-League-*"
       - "UCL.*"
       - "UCL *"
+      - "ucl.*"
+      - "ucl *"
       - "Champions League *"
       - "Champions League*"
+      - "uefa.champions.league.*"
+      - "uefa.champions.league*"
+      - "uefa champions league *"
+      - "champions.league.*"
+      - "champions league *"
     patterns:
       - description: UEFA Champions League dot releases with date
         # Example: UEFA.Champions.League.2026.02.25.PSG.vs.Monaco.1080p.WEB-DL.mkv
+        # Example: uefa.champions.league.2026.03.10.round.of.16.first.leg.atalanta.vs.bayern.munich.1080p.web.h264-verum.mkv
         regex: >-
-          (?i)^UEFA[._\s-]*Champions[._\s-]*League[._\s-]*(?P<season_year>\d{4})[._\s-]+(?P<month>\d{2})[._\s-]+(?P<day>\d{2})[._\s-]+(?P<matchup>(?P<away>[A-Za-z&’’À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&’’À-ÖØ-öø-ÿ]+){0,4})[._\s-]+(?:vs?|VS?|V)[._\s-]+(?P<home>[A-Za-z&’’À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&’’À-ÖØ-öø-ÿ]+){0,4}))(?=[._\s-]+(?:\d{3,4}p|1080|720|2160|4K|HDR|HEVC|H264|H265|x264|x265|WEB|Blu|HDTV|AMZN|STAN|PROPER|REPACK|MULTI|EN|ENG|AAC|DDP|Atmos|Rip|Pack)(?:[A-Za-z0-9]+)?|\.(?:mkv|mp4|ts|m4v|avi)$)
+          (?i)^UEFA[._\s-]*Champions[._\s-]*League[._\s-]*(?P<season_year>\d{4})[._\s-]+(?P<month>\d{2})[._\s-]+(?P<day>\d{2})[._\s-]+(?:(?:Round[._\s-]+of[._\s-]+\d+|Knoc?kout[._\s-]+Round|Quarter[._\s-]*Final|Semi[._\s-]*Final|Group[._\s-]+Stage|Play[._\s-]*off|Final)[._\s-]+(?:(?:First|Second|1st|2nd)[._\s-]+(?:Leg)[._\s-]+)?)?(?P<matchup>(?P<away>[A-Za-z&’’À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&’’À-ÖØ-öø-ÿ]+){0,4})[._\s-]+(?:vs?|VS?|V)[._\s-]+(?P<home>[A-Za-z&’’À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&’’À-ÖØ-öø-ÿ]+){0,4}))(?=[._\s-]+(?:\d{3,4}p|1080|720|2160|4K|HDR|HEVC|H264|H265|x264|x265|WEB|Blu|HDTV|AMZN|STAN|PROPER|REPACK|MULTI|EN|ENG|AAC|DDP|Atmos|Rip|Pack)(?:[A-Za-z0-9]+)?|\.(?:mkv|mp4|ts|m4v|avi)$)
         season_selector:
           mode: date
           value_template: "{season_year}-{month}-{day}"
@@ -1935,8 +1943,9 @@ pattern_sets:
           team_alias_map: uefa_champions_league
 
       - description: UEFA Champions League dot releases
+        # Example: UEFA.Champions.League.2026.Knockout.Round.Borussia.vs.Atalanta.1080pEN60fps.mkv
         regex: >-
-          (?i)^UEFA[._\s-]*Champions[._\s-]*League[._\s-]*(?P<season_year>\d{4})(?:[._-]\d{2})?[._\s-]+(?P<matchup>(?P<away>[A-Za-z&’’À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&’’À-ÖØ-öø-ÿ]+){0,4})[._\s-]+(?:vs?|VS?|V)[._\s-]+(?P<home>[A-Za-z&’’À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&’’À-ÖØ-öø-ÿ]+){0,4}))(?=[._\s-]+(?:\d{3,4}p|1080|720|2160|4K|HDR|HEVC|H264|H265|x264|x265|WEB|Blu|HDTV|AMZN|STAN|PROPER|REPACK|MULTI|EN|ENG|AAC|DDP|Atmos|Rip|Pack)(?:[A-Za-z0-9]+)?|\.(?:mkv|mp4|ts|m4v|avi)$)
+          (?i)^UEFA[._\s-]*Champions[._\s-]*League[._\s-]*(?P<season_year>\d{4})(?:[._-]\d{2})?[._\s-]+(?:(?:Round[._\s-]+of[._\s-]+\d+|Knoc?kout[._\s-]+Round|Quarter[._\s-]*Final|Semi[._\s-]*Final|Group[._\s-]+Stage|Play[._\s-]*off|Final)[._\s-]+(?:(?:First|Second|1st|2nd)[._\s-]+(?:Leg)[._\s-]+)?)?(?P<matchup>(?P<away>[A-Za-z&’’À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&’’À-ÖØ-öø-ÿ]+){0,4})[._\s-]+(?:vs?|VS?|V)[._\s-]+(?P<home>[A-Za-z&’’À-ÖØ-öø-ÿ]+(?:[._\s-]+[A-Za-z&’’À-ÖØ-öø-ÿ]+){0,4}))(?=[._\s-]+(?:\d{3,4}p|1080|720|2160|4K|HDR|HEVC|H264|H265|x264|x265|WEB|Blu|HDTV|AMZN|STAN|PROPER|REPACK|MULTI|EN|ENG|AAC|DDP|Atmos|Rip|Pack)(?:[A-Za-z0-9]+)?|\.(?:mkv|mp4|ts|m4v|avi)$)
         season_selector:
           mode: title
           group: matchup
