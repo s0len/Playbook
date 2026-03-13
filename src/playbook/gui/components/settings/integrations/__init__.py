@@ -65,11 +65,19 @@ def _render_cards(state: SettingsFormState, refresh_fn) -> None:
                             ui.label(f"Env: {', '.join(detected_envs)}").classes("text-xs text-slate-500")
 
                 with ui.row().classes("gap-1"):
-                    neutralize_button_utilities(
-                        ui.button(
-                            icon="edit",
-                            on_click=lambda m=mod: m.open_dialog(
-                                state, state.get_value(m.INTEGRATION_META["config_path"]) or {}, refresh_fn
-                            ),
-                        ).props("flat dense")
-                    )
+                    if mod.open_dialog is not None:
+                        neutralize_button_utilities(
+                            ui.button(
+                                icon="edit",
+                                on_click=lambda m=mod: m.open_dialog(
+                                    state, state.get_value(m.INTEGRATION_META["config_path"]) or {}, refresh_fn
+                                ),
+                            ).props("flat dense")
+                        )
+                    elif meta.get("website"):
+                        neutralize_button_utilities(
+                            ui.button(
+                                icon="open_in_new",
+                                on_click=lambda url=meta["website"]: ui.navigate.to(url, new_tab=True),
+                            ).props("flat dense")
+                        )
