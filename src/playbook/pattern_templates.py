@@ -20,6 +20,7 @@ class PatternSetData:
 
     patterns: list[dict[str, Any]] = field(default_factory=list)
     default_source_globs: list[str] = field(default_factory=list)
+    default_source_path_globs: list[str] = field(default_factory=list)
 
 
 def _resolve_regex_tokens(raw_tokens: dict[str, str]) -> dict[str, str]:
@@ -94,10 +95,13 @@ def _load_raw_pattern_data() -> dict[str, PatternSetData]:
             # New format: dict with 'patterns' and optional 'default_source_globs'
             patterns = value.get("patterns", [])
             default_source_globs = value.get("default_source_globs", [])
+            default_source_path_globs = value.get("default_source_path_globs", [])
             if not isinstance(patterns, list):
                 patterns = []
             if not isinstance(default_source_globs, list):
                 default_source_globs = []
+            if not isinstance(default_source_path_globs, list):
+                default_source_path_globs = []
         else:
             continue
 
@@ -112,6 +116,7 @@ def _load_raw_pattern_data() -> dict[str, PatternSetData]:
         result[name] = PatternSetData(
             patterns=patterns,
             default_source_globs=[str(g) for g in default_source_globs],
+            default_source_path_globs=[str(g) for g in default_source_path_globs],
         )
 
     return result
@@ -149,6 +154,27 @@ def get_default_source_globs(pattern_set_names: list[str]) -> list[str]:
         if name not in data:
             continue
         for glob in data[name].default_source_globs:
+            if glob not in seen:
+                seen.add(glob)
+                result.append(glob)
+
+    return result
+
+
+def get_default_source_path_globs(pattern_set_names: list[str]) -> list[str]:
+    """Get merged default source path globs from multiple pattern sets.
+
+    These globs are matched against the relative path from source_dir
+    (including parent directories), unlike source_globs which match filename only.
+    """
+    data = _load_raw_pattern_data()
+    seen: set[str] = set()
+    result: list[str] = []
+
+    for name in pattern_set_names:
+        if name not in data:
+            continue
+        for glob in data[name].default_source_path_globs:
             if glob not in seen:
                 seen.add(glob)
                 result.append(glob)

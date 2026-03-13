@@ -112,6 +112,50 @@ def test_notification_service_mentions_opt_in_roles(tmp_path, monkeypatch) -> No
     assert payload["content"].startswith("<@&42> [NEW] Demo Sport: Qualifying")
 
 
+def test_bare_role_id_auto_wrapped_in_mention_format(tmp_path, monkeypatch) -> None:
+    """Bare numeric Discord IDs should be auto-wrapped as <@&ID> role mentions."""
+    settings = NotificationSettings(
+        mentions={"demo": "123456789"},  # bare ID, no <@&...> wrapper
+        targets=[_DEFAULT_TARGET],
+    )
+    service = NotificationService(
+        settings,
+        cache_dir=tmp_path,
+        destination_dir=tmp_path,
+        enabled=True,
+    )
+
+    calls: list[dict[str, Any]] = []
+
+    def fake_request(method, url, json=None, timeout=None, headers=None):
+        calls.append({"method": method, "url": url, "json": json})
+        return FakeResponse(204)
+
+    monkeypatch.setattr("playbook.notifications.discord.requests.request", fake_request)
+
+    service.notify(_build_event())
+
+    payload = calls[0]["json"]
+    # Should have been auto-wrapped from "123456789" to "<@&123456789>"
+    assert "<@&123456789>" in payload["content"]
+
+
+def test_normalize_mention_function() -> None:
+    from playbook.notifications.utils import normalize_mention
+
+    # Bare numeric ID -> role mention
+    assert normalize_mention("123456789") == "<@&123456789>"
+    # Already formatted -> unchanged
+    assert normalize_mention("<@&123456789>") == "<@&123456789>"
+    assert normalize_mention("<@123456789>") == "<@123456789>"
+    assert normalize_mention("<#123456789>") == "<#123456789>"
+    # @here / @everyone -> unchanged
+    assert normalize_mention("@here") == "@here"
+    assert normalize_mention("@everyone") == "@everyone"
+    # Whitespace trimmed
+    assert normalize_mention("  123456789  ") == "<@&123456789>"
+
+
 def test_notification_service_mentions_handle_variant_ids(tmp_path, monkeypatch) -> None:
     settings = NotificationSettings(
         mentions={"premier_league": "<@&123>"},

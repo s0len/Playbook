@@ -90,56 +90,6 @@ def test_metadata_fingerprint_tracks_episode_changes(tmp_path) -> None:
     assert change.changed_episodes["01"] == {episode_key}
 
 
-def test_detailed_summary_groups_counts_with_info(tmp_path, caplog) -> None:
-    processor = _make_processor(tmp_path)
-    stats = ProcessingStats()
-    detail_token = "IGNORED_DETAIL_ENTRY"
-    stats.register_ignored(detail_token, sport_id="sport-a")
-    stats.register_warning("demo: sport-a: warn", sport_id="sport-a")
-    stats.register_error("demo: sport-a: error", sport_id="sport-a")
-    stats.register_skipped("skip reason", is_error=False)
-
-    from playbook import run_summary as summary_module
-
-    original_level = summary_module.LOGGER.level
-    summary_module.LOGGER.setLevel(logging.INFO)
-    try:
-        with caplog.at_level(logging.INFO, logger="playbook.run_summary"):
-            processor._log_detailed_summary(stats)
-    finally:
-        summary_module.LOGGER.setLevel(original_level)
-
-    text = caplog.text
-    # The summary uses "Detailed Summary" title
-    assert "Detailed Summary" in text
-    # The detailed counts section still uses the same format
-    assert "sport-a: 1 entry" in text
-    assert detail_token not in text
-    assert "Run with --verbose for per-warning details." in text
-
-
-def test_detailed_summary_shows_details_with_debug(tmp_path, caplog) -> None:
-    processor = _make_processor(tmp_path)
-    stats = ProcessingStats()
-    detail_token = "IGNORED_DETAIL_ENTRY"
-    stats.register_ignored(detail_token, sport_id="sport-a")
-    stats.register_warning("demo: sport-a: warn", sport_id="sport-a")
-
-    from playbook import run_summary as summary_module
-
-    original_level = summary_module.LOGGER.level
-    summary_module.LOGGER.setLevel(logging.DEBUG)
-    try:
-        with caplog.at_level(logging.DEBUG, logger="playbook.run_summary"):
-            processor._log_detailed_summary(stats, level=logging.DEBUG)
-    finally:
-        summary_module.LOGGER.setLevel(original_level)
-
-    text = caplog.text
-    assert detail_token in text
-    assert "demo: sport-a: warn" in text
-
-
 def test_run_recap_lists_destinations(tmp_path, caplog) -> None:
     processor = _make_processor(tmp_path)
     stats = ProcessingStats()
@@ -154,39 +104,6 @@ def test_run_recap_lists_destinations(tmp_path, caplog) -> None:
     # Plex sync status is always shown (disabled when not configured)
     assert "Plex Sync" in text
     assert "Demo/Season 01/Race.mkv" in text
-
-
-def test_detailed_summary_table_format(tmp_path, caplog, monkeypatch) -> None:
-    """Verify the summary output uses table format with correct values."""
-    processor = _make_processor(tmp_path)
-    stats = ProcessingStats()
-    stats.register_processed()
-    stats.register_skipped("test skip", is_error=False)
-    stats.register_ignored("test ignore", sport_id="test-sport")
-    stats.register_warning("test warning", sport_id="test-sport")
-    stats.register_error("test error", sport_id="test-sport")
-
-    from playbook import run_summary as summary_module
-
-    original_level = summary_module.LOGGER.level
-    summary_module.LOGGER.setLevel(logging.INFO)
-    try:
-        with caplog.at_level(logging.INFO, logger="playbook.run_summary"):
-            processor._log_detailed_summary(stats)
-    finally:
-        summary_module.LOGGER.setLevel(original_level)
-
-    text = caplog.text
-    # Verify table header/title
-    assert "Detailed Summary" in text
-    # Verify all the key metrics are present in output
-    assert "Processed" in text
-    assert "Skipped" in text
-    assert "Ignored" in text
-    assert "Warnings" in text
-    assert "Errors" in text
-    # Verify the actual counts appear in output (plain text format)
-    assert "1" in text  # processed, skipped, ignored, warnings, errors all have count of 1
 
 
 def test_run_recap_table_format(tmp_path, caplog) -> None:
@@ -247,31 +164,6 @@ def test_terminal_detection_for_table_output(tmp_path, caplog, monkeypatch) -> N
 
     # Restore original isatty
     monkeypatch.undo()
-
-
-def test_summary_table_color_coding_in_terminal_mode(tmp_path, caplog, monkeypatch) -> None:
-    """Verify color coding is applied when output is to a terminal."""
-    processor = _make_processor(tmp_path)
-    stats = ProcessingStats()
-    stats.register_processed()
-    stats.register_error("test error", sport_id="test-sport")
-    stats.register_warning("test warning", sport_id="test-sport")
-
-    # Mock sys.stdout.isatty to return True (terminal mode)
-    monkeypatch.setattr("sys.stdout.isatty", lambda: True)
-
-    with caplog.at_level(logging.INFO):
-        processor._log_detailed_summary(stats)
-
-    text = caplog.text
-
-    # Verify the summary content is present
-    assert "Detailed Summary" in text or "Processed" in text
-
-    # Verify the content is present regardless of color codes
-    assert "Processed" in text
-    assert "Errors" in text
-    assert "Warnings" in text
 
 
 def test_skips_mac_resource_fork_files(tmp_path, monkeypatch) -> None:

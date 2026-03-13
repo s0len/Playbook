@@ -67,6 +67,7 @@ def match_file_to_episode(
     trace: dict[str, Any] | None = None,
     suppress_warnings: bool = False,
     metadata_loader: MetadataLoaderCallback | None = None,
+    relative_path: str | None = None,
 ) -> dict[str, object] | None:
     """Match a filename to an episode in a show.
 
@@ -133,7 +134,8 @@ def match_file_to_episode(
     # Pattern-based matching
     for pattern_runtime in patterns:
         descriptor = pattern_runtime.config.description or pattern_runtime.config.regex
-        match = pattern_runtime.regex.search(filename)
+        match_target = relative_path if (pattern_runtime.config.match_relative_path and relative_path) else filename
+        match = pattern_runtime.regex.search(match_target)
         if not match:
             if trace_attempts is not None:
                 trace_attempts.append(

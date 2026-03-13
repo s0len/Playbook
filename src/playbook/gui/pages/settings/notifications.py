@@ -188,6 +188,9 @@ def _render_mentions_editor(state: SettingsFormState) -> None:
                     data = state.get_value("settings.notifications.mentions", {}) or {}
                     val = (e.value or "").strip()
                     if val:
+                        # Auto-wrap bare Discord snowflake IDs as role mentions
+                        if val.isdigit():
+                            val = f"<@&{val}>"
                         data[sport_id] = val
                     else:
                         data.pop(sport_id, None)
@@ -196,6 +199,6 @@ def _render_mentions_editor(state: SettingsFormState) -> None:
                 current = mentions_data.get(sid, "")
                 ui.input(
                     value=current,
-                    placeholder="<@&ROLE_ID>",
+                    placeholder="Role ID or <@&ROLE_ID>",
                     on_change=on_mention_change,
                 ).classes("flex-1").props("outlined dense")

@@ -11,6 +11,7 @@ from typing import Any
 from .pattern_templates import (
     expand_regex_with_tokens,
     get_default_source_globs,
+    get_default_source_path_globs,
     load_builtin_pattern_sets,
     load_default_sports,
 )
@@ -150,6 +151,7 @@ class PatternConfig:
     season_dir_template: str | None = None
     destination_root_template: str | None = None
     priority: int = 100
+    match_relative_path: bool = False
 
     def compiled_regex(self) -> re.Pattern[str]:
         return re.compile(self.regex, re.IGNORECASE)
@@ -359,6 +361,7 @@ class SportConfig:
     team_alias_map: str | None = None
     destination: DestinationTemplates = field(default_factory=DestinationTemplates)
     source_globs: list[str] = field(default_factory=list)  # Effective globs (computed from defaults + extra - disabled)
+    source_path_globs: list[str] = field(default_factory=list)  # Globs matched against relative path from source_dir
     extra_source_globs: list[str] = field(default_factory=list)  # User-added custom globs
     disabled_source_globs: list[str] = field(default_factory=list)  # Globs to exclude (can disable defaults or custom)
     pattern_set_names: list[str] = field(default_factory=list)  # Names of pattern sets used (for GUI to show defaults)
@@ -450,6 +453,7 @@ def _build_pattern_config(data: dict[str, Any]) -> PatternConfig:
         season_dir_template=data.get("season_dir_template"),
         destination_root_template=data.get("destination_root_template"),
         priority=int(data.get("priority", 100)),
+        match_relative_path=bool(data.get("match_relative_path", False)),
     )
     return pattern
 
@@ -546,6 +550,11 @@ def _build_sport_config(
                 seen.add(glob)
                 effective_globs.append(glob)
 
+    # Source path globs: matched against relative path from source_dir
+    source_path_globs = list(data.get("source_path_globs", []))
+    if not source_path_globs:
+        source_path_globs = get_default_source_path_globs(pattern_set_names)
+
     # Get variant_year if this sport was expanded from a year-based variant
     variant_year = data.get("variant_year")
     if variant_year is not None:
@@ -562,6 +571,7 @@ def _build_sport_config(
         team_alias_map=data.get("team_alias_map"),
         destination=destination,
         source_globs=effective_globs,
+        source_path_globs=source_path_globs,
         extra_source_globs=extra_source_globs,
         disabled_source_globs=list(disabled_source_globs),
         pattern_set_names=pattern_set_names,
@@ -1326,6 +1336,9 @@ def _build_settings(data: dict[str, Any]) -> Settings:
         key_str = str(key).strip()
         if not key_str:
             continue
+        # Auto-wrap bare Discord snowflake IDs as role mentions
+        if mention.isdigit():
+            mention = f"<@&{mention}>"
         mentions[key_str] = mention
 
     notifications = NotificationSettings(

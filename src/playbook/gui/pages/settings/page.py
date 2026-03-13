@@ -174,7 +174,12 @@ def _render_tab_button(state: SettingsFormState, tab_id: str, tab_label: str, ta
         "themes": ["settings.theme"],
         "notifications": ["settings.notifications"],
         "watcher": ["settings.file_watcher"],
-        "integrations": ["settings.plex_sync", "settings.kometa_trigger", "settings.tvsportsdb"],
+        "integrations": [
+            "settings.tvsportsdb",
+            "settings.integrations.plex",
+            "settings.integrations.autoscan",
+            "settings.kometa_trigger",
+        ],
     }
 
     has_modifications = any(
