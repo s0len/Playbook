@@ -24,7 +24,7 @@ Before installing, gather this information:
 
 Then:
 
-1. Copy `config/playbook.sample.yaml` to your preferred location (Docker defaults to `/config/playbook.yaml`)
+1. Copy `config/config.sample.yaml` to your preferred location (Docker defaults to `/config/playbook.yaml`)
 2. Edit the config to set `SOURCE_DIR`, `DESTINATION_DIR`, and `CACHE_DIR` (or provide them as environment variables)
 3. _(Optional)_ Disable sports you don't want using `disabled_sports: [sport_id, ...]`
 4. Validate your config: `playbook validate-config --config playbook.yaml --diff-sample`
@@ -111,10 +111,10 @@ services:
       - /path/to/library:/library
       - /path/to/cache:/cache
     ports:
-      - 8080:8080
+      - 8765:8765
 ```
 
-Start with `docker compose up -d`. The GUI is available at `http://localhost:8080`.
+Start with `docker compose up -d`. The GUI is available at `http://localhost:8765`.
 
 #### Environment Variables Reference
 

@@ -272,7 +272,7 @@ def _add_validate_config_subparser(subparsers) -> None:
     validate_parser.add_argument(
         "--diff-sample",
         action="store_true",
-        help="Display a unified diff against config/playbook.sample.yaml when available",
+        help="Display a unified diff against config/config.sample.yaml when available",
     )
     validate_parser.add_argument(
         "--show-trace",
@@ -708,7 +708,7 @@ def run_validate_config(args: argparse.Namespace) -> int:
             _print_sample_diff(sample_path, config_path)
         else:
             CONSOLE.print(
-                "[yellow]Sample configuration file config/playbook.sample.yaml not found; skipping diff.[/yellow]"
+                "[yellow]Sample configuration file config/config.sample.yaml not found; skipping diff.[/yellow]"
             )
 
     return 0 if report.is_valid else 1
@@ -716,7 +716,7 @@ def run_validate_config(args: argparse.Namespace) -> int:
 
 def _resolve_sample_config_path() -> Path | None:
     root = Path(__file__).resolve().parents[2]
-    sample_path = root / "config" / "playbook.sample.yaml"
+    sample_path = root / "config" / "config.sample.yaml"
     if sample_path.exists():
         return sample_path
     return None

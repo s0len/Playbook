@@ -278,7 +278,7 @@ pip-audit -r requirements.txt --desc
    ```bash
    pip install -r requirements.txt
    pytest
-   python -m playbook.cli --dry-run --config config/playbook.sample.yaml
+   python -m playbook.cli --dry-run --config config/config.sample.yaml
    ```
 
 3. Commit and push:

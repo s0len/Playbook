@@ -16,7 +16,7 @@ pip install -r requirements-dev.txt
 Run the CLI locally:
 
 ```bash
-python -m playbook.cli --config config/playbook.sample.yaml --dry-run --verbose
+python -m playbook.cli --config config/config.sample.yaml --dry-run --verbose
 ```
 
 Build the container image:

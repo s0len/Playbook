@@ -33,13 +33,13 @@ RUN chmod +x /entrypoint.sh
 
 ENV CONFIG_PATH=/config/playbook.yaml \
     DRY_RUN=false \
-    GUI_ENABLED=false \
-    GUI_PORT=8080 \
+    GUI_ENABLED=true \
+    GUI_PORT=8765 \
     GUI_HOST=0.0.0.0
 
 ENV PYTHONPATH=/app/src
 
-# Expose GUI port (only used when GUI_ENABLED=true or --gui flag)
-EXPOSE 8080
+# Expose GUI port
+EXPOSE 8765
 
 ENTRYPOINT ["/entrypoint.sh"]

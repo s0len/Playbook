@@ -127,7 +127,7 @@ def config_page() -> None:
                         ).classes("text-sm app-link")
                         ui.link(
                             "Sample Config",
-                            "https://github.com/s0len/Playbook/blob/main/config/playbook.sample.yaml",
+                            "https://github.com/s0len/Playbook/blob/main/config/config.sample.yaml",
                             new_tab=True,
                         ).classes("text-sm app-link")
 

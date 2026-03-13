@@ -146,7 +146,7 @@ def _page_wrapper(page_fn: callable, current_path: str = "/") -> None:
 
 def run_with_gui(
     config_path: Path,
-    port: int = 8080,
+    port: int = 8765,
     host: str = "0.0.0.0",
     *,
     dry_run: bool = False,
@@ -163,7 +163,7 @@ def run_with_gui(
 
     Args:
         config_path: Path to the Playbook configuration file
-        port: Port to run the web server on (default: 8080)
+        port: Port to run the web server on (default: 8765)
         host: Host to bind the web server to (default: 0.0.0.0)
         dry_run: Enable dry-run mode
         enable_notifications: Enable notification delivery
@@ -306,7 +306,7 @@ def _start_watcher_thread(processor: Processor, app_config: AppConfig) -> thread
     return thread
 
 
-def run_gui_standalone(port: int = 8080, host: str = "0.0.0.0") -> None:
+def run_gui_standalone(port: int = 8765, host: str = "0.0.0.0") -> None:
     """Run the GUI in standalone mode without a processor.
 
     This is useful for development and testing the GUI
