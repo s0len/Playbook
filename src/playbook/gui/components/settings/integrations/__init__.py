@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from nicegui import ui
 
-from ....app_button import neutralize_button_utilities
+from ...app_button import neutralize_button_utilities
 from . import autoscan_editor, kometa_editor, plex_editor, tvsportsdb_editor
 
 if TYPE_CHECKING:
