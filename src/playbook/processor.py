@@ -594,7 +594,7 @@ class Processor:
                 "sport_name": runtime.sport.name,
                 "source_name": source_path.name,
             }
-            if not matches_globs(source_path, runtime.sport):
+            if not matches_globs(source_path, runtime.sport, source_dir=self.config.settings.source_dir):
                 patterns = runtime.sport.source_globs or ["*"]
                 message = f"Excluded by source_globs {patterns}"
                 ignored_reasons.append(("ignored", message, runtime.sport.id))
@@ -629,6 +629,10 @@ class Processor:
                 continue
 
             detection_messages: list[tuple[str, str]] = []
+            try:
+                rel_path = str(source_path.relative_to(self.config.settings.source_dir))
+            except ValueError:
+                rel_path = None
             detection = match_file_to_episode(
                 source_path.name,
                 runtime.sport,
@@ -638,6 +642,7 @@ class Processor:
                 trace=trace_context,
                 suppress_warnings=is_sample_file,
                 metadata_loader=self._dynamic_loader.get_show_for_year if runtime.is_dynamic else None,
+                relative_path=rel_path,
             )
             trace_context["diagnostics"] = [
                 {"severity": severity, "message": message} for severity, message in detection_messages

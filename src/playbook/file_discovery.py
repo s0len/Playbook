@@ -39,20 +39,32 @@ def skip_reason_for_source_file(path: Path) -> str | None:
     return None
 
 
-def matches_globs(path: Path, sport: SportConfig) -> bool:
+def matches_globs(path: Path, sport: SportConfig, *, source_dir: Path | None = None) -> bool:
     """Check if a file matches any of the sport's glob patterns.
+
+    Checks filename against ``source_globs`` and, if *source_dir* is provided,
+    also checks the relative path against ``source_path_globs``.
 
     Args:
         path: Path to the source file
         sport: Sport configuration containing glob patterns
+        source_dir: Optional source directory for relative-path glob matching
 
     Returns:
         True if the file matches any glob pattern or if no patterns are defined
     """
-    if not sport.source_globs:
+    if not sport.source_globs and not sport.source_path_globs:
         return True
     filename = path.name
-    return any(fnmatch(filename, pattern) for pattern in sport.source_globs)
+    if sport.source_globs and any(fnmatch(filename, pattern) for pattern in sport.source_globs):
+        return True
+    if sport.source_path_globs and source_dir is not None:
+        try:
+            relative = path.relative_to(source_dir)
+        except ValueError:
+            return False
+        return any(relative.match(pattern) for pattern in sport.source_path_globs)
+    return not sport.source_globs and not sport.source_path_globs
 
 
 def should_suppress_sample_ignored(source_path: Path) -> bool:

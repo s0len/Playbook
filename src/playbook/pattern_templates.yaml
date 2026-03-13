@@ -826,6 +826,9 @@ pattern_sets:
       - "MotoGP *"
       - "motogp.*"
       - "motogp *"
+    default_source_path_globs:
+      - "MotoGP */[0-9]*"
+      - "MotoGP */Press Conferences/[0-9]*"
     patterns:
       - description: MotoGP DNU releases
         # Example: MotoGP.2024.Round03.Austin.Circuit.of.the.Americas.Qualifying-DNU.mkv
@@ -1064,6 +1067,40 @@ pattern_sets:
         episode_selector:
           group: session
           allow_fallback_to_title: true
+        session_aliases: *motogp_session_aliases
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_round:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
+      - description: MotoGP deef weekend pack releases
+        # Matches files in the root of a deef weekend pack directory.
+        # Example relative path: MotoGP 2026 - Round 01 - ThaiGP - Full Weekend (1080p50 DornaRip HEVC AAC x265-deef)/01. FP1 (1991mb 1920x1080 3848kbps x265 AAC deef)..mkv
+        match_relative_path: true
+        regex: >-
+          (?i)MotoGP\s+(?P<year>\d{4})\s*-\s*Round\s*(?P<round>\d{2})\s*-\s*[^/]+/\d{2}\.\s*(?P<session>[^(]+?)\s*\(
+        season_selector:
+          mode: round
+          group: round
+        episode_selector:
+          group: session
+          truncate_session: true
+        session_aliases: *motogp_session_aliases
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_round:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
+      - description: MotoGP deef press conference releases
+        # Matches files in the Press Conferences subdirectory of a deef pack.
+        # Example: .../Press Conferences/02. Thursday Press Conference (344mb ...).mkv
+        match_relative_path: true
+        regex: >-
+          (?i)MotoGP\s+(?P<year>\d{4})\s*-\s*Round\s*(?P<round>\d{2})\s*-\s*[^/]+/Press\s+Conferences/\d{2}\.\s*(?P<session>[^(]+?)\s*\(
+        season_selector:
+          mode: round
+          group: round
+        episode_selector:
+          group: session
+          truncate_session: true
         session_aliases: *motogp_session_aliases
         destination_root_template: "{show_title}"
         season_dir_template: "{season_round:02d} {season_title}"
@@ -1335,6 +1372,8 @@ pattern_sets:
       - "Moto2 *"
       - "moto2.*"
       - "moto2 *"
+    default_source_path_globs:
+      - "MotoGP */Moto2/[0-9]*"
     patterns:
       - description: Moto2 MWR releases
         # Example: Moto2.2025.Round20.Malaysia.Race.WEB-DL.1080p.h264.English-MWR
@@ -1365,6 +1404,23 @@ pattern_sets:
         season_dir_template: "{season_round:02d} {season_title}"
         filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
 
+      - description: Moto2 deef weekend pack releases
+        # Matches Moto2 files in the Moto2 subdirectory of a deef weekend pack.
+        # Example: MotoGP 2026 - Round 01 - ThaiGP - Full Weekend (...)/Moto2/01. FP1 (1529mb ...).mkv
+        match_relative_path: true
+        regex: >-
+          (?i)MotoGP\s+(?P<year>\d{4})\s*-\s*Round\s*(?P<round>\d{2})\s*-\s*[^/]+/Moto2/\d{2}\.\s*(?P<session>[^(]+?)\s*\(
+        season_selector:
+          mode: round
+          group: round
+        episode_selector:
+          group: session
+          truncate_session: true
+        session_aliases: *motogp_session_aliases
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_round:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
   # ------------------------------------------------------------------
   # Moto3 releases
   # ------------------------------------------------------------------
@@ -1374,6 +1430,8 @@ pattern_sets:
       - "Moto3 *"
       - "moto3.*"
       - "moto3 *"
+    default_source_path_globs:
+      - "MotoGP */Moto3/[0-9]*"
     patterns:
       - description: Moto3 MWR releases
         # Example: Moto3.2025.Round16.San.Marino.FP2.WEB-DL.1080p.h264.English-MWR
@@ -1399,6 +1457,23 @@ pattern_sets:
         episode_selector:
           group: session
           allow_fallback_to_title: true
+        session_aliases: *motogp_session_aliases
+        destination_root_template: "{show_title}"
+        season_dir_template: "{season_round:02d} {season_title}"
+        filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
+
+      - description: Moto3 deef weekend pack releases
+        # Matches Moto3 files in the Moto3 subdirectory of a deef weekend pack.
+        # Example: MotoGP 2026 - Round 01 - ThaiGP - Full Weekend (...)/Moto3/01. FP1 (1146mb ...).mkv
+        match_relative_path: true
+        regex: >-
+          (?i)MotoGP\s+(?P<year>\d{4})\s*-\s*Round\s*(?P<round>\d{2})\s*-\s*[^/]+/Moto3/\d{2}\.\s*(?P<session>[^(]+?)\s*\(
+        season_selector:
+          mode: round
+          group: round
+        episode_selector:
+          group: session
+          truncate_session: true
         session_aliases: *motogp_session_aliases
         destination_root_template: "{show_title}"
         season_dir_template: "{season_round:02d} {season_title}"

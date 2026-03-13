@@ -86,32 +86,34 @@ class TestSkipReasonForSourceFile:
 class TestMatchesGlobs:
     """Test matches_globs function."""
 
+    def _mock_sport(self, **kwargs) -> Mock:
+        sport = Mock(spec=SportConfig)
+        sport.source_globs = kwargs.get("source_globs", [])
+        sport.source_path_globs = kwargs.get("source_path_globs", [])
+        return sport
+
     def test_returns_true_when_no_globs_defined(self) -> None:
         """Test that files match when sport has no source_globs defined."""
-        sport = Mock(spec=SportConfig)
-        sport.source_globs = []
+        sport = self._mock_sport()
         path = Path("/foo/bar/any_file.mkv")
         assert matches_globs(path, sport) is True
 
     def test_returns_true_when_globs_is_none(self) -> None:
         """Test that files match when sport.source_globs is None."""
-        sport = Mock(spec=SportConfig)
-        sport.source_globs = None
+        sport = self._mock_sport(source_globs=None, source_path_globs=None)
         path = Path("/foo/bar/any_file.mkv")
         assert matches_globs(path, sport) is True
 
     def test_matches_simple_wildcard_pattern(self) -> None:
         """Test matching against simple wildcard patterns."""
-        sport = Mock(spec=SportConfig)
-        sport.source_globs = ["*.mkv"]
+        sport = self._mock_sport(source_globs=["*.mkv"])
 
         assert matches_globs(Path("/foo/bar/video.mkv"), sport) is True
         assert matches_globs(Path("/foo/bar/video.mp4"), sport) is False
 
     def test_matches_multiple_patterns(self) -> None:
         """Test matching against multiple glob patterns."""
-        sport = Mock(spec=SportConfig)
-        sport.source_globs = ["*.mkv", "*.mp4", "*.avi"]
+        sport = self._mock_sport(source_globs=["*.mkv", "*.mp4", "*.avi"])
 
         assert matches_globs(Path("/foo/bar/video.mkv"), sport) is True
         assert matches_globs(Path("/foo/bar/video.mp4"), sport) is True
@@ -120,8 +122,7 @@ class TestMatchesGlobs:
 
     def test_matches_complex_pattern(self) -> None:
         """Test matching against complex glob patterns."""
-        sport = Mock(spec=SportConfig)
-        sport.source_globs = ["NBA*.mkv", "*-NFL-*.mp4"]
+        sport = self._mock_sport(source_globs=["NBA*.mkv", "*-NFL-*.mp4"])
 
         assert matches_globs(Path("/foo/bar/NBA_2024_Finals.mkv"), sport) is True
         assert matches_globs(Path("/foo/bar/Game-NFL-Week1.mp4"), sport) is True
@@ -129,8 +130,7 @@ class TestMatchesGlobs:
 
     def test_only_checks_filename_not_full_path(self) -> None:
         """Test that glob matching only considers the filename, not the full path."""
-        sport = Mock(spec=SportConfig)
-        sport.source_globs = ["*.mkv"]
+        sport = self._mock_sport(source_globs=["*.mkv"])
 
         # Even though path contains 'mkv' in directory name, only filename matters
         assert matches_globs(Path("/foo/mkv/video.mp4"), sport) is False
@@ -138,13 +138,26 @@ class TestMatchesGlobs:
 
     def test_case_sensitive_matching(self) -> None:
         """Test that glob matching is case-sensitive."""
-        sport = Mock(spec=SportConfig)
-        sport.source_globs = ["*.mkv"]
+        sport = self._mock_sport(source_globs=["*.mkv"])
 
         # fnmatch is case-sensitive on Unix-like systems
         assert matches_globs(Path("/foo/bar/video.mkv"), sport) is True
         # This behavior depends on the OS, but we test current behavior
         assert matches_globs(Path("/foo/bar/video.MKV"), sport) is False
+
+    def test_source_path_globs_match_relative_path(self, tmp_path) -> None:
+        """Test that source_path_globs match against the relative path from source_dir."""
+        sport = self._mock_sport(source_path_globs=["MotoGP */Moto2/[0-9]*"])
+        source_dir = tmp_path
+        path = source_dir / "MotoGP 2026 - Round 01 - ThaiGP" / "Moto2" / "01. FP1.mkv"
+        assert matches_globs(path, sport, source_dir=source_dir) is True
+
+    def test_source_path_globs_no_match(self, tmp_path) -> None:
+        """Test that source_path_globs reject non-matching paths."""
+        sport = self._mock_sport(source_path_globs=["MotoGP */Moto2/[0-9]*"])
+        source_dir = tmp_path
+        path = source_dir / "MotoGP 2026 - Round 01 - ThaiGP" / "Moto3" / "01. FP1.mkv"
+        assert matches_globs(path, sport, source_dir=source_dir) is False
 
 
 class TestShouldSuppressSampleIgnored:

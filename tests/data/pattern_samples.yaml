@@ -1395,3 +1395,109 @@ samples:
       - value: "Formula1.2026.Australia.Grand.Prix.Practice.One.DV.HDR.2160p.WEB.h265-BILLIE.mkv"
         expect_season: "Australian Grand Prix"
         expect_episode: "Free Practice 1"
+
+  - description: "MotoGP deef weekend pack releases"
+    sport:
+      id: "motogp_deef"
+      name: "MotoGP"
+      pattern_sets:
+        - motogp
+    show:
+      key: "motogp-2026"
+      title: "MotoGP 2026"
+      seasons:
+        - title: "Thai Grand Prix"
+          round_number: 1
+          display_number: 1
+          episodes:
+            - title: "Free Practice 1"
+              aliases: ["fp1"]
+            - title: "Practice"
+            - title: "Free Practice 2"
+              aliases: ["fp2"]
+            - title: "Qualifying 1"
+              aliases: ["q1"]
+            - title: "Qualifying 2"
+              aliases: ["q2"]
+            - title: "Sprint"
+              aliases: ["sprint race"]
+            - title: "Warm-Up"
+              aliases: ["warm up", "warmup"]
+            - title: "Race"
+            - title: "After The Flag"
+            - title: "Thursday Press Conference"
+    files:
+      - value: "MotoGP 2026 - Round 01 - ThaiGP - Full Weekend (1080p50 DornaRip HEVC AAC x265-deef)/01. FP1 (1991mb 1920x1080 3848kbps x265 AAC deef)..mkv"
+        expect_episode: "Free Practice 1"
+      - value: "MotoGP 2026 - Round 01 - ThaiGP - Full Weekend (1080p50 DornaRip HEVC AAC x265-deef)/02. Practice (2122mb 1920x1080 3695kbps x265 AAC deef)..mkv"
+        expect_episode: "Practice"
+      - value: "MotoGP 2026 - Round 01 - ThaiGP - Full Weekend (1080p50 DornaRip HEVC AAC x265-deef)/06. Sprint (2265mb 1920x1080 4381kbps x265 AAC deef)..mkv"
+        expect_episode: "Sprint"
+      - value: "MotoGP 2026 - Round 01 - ThaiGP - Full Weekend (1080p50 DornaRip HEVC AAC x265-deef)/07. Warm Up (678mb 1920x1080 4103kbps x265 AAC deef)..mkv"
+        expect_episode: "Warm-Up"
+      - value: "MotoGP 2026 - Round 01 - ThaiGP - Full Weekend (1080p50 DornaRip HEVC AAC x265-deef)/08. Race (3364mb 1920x1080 4347kbps x265 AAC deef)..mkv"
+        expect_episode: "Race"
+      - value: "MotoGP 2026 - Round 01 - ThaiGP - Full Weekend (1080p50 DornaRip HEVC AAC x265-deef)/Press Conferences/05. After The Flag (481mb 1920x1080 2676kbps x265 AAC deef).mkv"
+        expect_episode: "After The Flag"
+      - value: "MotoGP 2026 - Round 01 - ThaiGP - Full Weekend (1080p50 DornaRip HEVC AAC x265-deef)/Press Conferences/02. Thursday Press Conference (344mb 1920x1080 1672kbps x265 AAC deef).mkv"
+        expect_episode: "Thursday Press Conference"
+
+  - description: "Moto2 deef weekend pack releases"
+    sport:
+      id: "moto2_deef"
+      name: "Moto2"
+      pattern_sets:
+        - moto2
+    show:
+      key: "moto2-2026"
+      title: "Moto2 2026"
+      seasons:
+        - title: "Thai Grand Prix"
+          round_number: 1
+          display_number: 1
+          episodes:
+            - title: "Free Practice 1"
+              aliases: ["fp1"]
+            - title: "Practice"
+            - title: "Free Practice 2"
+              aliases: ["fp2"]
+            - title: "Qualifying 1"
+              aliases: ["q1"]
+            - title: "Qualifying 2"
+              aliases: ["q2"]
+            - title: "Race"
+    files:
+      - value: "MotoGP 2026 - Round 01 - ThaiGP - Full Weekend (1080p50 DornaRip HEVC AAC x265-deef)/Moto2/01. FP1 (1529mb 1920x1080 3885kbps x265 AAC deef)..mkv"
+        expect_episode: "Free Practice 1"
+      - value: "MotoGP 2026 - Round 01 - ThaiGP - Full Weekend (1080p50 DornaRip HEVC AAC x265-deef)/Moto2/06. Race (2537mb 1920x1080 4289kbps x265 AAC deef)..mkv"
+        expect_episode: "Race"
+
+  - description: "Moto3 deef weekend pack releases"
+    sport:
+      id: "moto3_deef"
+      name: "Moto3"
+      pattern_sets:
+        - moto3
+    show:
+      key: "moto3-2026"
+      title: "Moto3 2026"
+      seasons:
+        - title: "Thai Grand Prix"
+          round_number: 1
+          display_number: 1
+          episodes:
+            - title: "Free Practice 1"
+              aliases: ["fp1"]
+            - title: "Practice"
+            - title: "Free Practice 2"
+              aliases: ["fp2"]
+            - title: "Qualifying 1"
+              aliases: ["q1"]
+            - title: "Qualifying 2"
+              aliases: ["q2"]
+            - title: "Race"
+    files:
+      - value: "MotoGP 2026 - Round 01 - ThaiGP - Full Weekend (1080p50 DornaRip HEVC AAC x265-deef)/Moto3/01. FP1 (1146mb 1920x1080 3563kbps x265 AAC deef)..mkv"
+        expect_episode: "Free Practice 1"
+      - value: "MotoGP 2026 - Round 01 - ThaiGP - Full Weekend (1080p50 DornaRip HEVC AAC x265-deef)/Moto3/06. Race (2268mb 1920x1080 4310kbps x265 AAC deef)..mkv"
+        expect_episode: "Race"

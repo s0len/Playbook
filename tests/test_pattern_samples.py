@@ -173,6 +173,7 @@ def test_pattern_samples(sample: PatternSample) -> None:
             sample.show,
             patterns,
             diagnostics=diagnostics,
+            relative_path=expectation.value,
         )
         assert result is not None, (
             f"{sample.description}: '{expectation.value}' did not resolve. Diagnostics: {diagnostics}"
