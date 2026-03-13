@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-
 import pytest
 
 from playbook.utils import (
@@ -262,7 +260,7 @@ class TestHashText:
         # Actually compute the expected value
         import hashlib
 
-        expected = hashlib.sha256("Hello 世界 🌍".encode("utf-8")).hexdigest()
+        expected = hashlib.sha256("Hello 世界 🌍".encode()).hexdigest()
         assert result == expected
 
     def test_special_characters(self) -> None:
@@ -270,7 +268,7 @@ class TestHashText:
         result = hash_text("!@#$%^&*()_+-={}[]|\\:;\"'<>,.?/~`")
         import hashlib
 
-        expected = hashlib.sha256("!@#$%^&*()_+-={}[]|\\:;\"'<>,.?/~`".encode("utf-8")).hexdigest()
+        expected = hashlib.sha256(b"!@#$%^&*()_+-={}[]|\\:;\"'<>,.?/~`").hexdigest()
         assert result == expected
 
     def test_multiline_string(self) -> None:
@@ -396,4 +394,3 @@ class TestHashFile:
 
         with pytest.raises(ValueError, match="Unable to hash"):
             hash_file(nonexistent)
-

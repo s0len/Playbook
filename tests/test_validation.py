@@ -3,7 +3,6 @@ from __future__ import annotations
 import pytest
 
 from playbook.validation import (
-    CONFIG_SCHEMA,
     ValidationIssue,
     ValidationReport,
     _format_jsonschema_path,
@@ -12,16 +11,13 @@ from playbook.validation import (
     validate_config_data,
 )
 
-
 # Fixtures
 
 
 @pytest.fixture
 def minimal_valid_config():
     """Minimal valid configuration with only required fields."""
-    return {
-        "sports": []
-    }
+    return {"sports": []}
 
 
 @pytest.fixture
@@ -56,14 +52,14 @@ def valid_config_with_settings():
             "kometa_trigger": {
                 "enabled": False,
                 "mode": "docker",
-            }
+            },
         },
         "sports": [
             {
                 "id": "test-sport",
                 "show_slug": "test-sport",
             }
-        ]
+        ],
     }
 
 
@@ -75,12 +71,7 @@ class TestValidationIssue:
 
     def test_validation_issue_creation(self):
         """Test creating a ValidationIssue with all fields."""
-        issue = ValidationIssue(
-            severity="error",
-            path="sports[0].id",
-            message="Invalid sport ID",
-            code="invalid-id"
-        )
+        issue = ValidationIssue(severity="error", path="sports[0].id", message="Invalid sport ID", code="invalid-id")
         assert issue.severity == "error"
         assert issue.path == "sports[0].id"
         assert issue.message == "Invalid sport ID"
@@ -92,7 +83,7 @@ class TestValidationIssue:
             severity="warning",
             path="settings.link_mode",
             message="Consider using hardlink",
-            code="link-mode-suggestion"
+            code="link-mode-suggestion",
         )
         assert issue.severity == "warning"
         assert issue.path == "settings.link_mode"
@@ -101,21 +92,13 @@ class TestValidationIssue:
 
     def test_validation_issue_with_root_path(self):
         """Test ValidationIssue with root-level path."""
-        issue = ValidationIssue(
-            severity="error",
-            path="<root>",
-            message="Missing required field",
-            code="required"
-        )
+        issue = ValidationIssue(severity="error", path="<root>", message="Missing required field", code="required")
         assert issue.path == "<root>"
 
     def test_validation_issue_with_nested_path(self):
         """Test ValidationIssue with deeply nested path."""
         issue = ValidationIssue(
-            severity="error",
-            path="sports[0].variants[1].metadata.url",
-            message="URL is blank",
-            code="metadata-url"
+            severity="error", path="sports[0].variants[1].metadata.url", message="URL is blank", code="metadata-url"
         )
         assert issue.path == "sports[0].variants[1].metadata.url"
 
@@ -140,10 +123,7 @@ class TestValidationReport:
         report = ValidationReport()
         report.warnings.append(
             ValidationIssue(
-                severity="warning",
-                path="settings",
-                message="Consider adding notifications",
-                code="suggestion"
+                severity="warning", path="settings", message="Consider adding notifications", code="suggestion"
             )
         )
         assert len(report.warnings) == 1
@@ -154,12 +134,7 @@ class TestValidationReport:
         """Test is_valid returns False when there are errors."""
         report = ValidationReport()
         report.errors.append(
-            ValidationIssue(
-                severity="error",
-                path="sports",
-                message="Sports field is required",
-                code="required"
-            )
+            ValidationIssue(severity="error", path="sports", message="Sports field is required", code="required")
         )
         assert len(report.errors) == 1
         assert report.is_valid is False
@@ -168,19 +143,11 @@ class TestValidationReport:
         """Test is_valid returns False when there are both errors and warnings."""
         report = ValidationReport()
         report.errors.append(
-            ValidationIssue(
-                severity="error",
-                path="sports",
-                message="Sports field is required",
-                code="required"
-            )
+            ValidationIssue(severity="error", path="sports", message="Sports field is required", code="required")
         )
         report.warnings.append(
             ValidationIssue(
-                severity="warning",
-                path="settings",
-                message="Consider adding notifications",
-                code="suggestion"
+                severity="warning", path="settings", message="Consider adding notifications", code="suggestion"
             )
         )
         assert len(report.errors) == 1
@@ -191,20 +158,10 @@ class TestValidationReport:
         """Test ValidationReport with multiple errors."""
         report = ValidationReport()
         report.errors.append(
-            ValidationIssue(
-                severity="error",
-                path="sports",
-                message="Sports field is required",
-                code="required"
-            )
+            ValidationIssue(severity="error", path="sports", message="Sports field is required", code="required")
         )
         report.errors.append(
-            ValidationIssue(
-                severity="error",
-                path="settings.link_mode",
-                message="Invalid link mode",
-                code="enum"
-            )
+            ValidationIssue(severity="error", path="settings.link_mode", message="Invalid link mode", code="enum")
         )
         assert len(report.errors) == 2
         assert report.is_valid is False
@@ -214,18 +171,12 @@ class TestValidationReport:
         report = ValidationReport()
         report.warnings.append(
             ValidationIssue(
-                severity="warning",
-                path="settings",
-                message="Consider adding notifications",
-                code="suggestion"
+                severity="warning", path="settings", message="Consider adding notifications", code="suggestion"
             )
         )
         report.warnings.append(
             ValidationIssue(
-                severity="warning",
-                path="sports[0]",
-                message="Consider adding team_alias_map",
-                code="suggestion"
+                severity="warning", path="sports[0]", message="Consider adding team_alias_map", code="suggestion"
             )
         )
         assert len(report.warnings) == 2
@@ -235,17 +186,9 @@ class TestValidationReport:
     def test_validation_report_errors_list_is_separate(self):
         """Test that errors and warnings are stored in separate lists."""
         report = ValidationReport()
-        error = ValidationIssue(
-            severity="error",
-            path="sports",
-            message="Sports field is required",
-            code="required"
-        )
+        error = ValidationIssue(severity="error", path="sports", message="Sports field is required", code="required")
         warning = ValidationIssue(
-            severity="warning",
-            path="settings",
-            message="Consider adding notifications",
-            code="suggestion"
+            severity="warning", path="settings", message="Consider adding notifications", code="suggestion"
         )
         report.errors.append(error)
         report.warnings.append(warning)
@@ -260,14 +203,7 @@ class TestValidationReport:
         report1 = ValidationReport()
         report2 = ValidationReport()
 
-        report1.errors.append(
-            ValidationIssue(
-                severity="error",
-                path="test",
-                message="test",
-                code="test"
-            )
-        )
+        report1.errors.append(ValidationIssue(severity="error", path="test", message="test", code="test"))
 
         # Verify that report2's errors list is independent
         assert len(report1.errors) == 1
@@ -317,9 +253,7 @@ class TestFormatJsonschemaPath:
 
     def test_deeply_nested_path(self):
         """Test path with deeply nested elements."""
-        result = _format_jsonschema_path(
-            ["settings", "destination", "root_template", "params", 0, "name"]
-        )
+        result = _format_jsonschema_path(["settings", "destination", "root_template", "params", 0, "name"])
         assert result == "settings.destination.root_template.params[0].name"
 
     def test_string_with_special_characters(self):
@@ -933,9 +867,7 @@ class TestConfigSchemaSports:
 
     def test_sports_must_be_array(self):
         """Test that sports field must be an array."""
-        config = {
-            "sports": "not an array"
-        }
+        config = {"sports": "not an array"}
         report = validate_config_data(config)
         assert report.is_valid is False
         # Find error related to sports type
@@ -944,23 +876,14 @@ class TestConfigSchemaSports:
 
     def test_empty_sports_array_is_valid(self):
         """Test that an empty sports array is valid."""
-        config = {
-            "sports": []
-        }
+        config = {"sports": []}
         report = validate_config_data(config)
         assert report.is_valid is True
         assert len(report.errors) == 0
 
     def test_sport_id_is_required(self):
         """Test that sport.id field is required."""
-        config = {
-            "sports": [
-                {
-                    "name": "Test Sport",
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"name": "Test Sport", "show_slug": "test-sport"}]}
         report = validate_config_data(config)
         assert report.is_valid is False
         # Find error related to sport id
@@ -969,14 +892,7 @@ class TestConfigSchemaSports:
 
     def test_sport_id_must_be_string(self):
         """Test that sport.id must be a string."""
-        config = {
-            "sports": [
-                {
-                    "id": 123,
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": 123, "show_slug": "test-sport"}]}
         report = validate_config_data(config)
         assert report.is_valid is False
         # Find error related to sport id type
@@ -985,14 +901,7 @@ class TestConfigSchemaSports:
 
     def test_sport_id_must_not_be_empty(self):
         """Test that sport.id must have minimum length of 1."""
-        config = {
-            "sports": [
-                {
-                    "id": "",
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "", "show_slug": "test-sport"}]}
         report = validate_config_data(config)
         assert report.is_valid is False
         # Find error related to sport id length
@@ -1001,70 +910,31 @@ class TestConfigSchemaSports:
 
     def test_sport_with_valid_id_and_show_slug(self):
         """Test that a sport with valid id and show_slug passes."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "show_slug": "test-sport"}]}
         report = validate_config_data(config)
         assert report.is_valid is True
 
     def test_sport_name_is_optional_string(self):
         """Test that sport.name is optional and accepts string."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "name": "Test Sport Name",
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "name": "Test Sport Name", "show_slug": "test-sport"}]}
         report = validate_config_data(config)
         assert report.is_valid is True
 
     def test_sport_enabled_boolean(self):
         """Test that sport.enabled accepts boolean."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "enabled": True,
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "enabled": True, "show_slug": "test-sport"}]}
         report = validate_config_data(config)
         assert report.is_valid is True
 
     def test_sport_team_alias_map_string(self):
         """Test that sport.team_alias_map accepts string."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "team_alias_map": "nhl",
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "team_alias_map": "nhl", "show_slug": "test-sport"}]}
         report = validate_config_data(config)
         assert report.is_valid is True
 
     def test_sport_team_alias_map_null(self):
         """Test that sport.team_alias_map accepts null."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "team_alias_map": None,
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "team_alias_map": None, "show_slug": "test-sport"}]}
         report = validate_config_data(config)
         assert report.is_valid is True
 
@@ -1085,40 +955,19 @@ class TestConfigSchemaSports:
 
     def test_show_slug_must_be_string(self):
         """Test that show_slug must be a string."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "show_slug": 123
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "show_slug": 123}]}
         report = validate_config_data(config)
         assert report.is_valid is False
 
     def test_show_slug_must_not_be_empty(self):
         """Test that show_slug must have minimum length of 1."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "show_slug": ""
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "show_slug": ""}]}
         report = validate_config_data(config)
         assert report.is_valid is False
 
     def test_show_slug_must_not_be_blank(self):
         """Test that show_slug must not be whitespace only."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "show_slug": "   "
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "show_slug": "   "}]}
         report = validate_config_data(config)
         assert report.is_valid is False
         slug_errors = [e for e in report.errors if "show-slug" in e.code]
@@ -1128,13 +977,7 @@ class TestConfigSchemaSports:
         """Test that season_overrides accepts object."""
         config = {
             "sports": [
-                {
-                    "id": "test-sport",
-                    "show_slug": "test-sport",
-                    "season_overrides": {
-                        "1": {"title": "Custom Title"}
-                    }
-                }
+                {"id": "test-sport", "show_slug": "test-sport", "season_overrides": {"1": {"title": "Custom Title"}}}
             ]
         }
         report = validate_config_data(config)
@@ -1143,33 +986,15 @@ class TestConfigSchemaSports:
     def test_sport_pattern_sets_as_array(self):
         """Test that sport.pattern_sets accepts array of strings."""
         config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "pattern_sets": ["nhl_default", "custom_set"],
-                    "show_slug": "test-sport"
-                }
-            ]
+            "sports": [{"id": "test-sport", "pattern_sets": ["nhl_default", "custom_set"], "show_slug": "test-sport"}]
         }
-        report = validate_config_data(config)
+        _ = validate_config_data(config)
         # May have errors about unknown pattern sets, but schema validation passes
         # The semantic validation (unknown pattern sets) is tested separately
 
     def test_sport_file_patterns_as_array(self):
         """Test that sport.file_patterns accepts array of pattern definitions."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "file_patterns": [
-                        {
-                            "regex": r".*\.mkv"
-                        }
-                    ],
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "file_patterns": [{"regex": r".*\.mkv"}], "show_slug": "test-sport"}]}
         report = validate_config_data(config)
         assert report.is_valid is True
 
@@ -1177,15 +1002,7 @@ class TestConfigSchemaSports:
         """Test that pattern_definition.regex is required."""
         config = {
             "sports": [
-                {
-                    "id": "test-sport",
-                    "file_patterns": [
-                        {
-                            "description": "Test pattern"
-                        }
-                    ],
-                    "show_slug": "test-sport"
-                }
+                {"id": "test-sport", "file_patterns": [{"description": "Test pattern"}], "show_slug": "test-sport"}
             ]
         }
         report = validate_config_data(config)
@@ -1196,19 +1013,7 @@ class TestConfigSchemaSports:
 
     def test_pattern_definition_regex_must_not_be_empty(self):
         """Test that pattern_definition.regex must have minimum length."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "file_patterns": [
-                        {
-                            "regex": ""
-                        }
-                    ],
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "file_patterns": [{"regex": ""}], "show_slug": "test-sport"}]}
         report = validate_config_data(config)
         assert report.is_valid is False
         # Find error related to regex length
@@ -1221,16 +1026,8 @@ class TestConfigSchemaSports:
             "sports": [
                 {
                     "id": "test-sport",
-                    "file_patterns": [
-                        {
-                            "regex": r".*\.mkv",
-                            "season_selector": {
-                                "mode": "round",
-                                "offset": 1
-                            }
-                        }
-                    ],
-                    "show_slug": "test-sport"
+                    "file_patterns": [{"regex": r".*\.mkv", "season_selector": {"mode": "round", "offset": 1}}],
+                    "show_slug": "test-sport",
                 }
             ]
         }
@@ -1243,15 +1040,8 @@ class TestConfigSchemaSports:
             "sports": [
                 {
                     "id": "test-sport",
-                    "file_patterns": [
-                        {
-                            "regex": r".*\.mkv",
-                            "season_selector": {
-                                "mode": "invalid_mode"
-                            }
-                        }
-                    ],
-                    "show_slug": "test-sport"
+                    "file_patterns": [{"regex": r".*\.mkv", "season_selector": {"mode": "invalid_mode"}}],
+                    "show_slug": "test-sport",
                 }
             ]
         }
@@ -1269,15 +1059,8 @@ class TestConfigSchemaSports:
                 "sports": [
                     {
                         "id": "test-sport",
-                        "file_patterns": [
-                            {
-                                "regex": r".*\.mkv",
-                                "season_selector": {
-                                    "mode": mode
-                                }
-                            }
-                        ],
-                        "show_slug": "test-sport"
+                        "file_patterns": [{"regex": r".*\.mkv", "season_selector": {"mode": mode}}],
+                        "show_slug": "test-sport",
                     }
                 ]
             }
@@ -1290,15 +1073,8 @@ class TestConfigSchemaSports:
             "sports": [
                 {
                     "id": "test-sport",
-                    "file_patterns": [
-                        {
-                            "regex": r".*\.mkv",
-                            "episode_selector": {
-                                "group": "episode"
-                            }
-                        }
-                    ],
-                    "show_slug": "test-sport"
+                    "file_patterns": [{"regex": r".*\.mkv", "episode_selector": {"group": "episode"}}],
+                    "show_slug": "test-sport",
                 }
             ]
         }
@@ -1307,28 +1083,14 @@ class TestConfigSchemaSports:
 
     def test_sport_source_globs_array(self):
         """Test that sport.source_globs accepts array of strings."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "source_globs": ["**/*.mkv", "**/*.mp4"],
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "source_globs": ["**/*.mkv", "**/*.mp4"], "show_slug": "test-sport"}]}
         report = validate_config_data(config)
         assert report.is_valid is True
 
     def test_sport_source_extensions_array(self):
         """Test that sport.source_extensions accepts array of strings."""
         config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "source_extensions": [".mkv", ".mp4", ".avi"],
-                    "show_slug": "test-sport"
-                }
-            ]
+            "sports": [{"id": "test-sport", "source_extensions": [".mkv", ".mp4", ".avi"], "show_slug": "test-sport"}]
         }
         report = validate_config_data(config)
         assert report.is_valid is True
@@ -1336,29 +1098,13 @@ class TestConfigSchemaSports:
     def test_sport_link_mode_valid_values(self):
         """Test that sport.link_mode accepts valid enum values."""
         for link_mode in ["hardlink", "copy", "symlink"]:
-            config = {
-                "sports": [
-                    {
-                        "id": "test-sport",
-                        "link_mode": link_mode,
-                        "show_slug": "test-sport"
-                    }
-                ]
-            }
+            config = {"sports": [{"id": "test-sport", "link_mode": link_mode, "show_slug": "test-sport"}]}
             report = validate_config_data(config)
             assert report.is_valid is True, f"Link mode '{link_mode}' should be valid"
 
     def test_sport_link_mode_invalid_value(self):
         """Test that sport.link_mode rejects invalid values."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "link_mode": "invalid_mode",
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "link_mode": "invalid_mode", "show_slug": "test-sport"}]}
         report = validate_config_data(config)
         assert report.is_valid is False
         # Find error related to link_mode
@@ -1367,15 +1113,7 @@ class TestConfigSchemaSports:
 
     def test_sport_allow_unmatched_boolean(self):
         """Test that sport.allow_unmatched accepts boolean."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "allow_unmatched": True,
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "allow_unmatched": True, "show_slug": "test-sport"}]}
         report = validate_config_data(config)
         assert report.is_valid is True
 
@@ -1388,9 +1126,9 @@ class TestConfigSchemaSports:
                     "destination": {
                         "root_template": "{sport_id}",
                         "season_dir_template": "Season {season}",
-                        "episode_template": "{title}.{ext}"
+                        "episode_template": "{title}.{ext}",
                     },
-                    "show_slug": "test-sport"
+                    "show_slug": "test-sport",
                 }
             ]
         }
@@ -1399,126 +1137,43 @@ class TestConfigSchemaSports:
 
     def test_sport_variants_array(self):
         """Test that sport.variants accepts array of variant objects."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "variants": [
-                        {
-                            "id": "variant-1",
-                            "show_slug": "variant1"
-                        }
-                    ]
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "variants": [{"id": "variant-1", "show_slug": "variant1"}]}]}
         report = validate_config_data(config)
         assert report.is_valid is True
 
     def test_variant_with_id_string(self):
         """Test that variant.id accepts string."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "variants": [
-                        {
-                            "id": "custom-variant-id",
-                            "show_slug": "variant"
-                        }
-                    ]
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "variants": [{"id": "custom-variant-id", "show_slug": "variant"}]}]}
         report = validate_config_data(config)
         assert report.is_valid is True
 
     def test_variant_with_id_suffix(self):
         """Test that variant.id_suffix accepts string."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "variants": [
-                        {
-                            "id_suffix": "-2023",
-                            "show_slug": "variant"
-                        }
-                    ]
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "variants": [{"id_suffix": "-2023", "show_slug": "variant"}]}]}
         report = validate_config_data(config)
         assert report.is_valid is True
 
     def test_variant_with_year_integer(self):
         """Test that variant.year accepts integer."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "variants": [
-                        {
-                            "year": 2023,
-                            "show_slug": "variant"
-                        }
-                    ]
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "variants": [{"year": 2023, "show_slug": "variant"}]}]}
         report = validate_config_data(config)
         assert report.is_valid is True
 
     def test_variant_with_year_string(self):
         """Test that variant.year accepts string."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "variants": [
-                        {
-                            "year": "2023",
-                            "show_slug": "variant"
-                        }
-                    ]
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "variants": [{"year": "2023", "show_slug": "variant"}]}]}
         report = validate_config_data(config)
         assert report.is_valid is True
 
     def test_variant_with_name(self):
         """Test that variant.name accepts string."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "variants": [
-                        {
-                            "name": "Test Variant",
-                            "show_slug": "variant"
-                        }
-                    ]
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "variants": [{"name": "Test Variant", "show_slug": "variant"}]}]}
         report = validate_config_data(config)
         assert report.is_valid is True
 
     def test_variant_show_slug_structure(self):
         """Test that variant.show_slug is accepted."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "variants": [
-                        {
-                            "show_slug": "variant-show"
-                        }
-                    ]
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "variants": [{"show_slug": "variant-show"}]}]}
         report = validate_config_data(config)
         assert report.is_valid is True
 
@@ -1526,18 +1181,9 @@ class TestConfigSchemaSports:
         """Test that multiple sports can be defined in array."""
         config = {
             "sports": [
-                {
-                    "id": "sport-1",
-                    "show_slug": "sport1"
-                },
-                {
-                    "id": "sport-2",
-                    "show_slug": "sport2"
-                },
-                {
-                    "id": "sport-3",
-                    "show_slug": "sport3"
-                }
+                {"id": "sport-1", "show_slug": "sport1"},
+                {"id": "sport-2", "show_slug": "sport2"},
+                {"id": "sport-3", "show_slug": "sport3"},
             ]
         }
         report = validate_config_data(config)
@@ -1560,7 +1206,7 @@ class TestConfigSchemaSports:
                             "description": "MKV files",
                             "season_selector": {"mode": "round"},
                             "episode_selector": {"group": "ep"},
-                            "priority": 100
+                            "priority": 100,
                         }
                     ],
                     "source_globs": ["**/*.mkv"],
@@ -1570,8 +1216,8 @@ class TestConfigSchemaSports:
                     "destination": {
                         "root_template": "{sport_id}",
                         "season_dir_template": "Season {season}",
-                        "episode_template": "{title}.{ext}"
-                    }
+                        "episode_template": "{title}.{ext}",
+                    },
                 }
             ]
         }
@@ -1585,23 +1231,10 @@ class TestConfigSchemaSports:
                 {
                     "id": "multi-variant-sport",
                     "variants": [
-                        {
-                            "id": "variant-1",
-                            "year": 2022,
-                            "show_slug": "v1"
-                        },
-                        {
-                            "id": "variant-2",
-                            "year": 2023,
-                            "show_slug": "v2"
-                        },
-                        {
-                            "id_suffix": "-2024",
-                            "year": "2024",
-                            "name": "2024 Season",
-                            "show_slug": "v3"
-                        }
-                    ]
+                        {"id": "variant-1", "year": 2022, "show_slug": "v1"},
+                        {"id": "variant-2", "year": 2023, "show_slug": "v2"},
+                        {"id_suffix": "-2024", "year": "2024", "name": "2024 Season", "show_slug": "v3"},
+                    ],
                 }
             ]
         }
@@ -1619,18 +1252,9 @@ class TestValidateSemantics:
         """Test that duplicate sport IDs are detected and reported."""
         config = {
             "sports": [
-                {
-                    "id": "duplicate-id",
-                    "show_slug": "sport1"
-                },
-                {
-                    "id": "unique-id",
-                    "show_slug": "sport2"
-                },
-                {
-                    "id": "duplicate-id",
-                    "show_slug": "sport3"
-                }
+                {"id": "duplicate-id", "show_slug": "sport1"},
+                {"id": "unique-id", "show_slug": "sport2"},
+                {"id": "duplicate-id", "show_slug": "sport3"},
             ]
         }
         report = ValidationReport()
@@ -1680,14 +1304,7 @@ class TestValidateSemantics:
 
     def test_missing_show_slug_without_variants(self):
         """Test error when sport has no show_slug, show_slug_template, or variants."""
-        config = {
-            "sports": [
-                {
-                    "id": "no-slug-sport",
-                    "name": "Sport Without Show Slug"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "no-slug-sport", "name": "Sport Without Show Slug"}]}
         report = ValidationReport()
         _validate_semantics(config, report)
 
@@ -1698,14 +1315,7 @@ class TestValidateSemantics:
 
     def test_no_error_when_sport_has_metadata(self):
         """Test no error when sport has metadata block."""
-        config = {
-            "sports": [
-                {
-                    "id": "with-metadata",
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "with-metadata", "show_slug": "test-sport"}]}
         report = ValidationReport()
         _validate_semantics(config, report)
 
@@ -1714,19 +1324,7 @@ class TestValidateSemantics:
 
     def test_no_error_when_sport_has_variants(self):
         """Test no error when sport has no show_slug but has variants with show_slug."""
-        config = {
-            "sports": [
-                {
-                    "id": "with-variants",
-                    "variants": [
-                        {
-                            "id": "variant-1",
-                            "show_slug": "v1"
-                        }
-                    ]
-                }
-            ]
-        }
+        config = {"sports": [{"id": "with-variants", "variants": [{"id": "variant-1", "show_slug": "v1"}]}]}
         report = ValidationReport()
         _validate_semantics(config, report)
 
@@ -1735,14 +1333,7 @@ class TestValidateSemantics:
 
     def test_no_error_when_sport_has_show_slug_template(self):
         """Test no error when sport has show_slug_template instead of show_slug."""
-        config = {
-            "sports": [
-                {
-                    "id": "dynamic-sport",
-                    "show_slug_template": "sport-{year}"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "dynamic-sport", "show_slug_template": "sport-{year}"}]}
         report = ValidationReport()
         _validate_semantics(config, report)
 
@@ -1751,14 +1342,7 @@ class TestValidateSemantics:
 
     def test_show_slug_template_blank_detection(self):
         """Test that blank show_slug_template is detected."""
-        config = {
-            "sports": [
-                {
-                    "id": "blank-template-sport",
-                    "show_slug_template": "   "
-                }
-            ]
-        }
+        config = {"sports": [{"id": "blank-template-sport", "show_slug_template": "   "}]}
         report = ValidationReport()
         _validate_semantics(config, report)
 
@@ -1768,14 +1352,7 @@ class TestValidateSemantics:
 
     def test_show_slug_blank_detection(self):
         """Test that blank show_slug is detected."""
-        config = {
-            "sports": [
-                {
-                    "id": "blank-slug-sport",
-                    "show_slug": "   "
-                }
-            ]
-        }
+        config = {"sports": [{"id": "blank-slug-sport", "show_slug": "   "}]}
         report = ValidationReport()
         _validate_semantics(config, report)
 
@@ -1786,28 +1363,14 @@ class TestValidateSemantics:
 
     def test_show_slug_empty_string_detection(self):
         """Test that empty string show_slug is detected by schema validation."""
-        config = {
-            "sports": [
-                {
-                    "id": "empty-slug-sport",
-                    "show_slug": ""
-                }
-            ]
-        }
+        config = {"sports": [{"id": "empty-slug-sport", "show_slug": ""}]}
         report = validate_config_data(config)
         # Empty string should be caught by schema (minLength: 1)
         assert report.is_valid is False
 
     def test_show_slug_valid_does_not_error(self):
         """Test that valid show_slug does not trigger error."""
-        config = {
-            "sports": [
-                {
-                    "id": "valid-slug-sport",
-                    "show_slug": "valid-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "valid-slug-sport", "show_slug": "valid-sport"}]}
         report = ValidationReport()
         _validate_semantics(config, report)
 
@@ -1816,15 +1379,7 @@ class TestValidateSemantics:
 
     def test_unknown_pattern_set_reference(self):
         """Test that unknown pattern set references are detected."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "pattern_sets": ["unknown_pattern_set"],
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "pattern_sets": ["unknown_pattern_set"], "show_slug": "test-sport"}]}
         report = ValidationReport()
         _validate_semantics(config, report)
 
@@ -1837,11 +1392,7 @@ class TestValidateSemantics:
         """Test detection of multiple unknown pattern set references."""
         config = {
             "sports": [
-                {
-                    "id": "test-sport",
-                    "pattern_sets": ["unknown_1", "unknown_2", "unknown_3"],
-                    "show_slug": "test-sport"
-                }
+                {"id": "test-sport", "pattern_sets": ["unknown_1", "unknown_2", "unknown_3"], "show_slug": "test-sport"}
             ]
         }
         report = ValidationReport()
@@ -1854,15 +1405,7 @@ class TestValidateSemantics:
         """Test that builtin pattern sets do not trigger errors."""
         # This test assumes there are builtin pattern sets
         # We'll test with an empty pattern_sets to ensure no error
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "pattern_sets": [],
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "pattern_sets": [], "show_slug": "test-sport"}]}
         report = ValidationReport()
         _validate_semantics(config, report)
 
@@ -1872,18 +1415,8 @@ class TestValidateSemantics:
     def test_user_defined_pattern_sets_are_recognized(self):
         """Test that user-defined pattern sets are recognized and do not error."""
         config = {
-            "pattern_sets": {
-                "custom_set": [
-                    {"regex": r".*\.mkv"}
-                ]
-            },
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "pattern_sets": ["custom_set"],
-                    "show_slug": "test-sport"
-                }
-            ]
+            "pattern_sets": {"custom_set": [{"regex": r".*\.mkv"}]},
+            "sports": [{"id": "test-sport", "pattern_sets": ["custom_set"], "show_slug": "test-sport"}],
         }
         report = ValidationReport()
         _validate_semantics(config, report)
@@ -1893,19 +1426,7 @@ class TestValidateSemantics:
 
     def test_variant_missing_show_slug_detected(self):
         """Test that variant without show_slug is detected."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "variants": [
-                        {
-                            "id": "variant-without-slug",
-                            "year": 2023
-                        }
-                    ]
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "variants": [{"id": "variant-without-slug", "year": 2023}]}]}
         report = ValidationReport()
         _validate_semantics(config, report)
 
@@ -1915,19 +1436,7 @@ class TestValidateSemantics:
 
     def test_variant_with_empty_show_slug_detected(self):
         """Test that variant with empty show_slug is detected."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "variants": [
-                        {
-                            "id": "variant-empty-slug",
-                            "show_slug": ""
-                        }
-                    ]
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "variants": [{"id": "variant-empty-slug", "show_slug": ""}]}]}
         report = ValidationReport()
         _validate_semantics(config, report)
 
@@ -1936,19 +1445,7 @@ class TestValidateSemantics:
 
     def test_variant_with_valid_show_slug_no_error(self):
         """Test that variant with valid show_slug does not error."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "variants": [
-                        {
-                            "id": "variant-with-slug",
-                            "show_slug": "variant"
-                        }
-                    ]
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "variants": [{"id": "variant-with-slug", "show_slug": "variant"}]}]}
         report = ValidationReport()
         _validate_semantics(config, report)
 
@@ -1957,19 +1454,7 @@ class TestValidateSemantics:
 
     def test_variant_show_slug_blank_detected(self):
         """Test that blank show_slug in variant is detected."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "variants": [
-                        {
-                            "id": "variant-1",
-                            "show_slug": "  "
-                        }
-                    ]
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "variants": [{"id": "variant-1", "show_slug": "  "}]}]}
         report = ValidationReport()
         _validate_semantics(config, report)
 
@@ -1984,19 +1469,10 @@ class TestValidateSemantics:
                 {
                     "id": "test-sport",
                     "variants": [
-                        {
-                            "id": "valid-variant",
-                            "show_slug": "v1"
-                        },
-                        {
-                            "id": "invalid-variant",
-                            "show_slug": ""
-                        },
-                        {
-                            "id": "no-metadata-variant",
-                            "year": 2023
-                        }
-                    ]
+                        {"id": "valid-variant", "show_slug": "v1"},
+                        {"id": "invalid-variant", "show_slug": ""},
+                        {"id": "no-metadata-variant", "year": 2023},
+                    ],
                 }
             ]
         }
@@ -2009,16 +1485,7 @@ class TestValidateSemantics:
 
     def test_variant_non_dict_structure_detected(self):
         """Test that non-dict variant entries are detected."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "variants": [
-                        "not-a-dict"
-                    ]
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "variants": ["not-a-dict"]}]}
         report = ValidationReport()
         _validate_semantics(config, report)
 
@@ -2028,23 +1495,14 @@ class TestValidateSemantics:
 
     def test_show_slug_non_string_detected(self):
         """Test that non-string show_slug is detected by schema."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "show_slug": 123
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "show_slug": 123}]}
         report = validate_config_data(config)
         # Schema validation should catch non-string show_slug
         assert report.is_valid is False
 
     def test_empty_config_no_errors(self):
         """Test that minimal empty config produces no semantic errors."""
-        config = {
-            "sports": []
-        }
+        config = {"sports": []}
         report = ValidationReport()
         _validate_semantics(config, report)
 
@@ -2053,36 +1511,18 @@ class TestValidateSemantics:
     def test_complex_valid_config_no_errors(self):
         """Test complex valid configuration produces no semantic errors."""
         config = {
-            "pattern_sets": {
-                "custom_patterns": [
-                    {"regex": r".*\.mkv"}
-                ]
-            },
-            "settings": {
-                "notifications": {
-                    "scan_summary": True
-                }
-            },
+            "pattern_sets": {"custom_patterns": [{"regex": r".*\.mkv"}]},
+            "settings": {"notifications": {"scan_summary": True}},
             "sports": [
-                {
-                    "id": "sport-1",
-                    "pattern_sets": ["custom_patterns"],
-                    "show_slug": "sport1"
-                },
+                {"id": "sport-1", "pattern_sets": ["custom_patterns"], "show_slug": "sport1"},
                 {
                     "id": "sport-2",
                     "variants": [
-                        {
-                            "id": "variant-1",
-                            "show_slug": "variant1"
-                        },
-                        {
-                            "id": "variant-2",
-                            "show_slug": "variant2"
-                        }
-                    ]
-                }
-            ]
+                        {"id": "variant-1", "show_slug": "variant1"},
+                        {"id": "variant-2", "show_slug": "variant2"},
+                    ],
+                },
+            ],
         }
         report = ValidationReport()
         _validate_semantics(config, report)
@@ -2098,16 +1538,7 @@ class TestValidateConfigDataIntegration:
 
     def test_fully_valid_config_returns_is_valid_true(self):
         """Test that a fully valid config returns is_valid=True."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "name": "Test Sport",
-                    "enabled": True,
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "name": "Test Sport", "enabled": True, "show_slug": "test-sport"}]}
         report = validate_config_data(config)
 
         assert report.is_valid is True
@@ -2131,23 +1562,8 @@ class TestValidateConfigDataIntegration:
     def test_multiple_errors_are_collected(self):
         """Test that multiple validation errors are collected in a single report."""
         config = {
-            "sports": [
-                {
-                    "id": "",
-                    "show_slug": ""
-                },
-                {
-                    "id": "sport-2",
-                    "link_mode": "invalid_mode",
-                    "metadata": None
-                }
-            ],
-            "settings": {
-                "link_mode": "bad_mode",
-                "file_watcher": {
-                    "debounce_seconds": -5
-                }
-            }
+            "sports": [{"id": "", "show_slug": ""}, {"id": "sport-2", "link_mode": "invalid_mode", "metadata": None}],
+            "settings": {"link_mode": "bad_mode", "file_watcher": {"debounce_seconds": -5}},
         }
         report = validate_config_data(config)
 
@@ -2157,12 +1573,7 @@ class TestValidateConfigDataIntegration:
     def test_errors_have_correct_paths(self):
         """Test that errors include correct paths to problematic fields."""
         config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "show_slug": ""
-                }
-            ],
+            "sports": [{"id": "test-sport", "show_slug": ""}],
         }
         report = validate_config_data(config)
 
@@ -2174,18 +1585,7 @@ class TestValidateConfigDataIntegration:
 
     def test_errors_have_correct_codes(self):
         """Test that errors include appropriate error codes."""
-        config = {
-            "sports": [
-                {
-                    "id": "sport-1",
-                    "show_slug": "sport1"
-                },
-                {
-                    "id": "sport-1",
-                    "show_slug": "sport2"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "sport-1", "show_slug": "sport1"}, {"id": "sport-1", "show_slug": "sport2"}]}
         report = validate_config_data(config)
 
         assert report.is_valid is False
@@ -2195,9 +1595,7 @@ class TestValidateConfigDataIntegration:
 
     def test_schema_validation_errors_have_schema_code(self):
         """Test that schema validation errors use 'schema' code."""
-        config = {
-            "sports": "not-an-array"
-        }
+        config = {"sports": "not-an-array"}
         report = validate_config_data(config)
 
         assert report.is_valid is False
@@ -2209,13 +1607,7 @@ class TestValidateConfigDataIntegration:
     def test_semantic_errors_have_specific_codes(self):
         """Test that semantic validation errors have specific error codes."""
         config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "pattern_sets": ["nonexistent_pattern_set"],
-                    "show_slug": "test-sport"
-                }
-            ]
+            "sports": [{"id": "test-sport", "pattern_sets": ["nonexistent_pattern_set"], "show_slug": "test-sport"}]
         }
         report = validate_config_data(config)
 
@@ -2226,11 +1618,7 @@ class TestValidateConfigDataIntegration:
 
     def test_sports_field_is_optional_integration(self):
         """Test that missing 'sports' field is valid (auto-loads from pattern_templates.yaml)."""
-        config = {
-            "settings": {
-                "source_dir": "/source"
-            }
-        }
+        config = {"settings": {"source_dir": "/source"}}
         report = validate_config_data(config)
 
         # sports is optional since it auto-loads from pattern_templates.yaml
@@ -2240,13 +1628,8 @@ class TestValidateConfigDataIntegration:
         """Test complex configuration with all features enabled."""
         config = {
             "pattern_sets": {
-                "custom_set_1": [
-                    {"regex": r".*\.mkv"},
-                    {"regex": r".*\.mp4"}
-                ],
-                "custom_set_2": [
-                    {"regex": r"S\d+E\d+"}
-                ]
+                "custom_set_1": [{"regex": r".*\.mkv"}, {"regex": r".*\.mp4"}],
+                "custom_set_2": [{"regex": r"S\d+E\d+"}],
             },
             "settings": {
                 "source_dir": "/media/source",
@@ -2257,18 +1640,16 @@ class TestValidateConfigDataIntegration:
                 "destination": {
                     "root_template": "{sport_id}",
                     "season_dir_template": "Season {season}",
-                    "episode_template": "{title}.{ext}"
+                    "episode_template": "{title}.{ext}",
                 },
-                "notifications": {
-                    "scan_summary": True
-                },
+                "notifications": {"scan_summary": True},
                 "file_watcher": {
                     "enabled": True,
                     "paths": ["/watch/path1", "/watch/path2"],
                     "include": ["*.mkv", "*.mp4"],
                     "ignore": ["*.tmp"],
                     "debounce_seconds": 5,
-                    "reconcile_interval": 300
+                    "reconcile_interval": 300,
                 },
                 "kometa_trigger": {
                     "enabled": True,
@@ -2276,9 +1657,9 @@ class TestValidateConfigDataIntegration:
                     "docker": {
                         "binary": "docker",
                         "image": "kometateam/kometa:latest",
-                        "config_path": "/config/config.yml"
-                    }
-                }
+                        "config_path": "/config/config.yml",
+                    },
+                },
             },
             "sports": [
                 {
@@ -2291,14 +1672,9 @@ class TestValidateConfigDataIntegration:
                         {
                             "regex": r"Game\s+\d+",
                             "description": "Game files",
-                            "season_selector": {
-                                "mode": "round",
-                                "offset": 1
-                            },
-                            "episode_selector": {
-                                "group": "episode"
-                            },
-                            "priority": 100
+                            "season_selector": {"mode": "round", "offset": 1},
+                            "episode_selector": {"group": "episode"},
+                            "priority": 100,
                         }
                     ],
                     "source_globs": ["**/*.mkv"],
@@ -2308,29 +1684,19 @@ class TestValidateConfigDataIntegration:
                     "destination": {
                         "root_template": "{sport_id}/{year}",
                         "season_dir_template": "Season {season}",
-                        "episode_template": "{title}.{ext}"
-                    }
+                        "episode_template": "{title}.{ext}",
+                    },
                 },
                 {
                     "id": "sport-2",
                     "name": "Second Sport",
                     "pattern_sets": ["custom_set_2"],
                     "variants": [
-                        {
-                            "id": "variant-2023",
-                            "year": 2023,
-                            "name": "2023 Season",
-                            "show_slug": "sport2-2023"
-                        },
-                        {
-                            "id_suffix": "-2024",
-                            "year": "2024",
-                            "name": "2024 Season",
-                            "show_slug": "sport2-2024"
-                        }
-                    ]
-                }
-            ]
+                        {"id": "variant-2023", "year": 2023, "name": "2023 Season", "show_slug": "sport2-2023"},
+                        {"id_suffix": "-2024", "year": "2024", "name": "2024 Season", "show_slug": "sport2-2024"},
+                    ],
+                },
+            ],
         }
         report = validate_config_data(config)
 
@@ -2339,18 +1705,7 @@ class TestValidateConfigDataIntegration:
 
     def test_multiple_validation_types_combined(self):
         """Test that both schema and semantic errors are collected together."""
-        config = {
-            "sports": [
-                {
-                    "id": "",
-                    "show_slug": "  "
-                },
-                {
-                    "id": "sport-2",
-                    "link_mode": "bad_mode"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "", "show_slug": "  "}, {"id": "sport-2", "link_mode": "bad_mode"}]}
         report = validate_config_data(config)
 
         assert report.is_valid is False
@@ -2362,11 +1717,7 @@ class TestValidateConfigDataIntegration:
 
     def test_error_collection_preserves_all_errors(self):
         """Test that all errors are preserved and not truncated."""
-        config = {
-            "sports": [
-                {"id": f"sport-{i}", "show_slug": ""} for i in range(10)
-            ]
-        }
+        config = {"sports": [{"id": f"sport-{i}", "show_slug": ""} for i in range(10)]}
         report = validate_config_data(config)
 
         assert report.is_valid is False
@@ -2374,14 +1725,7 @@ class TestValidateConfigDataIntegration:
 
     def test_report_structure_with_errors(self):
         """Test ValidationReport structure when errors are present."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "show_slug": ""
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "show_slug": ""}]}
         report = validate_config_data(config)
 
         assert isinstance(report, ValidationReport)
@@ -2399,14 +1743,7 @@ class TestValidateConfigDataIntegration:
 
     def test_report_structure_with_no_errors(self):
         """Test ValidationReport structure when config is valid."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "show_slug": "test-sport"}]}
         report = validate_config_data(config)
 
         assert isinstance(report, ValidationReport)
@@ -2417,14 +1754,7 @@ class TestValidateConfigDataIntegration:
 
     def test_warnings_are_separate_from_errors(self):
         """Test that warnings list exists separately from errors."""
-        config = {
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "show_slug": "test-sport"
-                }
-            ]
-        }
+        config = {"sports": [{"id": "test-sport", "show_slug": "test-sport"}]}
         report = validate_config_data(config)
 
         assert hasattr(report, "errors")
@@ -2439,16 +1769,7 @@ class TestValidateConfigDataIntegration:
             "sports": [
                 {
                     "id": "multi-variant-sport",
-                    "variants": [
-                        {
-                            "id": "variant-1",
-                            "show_slug": "v1"
-                        },
-                        {
-                            "id": "variant-2",
-                            "show_slug": "v2"
-                        }
-                    ]
+                    "variants": [{"id": "variant-1", "show_slug": "v1"}, {"id": "variant-2", "show_slug": "v2"}],
                 }
             ]
         }
@@ -2460,18 +1781,8 @@ class TestValidateConfigDataIntegration:
     def test_config_with_custom_and_builtin_pattern_sets(self):
         """Test config with both custom and potentially builtin pattern sets."""
         config = {
-            "pattern_sets": {
-                "my_custom_patterns": [
-                    {"regex": r".*\.mkv"}
-                ]
-            },
-            "sports": [
-                {
-                    "id": "test-sport",
-                    "pattern_sets": ["my_custom_patterns"],
-                    "show_slug": "test-sport"
-                }
-            ]
+            "pattern_sets": {"my_custom_patterns": [{"regex": r".*\.mkv"}]},
+            "sports": [{"id": "test-sport", "pattern_sets": ["my_custom_patterns"], "show_slug": "test-sport"}],
         }
         report = validate_config_data(config)
 
@@ -2480,16 +1791,7 @@ class TestValidateConfigDataIntegration:
     def test_duplicate_ids_with_valid_schema(self):
         """Test that duplicate IDs are caught even when schema is valid."""
         config = {
-            "sports": [
-                {
-                    "id": "duplicate-id",
-                    "show_slug": "sport1"
-                },
-                {
-                    "id": "duplicate-id",
-                    "show_slug": "sport2"
-                }
-            ]
+            "sports": [{"id": "duplicate-id", "show_slug": "sport1"}, {"id": "duplicate-id", "show_slug": "sport2"}]
         }
         report = validate_config_data(config)
 

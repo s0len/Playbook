@@ -4,7 +4,6 @@ import textwrap
 from io import StringIO
 from pathlib import Path
 
-import pytest
 from rich.console import Console
 
 from playbook.banner import BannerInfo, build_banner_info, print_startup_banner
@@ -22,9 +21,9 @@ def build_minimal_config(tmp_path: Path) -> AppConfig:
         config_path,
         f"""
         settings:
-          source_dir: "{tmp_path / 'source'}"
-          destination_dir: "{tmp_path / 'dest'}"
-          cache_dir: "{tmp_path / 'cache'}"
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
           use_default_sports: false
 
         sports:
@@ -93,9 +92,9 @@ def test_build_banner_info_with_dry_run(tmp_path) -> None:
         config_path,
         f"""
         settings:
-          source_dir: "{tmp_path / 'source'}"
-          destination_dir: "{tmp_path / 'dest'}"
-          cache_dir: "{tmp_path / 'cache'}"
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
           dry_run: true
 
         sports:
@@ -117,9 +116,9 @@ def test_build_banner_info_with_watch_mode(tmp_path) -> None:
         config_path,
         f"""
         settings:
-          source_dir: "{tmp_path / 'source'}"
-          destination_dir: "{tmp_path / 'dest'}"
-          cache_dir: "{tmp_path / 'cache'}"
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
           file_watcher:
             enabled: true
 
@@ -152,9 +151,9 @@ def test_build_banner_info_counts_enabled_sports(tmp_path) -> None:
         config_path,
         f"""
         settings:
-          source_dir: "{tmp_path / 'source'}"
-          destination_dir: "{tmp_path / 'dest'}"
-          cache_dir: "{tmp_path / 'cache'}"
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
           use_default_sports: false
 
         sports:
@@ -183,9 +182,9 @@ def test_build_banner_info_with_notifications(tmp_path) -> None:
         config_path,
         f"""
         settings:
-          source_dir: "{tmp_path / 'source'}"
-          destination_dir: "{tmp_path / 'dest'}"
-          cache_dir: "{tmp_path / 'cache'}"
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
           notifications:
             targets:
               - id: test_notifier
@@ -211,9 +210,9 @@ def test_build_banner_info_with_plex_sync(tmp_path) -> None:
         config_path,
         f"""
         settings:
-          source_dir: "{tmp_path / 'source'}"
-          destination_dir: "{tmp_path / 'dest'}"
-          cache_dir: "{tmp_path / 'cache'}"
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
           plex_metadata_sync:
             enabled: true
             url: http://localhost:32400
@@ -238,9 +237,9 @@ def test_build_banner_info_with_kometa_trigger(tmp_path) -> None:
         config_path,
         f"""
         settings:
-          source_dir: "{tmp_path / 'source'}"
-          destination_dir: "{tmp_path / 'dest'}"
-          cache_dir: "{tmp_path / 'cache'}"
+          source_dir: "{tmp_path / "source"}"
+          destination_dir: "{tmp_path / "dest"}"
+          cache_dir: "{tmp_path / "cache"}"
           kometa_trigger:
             enabled: true
             url: http://localhost:5000
@@ -409,7 +408,6 @@ def test_print_startup_banner_without_modes_or_features() -> None:
 
     # Should not have Mode or Features rows when nothing is enabled
     # Check the output doesn't have these sections
-    lines = [line for line in result.split('\n') if 'Mode' in line and 'DRY-RUN' not in line]
     # The "Mode" label should not appear in the output when no modes are active
     # However, checking absence is tricky with rich formatting
     # Let's just verify essential content is present

@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import pytest
-
 from playbook.team_aliases import (
     _build_alias_map,
     get_team_alias_map,
 )
-
 
 # Tests for private helper function
 
@@ -143,7 +140,7 @@ class TestBuildAliasMap:
         assert result["bruins"] == "Boston Bruins"
 
         # Should only have one entry for the normalized "bruins" key
-        bruins_keys = [k for k in result.keys() if k == "bruins"]
+        bruins_keys = [k for k in result if k == "bruins"]
         assert len(bruins_keys) == 1
 
 

@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import Mock, patch
-
-import pytest
+from unittest.mock import patch
 
 from playbook.trace_writer import TraceOptions, persist_trace
 

@@ -7,7 +7,6 @@ import pytest
 from playbook.config import QualityProfile, QualityScoring
 from playbook.quality import QualityInfo
 from playbook.quality_scorer import (
-    QualityComparison,
     QualityScore,
     compare_quality,
     compute_quality_score,

@@ -20,13 +20,37 @@ node_modules/
 # Python files to ignore
 __pycache__/
 *.pyc
+*.egg-info/
 .venv/
 .ruff_cache/
 
+# Logs and command output
 sport.log
 playbook.log
+*.log.previous
+*_output.txt
+
+# Build and docs output
 openapi.json
 site/
+package-lock.json
+
+# Temporary scripts (auto-claude artifacts)
+qa_*.py
+verify_*.py
+validate_*.py
+integration_test*.py
+code_quality_check.py
+/test_*.py
+
+# Temporary verification/investigation docs
+*-verification*.md
+INVESTIGATION.md
+REFACTORING_SUMMARY.md
+DOCKER_VERIFICATION.md
+VERIFICATION.md
+linting_report.md
+AGENTS.md
 
 .auto-claude/*
 !.auto-claude/.env.example

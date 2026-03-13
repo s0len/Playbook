@@ -3,7 +3,6 @@ from __future__ import annotations
 import io
 from dataclasses import dataclass
 
-import pytest
 from rich.console import Console
 
 from playbook.models import ProcessingStats

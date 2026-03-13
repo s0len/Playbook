@@ -163,7 +163,7 @@ class TestRichHelpFormatter:
         """Test that formatter falls back to standard help for non-TTY environments."""
         # Create a formatter with a non-TTY console
         console = Console(file=StringIO(), force_terminal=False)
-        formatter = RichHelpFormatter(prog="playbook", console=console)
+        _ = RichHelpFormatter(prog="playbook", console=console)
 
         # Create a simple parser
         parser = argparse.ArgumentParser(

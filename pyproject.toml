@@ -58,7 +58,7 @@ Issues = "https://github.com/s0len/Playbook/issues"
 line-length = 120
 target-version = "py312"
 
-# Exclude directories and temporary files
+# Exclude directories
 exclude = [
     ".venv",
     "venv",
@@ -71,12 +71,6 @@ exclude = [
     "build",
     "dist",
     ".tox",
-    "qa_*.py",  # Temporary QA validation scripts
-    "test_*.py",  # Root-level test files (not in tests/)
-    "verify_*.py",  # Temporary verification scripts
-    "validate_*.py",  # Temporary validation scripts
-    "integration_test*.py",  # Temporary integration test scripts
-    "code_quality_check.py",  # Temporary code quality script
 ]
 
 [tool.ruff.lint]

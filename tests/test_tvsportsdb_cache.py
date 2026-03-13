@@ -185,7 +185,14 @@ class TestTVSportsDBCache:
         conn.execute(
             "INSERT OR REPLACE INTO metadata_cache (key, content, etag, last_modified, fetched_at, expires_at) "
             "VALUES (?, ?, ?, ?, ?, ?)",
-            ("shows/broken", json.dumps({"garbage": True, "not_a_show": [1, 2, 3]}), None, None, now.isoformat(), expires.isoformat()),
+            (
+                "shows/broken",
+                json.dumps({"garbage": True, "not_a_show": [1, 2, 3]}),
+                None,
+                None,
+                now.isoformat(),
+                expires.isoformat(),
+            ),
         )
         conn.commit()
 
