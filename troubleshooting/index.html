@@ -1,0 +1,1417 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Sonarr for Sports – Automated file matching, renaming, and metadata for sports content in Plex.">
+      
+      
+      
+        <link rel="canonical" href="https://s0len.github.io/Playbook/troubleshooting/">
+      
+      
+        <link rel="prev" href="../recipes/">
+      
+      
+        <link rel="next" href="../developer-guide/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Troubleshooting & FAQ - Playbook</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#troubleshooting-faq" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Playbook" class="md-header__button md-logo" aria-label="Playbook" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Playbook
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Troubleshooting & FAQ
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/s0len/playbook" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    s0len/playbook
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Introduction
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../configuration/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Configuration Guide
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../operations/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Operations & Run Modes
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../integrations/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Integrations
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../recipes/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Recipes & How-tos
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Troubleshooting & FAQ
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../developer-guide/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Developer Guide
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Playbook" class="md-nav__button md-logo" aria-label="Playbook" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    Playbook
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/s0len/playbook" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    s0len/playbook
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations & Run Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recipes & How-tos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting & FAQ
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting & FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-triage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Triage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diagnostics-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagnostics Workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#understanding-validation-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Understanding Validation Output
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Understanding Validation Output">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#output-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-elements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Elements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interpreting-fix-suggestions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interpreting Fix Suggestions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#command-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-cheat-sheet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Cheat Sheet
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cache-filesystem-hygiene" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cache &amp; Filesystem Hygiene
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Integration Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#kometa" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kometa
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#autoscan-plex-refreshes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autoscan / Plex refreshes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Autoscan / Plex refreshes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#certificate-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Certificate Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#autobrr-downloader-feeds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autobrr / Downloader feeds
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#faq" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FAQ
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-triage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Triage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diagnostics-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagnostics Workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#understanding-validation-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Understanding Validation Output
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Understanding Validation Output">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#output-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-elements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Elements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interpreting-fix-suggestions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interpreting Fix Suggestions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#command-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-cheat-sheet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Cheat Sheet
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cache-filesystem-hygiene" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cache &amp; Filesystem Hygiene
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Integration Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#kometa" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kometa
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#autoscan-plex-refreshes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autoscan / Plex refreshes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Autoscan / Plex refreshes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#certificate-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Certificate Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#autobrr-downloader-feeds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autobrr / Downloader feeds
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#faq" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FAQ
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="troubleshooting-faq">Troubleshooting &amp; FAQ<a class="headerlink" href="#troubleshooting-faq" title="Permanent link">&para;</a></h1>
+<p>Run into snags? Start with the quick triage grid below, then follow the deeper diagnostics checklist to narrow things down.</p>
+<h2 id="quick-triage">Quick Triage<a class="headerlink" href="#quick-triage" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Likely cause</th>
+<th>Immediate next step</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CLI finishes instantly, nothing processed</td>
+<td><code>source_dir</code> not mounted/readable or <code>source_globs</code> too strict</td>
+<td>Run <code>python -m playbook.cli --config ... --dry-run --verbose</code> and inspect <code>playbook.log</code> for "skipped" entries</td>
+</tr>
+<tr>
+<td>Metadata looks stale / missing events</td>
+<td>Cached API responses past TTL or wrong <code>show_slug</code></td>
+<td>Delete <code>CACHE_DIR/tvsportsdb/*</code> or lower <code>tvsportsdb.ttl_hours</code>, then rerun with <code>--dry-run</code></td>
+</tr>
+<tr>
+<td>Show not found in TVSportsDB</td>
+<td>Invalid <code>show_slug</code> or show doesn't exist yet</td>
+<td>Verify the slug exists in TVSportsDB; check API connectivity</td>
+</tr>
+<tr>
+<td>Hardlinks fail / files missing</td>
+<td>Cross-filesystem moves or SMB/NFS target</td>
+<td>Set <code>link_mode: copy</code> (global or per sport) and ensure destination mount permissions</td>
+</tr>
+<tr>
+<td>Kometa/Autoscan never triggers</td>
+<td><code>settings.kometa_trigger.enabled</code> false or Autoscan rewrites wrong</td>
+<td>Run <code>python -m playbook.cli kometa-trigger ...</code> to test; review notification targets for correct rewrites</td>
+</tr>
+<tr>
+<td>Watcher never fires</td>
+<td><code>watchdog</code> missing or paths misconfigured</td>
+<td>Check container logs for "watchdog unavailable", confirm <code>file_watcher.paths</code> exist, or fall back to batch mode</td>
+</tr>
+</tbody>
+</table>
+<h2 id="diagnostics-workflow">Diagnostics Workflow<a class="headerlink" href="#diagnostics-workflow" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Validate config:</strong> <code>python -m playbook.cli validate-config --config playbook.yaml --diff-sample --show-trace</code>. Catch schema errors before wasting time elsewhere.</li>
+<li><strong>Instrumented dry-run:</strong> <code>python -m playbook.cli --config playbook.yaml --dry-run --verbose --trace-matches</code>. This produces console DEBUG output, persistent logs, and per-file trace JSON (under <code>cache_dir/traces</code>).</li>
+<li><strong>Review logs:</strong> Inspect <code>playbook.log</code> for warnings (missing metadata, Kometa trigger failures, Autoscan errors). The file rotates to <code>playbook.log.previous</code> every run—keep both when filing issues.</li>
+<li><strong>Reset processed cache (optional):</strong> <code>--clear-processed-cache</code> (or <code>CLEAR_PROCESSED_CACHE=true</code>) forces Playbook to treat every file as new—useful when you want to re-run test datasets.</li>
+<li><strong>Isolate integrations:</strong></li>
+<li>Kometa: <code>python -m playbook.cli kometa-trigger --config ... --mode docker</code></li>
+<li>Autoscan: temporarily disable other targets so logs only contain Autoscan responses.</li>
+<li>Notifications: point Discord/Slack webhooks at a test channel until you confirm formatting.</li>
+</ol>
+<h2 id="understanding-validation-output">Understanding Validation Output<a class="headerlink" href="#understanding-validation-output" title="Permanent link">&para;</a></h2>
+<p>The <code>validate-config</code> command provides enhanced error reporting with grouped issues, line numbers, and actionable fix suggestions to help you quickly identify and resolve configuration problems.</p>
+<h3 id="output-format">Output Format<a class="headerlink" href="#output-format" title="Permanent link">&para;</a></h3>
+<p>Validation errors are organized by configuration section with visual panels:</p>
+<div class="highlight"><pre><span></span><code>Validation Errors: 3 error(s) detected
+
+╭─ Settings ─────────────────────────────────────────╮
+│ → Notification Settings                            │
+│  L6    settings.notifications.flush_time           │
+│        Invalid time format: &#39;invalid_number&#39;       │
+│        (flush-time)                                │
+│        💡 Use HH:MM or HH:MM:SS format (e.g.,      │
+│           &#39;23:30&#39; or &#39;23:30:00&#39;)                   │
+╰────────────────────────────────────────────────────╯
+
+╭─ Sport #1 (demo) ──────────────────────────────────╮
+│  L10   sports[0].show_slug                         │
+│        Sport must define show_slug or variants     │
+│        with show_slug                              │
+│        (show-slug-missing)                         │
+│        💡 Add &#39;show_slug&#39; field referencing a      │
+│           show in TVSportsDB                    │
+│                                                    │
+│  L11   sports[0].id                                │
+│        Duplicate sport ID: &#39;demo&#39;                  │
+│        (duplicate-id)                              │
+│        💡 Change the &#39;id&#39; field to a unique value  │
+╰────────────────────────────────────────────────────╯
+</code></pre></div>
+<h3 id="key-elements">Key Elements<a class="headerlink" href="#key-elements" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Grouped sections:</strong> Errors are grouped by configuration area (Settings, Sport #1, Pattern Sets, etc.) making it easy to focus on one part of your config at a time</li>
+<li><strong>Line numbers:</strong> Each error shows <code>L&lt;number&gt;</code> indicating the exact line in your YAML file where the issue occurs</li>
+<li><strong>Full path:</strong> The complete path to the problematic field (e.g., <code>sports[0].show_slug</code>)</li>
+<li><strong>Error codes:</strong> Technical error identifiers in parentheses (e.g., <code>(flush-time)</code>, <code>(show-slug-missing)</code>) useful for searching documentation</li>
+<li><strong>Fix suggestions:</strong> Actionable guidance marked with 💡 that explains how to correct the issue</li>
+</ul>
+<h3 id="interpreting-fix-suggestions">Interpreting Fix Suggestions<a class="headerlink" href="#interpreting-fix-suggestions" title="Permanent link">&para;</a></h3>
+<p>Fix suggestions are context-aware and provide specific guidance based on the error:</p>
+<ul>
+<li>
+<p><strong>Schema errors:</strong> Show expected type/format and provide valid examples
+  <div class="highlight"><pre><span></span><code>💡 Expected type: string, but got: integer
+   Wrap the value in quotes to make it a string
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Format errors:</strong> Explain the required format with concrete examples
+  <div class="highlight"><pre><span></span><code>💡 Use HH:MM or HH:MM:SS format (e.g., &#39;23:30&#39; or &#39;23:30:00&#39;)
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Missing fields:</strong> Tell you exactly which required field to add
+  <div class="highlight"><pre><span></span><code>💡 Add &#39;show_slug&#39; field referencing a show in TVSportsDB
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Invalid values:</strong> Suggest valid alternatives or corrections
+  <div class="highlight"><pre><span></span><code>💡 Change the &#39;id&#39; field to a unique value. Current duplicates: demo
+</code></pre></div></p>
+</li>
+</ul>
+<h3 id="command-options">Command Options<a class="headerlink" href="#command-options" title="Permanent link">&para;</a></h3>
+<p><strong>Hide fix suggestions for cleaner output:</strong>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>playbook.cli<span class="w"> </span>validate-config<span class="w"> </span>--config<span class="w"> </span>playbook.yaml<span class="w"> </span>--no-suggestions
+</code></pre></div></p>
+<p>This shows only the errors and line numbers without the 💡 guidance—useful for quick scans or when you're already familiar with the fixes.</p>
+<p><strong>Full validation with all features:</strong>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>playbook.cli<span class="w"> </span>validate-config<span class="w"> </span>--config<span class="w"> </span>playbook.yaml<span class="w"> </span>--diff-sample<span class="w"> </span>--show-trace
+</code></pre></div></p>
+<p>Includes diff samples and trace information for deep debugging alongside the grouped error output.</p>
+<h2 id="command-cheat-sheet">Command Cheat Sheet<a class="headerlink" href="#command-cheat-sheet" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># Validate config with diff</span>
+python<span class="w"> </span>-m<span class="w"> </span>playbook.cli<span class="w"> </span>validate-config<span class="w"> </span>--config<span class="w"> </span>/config/playbook.yaml<span class="w"> </span>--diff-sample<span class="w"> </span>--show-trace
+
+<span class="c1"># Verbose dry-run with match traces</span>
+python<span class="w"> </span>-m<span class="w"> </span>playbook.cli<span class="w"> </span>--config<span class="w"> </span>/config/playbook.yaml<span class="w"> </span>--dry-run<span class="w"> </span>--verbose<span class="w"> </span>--trace-matches
+
+<span class="c1"># Force watcher mode off (single pass)</span>
+python<span class="w"> </span>-m<span class="w"> </span>playbook.cli<span class="w"> </span>--config<span class="w"> </span>/config/playbook.yaml<span class="w"> </span>--no-watch
+
+<span class="c1"># Manual Kometa trigger diagnostics</span>
+python<span class="w"> </span>-m<span class="w"> </span>playbook.cli<span class="w"> </span>kometa-trigger<span class="w"> </span>--config<span class="w"> </span>/config/playbook.yaml<span class="w"> </span>--mode<span class="w"> </span>docker<span class="w"> </span>--verbose
+</code></pre></div>
+<h2 id="cache-filesystem-hygiene">Cache &amp; Filesystem Hygiene<a class="headerlink" href="#cache-filesystem-hygiene" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Safe to delete:</strong>
+  <code>CACHE_DIR/tvsportsdb/*</code> (forces API refetch), <code>CACHE_DIR/processed_cache.json</code>, <code>LOG_DIR/*.previous</code></li>
+<li><strong>Keep persistent:</strong><br />
+<code>playbook.yaml</code>, notification secrets, destination directory (Plex expects consistent paths), Kometa configs</li>
+<li><strong>Hardlink tips:</strong><br />
+  Use <code>link_mode: copy</code> or <code>symlink</code> when crossing filesystems. On SMB/NFS mounts, confirm the server allows hardlinks or skip straight to copy mode.</li>
+</ul>
+<h2 id="integration-troubleshooting">Integration Troubleshooting<a class="headerlink" href="#integration-troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="kometa">Kometa<a class="headerlink" href="#kometa" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>Kometa trigger is disabled</code> → enable <code>settings.kometa_trigger.enabled</code> or pass <code>--mode docker/kubernetes</code> to the CLI.</li>
+<li><code>Kometa docker trigger requires access to the Docker socket</code> → mount <code>/var/run/docker.sock</code> plus the Docker client binaries into the Playbook container.</li>
+<li>Kubernetes jobs stuck in <code>Active</code> → <code>kubectl delete job -l trigger=playbook</code> to clear them, then rerun.</li>
+<li>Use <code>kometa_trigger.docker.exec_command</code> to match whatever entrypoint your Compose stack uses; Playbook appends <code>--run-libraries</code>/<code>--config</code> automatically.</li>
+</ul>
+<h3 id="autoscan-plex-refreshes">Autoscan / Plex refreshes<a class="headerlink" href="#autoscan-plex-refreshes" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>404 errors</strong> → Confirm Autoscan URL is reachable from Playbook's network namespace; check Docker network configuration and port mappings.</li>
+<li><strong>SSL/TLS certificate errors</strong> → See <a href="#certificate-configuration">Certificate Configuration</a> below for proper solutions. <strong>Do not disable SSL verification</strong> unless you understand the security risks.</li>
+<li><strong>Nothing happens after linking files</strong> → Verify <code>rewrite</code> entries translate Playbook's destination into what Autoscan/Plex can see (inside Docker, paths often differ).</li>
+<li><strong>Plex scans stale metadata</strong> → Pair Autoscan with Kometa triggers; Plex rescans directories immediately while Kometa updates titles/artwork.</li>
+</ul>
+<h4 id="certificate-configuration">Certificate Configuration<a class="headerlink" href="#certificate-configuration" title="Permanent link">&para;</a></h4>
+<p>If you encounter SSL/TLS certificate verification errors when connecting to Autoscan, <strong>do not immediately disable verification</strong>. Instead, use one of these proper solutions:</p>
+<ol>
+<li><strong>Use a CA-signed certificate</strong> (recommended for production):</li>
+<li>Obtain a certificate from Let's Encrypt or another trusted Certificate Authority</li>
+<li>Configure your Autoscan server to use the CA-signed certificate</li>
+<li>
+<p>No Playbook configuration changes needed—verification will work automatically</p>
+</li>
+<li>
+<p><strong>Add self-signed certificate to trust store</strong> (for development/internal networks):
+   <div class="highlight"><pre><span></span><code><span class="c1"># Copy your self-signed certificate into the container</span>
+docker<span class="w"> </span>cp<span class="w"> </span>autoscan-cert.crt<span class="w"> </span>playbook:/usr/local/share/ca-certificates/
+
+<span class="c1"># Update the certificate trust store</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>playbook<span class="w"> </span>update-ca-certificates
+
+<span class="c1"># Restart Playbook to pick up the new certificate</span>
+docker<span class="w"> </span>restart<span class="w"> </span>playbook
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Disable verification (⚠️ NOT RECOMMENDED):</strong></p>
+</li>
+<li><strong>Only use this as a last resort in isolated development/testing environments</strong></li>
+<li>Setting <code>verify_ssl: false</code> exposes your system to <strong>man-in-the-middle (MITM) attacks</strong></li>
+<li><strong>NEVER use this in production or on networks you don't fully control</strong></li>
+<li>See the <a href="../integrations/#autoscan-hooks">Autoscan integration docs</a> for detailed security warnings</li>
+</ol>
+<p>The proper certificate configuration approach protects your system from MITM attacks while eliminating SSL errors. If you're still having issues after trying the above, review your certificate's Common Name (CN) or Subject Alternative Names (SAN) to ensure they match the hostname in your Autoscan URL.</p>
+<h3 id="autobrr-downloader-feeds">Autobrr / Downloader feeds<a class="headerlink" href="#autobrr-downloader-feeds" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Filters never match → use Autobrr’s regex tester and ensure <code>match_releases</code> are case-insensitive (<code>(?i)</code>), include the season/year, and restrict to trusted encoders.</li>
+<li>Wrong category/path → align Autobrr’s action category (e.g., <code>sports/f1</code>) with Playbook’s <code>source_globs</code> so new files land where pattern sets expect them.</li>
+<li>Duplicate grabs → leverage Autobrr <code>priority</code> and <code>excluded_words</code> to prefer one release group per sport.</li>
+</ul>
+<h2 id="faq">FAQ<a class="headerlink" href="#faq" title="Permanent link">&para;</a></h2>
+<p><strong>Can I run multiple configs?</strong><br />
+Yes—launch separate containers/CLI processes with distinct <code>CONFIG_PATH</code>, <code>SOURCE_DIR</code>, and <code>DESTINATION_DIR</code>. Avoid pointing two configs at the same destination unless you coordinate notifications carefully.</p>
+<p><strong>Does Playbook delete or move downloads?</strong><br />
+No. Default is hardlinking. Switch to copy/symlink when cross-filesystem moves or NAS targets require it.</p>
+<p><strong>How do I add a brand-new sport?</strong><br />
+Follow the steps in <a href="../recipes/#extending-to-new-sports">Recipes &amp; How-tos</a>, add real sample filenames to <code>tests/data/pattern_samples.yaml</code>, and consider upstreaming new pattern sets.</p>
+<p><strong>Watcher vs batch—what should I use?</strong><br />
+Use batch (cron/systemd) for infrequent reorganizations, watcher mode for continuous ingest. Even with watcher mode, schedule a nightly batch run as a safety net if your platform occasionally drops filesystem events.</p>
+<p><strong>Where should I ask for help?</strong><br />
+Open an issue with:
+- Playbook version (container tag or commit SHA)
+- Relevant excerpts from <code>playbook.log</code>
+- Redacted <code>playbook.yaml</code> (remove secrets)
+- Example filenames that failed to match</p>
+<p>Still blocked? <a href="https://github.com/s0len/playbook/issues">Start a discussion or open an issue</a> and we’ll dig in. The more context (logs, configs, sample names) you provide, the faster we can help.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tabs", "navigation.sections", "navigation.top", "content.code.copy", "search.highlight", "search.suggest"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
