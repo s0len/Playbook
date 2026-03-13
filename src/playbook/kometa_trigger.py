@@ -292,13 +292,15 @@ class KometaDockerTrigger(_BaseKometaTrigger):
     def _ensure_binary(self, binary: str) -> bool:
         if shutil.which(binary) is None:
             LOGGER.error(
-                "Docker binary '%s' not found on PATH. Mount it into the container (e.g. -v $(which docker):/usr/local/bin/docker).",
+                "Docker binary '%s' not found on PATH. Mount it into the container"
+                " (e.g. -v $(which docker):/usr/local/bin/docker).",
                 binary,
             )
             return False
         if not os.environ.get("DOCKER_HOST") and not Path("/var/run/docker.sock").exists():
             LOGGER.warning(
-                "Docker socket /var/run/docker.sock not found. Mount it with '-v /var/run/docker.sock:/var/run/docker.sock' so Playbook can reach the Docker daemon."
+                "Docker socket /var/run/docker.sock not found. Mount it with"
+                " '-v /var/run/docker.sock:/var/run/docker.sock' so Playbook can reach the Docker daemon."
             )
         return True
 

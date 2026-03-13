@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import dataclasses
 import difflib
 import logging
@@ -360,10 +361,8 @@ def configure_logging(log_level_name: str, log_file: Path, console_level_name: s
     root_logger = logging.getLogger()
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
-        try:
+        with contextlib.suppress(Exception):  # pragma: no cover - defensive cleanup
             handler.close()
-        except Exception:  # pragma: no cover - defensive cleanup
-            pass
 
     formatter = logging.Formatter(LOG_RECORD_FORMAT, LOG_DATE_FORMAT)
 

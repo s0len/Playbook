@@ -102,7 +102,7 @@ def select_episode(
             raw_value = default_value
     if raw_value is None:
         if pattern_config.episode_selector.allow_fallback_to_title:
-            for candidate in reversed(sorted(session_lookup.keys(), key=len)):
+            for candidate in sorted(session_lookup.keys(), key=len, reverse=True):
                 if candidate and candidate in normalize_token(" ".join(match_groups.values())):
                     raw_value = candidate
                     break
@@ -397,10 +397,11 @@ def select_episode(
         # Find episodes with dates within proximity of the fallback date
         date_candidates: list[tuple[Episode, int]] = []
         for episode in season.episodes:
-            if episode.originally_available is not None:
-                if dates_within_proximity(fallback_date, episode.originally_available, tolerance_days=2):
-                    delta = abs((fallback_date - episode.originally_available).days)
-                    date_candidates.append((episode, delta))
+            if episode.originally_available is not None and dates_within_proximity(
+                fallback_date, episode.originally_available, tolerance_days=2
+            ):
+                delta = abs((fallback_date - episode.originally_available).days)
+                date_candidates.append((episode, delta))
 
         if date_candidates:
             # Sort by closest date match and return the best

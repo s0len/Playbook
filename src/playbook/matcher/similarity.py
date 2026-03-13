@@ -66,7 +66,9 @@ def tokens_close(candidate: str, target: str) -> bool:
     # Check for simple transposition (two adjacent chars swapped)
     if len(candidate) == len(target):
         differing_indices = [
-            idx for idx, (cand_char, targ_char) in enumerate(zip(candidate, target)) if cand_char != targ_char
+            idx
+            for idx, (cand_char, targ_char) in enumerate(zip(candidate, target, strict=True))
+            if cand_char != targ_char
         ]
         if len(differing_indices) == 2:
             first, second = differing_indices

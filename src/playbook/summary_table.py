@@ -263,10 +263,7 @@ class SummaryTableRenderer:
         for sport_id in sorted(sport_ids_with_activity):
             # Get sport name from config, fallback to ID if not found
             sport_name = sports_by_id.get(sport_id)
-            if sport_name:
-                sport_name_str = sport_name.name
-            else:
-                sport_name_str = sport_id
+            sport_name_str = sport_name.name if sport_name else sport_id
 
             # Get counts for this sport
             processed = processed_by_sport.get(sport_id, 0) if processed_by_sport else 0
@@ -459,10 +456,7 @@ class SummaryTableRenderer:
         for sport_id in sorted(sport_ids_with_activity):
             # Get sport name from config, fallback to ID if not found
             sport_name = sports_by_id.get(sport_id)
-            if sport_name:
-                sport_name_str = sport_name.name
-            else:
-                sport_name_str = sport_id
+            sport_name_str = sport_name.name if sport_name else sport_id
 
             # Get counts for this sport
             processed = processed_by_sport.get(sport_id, 0) if processed_by_sport else 0
@@ -480,7 +474,8 @@ class SummaryTableRenderer:
                 status = "IDLE"
 
             lines.append(
-                f"    {sport_id:15s} | {sport_name_str:25s} | Processed: {processed:3d} | Warnings: {warnings:3d} | Errors: {errors:3d} | Status: {status}"
+                f"    {sport_id:15s} | {sport_name_str:25s} | Processed: {processed:3d}"
+                f" | Warnings: {warnings:3d} | Errors: {errors:3d} | Status: {status}"
             )
 
         return "\n".join(lines)

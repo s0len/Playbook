@@ -67,7 +67,7 @@ def sanitize_component(component: str, replacement: str = "_") -> str:
         return "untitled"
 
     cleaned = "".join(ch if ch in SAFE_FILENAME_CHARS else replacement for ch in component)
-    cleaned = re.sub(r"%s+" % re.escape(replacement), replacement, cleaned)
+    cleaned = re.sub(rf"{re.escape(replacement)}+", replacement, cleaned)
     cleaned = cleaned.strip(replacement) or "untitled"
 
     if cleaned in {".", ".."}:

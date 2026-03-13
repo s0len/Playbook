@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 import time
 from datetime import datetime
@@ -278,9 +279,7 @@ class DiscordTarget(NotificationTarget):
 
         header_retry = response.headers.get("Retry-After")
         if header_retry:
-            try:
+            with contextlib.suppress(ValueError):
                 wait = max(wait, float(header_retry))
-            except ValueError:
-                pass
 
         return max(wait, 1.0)

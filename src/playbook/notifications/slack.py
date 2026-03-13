@@ -58,4 +58,7 @@ class SlackTarget(NotificationTarget):
 
         quality_part = f"\n> Quality: {event.quality_str}" if event.quality_str else ""
 
-        return f":white_check_mark: {base} {event.action} via {event.link_mode}{suffix} → {event.destination}{quality_part}"
+        return (
+            f":white_check_mark: {base} {event.action} via {event.link_mode}{suffix}"
+            f" → {event.destination}{quality_part}"
+        )
