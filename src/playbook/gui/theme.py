@@ -7,6 +7,7 @@ with dark mode support.
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 from typing import Literal
 
@@ -111,10 +112,8 @@ def set_theme_preference(mode: ThemeMode) -> None:
     Args:
         mode: The theme mode to store
     """
-    try:
+    with contextlib.suppress(Exception):
         app.storage.user["theme"] = mode
-    except Exception:
-        pass
 
 
 def is_dark_mode() -> bool:

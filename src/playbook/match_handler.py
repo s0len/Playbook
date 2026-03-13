@@ -7,6 +7,7 @@ the processed file cache, and cleaning up old destinations when files move.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import re
 from pathlib import Path
@@ -567,10 +568,8 @@ def handle_match(
         event.quality_score = quality_score_obj.total
 
     # Try to get source file size
-    try:
+    with contextlib.suppress(OSError):
         event.file_size = match.source_path.stat().st_size
-    except OSError:
-        pass
 
     # Helper: look up old quality from persistence store
     def _enrich_old_quality() -> None:

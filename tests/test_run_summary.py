@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-from unittest.mock import Mock, patch
-
-import pytest
-
 from playbook.models import ProcessingStats
 from playbook.run_summary import (
     extract_error_context,
@@ -114,9 +110,7 @@ class TestFilteredIgnoredDetails:
 
     def test_preserves_normal_ignored_details(self) -> None:
         """Test that normal ignored details are preserved."""
-        stats = ProcessingStats(
-            ignored_details=["File already exists", "Pattern did not match"]
-        )
+        stats = ProcessingStats(ignored_details=["File already exists", "Pattern did not match"])
         result = filtered_ignored_details(stats)
         assert result == ["File already exists", "Pattern did not match"]
 
@@ -174,9 +168,7 @@ class TestFilteredIgnoredDetails:
 
     def test_uses_singular_for_one_non_video_item(self) -> None:
         """Test that singular 'item' is used for one non-video suppression."""
-        stats = ProcessingStats(
-            ignored_details=["No configured sport accepts extension .txt"]
-        )
+        stats = ProcessingStats(ignored_details=["No configured sport accepts extension .txt"])
         result = filtered_ignored_details(stats)
         assert result == ["(Suppressed 1 non-video item)"]
 
@@ -389,10 +381,7 @@ class TestExtractErrorContext:
         """Test extracting context from 'Season not found' error with available seasons."""
         error = "Season not found: Season 2023 in show 'NBA Games' | library=nba-lib | source=https://example.com/metadata.yaml. Available: 2021, 2022"
         result = extract_error_context(error)
-        assert (
-            result
-            == "Season 2023 | show='NBA Games' | library=nba-lib | plex has=[2021, 2022]"
-        )
+        assert result == "Season 2023 | show='NBA Games' | library=nba-lib | plex has=[2021, 2022]"
 
     def test_extracts_episode_not_found_without_available(self) -> None:
         """Test extracting context from 'Episode not found' error without available episodes."""
@@ -404,10 +393,7 @@ class TestExtractErrorContext:
         """Test extracting context from 'Episode not found' error with available episodes."""
         error = "Episode not found: Episode 5 in season 2023 of 'NBA Games' | library=nba-lib | source=https://example.com/metadata.yaml. Available: 1, 2, 3, 4"
         result = extract_error_context(error)
-        assert (
-            result
-            == "Episode 5 | season=2023 | show='NBA Games' | plex has=[1, 2, 3, 4]"
-        )
+        assert result == "Episode 5 | season=2023 | show='NBA Games' | plex has=[1, 2, 3, 4]"
 
     def test_handles_season_error_with_extra_spaces(self) -> None:
         """Test handling season error with extra spaces."""

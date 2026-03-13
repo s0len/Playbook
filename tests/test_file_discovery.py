@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import Mock, patch
-
-import pytest
+from unittest.mock import Mock
 
 from playbook.config import SportConfig
 from playbook.file_discovery import (
@@ -402,6 +400,7 @@ class TestGatherSourceFiles:
 
         # Should be iterable
         from collections.abc import Iterable
+
         assert isinstance(result, Iterable)
 
     def test_filters_multiple_types_in_same_directory(self, tmp_path) -> None:

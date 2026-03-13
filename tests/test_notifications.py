@@ -112,7 +112,6 @@ def test_notification_service_mentions_opt_in_roles(tmp_path, monkeypatch) -> No
     assert payload["content"].startswith("<@&42> [NEW] Demo Sport: Qualifying")
 
 
-
 def test_notification_service_mentions_handle_variant_ids(tmp_path, monkeypatch) -> None:
     settings = NotificationSettings(
         mentions={"premier_league": "<@&123>"},

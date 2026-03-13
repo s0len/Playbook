@@ -34,9 +34,7 @@ def sample_record() -> ProcessedFileRecord:
 class TestProcessedFileStore:
     """Tests for ProcessedFileStore."""
 
-    def test_record_and_retrieve_by_source(
-        self, store: ProcessedFileStore, sample_record: ProcessedFileRecord
-    ) -> None:
+    def test_record_and_retrieve_by_source(self, store: ProcessedFileStore, sample_record: ProcessedFileRecord) -> None:
         """Test recording and retrieving a file by source path."""
         store.record_processed(sample_record)
 
@@ -51,9 +49,7 @@ class TestProcessedFileStore:
         assert retrieved.checksum == sample_record.checksum
         assert retrieved.status == sample_record.status
 
-    def test_get_by_source_returns_none_for_missing(
-        self, store: ProcessedFileStore
-    ) -> None:
+    def test_get_by_source_returns_none_for_missing(self, store: ProcessedFileStore) -> None:
         """Test that get_by_source returns None for missing records."""
         result = store.get_by_source("/nonexistent/file.mkv")
         assert result is None
@@ -293,9 +289,7 @@ class TestProcessedFileStore:
         assert stats["by_sport"]["f1"] == 2
         assert stats["by_sport"]["nba"] == 1
 
-    def test_delete_by_source(
-        self, store: ProcessedFileStore, sample_record: ProcessedFileRecord
-    ) -> None:
+    def test_delete_by_source(self, store: ProcessedFileStore, sample_record: ProcessedFileRecord) -> None:
         """Test deleting a record by source path."""
         store.record_processed(sample_record)
         assert store.get_by_source(sample_record.source_path) is not None
@@ -430,17 +424,13 @@ class TestProcessedFileStore:
         assert db_path.exists()
         store.close()
 
-    def test_check_processed_with_destination_not_in_db(
-        self, store: ProcessedFileStore
-    ) -> None:
+    def test_check_processed_with_destination_not_in_db(self, store: ProcessedFileStore) -> None:
         """Test that check_processed_with_destination returns (False, None) when source not in DB."""
         is_processed, dest_path = store.check_processed_with_destination("/nonexistent/file.mkv")
         assert is_processed is False
         assert dest_path is None
 
-    def test_check_processed_with_destination_exists(
-        self, store: ProcessedFileStore, tmp_path: Path
-    ) -> None:
+    def test_check_processed_with_destination_exists(self, store: ProcessedFileStore, tmp_path: Path) -> None:
         """Test that check_processed_with_destination returns (True, path) when destination exists."""
         # Create a real destination file
         dest_file = tmp_path / "dest" / "F1" / "Race.mkv"
@@ -465,9 +455,7 @@ class TestProcessedFileStore:
         assert is_processed is True
         assert dest_path == str(dest_file)
 
-    def test_check_processed_with_destination_missing(
-        self, store: ProcessedFileStore
-    ) -> None:
+    def test_check_processed_with_destination_missing(self, store: ProcessedFileStore) -> None:
         """Test that check_processed_with_destination returns (False, path) when destination is missing."""
         # Record a file with a non-existent destination
         record = ProcessedFileRecord(
@@ -487,9 +475,7 @@ class TestProcessedFileStore:
         assert is_processed is False
         assert dest_path == "/dest/nonexistent/Race.mkv"
 
-    def test_remove_by_metadata_changes_removes_affected_sport(
-        self, store: ProcessedFileStore
-    ) -> None:
+    def test_remove_by_metadata_changes_removes_affected_sport(self, store: ProcessedFileStore) -> None:
         """Test that remove_by_metadata_changes removes all records for a sport with changes."""
         # Add records for multiple sports
         for i in range(3):
@@ -530,7 +516,7 @@ class TestProcessedFileStore:
 
         # Should have removed 3 F1 records
         assert len(removed) == 3
-        assert all("/source/f1/" in path for path in removed.keys())
+        assert all("/source/f1/" in path for path in removed)
 
         # F1 records should be gone
         assert len(store.get_by_sport("f1")) == 0
@@ -538,9 +524,7 @@ class TestProcessedFileStore:
         # NBA records should still exist
         assert len(store.get_by_sport("nba")) == 2
 
-    def test_remove_by_metadata_changes_returns_empty_for_no_changes(
-        self, store: ProcessedFileStore
-    ) -> None:
+    def test_remove_by_metadata_changes_returns_empty_for_no_changes(self, store: ProcessedFileStore) -> None:
         """Test that remove_by_metadata_changes returns empty dict when no changes."""
         record = ProcessedFileRecord(
             source_path="/source/f1/race.mkv",
@@ -617,9 +601,10 @@ class TestMetadataCacheStore:
 
         # Should be None (expired immediately with 0 TTL)
         import time
+
         time.sleep(0.1)  # Small delay to ensure expiry
 
-        entry = short_cache.get("shows/test")
+        _ = short_cache.get("shows/test")
         # With ttl_hours=0, the entry expires at creation time
         # So it should be None or expired
         short_cache.close()

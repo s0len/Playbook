@@ -144,11 +144,7 @@ def summarize_plex_errors(errors: list[str], *, limit: int = 10) -> list[str]:
     grouped: dict[str, list[str]] = {}
     for error in errors:
         # Extract error category (e.g., "Show not found", "Season not found", etc.)
-        if ":" in error:
-            category = error.split(":")[0].strip()
-        else:
-            # Use first 30 chars as category
-            category = error[:30].strip()
+        category = error.split(":")[0].strip() if ":" in error else error[:30].strip()
         grouped.setdefault(category, []).append(error)
 
     lines: list[str] = []
@@ -234,9 +230,10 @@ def extract_error_context(error: str) -> str | None:
                 parts.append(f"plex has=[{available_part}]")
         return " | ".join(parts)
 
-    # Pattern for "Episode not found: {info} in season {season} of '{title}' | library={id} | source={url}. Available: {episodes}"
+    # Pattern: "Episode not found: {info} in season {season} of '{title}' | library={id} | source={url}. ..."
     episode_match = re.match(
-        r"Episode not found:\s*([^|]+)\s*in season\s*([^|]+)\s*of\s*'([^']+)'\s*\|\s*library=(\S+)\s*\|\s*source=([^.]+)\.?\s*(.*)",
+        r"Episode not found:\s*([^|]+)\s*in season\s*([^|]+)\s*of\s*'([^']+)'"
+        r"\s*\|\s*library=(\S+)\s*\|\s*source=([^.]+)\.?\s*(.*)",
         error,
     )
     if episode_match:

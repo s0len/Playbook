@@ -278,7 +278,7 @@ class TestComputeShowFingerprint:
 
         # Find the episode keys
         ep1_keys = list(s1_episodes_1.keys())
-        ep2_keys = list(s1_episodes_2.keys())
+        _ = list(s1_episodes_2.keys())
 
         # At least one episode hash should differ
         assert any(s1_episodes_1.get(k) != s1_episodes_2.get(k) for k in ep1_keys)

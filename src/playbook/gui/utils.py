@@ -4,6 +4,7 @@ Utility functions for the Playbook GUI.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from collections.abc import Callable
 from functools import wraps
@@ -47,17 +48,13 @@ def safe_timer(interval: float, callback: Callable[[], Any], *, once: bool = Fal
 
     # Deactivate timer when client disconnects
     def on_disconnect() -> None:
-        try:
+        with contextlib.suppress(Exception):
             timer.active = False
-        except Exception:
-            pass
 
-    try:
+    with contextlib.suppress(Exception):
+        # Context not available
         client = ui.context.client
         client.on_disconnect(on_disconnect)
-    except Exception:
-        # Context not available
-        pass
 
     return timer
 

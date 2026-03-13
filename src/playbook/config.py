@@ -848,7 +848,8 @@ def _build_kometa_trigger_settings(data: dict[str, Any]) -> KometaTriggerSetting
             docker_exec_command = None
     if docker_exec_command and ("exec_python" in docker_raw or "exec_script" in docker_raw):
         raise ValueError(
-            "Please specify either 'kometa_trigger.docker.exec_command' or the exec_python/exec_script fields, not both."
+            "Please specify either 'kometa_trigger.docker.exec_command' or the exec_python/exec_script fields,"
+            " not both."
         )
 
     return KometaTriggerSettings(

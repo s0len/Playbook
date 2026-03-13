@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, MutableSequence, Sequence
 from textwrap import wrap
-from typing import Union
 
 DEFAULT_WRAP_WIDTH = 110
 DEFAULT_LABEL_WIDTH = 22
 DEFAULT_INDENT = "    "
 
-FieldMapping = Union[Mapping[str, object], Sequence[tuple[str, object]]]
+FieldMapping = Mapping[str, object] | Sequence[tuple[str, object]]
 
 
 def _coerce_items(fields: FieldMapping) -> list[tuple[str, object]]:

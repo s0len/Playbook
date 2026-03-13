@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from unittest.mock import Mock, patch
-
-import pytest
 
 from playbook.match_handler import (
     alias_candidates,
@@ -17,7 +14,6 @@ from playbook.match_handler import (
 )
 from playbook.quality import QualityInfo
 from playbook.quality_scorer import QualityScore
-from playbook.models import ProcessingStats
 
 
 class TestSpecificityScore:
@@ -146,9 +142,7 @@ class TestAliasCandidates:
 
         pattern = Mock()
         pattern.config = Mock()
-        pattern.config.session_aliases = {
-            "Quarter Final": ["QF 1", "QF 2"]
-        }
+        pattern.config.session_aliases = {"Quarter Final": ["QF 1", "QF 2"]}
 
         match = Mock()
         match.episode = episode

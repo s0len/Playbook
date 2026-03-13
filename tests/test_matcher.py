@@ -240,19 +240,33 @@ def test_season_selector_title_mode_word_level_matching() -> None:
     sprint = Episode(title="Sprint", summary=None, originally_available=None, index=1)
     race = Episode(title="Race", summary=None, originally_available=None, index=2)
     portuguese_gp = Season(
-        key="2", title="Portuguese Grand Prix", summary=None, index=2,
-        episodes=[sprint, race], round_number=2, display_number=2,
+        key="2",
+        title="Portuguese Grand Prix",
+        summary=None,
+        index=2,
+        episodes=[sprint, race],
+        round_number=2,
+        display_number=2,
     )
     spanish_gp = Season(
-        key="5", title="Spanish Grand Prix", summary=None, index=5,
-        episodes=[sprint, race], round_number=5, display_number=5,
+        key="5",
+        title="Spanish Grand Prix",
+        summary=None,
+        index=5,
+        episodes=[sprint, race],
+        round_number=5,
+        display_number=5,
     )
     indonesian_gp = Season(
-        key="15", title="Indonesian Grand Prix", summary=None, index=15,
-        episodes=[sprint, race], round_number=15, display_number=15,
+        key="15",
+        title="Indonesian Grand Prix",
+        summary=None,
+        index=15,
+        episodes=[sprint, race],
+        round_number=15,
+        display_number=15,
     )
-    show = Show(key="motogp", title="MotoGP", summary=None,
-                seasons=[portuguese_gp, spanish_gp, indonesian_gp])
+    show = Show(key="motogp", title="MotoGP", summary=None, seasons=[portuguese_gp, spanish_gp, indonesian_gp])
     selector = SeasonSelector(mode="title", group="location")
 
     # Portuguese name matches "Portuguese Grand Prix" via portugal↔portuguese
@@ -2187,18 +2201,14 @@ class TestNBADotSeparatedFormat:
         alias_map = get_team_alias_map("nba")
 
         # 'la' should resolve to Clippers (as added in subtask-5-1)
-        assert alias_map.get("la") == "Los Angeles Clippers", (
-            "'la' should resolve to 'Los Angeles Clippers'"
-        )
+        assert alias_map.get("la") == "Los Angeles Clippers", "'la' should resolve to 'Los Angeles Clippers'"
 
     def test_denvernuggets_normalized_resolves(self) -> None:
         """Verify 'denvernuggets' (dot-removed format) resolves correctly."""
         alias_map = get_team_alias_map("nba")
 
         # 'denvernuggets' should resolve via city+nickname combination
-        assert alias_map.get("denvernuggets") == "Denver Nuggets", (
-            "'denvernuggets' should resolve to 'Denver Nuggets'"
-        )
+        assert alias_map.get("denvernuggets") == "Denver Nuggets", "'denvernuggets' should resolve to 'Denver Nuggets'"
 
     def test_dot_separated_team_names_normalize_correctly(self) -> None:
         """Verify that dot-separated team names normalize to resolve correctly.
@@ -2239,9 +2249,7 @@ class TestNBADotSeparatedFormat:
                 r"(?P<home>[A-Za-z.]+[\s._-]+[A-Za-z.]+))[\s._-]+"
                 r"(?P<day>\d{2})[\s._-]+(?P<month>\d{2}).*\.mkv$"
             ),
-            season_selector=SeasonSelector(
-                mode="date", value_template="{date_year}-{month:0>2}-{day:0>2}"
-            ),
+            season_selector=SeasonSelector(mode="date", value_template="{date_year}-{month:0>2}-{day:0>2}"),
             episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
             priority=10,
         )
@@ -2362,9 +2370,7 @@ class TestNBAIntegrationDateAndTeams:
                 r"(?P<date_year>\d{4})[\s._-]+(?P<month>\d{2})[\s._-]+(?P<day>\d{2})[\s._-]+"
                 r"(?P<session>(?P<away>[A-Za-z ]+)[\s._-]+vs[\s._-]+(?P<home>[A-Za-z ]+)).*\.mkv$"
             ),
-            season_selector=SeasonSelector(
-                mode="date", value_template="{date_year}-{month:0>2}-{day:0>2}"
-            ),
+            season_selector=SeasonSelector(mode="date", value_template="{date_year}-{month:0>2}-{day:0>2}"),
             episode_selector=EpisodeSelector(group="session", allow_fallback_to_title=True),
             priority=10,
         )
@@ -2572,9 +2578,7 @@ class TestUEFAChampionsLeagueIntegration:
             patterns,
         )
 
-        assert result is not None, (
-            "Should match UEFA Champions League file with abbreviated team names (MC, Borussia)"
-        )
+        assert result is not None, "Should match UEFA Champions League file with abbreviated team names (MC, Borussia)"
         assert result["episode"].title == "Manchester City vs Borussia Dortmund", (
             f"Expected 'Manchester City vs Borussia Dortmund', got '{result['episode'].title}'"
         )
@@ -2592,9 +2596,7 @@ class TestUEFAChampionsLeagueIntegration:
             patterns,
         )
 
-        assert result is not None, (
-            "Should match UEFA Champions League file with PSG and Bayern abbreviations"
-        )
+        assert result is not None, "Should match UEFA Champions League file with PSG and Bayern abbreviations"
         assert result["episode"].title == "Paris Saint-Germain vs Bayern Munich"
 
     def test_uefa_integration_real_vs_inter_resolves(self) -> None:
@@ -2610,9 +2612,7 @@ class TestUEFAChampionsLeagueIntegration:
             patterns,
         )
 
-        assert result is not None, (
-            "Should match UEFA Champions League file with Real and Inter abbreviations"
-        )
+        assert result is not None, "Should match UEFA Champions League file with Real and Inter abbreviations"
         assert result["episode"].title == "Real Madrid vs Inter Milan"
 
     def test_uefa_integration_german_club_abbreviation_resolves(self) -> None:
@@ -2639,9 +2639,7 @@ class TestUEFAChampionsLeagueIntegration:
             patterns,
         )
 
-        assert result is not None, (
-            "Should match UEFA Champions League file with BVB and BAY abbreviations"
-        )
+        assert result is not None, "Should match UEFA Champions League file with BVB and BAY abbreviations"
         assert result["episode"].title == "Borussia Dortmund vs Bayern Munich"
 
     def test_uefa_integration_full_team_names_still_work(self) -> None:
@@ -2677,9 +2675,7 @@ class TestUEFAChampionsLeagueIntegration:
             patterns,
         )
 
-        assert result is not None, (
-            "Should match with underscore separators and lowercase abbreviations"
-        )
+        assert result is not None, "Should match with underscore separators and lowercase abbreviations"
         assert result["episode"].title == "Manchester City vs Borussia Dortmund"
 
 
@@ -2750,10 +2746,7 @@ def test_uefa_integration_alias_resolution() -> None:
     )
 
     # Verify the match succeeded
-    assert result is not None, (
-        f"Failed to match UEFA file: {filename}\n"
-        f"Trace: {trace}"
-    )
+    assert result is not None, f"Failed to match UEFA file: {filename}\nTrace: {trace}"
 
     # Verify correct episode matched
     assert result["season"].key == "2025"
@@ -2769,9 +2762,7 @@ def test_uefa_integration_alias_resolution() -> None:
         diagnostics=diagnostics,
     )
     assert result_with_diag is not None
-    assert len([d for d in diagnostics if d[0] == "warning"]) == 0, (
-        f"Unexpected warnings: {diagnostics}"
-    )
+    assert len([d for d in diagnostics if d[0] == "warning"]) == 0, f"Unexpected warnings: {diagnostics}"
 
 
 # ========================== Figure Skating Integration Tests ==========================
@@ -2896,10 +2887,7 @@ class TestFigureSkatingIntegration:
             trace=trace,
         )
 
-        assert result is not None, (
-            f"Should match Figure Skating file with date-based fallback\n"
-            f"Trace: {trace}"
-        )
+        assert result is not None, f"Should match Figure Skating file with date-based fallback\nTrace: {trace}"
         assert result["episode"].title == "Rostelecom Cup", (
             f"Expected 'Rostelecom Cup', got '{result['episode'].title}'"
         )
@@ -2918,9 +2906,7 @@ class TestFigureSkatingIntegration:
             patterns,
         )
 
-        assert result is not None, (
-            "Should match Figure Skating file with Skate America date"
-        )
+        assert result is not None, "Should match Figure Skating file with Skate America date"
         assert result["episode"].title == "Skate America"
 
     def test_figure_skating_integration_no_warnings_on_successful_match(self) -> None:
@@ -2940,9 +2926,7 @@ class TestFigureSkatingIntegration:
 
         assert result is not None
         warnings = [d for d in diagnostics if d[0] == "warning"]
-        assert len(warnings) == 0, (
-            f"Unexpected warnings for successful date-based match: {warnings}"
-        )
+        assert len(warnings) == 0, f"Unexpected warnings for successful date-based match: {warnings}"
 
     def test_figure_skating_integration_multiple_events_selects_closest(self) -> None:
         """Integration test: When date is between events, closest event is selected."""
@@ -2995,9 +2979,7 @@ class TestFigureSkatingIntegration:
             patterns,
         )
 
-        assert result is not None, (
-            "Should match Figure Skating file with underscore separators"
-        )
+        assert result is not None, "Should match Figure Skating file with underscore separators"
         assert result["episode"].title == "Rostelecom Cup"
 
 
@@ -3086,10 +3068,7 @@ def test_figure_skating_integration_full_resolution_chain() -> None:
     )
 
     # Verify the match succeeded
-    assert result is not None, (
-        f"Failed to match Figure Skating file: {filename}\n"
-        f"Trace: {trace}"
-    )
+    assert result is not None, f"Failed to match Figure Skating file: {filename}\nTrace: {trace}"
 
     # Verify correct episode matched
     assert result["season"].key == "2025"
@@ -3108,6 +3087,4 @@ def test_figure_skating_integration_full_resolution_chain() -> None:
     )
     assert result_with_diag is not None
     warnings = [d for d in diagnostics if d[0] == "warning"]
-    assert len(warnings) == 0, (
-        f"Unexpected warnings for date-based match: {warnings}"
-    )
+    assert len(warnings) == 0, f"Unexpected warnings for date-based match: {warnings}"

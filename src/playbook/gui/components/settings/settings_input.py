@@ -6,6 +6,7 @@ Provides styled input fields with validation feedback.
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
@@ -82,10 +83,8 @@ def settings_input(
                 value = e.value
                 # Convert to appropriate type
                 if input_type == "number" and value:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         value = float(value) if "." in str(value) else int(value)
-                    except (ValueError, TypeError):
-                        pass
 
                 # Run validation if provided
                 if validation:

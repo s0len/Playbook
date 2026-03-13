@@ -3,17 +3,16 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from queue import Queue
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from playbook.config import WatcherSettings
 from playbook.watcher import (
+    FileWatcherLoop,
     WatchdogUnavailableError,
     _FileChangeHandler,
-    FileWatcherLoop,
 )
-
 
 # Fixtures for mocking watchdog dependencies
 
@@ -133,18 +132,21 @@ class TestWatchdogUnavailableError:
 
     def test_exception_with_standard_message(self):
         """Test exception with the standard watchdog missing message."""
-        expected_message = "Filesystem watcher mode requires the 'watchdog' dependency. Install via 'pip install watchdog'."
+        expected_message = (
+            "Filesystem watcher mode requires the 'watchdog' dependency. Install via 'pip install watchdog'."
+        )
         error = WatchdogUnavailableError(expected_message)
         assert str(error) == expected_message
 
     def test_exception_raised_when_observer_none(self, mock_processor, watcher_settings):
         """Test that FileWatcherLoop raises WatchdogUnavailableError when Observer is None."""
-        with patch("playbook.watcher.Observer", None):
-            with pytest.raises(
-                WatchdogUnavailableError,
-                match=r"Filesystem watcher mode requires the 'watchdog' dependency"
-            ):
-                FileWatcherLoop(mock_processor, watcher_settings)
+        with (
+            patch("playbook.watcher.Observer", None),
+            pytest.raises(
+                WatchdogUnavailableError, match=r"Filesystem watcher mode requires the 'watchdog' dependency"
+            ),
+        ):
+            FileWatcherLoop(mock_processor, watcher_settings)
 
 
 # Tests for _FileChangeHandler class
@@ -492,12 +494,13 @@ class TestFileWatcherLoopInit:
 
     def test_raises_watchdog_unavailable_error_when_observer_none(self, mock_processor, watcher_settings):
         """Test that FileWatcherLoop raises WatchdogUnavailableError when Observer is None."""
-        with patch("playbook.watcher.Observer", None):
-            with pytest.raises(
-                WatchdogUnavailableError,
-                match=r"Filesystem watcher mode requires the 'watchdog' dependency"
-            ):
-                FileWatcherLoop(mock_processor, watcher_settings)
+        with (
+            patch("playbook.watcher.Observer", None),
+            pytest.raises(
+                WatchdogUnavailableError, match=r"Filesystem watcher mode requires the 'watchdog' dependency"
+            ),
+        ):
+            FileWatcherLoop(mock_processor, watcher_settings)
 
     def test_successful_initialization_with_valid_settings(self, mock_processor, watcher_settings, mock_observer):
         """Test that FileWatcherLoop initializes successfully with valid settings."""
@@ -515,7 +518,9 @@ class TestFileWatcherLoopInit:
             assert loop._handler._include == []
             assert loop._handler._ignore == []
 
-    def test_initialization_schedules_observer_for_each_root(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+    def test_initialization_schedules_observer_for_each_root(
+        self, mock_processor, watcher_settings, mock_observer, tmp_path
+    ):
         """Test that FileWatcherLoop schedules observer for each root directory."""
         # Set up multiple paths to watch
         path1 = tmp_path / "watch1"
@@ -542,7 +547,9 @@ class TestFileWatcherLoopInit:
                 assert call[0][0] == loop._handler  # First arg is handler
                 assert call[1]["recursive"] is True  # recursive=True
 
-    def test_initialization_with_empty_paths_uses_source_dir(self, mock_processor, minimal_watcher_settings, mock_observer, tmp_path):
+    def test_initialization_with_empty_paths_uses_source_dir(
+        self, mock_processor, minimal_watcher_settings, mock_observer, tmp_path
+    ):
         """Test that FileWatcherLoop uses source_dir as default when paths is empty."""
         source_dir = tmp_path / "source"
         source_dir.mkdir(exist_ok=True)
@@ -550,7 +557,7 @@ class TestFileWatcherLoopInit:
         minimal_watcher_settings.paths = []
 
         with patch("playbook.watcher.Observer", return_value=mock_observer):
-            loop = FileWatcherLoop(mock_processor, minimal_watcher_settings)
+            _ = FileWatcherLoop(mock_processor, minimal_watcher_settings)
 
             # Verify observer.schedule was called with source_dir
             assert mock_observer.schedule.call_count == 1
@@ -567,7 +574,7 @@ class TestFileWatcherLoopInit:
         watcher_settings.paths = ["relative/subdir"]
 
         with patch("playbook.watcher.Observer", return_value=mock_observer):
-            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            _ = FileWatcherLoop(mock_processor, watcher_settings)
 
             # Verify the resolved path is relative to source_dir
             expected_path = source_dir / "relative/subdir"
@@ -586,32 +593,38 @@ class TestFileWatcherLoopInit:
         watcher_settings.paths = [str(absolute_path)]
 
         with patch("playbook.watcher.Observer", return_value=mock_observer):
-            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            _ = FileWatcherLoop(mock_processor, watcher_settings)
 
             # Verify the absolute path is used as-is
             assert mock_observer.schedule.call_count == 1
             call_args = mock_observer.schedule.call_args
             assert call_args[0][1] == str(absolute_path)
 
-    def test_initialization_expands_user_home_directory(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+    def test_initialization_expands_user_home_directory(
+        self, mock_processor, watcher_settings, mock_observer, tmp_path
+    ):
         """Test that FileWatcherLoop expands ~ to user home directory."""
         # Create a path with ~ that will be expanded
         watcher_settings.paths = ["~/watch_dir"]
 
-        with patch("playbook.watcher.Observer", return_value=mock_observer):
-            with patch("pathlib.Path.expanduser") as mock_expanduser:
-                # Mock expanduser to return a specific path
-                expanded_path = tmp_path / "home/user/watch_dir"
-                mock_expanduser.return_value = expanded_path
+        with (
+            patch("playbook.watcher.Observer", return_value=mock_observer),
+            patch("pathlib.Path.expanduser") as mock_expanduser,
+        ):
+            # Mock expanduser to return a specific path
+            expanded_path = tmp_path / "home/user/watch_dir"
+            mock_expanduser.return_value = expanded_path
 
-                # Also need to mock mkdir since expanded_path won't exist
-                with patch("pathlib.Path.mkdir"):
-                    loop = FileWatcherLoop(mock_processor, watcher_settings)
+            # Also need to mock mkdir since expanded_path won't exist
+            with patch("pathlib.Path.mkdir"):
+                _ = FileWatcherLoop(mock_processor, watcher_settings)
 
-                    # Verify expanduser was called
-                    assert mock_expanduser.called
+                # Verify expanduser was called
+                assert mock_expanduser.called
 
-    def test_initialization_creates_directories_if_not_exist(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+    def test_initialization_creates_directories_if_not_exist(
+        self, mock_processor, watcher_settings, mock_observer, tmp_path
+    ):
         """Test that FileWatcherLoop creates watch directories if they don't exist."""
         source_dir = tmp_path / "source"
         source_dir.mkdir(exist_ok=True)
@@ -622,13 +635,15 @@ class TestFileWatcherLoopInit:
         watcher_settings.paths = [str(new_dir)]
 
         with patch("playbook.watcher.Observer", return_value=mock_observer):
-            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            _ = FileWatcherLoop(mock_processor, watcher_settings)
 
             # Verify directory was created
             assert new_dir.exists()
             assert new_dir.is_dir()
 
-    def test_initialization_with_multiple_paths_mixed_types(self, mock_processor, watcher_settings, mock_observer, tmp_path):
+    def test_initialization_with_multiple_paths_mixed_types(
+        self, mock_processor, watcher_settings, mock_observer, tmp_path
+    ):
         """Test FileWatcherLoop initialization with mixed absolute and relative paths."""
         source_dir = tmp_path / "source"
         source_dir.mkdir(exist_ok=True)
@@ -644,7 +659,7 @@ class TestFileWatcherLoopInit:
         watcher_settings.paths = [str(absolute_path), relative_path]
 
         with patch("playbook.watcher.Observer", return_value=mock_observer):
-            loop = FileWatcherLoop(mock_processor, watcher_settings)
+            _ = FileWatcherLoop(mock_processor, watcher_settings)
 
             # Verify both paths were scheduled
             assert mock_observer.schedule.call_count == 2
@@ -684,7 +699,9 @@ class TestFileWatcherLoopInit:
 class TestFileWatcherLoopResolveRoots:
     """Tests for FileWatcherLoop._resolve_roots method."""
 
-    def test_default_to_source_dir_when_paths_empty(self, mock_processor, minimal_watcher_settings, mock_observer, tmp_path):
+    def test_default_to_source_dir_when_paths_empty(
+        self, mock_processor, minimal_watcher_settings, mock_observer, tmp_path
+    ):
         """Test that _resolve_roots returns source_dir when paths is empty."""
         source_dir = tmp_path / "source"
         source_dir.mkdir(exist_ok=True)
@@ -699,7 +716,9 @@ class TestFileWatcherLoopResolveRoots:
             assert len(roots) == 1
             assert roots[0] == source_dir
 
-    def test_default_to_source_dir_when_paths_none(self, mock_processor, minimal_watcher_settings, mock_observer, tmp_path):
+    def test_default_to_source_dir_when_paths_none(
+        self, mock_processor, minimal_watcher_settings, mock_observer, tmp_path
+    ):
         """Test that _resolve_roots returns source_dir when paths is None."""
         source_dir = tmp_path / "source"
         source_dir.mkdir(exist_ok=True)
@@ -831,8 +850,7 @@ class TestFileWatcherLoopResolveRoots:
         watcher_settings.paths = ["level1/level2/level3/level4"]
 
         with patch("playbook.watcher.Observer", return_value=mock_observer):
-            loop = FileWatcherLoop(mock_processor, watcher_settings)
-            roots = loop._roots
+            _ = FileWatcherLoop(mock_processor, watcher_settings)
 
             # All parent directories should have been created
             expected_path = source_dir / "level1/level2/level3/level4"
@@ -852,7 +870,6 @@ class TestFileWatcherLoopResolveRoots:
 
         with patch("playbook.watcher.Observer", return_value=mock_observer):
             # We need to mock Path.expanduser
-            original_expanduser = Path.expanduser
 
             def mock_expanduser_func(self):
                 if "~" in str(self):
@@ -934,7 +951,6 @@ class TestFileWatcherLoopResolveRoots:
             roots = loop._roots
 
             # Path should be normalized
-            expected_path = source_dir / "subdir/../other"
             assert len(roots) == 1
             # The path may or may not be normalized, but it should work
             assert roots[0].exists()

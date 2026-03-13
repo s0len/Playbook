@@ -269,4 +269,3 @@ def test_help_mentions_examples_flag(capsys) -> None:
 
     # Help should mention --examples flag
     assert "--examples" in help_output
-

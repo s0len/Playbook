@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 from playbook.logging_utils import (
     LogBlockBuilder,
     _coerce_items,
@@ -10,7 +8,6 @@ from playbook.logging_utils import (
     render_fields_block,
     render_section_block,
 )
-
 
 # Tests for helper functions
 
@@ -288,13 +285,15 @@ class TestLogBlockBuilder:
     def test_add_fields_with_various_value_types(self):
         """Test add_fields with different value types."""
         builder = LogBlockBuilder("Types", pad_top=False)
-        builder.add_fields({
-            "string": "text",
-            "number": 42,
-            "boolean": True,
-            "none": None,
-            "list": [1, 2, 3],
-        })
+        builder.add_fields(
+            {
+                "string": "text",
+                "number": 42,
+                "boolean": True,
+                "none": None,
+                "list": [1, 2, 3],
+            }
+        )
         result = builder.render()
         assert "string" in result and "text" in result
         assert "number" in result and "42" in result
@@ -395,10 +394,12 @@ class TestLogBlockBuilder:
     def test_complex_block_with_multiple_sections(self):
         """Test building a complex block with fields and sections."""
         builder = LogBlockBuilder("Complex Report")
-        builder.add_fields({
-            "Status": "Active",
-            "Count": 42,
-        })
+        builder.add_fields(
+            {
+                "Status": "Active",
+                "Count": 42,
+            }
+        )
         builder.add_section("Warnings", ["Warning 1", "Warning 2"])
         builder.add_section("Errors", [])
         result = builder.render()
