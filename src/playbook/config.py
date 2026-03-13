@@ -453,6 +453,7 @@ def _build_pattern_config(data: dict[str, Any]) -> PatternConfig:
         season_dir_template=data.get("season_dir_template"),
         destination_root_template=data.get("destination_root_template"),
         priority=int(data.get("priority", 100)),
+        match_relative_path=bool(data.get("match_relative_path", False)),
     )
     return pattern
 
