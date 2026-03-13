@@ -1007,7 +1007,9 @@ def _execute_manual_match(record, sport, show, season, episode) -> None:
     from playbook.models import ProcessingStats
 
     stats = ProcessingStats()
-    processor._handle_match(match, stats)
+    event = processor._handle_match(match, stats)
+    if event:
+        processor.notification_service.notify(event)
 
     # Mark as manually matched in unmatched store
     if gui_state.unmatched_store:
