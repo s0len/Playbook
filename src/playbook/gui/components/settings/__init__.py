@@ -11,6 +11,7 @@ Provides reusable form components for the Settings page including:
 - NotificationTarget: Polymorphic notification target form
 """
 
+from .integrations import integration_editor
 from .key_value_editor import key_value_editor
 from .list_editor import list_editor
 from .notification_target import notification_target_editor
@@ -20,6 +21,7 @@ from .settings_select import settings_select
 from .settings_toggle import settings_toggle
 
 __all__ = [
+    "integration_editor",
     "settings_card",
     "settings_toggle",
     "settings_input",

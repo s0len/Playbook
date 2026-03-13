@@ -38,16 +38,6 @@ NOTIFICATION_TYPES = {
             {"key": "method", "label": "Method", "type": "select", "options": ["POST", "PUT", "PATCH"]},
         ],
     },
-    "autoscan": {
-        "label": "Autoscan",
-        "icon": "radar",
-        "fields": [
-            {"key": "url", "label": "Autoscan URL", "type": "text", "required": True},
-            {"key": "trigger", "label": "Trigger", "type": "select", "options": ["manual", "inotify"]},
-            {"key": "username", "label": "Username", "type": "text"},
-            {"key": "password", "label": "Password", "type": "password"},
-        ],
-    },
     "email": {
         "label": "Email",
         "icon": "email",
@@ -58,26 +48,6 @@ NOTIFICATION_TYPES = {
             {"key": "to_addr", "label": "To Address", "type": "text", "required": True},
             {"key": "username", "label": "Username", "type": "text"},
             {"key": "password", "label": "Password", "type": "password"},
-        ],
-    },
-    "plex_scan": {
-        "label": "Plex Scan",
-        "icon": "play_circle",
-        "fields": [
-            {"key": "url", "label": "Plex URL", "type": "text", "placeholder": "Uses PLEX_URL env if empty"},
-            {"key": "token", "label": "Plex Token", "type": "password", "placeholder": "Uses PLEX_TOKEN env if empty"},
-            {
-                "key": "library_name",
-                "label": "Library Name",
-                "type": "text",
-                "placeholder": "Uses PLEX_LIBRARY_NAME env if empty",
-            },
-            {
-                "key": "library_id",
-                "label": "Library ID",
-                "type": "text",
-                "placeholder": "Uses PLEX_LIBRARY_ID env if empty",
-            },
         ],
     },
 }
@@ -297,7 +267,9 @@ def notification_target_editor(
 
         for idx, target in enumerate(targets):
             target_type = str(target.get("type", "webhook")).lower()
-            type_config = NOTIFICATION_TYPES.get(target_type, NOTIFICATION_TYPES["webhook"])
+            if target_type not in NOTIFICATION_TYPES:
+                continue  # silently skip removed/unknown types (e.g. plex_scan, autoscan)
+            type_config = NOTIFICATION_TYPES[target_type]
             enabled = bool(target.get("enabled", True))
 
             with ui.card().classes("w-full p-4 settings-inline-card"):
