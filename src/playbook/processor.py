@@ -41,8 +41,6 @@ from .post_run_triggers import run_plex_sync_if_needed, trigger_kometa_if_needed
 from .processing_state import ProcessingState
 from .run_summary import (
     has_activity,
-    has_detailed_activity,
-    log_detailed_summary,
     log_run_recap,
 )
 from .trace_writer import TraceOptions, persist_trace
@@ -529,18 +527,6 @@ class Processor:
                         )
                     )
 
-            has_details = has_detailed_activity(stats)
-            has_errors = bool(stats.errors)
-            if LOGGER.isEnabledFor(logging.DEBUG):
-                # In DEBUG mode, show detailed summary when there's any activity
-                has_issues = has_errors or bool(stats.warnings)
-                if has_details or has_issues:
-                    level = logging.INFO if has_issues else logging.DEBUG
-                    self._log_detailed_summary(stats, level=level)
-            elif has_errors:
-                # At INFO level, only show detailed summary for actual errors
-                # (warnings are already logged individually and counted in Run Recap)
-                self._log_detailed_summary(stats)
             self._trigger_post_run_trigger_if_needed(stats)
             # Send summary notification if in summary mode
             self.notification_service.send_summary()
@@ -939,14 +925,6 @@ class Processor:
             else:
                 lines.append(f"  - [{prefix}] {message}")
         return "\n".join(lines)
-
-    def _log_detailed_summary(self, stats: ProcessingStats, *, level: int = logging.INFO) -> None:
-        """Log detailed summary of processing results (delegates to run_summary module)."""
-        log_detailed_summary(
-            stats,
-            plex_sync_stats=self._state.plex_sync_stats,
-            level=level,
-        )
 
     def _log_run_recap(self, stats: ProcessingStats, duration: float) -> None:
         """Log run recap with duration, stats, and follow-up actions (delegates to run_summary module)."""
