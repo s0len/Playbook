@@ -390,6 +390,10 @@ samples:
     filenames:
       - value: "formula1.2025.american.grand.prix.sprint.race.1080p.web.h264-verum.mkv"
         expect_episode: "Sprint"
+      - value: "formula1.2025.american.grand.prix.sprint.race.hlg.2160p.web.h265-verum.mkv"
+        expect_episode: "Sprint"
+      - value: "Formula1.2025.American.Grand.Prix.Race.DV.HDR.2160p.WEB.h265-VERUM.mkv"
+        expect_episode: "Race"
 
   - description: "Formula 1 VERUM full race pack resolves via aliases"
     sport:
@@ -429,6 +433,8 @@ samples:
         expect_episode: "Race"
       - value: "formula1.2025.brazilian.grand.prix.sprint.race.1080p.web.h264-verum.mkv"
         expect_episode: "Sprint"
+      - value: "Formula1.2025.Mexican.Grand.Prix.Grand.Prix.DV.HDR.2160p.VERUM"
+        expect_episode: "Race"
       - value: "formula1.2025.brazilian.grand.prix.grand.prix.1080p.web.h264-verum.mkv"
         expect_episode: "Race"
       - value: "formula1.2025.brazilian.grand.prix.sprint.qualifying.1080p.web.h264-verum.mkv"
@@ -1359,6 +1365,42 @@ samples:
       - value: "Champions League 2026 Monaco vs Benfica 18 02 1080pEN60fps.mkv"
         expect_season: "Knockout Phase Play-offs"
         expect_episode: "Monaco vs Benfica"
+
+  - description: "UCL VERUM releases with phase info between date and matchup"
+    sport:
+      id: "ucl_verum_phase_test"
+      name: "UEFA Champions League"
+      pattern_sets:
+        - uefa_champions_league
+    show:
+      key: "ucl-verum-test"
+      title: "UEFA Champions League 2025-2026"
+      seasons:
+        - title: "Round of 16"
+          round_number: 10
+          display_number: 10
+          episodes:
+            - title: "Atalanta vs Bayern Munich"
+              originally_available: "2026-03-10"
+            - title: "PSG vs Chelsea"
+              originally_available: "2026-03-11"
+            - title: "Atletico Madrid vs Tottenham Hotspur"
+              originally_available: "2026-03-10"
+            - title: "Galatasaray vs Liverpool"
+              originally_available: "2026-03-10"
+    files:
+      - value: "uefa.champions.league.2026.03.10.round.of.16.first.leg.atalanta.vs.bayern.munich.1080p.web.h264-verum.mkv"
+        expect_season: "Round of 16"
+        expect_episode: "Atalanta vs Bayern Munich"
+      - value: "uefa.champions.league.2026.03.11.round.of.16.first.leg.psg.vs.chelsea.1080p.web.h264-verum.mkv"
+        expect_season: "Round of 16"
+        expect_episode: "PSG vs Chelsea"
+      - value: "uefa.champions.league.2026.03.10.round.of.16.first.leg.atletico.madrid.vs.tottenham.hotspur.1080p.web.h264-verum.mkv"
+        expect_season: "Round of 16"
+        expect_episode: "Atletico Madrid vs Tottenham Hotspur"
+      - value: "uefa.champions.league.2026.03.10.round.of.16.first.leg.galatasaray.vs.liverpool.1080p.web.h264-verum.mkv"
+        expect_season: "Round of 16"
+        expect_episode: "Galatasaray vs Liverpool"
 
   - description: "Formula 1 generic dot-separated releases without Round number (BILLIE)"
     sport:
