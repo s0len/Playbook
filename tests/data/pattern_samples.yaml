@@ -172,7 +172,7 @@ samples:
           display_number: 1
           episodes:
             - title: "Bayern Munich vs Chelsea"
-            - title: "MC vs Napoli"
+            - title: "PSG vs SSC Napoli"
         - title: "Matchday 2"
           round_number: 2
           display_number: 2
@@ -183,21 +183,25 @@ samples:
           display_number: 4
           episodes:
             - title: "Club Brugge vs Barcelona"
-            - title: "MC vs Borussia"
-            - title: "Slavia vs Arsenal"
+            - title: "Manchester City vs Borussia Dortmund"
+              aliases:
+                - "MC vs Borussia"
+            - title: "Slavia Praha vs Arsenal"
+              aliases:
+                - "Slavia vs Arsenal"
     filenames:
       - value: "UEFA Champions League 2025 Bayern Munich vs Chelsea 17 09 2025 1080EN50fps.mkv"
         expect_episode: "Bayern Munich vs Chelsea"
-      - value: "UEFA Champions League 2025 MC vs Napoli 18 09 2025 1080EN50fps.mkv"
-        expect_episode: "MC vs Napoli"
+      - value: "UEFA Champions League 2025 PSG vs Napoli 18 09 2025 1080EN50fps.mkv"
+        expect_episode: "PSG vs SSC Napoli"
       - value: "UEFA.Champions.League.2025.Chelsea.vs.Benfica.1080pEN50fps.mkv"
         expect_episode: "Chelsea vs Benfica"
       - value: "UEFA.Champions.League.2025.Club.Brugge.vs.Barcelona.1080pEN50fps.mkv"
         expect_episode: "Club Brugge vs Barcelona"
       - value: "UEFA.Champions.League.2025.MC.vs.Borussia.1080pEN50fps.mkv"
-        expect_episode: "MC vs Borussia"
+        expect_episode: "Manchester City vs Borussia Dortmund"
       - value: "UEFA.Champions.League.2025.Slavia.vs.Arsenal.1080pEN50fps.mkv"
-        expect_episode: "Slavia vs Arsenal"
+        expect_episode: "Slavia Praha vs Arsenal"
 
   - description: "NBA 2025-26 regular season samples"
     sport:

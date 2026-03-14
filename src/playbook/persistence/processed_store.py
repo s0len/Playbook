@@ -467,22 +467,21 @@ class ProcessedFileStore:
         return self._row_to_record(row) if row else None
 
     def get_quality_score(self, destination_path: str) -> int | None:
-        """Get the highest quality score for a destination path.
+        """Get the quality score of the current active file for a destination.
 
-        This is used to compare quality scores when deciding whether to
-        upgrade an existing file. We use MAX because multiple source files
-        may have been processed to the same destination (after upgrades),
-        and we want to compare against the best quality we've ever achieved.
+        Only considers non-superseded records so that a corrupt or manually
+        replaced file's score doesn't block future upgrades.
 
         Args:
             destination_path: The destination file path to look up
 
         Returns:
-            The highest quality score, or None if not found or not set
+            The highest active quality score, or None if not found or not set
         """
         conn = self._get_connection()
         cursor = conn.execute(
-            "SELECT MAX(quality_score) as quality_score FROM processed_files WHERE destination_path = ?",
+            "SELECT MAX(quality_score) as quality_score FROM processed_files "
+            "WHERE destination_path = ? AND status != 'superseded'",
             (destination_path,),
         )
         row = cursor.fetchone()
