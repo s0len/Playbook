@@ -229,8 +229,9 @@ pattern_sets:
 
       - description: Formula 1 VERUM releases
         # Example: Formula1.2024.Saudi.Arabian.Grand.Prix.Qualifying.1080p.VERUM.mkv
+        # Example: formula1.2026.australia.grand.prix.qualifying.hlg.2160p.web.h265-verum.mkv
         regex: >-
-          (?i)^Formula1\.(?P<year>\d{4})\.(?P<season_slug>[^.]+(?:\.[^.]+){1,2})\.(?P<session>Qualifying|Sprint\.Qualifying|Sprint\.Race|Sprint|Race)(?=\.1080p)
+          (?i)^Formula1\.(?P<year>\d{4})\.(?P<season_slug>[^.]+(?:\.[^.]+){1,2})\.(?P<session>Qualifying|Sprint\.Qualifying|Sprint\.Race|Sprint|Race)(?=\.(?:(?:DV\.)?(?:HDR\.)?(?:HLG\.)?(?:2160|1080|720)[pi]?))
         season_selector:
           mode: title        # Use the slug to match metadata titles directly.
           group: season_slug
@@ -253,8 +254,9 @@ pattern_sets:
 
       - description: Formula 1 VERUM full race packs
         # Example: Formula1.2024.Miami.Grand.Prix.Grand.Prix.1080p.VERUM
+        # Example: Formula1.2024.Miami.Grand.Prix.Grand.Prix.DV.HDR.2160p.VERUM
         regex: >-
-          (?i)^Formula1\.(?P<year>\d{4})\.(?P<season_slug>[^.]+(?:\.[^.]+)*?)(?=\.Grand\.Prix)\.(?P<session>Grand\.Prix)\.1080p.*
+          (?i)^Formula1\.(?P<year>\d{4})\.(?P<season_slug>[^.]+(?:\.[^.]+)*?)(?=\.Grand\.Prix)\.(?P<session>Grand\.Prix)\.(?:DV\.)?(?:HDR\.)?(?:HLG\.)?(?:2160|1080|720)[pi]?.*
         season_selector:
           mode: title
           group: season_slug

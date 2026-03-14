@@ -390,6 +390,10 @@ samples:
     filenames:
       - value: "formula1.2025.american.grand.prix.sprint.race.1080p.web.h264-verum.mkv"
         expect_episode: "Sprint"
+      - value: "formula1.2025.american.grand.prix.sprint.race.hlg.2160p.web.h265-verum.mkv"
+        expect_episode: "Sprint"
+      - value: "Formula1.2025.American.Grand.Prix.Race.DV.HDR.2160p.WEB.h265-VERUM.mkv"
+        expect_episode: "Race"
 
   - description: "Formula 1 VERUM full race pack resolves via aliases"
     sport:
@@ -429,6 +433,8 @@ samples:
         expect_episode: "Race"
       - value: "formula1.2025.brazilian.grand.prix.sprint.race.1080p.web.h264-verum.mkv"
         expect_episode: "Sprint"
+      - value: "Formula1.2025.Mexican.Grand.Prix.Grand.Prix.DV.HDR.2160p.VERUM"
+        expect_episode: "Race"
       - value: "formula1.2025.brazilian.grand.prix.grand.prix.1080p.web.h264-verum.mkv"
         expect_episode: "Race"
       - value: "formula1.2025.brazilian.grand.prix.sprint.qualifying.1080p.web.h264-verum.mkv"
