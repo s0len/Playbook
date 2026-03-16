@@ -128,13 +128,31 @@ def _stat_card(label: str, value: int, icon: str, tone: str) -> None:
         "danger": "app-stat-surface-danger",
         "muted": "app-stat-surface-muted",
     }
+    value_colors = {
+        "accent": "var(--accent-color)",
+        "warning": "#fbbf24",
+        "danger": "#f87171",
+        "muted": "var(--text-primary)",
+    }
+    border_colors = {
+        "accent": "var(--accent-color)",
+        "warning": "#fbbf24",
+        "danger": "#f87171",
+        "muted": "rgba(148, 163, 184, 0.4)",
+    }
     surface_class = surface_map.get(tone, "app-stat-surface-accent")
+    value_color = value_colors.get(tone, "var(--accent-color)")
+    border_color = border_colors.get(tone, "var(--accent-color)")
 
-    with ui.card().classes(f"stat-card border {surface_class} p-4 min-w-32"):
+    with (
+        ui.card()
+        .classes(f"stat-card border {surface_class} p-4 min-w-32")
+        .style(f"border-top: 3px solid {border_color}")
+    ):
         with ui.row().classes("items-center gap-2"):
             ui.icon(icon).classes(f"text-xl app-stat-icon app-stat-icon-{tone}")
             with ui.column().classes("gap-0"):
-                ui.label(str(value)).classes("text-2xl font-bold stat-value")
+                ui.label(str(value)).classes("text-2xl font-bold").style(f"color: {value_color}")
                 ui.label(label).classes("text-sm app-text-muted")
 
 

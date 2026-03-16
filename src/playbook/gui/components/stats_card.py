@@ -45,6 +45,21 @@ def stats_card(
         "danger": "app-text-danger",
         "muted": "app-stat-icon-muted",
     }
+    # Inline style colors — bypasses all CSS specificity issues with Quasar/NiceGUI
+    value_colors = {
+        "accent": "var(--accent-color)",
+        "success": "#4ade80",
+        "warning": "#fbbf24",
+        "danger": "#f87171",
+        "muted": "var(--text-primary)",
+    }
+    border_colors = {
+        "accent": "var(--accent-color)",
+        "success": "#4ade80",
+        "warning": "#fbbf24",
+        "danger": "#f87171",
+        "muted": "rgba(148, 163, 184, 0.4)",
+    }
 
     # Backward compatibility aliases
     alias_map = {
@@ -58,13 +73,17 @@ def stats_card(
     tone = alias_map.get(color, color)
     base_class = surface_classes.get(tone, surface_classes["accent"])
     icon_class = icon_classes.get(tone, icon_classes["accent"])
+    value_color = value_colors.get(tone, value_colors["accent"])
+    border_color = border_colors.get(tone, border_colors["accent"])
 
-    with ui.card().classes(f"stat-card w-40 border {base_class}") as card:
+    with (
+        ui.card().classes(f"stat-card w-40 border {base_class}").style(f"border-top: 3px solid {border_color}") as card
+    ):
         with ui.column().classes("items-center py-2 px-3"):
             if icon:
                 ui.icon(icon).classes(f"text-3xl {icon_class}")
 
-            value_label = ui.label(str(value_fn())).classes("text-3xl font-bold stat-value")
+            value_label = ui.label(str(value_fn())).classes("text-3xl font-bold").style(f"color: {value_color}")
             ui.label(title).classes("text-sm font-medium opacity-80")
 
             if subtitle:
