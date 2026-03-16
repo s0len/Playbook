@@ -194,7 +194,7 @@ def _render_recap(time_str: str, level_key: str, badge_text: str, fields: dict[s
     with ui.row().classes(f"w-full log-entry log-entry-{level_key} log-entry-recap"):
         ui.label(time_str).classes("log-timestamp")
         ui.label(badge_text).classes(f"log-badge log-badge-{level_key}")
-        ui.html(html).classes("min-w-0 flex-1")
+        ui.html(html, sanitize=False).classes("min-w-0 flex-1")
 
 
 def _render_processing(time_str: str, level_key: str, badge_text: str, fields: dict[str, str]) -> None:
@@ -220,7 +220,7 @@ def _render_processing(time_str: str, level_key: str, badge_text: str, fields: d
     with ui.row().classes(f"w-full log-entry log-entry-{level_key}"):
         ui.label(time_str).classes("log-timestamp")
         ui.label(badge_text).classes(f"log-badge log-badge-{level_key}")
-        ui.html(html).classes("min-w-0 flex-1")
+        ui.html(html, sanitize=False).classes("min-w-0 flex-1")
 
 
 def _render_summary(time_str: str, level_key: str, badge_text: str, fields: dict[str, str]) -> None:
@@ -243,7 +243,7 @@ def _render_summary(time_str: str, level_key: str, badge_text: str, fields: dict
     with ui.row().classes(f"w-full log-entry log-entry-{level_key} log-entry-recap"):
         ui.label(time_str).classes("log-timestamp")
         ui.label(badge_text).classes(f"log-badge log-badge-{level_key}")
-        ui.html(html).classes("min-w-0 flex-1")
+        ui.html(html, sanitize=False).classes("min-w-0 flex-1")
 
 
 def _render_generic_block(
@@ -267,7 +267,7 @@ def _render_generic_block(
     with ui.row().classes(f"w-full log-entry log-entry-{level_key}"):
         ui.label(time_str).classes("log-timestamp")
         ui.label(badge_text).classes(f"log-badge log-badge-{level_key}")
-        ui.html(html).classes("min-w-0 flex-1")
+        ui.html(html, sanitize=False).classes("min-w-0 flex-1")
 
 
 # ---------------------------------------------------------------------------
