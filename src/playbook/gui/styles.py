@@ -98,7 +98,7 @@ body.body--dark .glass-card {
 }
 
 /* ===== Page titles ===== */
-.text-3xl.font-bold {
+.text-3xl.font-bold:not(.stat-value) {
     color: var(--text-primary) !important;
 }
 
@@ -1361,11 +1361,11 @@ body.body--dark .list-editor-item:hover {
 .stat-card.app-stat-surface-muted   { border-top: 3px solid rgba(148, 163, 184, 0.4); }
 
 /* Large stat number inherits semantic color */
-.stat-card.app-stat-surface-success .stat-value { color: #4ade80; }
-.stat-card.app-stat-surface-warning .stat-value { color: #fbbf24; }
-.stat-card.app-stat-surface-danger  .stat-value { color: #f87171; }
-.stat-card.app-stat-surface-accent  .stat-value { color: var(--accent-color); }
-.stat-card.app-stat-surface-muted   .stat-value { color: var(--text-primary); }
+.stat-card.app-stat-surface-success .stat-value { color: #4ade80 !important; }
+.stat-card.app-stat-surface-warning .stat-value { color: #fbbf24 !important; }
+.stat-card.app-stat-surface-danger  .stat-value { color: #f87171 !important; }
+.stat-card.app-stat-surface-accent  .stat-value { color: var(--accent-color) !important; }
+.stat-card.app-stat-surface-muted   .stat-value { color: var(--text-primary) !important; }
 
 /* Icon gets a subtle background pill */
 .stat-card .app-stat-icon-accent,
