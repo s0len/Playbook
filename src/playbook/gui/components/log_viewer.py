@@ -1,13 +1,23 @@
 """
 Log viewer component for the Playbook GUI.
+
+Provides log_line() for rendering individual entries with structured
+parsing of LogBlockBuilder messages (Run Recap, Processing Details, etc.).
 """
 
 from __future__ import annotations
+
+import re
+from html import escape as _h
 
 from nicegui import ui
 
 from ..state import LogEntry, gui_state
 from .app_button import neutralize_button_utilities
+
+# ---------------------------------------------------------------------------
+# Reusable log_viewer widget (used by dashboard, etc.)
+# ---------------------------------------------------------------------------
 
 
 def log_viewer(
@@ -38,29 +48,21 @@ def log_viewer(
         """Get logs filtered by current criteria."""
         filtered = []
         for entry in gui_state.log_buffer:
-            # Level filter
             entry_level = level_order.get(entry.level, 1)
             if entry_level < min_level:
                 continue
-
-            # Sport filter (check if sport ID appears in logger name or message)
             if sport_filter != "ALL":
                 if (
                     sport_filter.lower() not in entry.message.lower()
                     and sport_filter.lower() not in entry.logger_name.lower()
                 ):
                     continue
-
-            # Search filter
             if search_query:
                 if search_query.lower() not in entry.message.lower():
                     continue
-
             filtered.append(entry)
-
             if len(filtered) >= max_lines:
                 break
-
         return filtered
 
     def refresh() -> None:
@@ -72,43 +74,238 @@ def log_viewer(
             else:
                 for entry in logs:
                     log_line(entry)
-
         if auto_scroll:
             log_container.scroll_to(percent=0)
 
     ui.timer(1.0, refresh)
     refresh()
-
     return log_container
 
 
-LEVEL_STYLES = {
-    "DEBUG": ("app-alert app-alert-info app-text-muted", "app-text-muted"),
-    "INFO": ("app-alert app-alert-success app-text-success", "app-text-success"),
-    "WARNING": ("app-alert app-alert-warning app-text-warning", "app-text-warning"),
-    "ERROR": ("app-alert app-alert-danger app-text-danger", "app-text-danger"),
-    "CRITICAL": ("app-alert app-alert-danger app-text-danger", "app-text-danger"),
+# ---------------------------------------------------------------------------
+# Structured block parser — turns LogBlockBuilder output into data
+# ---------------------------------------------------------------------------
+
+_KV_RE = re.compile(r"^\s+(\S[^:]*?)\s*:\s*(.+)$")
+
+
+def _parse_block(message: str) -> tuple[str, dict[str, str], list[tuple[str, list[str]]]] | None:
+    """Parse a LogBlockBuilder message into (title, fields, sections).
+
+    Returns None if the message is not a structured block.
+    """
+    if "\n" not in message:
+        return None
+
+    title = ""
+    fields: dict[str, str] = {}
+    sections: list[tuple[str, list[str]]] = []
+    current_section: str | None = None
+    current_items: list[str] = []
+
+    for line in message.split("\n"):
+        stripped = line.strip()
+        if not stripped or stripped.replace("-", "") == "":
+            continue
+
+        # Section header: non-indented, ends with colon, no internal colon
+        if not line.startswith(" ") and stripped.endswith(":") and ":" not in stripped[:-1]:
+            if current_section:
+                sections.append((current_section, current_items))
+            current_section = stripped[:-1]
+            current_items = []
+            continue
+
+        # Section bullet item
+        if current_section and stripped.startswith("- "):
+            current_items.append(stripped[2:])
+            continue
+
+        # Key-value pair (indented)
+        kv = _KV_RE.match(line)
+        if kv:
+            fields[kv.group(1).strip()] = kv.group(2).strip()
+            continue
+
+        # Title: first non-indented, non-dash line
+        if not title and not line.startswith(" "):
+            title = stripped
+
+    if current_section:
+        sections.append((current_section, current_items))
+
+    return (title, fields, sections) if title and fields else None
+
+
+# ---------------------------------------------------------------------------
+# Level styling constants
+# ---------------------------------------------------------------------------
+
+LEVEL_CSS_KEY = {
+    "DEBUG": "debug",
+    "INFO": "info",
+    "WARNING": "warning",
+    "ERROR": "error",
+    "CRITICAL": "error",
+}
+
+LEVEL_BADGE_TEXT = {
+    "DEBUG": "DBG",
+    "INFO": "INFO",
+    "WARNING": "WARN",
+    "ERROR": "ERR",
+    "CRITICAL": "CRIT",
 }
 
 
-def log_line(entry: LogEntry) -> None:
-    """Render a single log line with qui-style colored level badge.
+# ---------------------------------------------------------------------------
+# Structured renderers (HTML-based for performance)
+# ---------------------------------------------------------------------------
 
-    Args:
-        entry: The log entry to display
+_RECAP_KEYS = ["Duration", "Processed", "Skipped", "Ignored", "Warnings", "Errors", "Destinations", "Plex Sync"]
+
+
+def _pill_html(key: str, value: str) -> str:
+    """Generate HTML for a stat pill: value + label, colored by meaning."""
+    cls = "log-pill"
+    if key in ("Warnings",) and value != "0":
+        cls += " log-pill-warning"
+    elif key in ("Errors",) and value != "0":
+        cls += " log-pill-error"
+    elif key == "Duration":
+        cls += " log-pill-accent"
+    return (
+        f'<span class="{cls}">'
+        f'<span class="log-pill-value">{_h(value)}</span>'
+        f'<span class="log-pill-label">{_h(key.lower())}</span>'
+        f"</span>"
+    )
+
+
+def _render_recap(time_str: str, level_key: str, badge_text: str, fields: dict[str, str]) -> None:
+    """Render Run Recap as a card with stat pills."""
+    pills = [_pill_html(k, fields[k]) for k in _RECAP_KEYS if k in fields]
+    html = (
+        f'<div class="log-block-content">'
+        f'<div class="log-block-title">Run Recap</div>'
+        f'<div class="log-stats-row">{"".join(pills)}</div>'
+        f"</div>"
+    )
+    with ui.row().classes(f"w-full log-entry log-entry-{level_key} log-entry-recap"):
+        ui.label(time_str).classes("log-timestamp")
+        ui.label(badge_text).classes(f"log-badge log-badge-{level_key}")
+        ui.html(html).classes("min-w-0 flex-1")
+
+
+def _render_processing(time_str: str, level_key: str, badge_text: str, fields: dict[str, str]) -> None:
+    """Render Processing Details as compact source -> destination."""
+    source = _h(fields.get("Source", ""))
+    parts: list[str] = []
+    if dest := fields.get("Destination", ""):
+        parts.append(f'<span class="log-detail-dest">\u2192 {_h(dest)}</span>')
+    if quality := fields.get("Quality", ""):
+        parts.append(f'<span class="log-detail-tag">{_h(quality)}</span>')
+    if upgrade := fields.get("Upgrade", ""):
+        parts.append(f'<span class="log-detail-tag log-detail-upgrade">{_h(upgrade)}</span>')
+    if action := fields.get("Action", ""):
+        parts.append(f'<span class="log-detail-action">{_h(action)}</span>')
+
+    sep = '<span class="log-sep">\u00b7</span>'
+    html = (
+        f'<div class="log-block-content">'
+        f'<div class="log-processing-source">{source}</div>'
+        f'<div class="log-processing-meta">{sep.join(parts)}</div>'
+        f"</div>"
+    )
+    with ui.row().classes(f"w-full log-entry log-entry-{level_key}"):
+        ui.label(time_str).classes("log-timestamp")
+        ui.label(badge_text).classes(f"log-badge log-badge-{level_key}")
+        ui.html(html).classes("min-w-0 flex-1")
+
+
+def _render_summary(time_str: str, level_key: str, badge_text: str, fields: dict[str, str]) -> None:
+    """Render Summary as compact inline stats."""
+    parts = [
+        f'<span class="log-summary-stat">'
+        f'<span class="log-pill-value">{_h(fields[k])}</span> {_h(k.lower())}'
+        f"</span>"
+        for k in ["Processed", "Skipped", "Ignored"]
+        if k in fields
+    ]
+    sep = '<span class="log-sep">\u00b7</span>'
+    html = (
+        f'<div class="log-summary-content">'
+        f'<span class="log-block-title">Summary</span>'
+        f'<span class="log-sep">\u2014</span>'
+        f"{sep.join(parts)}"
+        f"</div>"
+    )
+    with ui.row().classes(f"w-full log-entry log-entry-{level_key} log-entry-recap"):
+        ui.label(time_str).classes("log-timestamp")
+        ui.label(badge_text).classes(f"log-badge log-badge-{level_key}")
+        ui.html(html).classes("min-w-0 flex-1")
+
+
+def _render_generic_block(
+    time_str: str, level_key: str, badge_text: str, title: str, fields: dict[str, str]
+) -> None:
+    """Render any other structured block as title + inline key-value pairs."""
+    parts = [
+        f'<span class="log-summary-stat">'
+        f'<span class="log-pill-value">{_h(v)}</span> {_h(k.lower())}'
+        f"</span>"
+        for k, v in fields.items()
+    ]
+    sep = '<span class="log-sep">\u00b7</span>'
+    html = (
+        f'<div class="log-summary-content">'
+        f'<span class="log-block-title">{_h(title)}</span>'
+        f'<span class="log-sep">\u2014</span>'
+        f"{sep.join(parts)}"
+        f"</div>"
+    )
+    with ui.row().classes(f"w-full log-entry log-entry-{level_key}"):
+        ui.label(time_str).classes("log-timestamp")
+        ui.label(badge_text).classes(f"log-badge log-badge-{level_key}")
+        ui.html(html).classes("min-w-0 flex-1")
+
+
+# ---------------------------------------------------------------------------
+# Main entry point — dispatches to structured or generic renderer
+# ---------------------------------------------------------------------------
+
+
+def log_line(entry: LogEntry) -> None:
+    """Render a single log entry.
+
+    Structured messages (from LogBlockBuilder) are parsed and rendered
+    with stat pills / compact layouts. Everything else renders as plain text.
     """
-    badge_cls, msg_cls = LEVEL_STYLES.get(entry.level, ("app-alert app-alert-info app-text-muted", "app-text-muted"))
+    level_key = LEVEL_CSS_KEY.get(entry.level, "info")
+    badge_text = LEVEL_BADGE_TEXT.get(entry.level, entry.level[:4])
     time_str = entry.timestamp.strftime("%H:%M:%S")
 
-    with ui.row().classes("w-full gap-2 items-start py-0.5 hover:bg-white/5 px-1"):
-        # Timestamp
-        ui.label(time_str).classes("text-xs app-text-muted shrink-0 font-mono")
-        # Level badge
-        ui.label(entry.level.title()).classes(
-            f"w-12 text-center text-[10px] font-semibold rounded px-1 py-0.5 shrink-0 {badge_cls}"
-        )
-        # Message
-        ui.label(entry.message).classes(f"text-xs font-mono log-line-message {msg_cls}")
+    # Try structured parsing first
+    parsed = _parse_block(entry.message)
+    if parsed:
+        title, fields, _sections = parsed
+        if title == "Run Recap":
+            _render_recap(time_str, level_key, badge_text, fields)
+            return
+        if title == "Processing Details":
+            _render_processing(time_str, level_key, badge_text, fields)
+            return
+        if title == "Summary":
+            _render_summary(time_str, level_key, badge_text, fields)
+            return
+        _render_generic_block(time_str, level_key, badge_text, title, fields)
+        return
+
+    # Plain unstructured message
+    with ui.row().classes(f"w-full log-entry log-entry-{level_key}"):
+        ui.label(time_str).classes("log-timestamp")
+        ui.label(badge_text).classes(f"log-badge log-badge-{level_key}")
+        ui.label(entry.message).classes(f"log-msg log-msg-{level_key}")
 
 
 def log_filters(

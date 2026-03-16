@@ -30,7 +30,7 @@ def logs_page() -> None:
     with ui.column().classes("w-full p-6 gap-4 view-shell"):
         # Header
         ui.label("Logs").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
-        ui.label("Real-time application logs.").classes("text-sm text-slate-500 dark:text-slate-400 -mt-2")
+        ui.label("Real-time application logs.").classes("text-sm app-text-muted -mt-2")
 
         # Toolbar
         with ui.card().classes("glass-card w-full"):
@@ -86,14 +86,14 @@ def logs_page() -> None:
         with ui.card().classes("glass-card w-full"):
             log_scroll = (
                 ui.scroll_area()
-                .classes("w-full font-mono text-xs log-container text-slate-100 rounded-lg")
+                .classes("w-full log-container")
                 .style("height: 600px; max-height: 70vh;")
             )
             with log_scroll:
                 log_container = ui.column().classes("w-full p-3 gap-0")
 
             # Footer
-            with ui.row().classes("w-full justify-center items-center mt-2 text-xs text-slate-500 dark:text-slate-400"):
+            with ui.row().classes("w-full justify-center items-center mt-2 text-xs log-footer"):
                 log_count_label = ui.label(f"Showing 0 of 0 entries ({MAX_LOG_LINES} max)")
 
             def refresh_logs() -> None:
@@ -111,7 +111,9 @@ def logs_page() -> None:
                     log_container.clear()
                     with log_container:
                         if not logs:
-                            ui.label("No logs matching filters").classes("text-slate-500 italic py-4")
+                            with ui.column().classes("w-full items-center justify-center py-12 gap-2"):
+                                ui.icon("terminal").classes("text-3xl log-empty")
+                                ui.label("No logs matching filters").classes("text-sm italic log-empty")
                         else:
                             for entry in logs:
                                 log_line(entry)
