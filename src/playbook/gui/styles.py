@@ -76,10 +76,25 @@ body, .q-page, .q-page-container, .q-drawer, .q-card, .q-dialog {
     letter-spacing: -0.01em;
 }
 
-/* Display font for headings */
-.text-3xl, .text-2xl, .text-xl, .text-lg,
-.font-semibold, .font-bold {
+/* Protect Material Icons from any font overrides */
+.q-icon, .material-icons, .notranslate,
+[class*="material-icons"], [class*="material-symbols"] {
+    font-family: 'Material Icons' !important;
+}
+
+/* Display font for headings — exclude icon elements */
+.text-3xl:not(.q-icon):not(.material-icons),
+.text-2xl:not(.q-icon):not(.material-icons),
+.text-xl:not(.q-icon):not(.material-icons),
+.text-lg:not(.q-icon):not(.material-icons),
+.font-semibold:not(.q-icon):not(.material-icons),
+.font-bold:not(.q-icon):not(.material-icons) {
     font-family: var(--font-display) !important;
+}
+
+/* Button text uses display font but button icons must stay Material Icons */
+.q-btn .q-icon, .q-btn .material-icons {
+    font-family: 'Material Icons' !important;
 }
 
 /* ===== Page Background ===== */
@@ -337,8 +352,8 @@ body.body--dark .status-chip-error {
 }
 
 /* Stat value numbers — display font, tighter tracking */
-.stat-card .text-3xl,
-.stat-card .text-2xl {
+.stat-card .text-3xl:not(.q-icon),
+.stat-card .text-2xl:not(.q-icon) {
     font-family: var(--font-display) !important;
     font-weight: 800 !important;
     letter-spacing: -0.04em;
