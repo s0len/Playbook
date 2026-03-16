@@ -36,7 +36,7 @@ def config_page() -> None:
     with ui.column().classes("w-full max-w-7xl mx-auto p-4 gap-4"):
         # Page title with actions
         with ui.row().classes("w-full items-center justify-between"):
-            ui.label("Configuration").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
+            ui.label("Configuration").classes("text-3xl font-bold")
 
             with ui.row().classes("gap-2"):
                 # Save indicator
@@ -73,9 +73,9 @@ def config_page() -> None:
             # Editor panel (left, wider)
             with ui.card().classes("glass-card flex-1"):
                 with ui.row().classes("items-center justify-between mb-2"):
-                    ui.label("playbook.yaml").classes("text-lg font-semibold text-slate-700 dark:text-slate-200")
+                    ui.label("playbook.yaml").classes("text-lg font-semibold")
                     if gui_state.config_path:
-                        ui.label(str(gui_state.config_path)).classes("text-sm text-slate-500 dark:text-slate-400")
+                        ui.label(str(gui_state.config_path)).classes("text-sm app-text-muted")
 
                 # YAML editor
                 editor = (
@@ -100,17 +100,15 @@ def config_page() -> None:
             with ui.column().classes("w-80 gap-4"):
                 # Validation results
                 with ui.card().classes("glass-card w-full"):
-                    ui.label("Validation").classes("text-lg font-semibold text-slate-700 dark:text-slate-200 mb-2")
+                    ui.label("Validation").classes("text-lg font-semibold mb-2")
                     validation_panel = ui.column().classes("w-full gap-2")
                     with validation_panel:
-                        ui.label("Click 'Validate' to check configuration").classes(
-                            "text-sm text-slate-500 dark:text-slate-400 italic"
-                        )
+                        ui.label("Click 'Validate' to check configuration").classes("text-sm app-text-muted italic")
 
                 # Help/Tips card
                 with ui.card().classes("glass-card w-full"):
-                    ui.label("Tips").classes("text-lg font-semibold text-slate-700 dark:text-slate-200 mb-2")
-                    with ui.column().classes("gap-1 text-sm text-slate-600 dark:text-slate-400"):
+                    ui.label("Tips").classes("text-lg font-semibold mb-2")
+                    with ui.column().classes("gap-1 text-sm app-text-muted"):
                         ui.label("- Use 2-space indentation for YAML")
                         ui.label("- Required: settings, sports sections")
                         ui.label("- Each sport needs: id, show_slug")
@@ -118,7 +116,7 @@ def config_page() -> None:
 
                 # Quick links
                 with ui.card().classes("glass-card w-full"):
-                    ui.label("Reference").classes("text-lg font-semibold text-slate-700 dark:text-slate-200 mb-2")
+                    ui.label("Reference").classes("text-lg font-semibold mb-2")
                     with ui.column().classes("gap-1"):
                         ui.link(
                             "Documentation",
@@ -229,7 +227,7 @@ def _validation_message(msg_type: str, message: str) -> None:
     }
     color_class, icon = colors.get(
         msg_type,
-        ("bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200", "info"),
+        ("bg-slate-100 dark:bg-slate-800", "info"),
     )
 
     with ui.row().classes(f"w-full items-start gap-2 p-2 rounded {color_class}"):

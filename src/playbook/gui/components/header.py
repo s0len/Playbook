@@ -74,8 +74,8 @@ def _sidebar_item(target: str, icon_name: str, label: str, is_active: bool, draw
 def _status_indicator() -> None:
     """Show processing status indicator with text label."""
     with ui.row().classes("items-center gap-2 mt-3 px-3 py-2"):
-        status_icon = ui.icon("circle").classes("text-[10px] text-slate-400")
-        status_label = ui.label("Idle").classes("text-xs text-white/40")
+        status_icon = ui.icon("circle").classes("text-[10px] app-text-muted")
+        status_label = ui.label("Idle").classes("text-xs app-text-muted")
 
         last_status = [None]
 
@@ -89,9 +89,9 @@ def _status_indicator() -> None:
                         status_label.text = "Processing"
                         status_label.classes(replace="text-xs app-text-success")
                     else:
-                        status_icon.classes(replace="text-[10px] text-slate-400")
+                        status_icon.classes(replace="text-[10px] app-text-muted")
                         status_label.text = "Idle"
-                        status_label.classes(replace="text-xs text-white/40")
+                        status_label.classes(replace="text-xs app-text-muted")
             except (RuntimeError, KeyError):
                 pass
 

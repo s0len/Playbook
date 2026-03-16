@@ -29,7 +29,7 @@ def logs_page() -> None:
 
     with ui.column().classes("w-full p-6 gap-4 view-shell"):
         # Header
-        ui.label("Logs").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
+        ui.label("Logs").classes("text-3xl font-bold")
         ui.label("Real-time application logs.").classes("text-sm app-text-muted -mt-2")
 
         # Toolbar
@@ -72,7 +72,7 @@ def logs_page() -> None:
                         "Clear",
                         on_click=lambda: _clear_logs(),
                     ).props("flat dense")
-                ).classes("text-slate-500 dark:text-slate-400 text-xs")
+                ).classes("app-text-muted text-xs")
 
                 # Auto-scroll toggle
                 with ui.row().classes("items-center gap-1.5"):
@@ -80,15 +80,11 @@ def logs_page() -> None:
                         value=state["auto_scroll"],
                         on_change=lambda e: _update_filter(state, "auto_scroll", e.value),
                     ).props("dense")
-                    ui.label("Auto-scroll").classes("text-xs text-slate-500 dark:text-slate-400")
+                    ui.label("Auto-scroll").classes("text-xs app-text-muted")
 
         # Log viewport
         with ui.card().classes("glass-card w-full"):
-            log_scroll = (
-                ui.scroll_area()
-                .classes("w-full log-container")
-                .style("height: 600px; max-height: 70vh;")
-            )
+            log_scroll = ui.scroll_area().classes("w-full log-container").style("height: 600px; max-height: 70vh;")
             with log_scroll:
                 log_container = ui.column().classes("w-full p-3 gap-0")
 

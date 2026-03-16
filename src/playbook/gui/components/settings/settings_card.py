@@ -54,14 +54,14 @@ def settings_card(
                 with expansion.add_slot("header"):
                     with ui.row().classes("w-full items-center gap-2"):
                         if icon:
-                            ui.icon(icon).classes("text-slate-500 dark:text-slate-400")
+                            ui.icon(icon).classes("app-text-muted")
                         with ui.column().classes("gap-0 flex-1"):
                             with ui.row().classes("items-center gap-2"):
-                                ui.label(title).classes("text-lg font-semibold text-slate-700 dark:text-slate-200")
+                                ui.label(title).classes("text-lg font-semibold")
                                 if modified:
                                     ui.badge("Modified").classes("text-xs app-badge app-badge-muted")
                             if description:
-                                ui.label(description).classes("text-sm text-slate-500 dark:text-slate-400")
+                                ui.label(description).classes("text-sm app-text-muted")
 
                 # Content area
                 with ui.column().classes("w-full gap-4 pt-2") as content:
@@ -70,14 +70,14 @@ def settings_card(
             # Non-collapsible header
             with ui.row().classes("items-center gap-2 mb-4"):
                 if icon:
-                    ui.icon(icon).classes("text-slate-500 dark:text-slate-400 text-xl")
+                    ui.icon(icon).classes("app-text-muted text-xl")
                 with ui.column().classes("gap-0 flex-1"):
                     with ui.row().classes("items-center gap-2"):
-                        ui.label(title).classes("text-lg font-semibold text-slate-700 dark:text-slate-200")
+                        ui.label(title).classes("text-lg font-semibold")
                         if modified:
                             ui.badge("Modified").classes("text-xs app-badge app-badge-muted")
                     if description:
-                        ui.label(description).classes("text-sm text-slate-500 dark:text-slate-400")
+                        ui.label(description).classes("text-sm app-text-muted")
 
             # Content area
             with ui.column().classes("w-full gap-4") as content:
@@ -99,7 +99,7 @@ def settings_section_header(
     """
     with ui.row().classes("items-center gap-2 mt-2"):
         if icon:
-            ui.icon(icon).classes("text-slate-400 dark:text-slate-500 text-lg")
-        ui.label(title).classes("text-sm font-semibold text-slate-600 dark:text-slate-300")
+            ui.icon(icon).classes("app-text-muted text-lg")
+        ui.label(title).classes("text-sm font-semibold app-text-muted")
     if description:
-        ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400 mb-2")
+        ui.label(description).classes("text-xs app-text-muted mb-2")

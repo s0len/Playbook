@@ -62,7 +62,7 @@ def unmatched_page() -> None:
     with ui.column().classes("w-full p-6 gap-6 view-shell"):
         # Page title with refresh button
         with ui.row().classes("w-full items-center justify-between"):
-            ui.label("Unmatched Files").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
+            ui.label("Unmatched Files").classes("text-3xl font-bold")
             with ui.row().classes("gap-2"):
                 app_button(
                     "Rescan",
@@ -122,12 +122,20 @@ def _render_stats_content() -> None:
 
 def _stat_card(label: str, value: int, icon: str, tone: str) -> None:
     """Render a statistics card."""
-    with ui.card().classes("glass-card p-4 min-w-32"):
+    surface_map = {
+        "accent": "app-stat-surface-accent",
+        "warning": "app-stat-surface-warning",
+        "danger": "app-stat-surface-danger",
+        "muted": "app-stat-surface-muted",
+    }
+    surface_class = surface_map.get(tone, "app-stat-surface-accent")
+
+    with ui.card().classes(f"stat-card border {surface_class} p-4 min-w-32"):
         with ui.row().classes("items-center gap-2"):
             ui.icon(icon).classes(f"text-xl app-stat-icon app-stat-icon-{tone}")
             with ui.column().classes("gap-0"):
-                ui.label(str(value)).classes("text-2xl font-bold text-slate-800 dark:text-slate-100")
-                ui.label(label).classes("text-sm text-slate-500 dark:text-slate-400")
+                ui.label(str(value)).classes("text-2xl font-bold stat-value")
+                ui.label(label).classes("text-sm app-text-muted")
 
 
 def _filters_section_v2(state, on_filter_change) -> None:
@@ -144,7 +152,7 @@ def _filters_section_v2(state, on_filter_change) -> None:
                 _render_category_toggles(state, on_filter_change, refresh_toggles)
 
     with ui.column().classes("w-full gap-4"):
-        ui.label("Filters").classes("text-lg font-semibold text-slate-700 dark:text-slate-200")
+        ui.label("Filters").classes("text-lg font-semibold")
 
         # Category toggles container
         toggle_container = ui.row().classes("gap-4 flex-wrap")
@@ -185,7 +193,7 @@ def _filters_section_v2(state, on_filter_change) -> None:
 
 def _render_category_toggles(state, on_filter_change, refresh_toggles) -> None:
     """Render the category toggle buttons."""
-    ui.label("Categories:").classes("text-sm text-slate-600 dark:text-slate-400 self-center")
+    ui.label("Categories:").classes("text-sm app-text-muted self-center")
 
     categories_config = [
         ("video", "Videos", "movie"),
@@ -218,7 +226,7 @@ def _render_category_toggles(state, on_filter_change, refresh_toggles) -> None:
 def _render_results_content(state, refresh_results, refresh_page) -> None:
     """Render the results list content."""
     if not gui_state.unmatched_store:
-        ui.label("Unmatched file store not available").classes("text-slate-500 dark:text-slate-400 italic py-8")
+        ui.label("Unmatched file store not available").classes("app-text-muted italic py-8")
         return
 
     try:
@@ -247,7 +255,7 @@ def _render_results_content(state, refresh_results, refresh_page) -> None:
 
     # Results header
     with ui.row().classes("w-full items-center justify-between"):
-        ui.label(f"Showing {len(records)} of {total_count} files").classes("text-sm text-slate-500 dark:text-slate-400")
+        ui.label(f"Showing {len(records)} of {total_count} files").classes("text-sm app-text-muted")
 
         # Pagination
         if total_count > state.page_size:
@@ -271,9 +279,7 @@ def _render_results_content(state, refresh_results, refresh_page) -> None:
                     ).props("flat round dense")
                 )
 
-                ui.label(f"Page {state.page + 1} of {total_pages}").classes(
-                    "text-sm text-slate-600 dark:text-slate-400"
-                )
+                ui.label(f"Page {state.page + 1} of {total_pages}").classes("text-sm app-text-muted")
 
                 neutralize_button_utilities(
                     ui.button(
@@ -286,10 +292,8 @@ def _render_results_content(state, refresh_results, refresh_page) -> None:
         with ui.card().classes("glass-card w-full p-8"):
             with ui.column().classes("items-center gap-2"):
                 ui.icon("check_circle").classes("app-text-success text-4xl")
-                ui.label("No unmatched files found").classes("text-lg font-medium text-slate-700 dark:text-slate-300")
-                ui.label("Try adjusting your filters or run a scan").classes(
-                    "text-sm text-slate-500 dark:text-slate-400"
-                )
+                ui.label("No unmatched files found").classes("text-lg font-medium")
+                ui.label("Try adjusting your filters or run a scan").classes("text-sm app-text-muted")
     else:
         # File cards
         for record in records:
@@ -302,7 +306,17 @@ def _file_card(record, state, refresh_page) -> None:
 
     record: UnmatchedFileRecord
 
-    with ui.card().classes("glass-card w-full"):
+    # Map category to file-card tone class
+    file_card_tone_map = {
+        "video": "file-card-accent",
+        "sample": "file-card-warning",
+        "metadata": "file-card-muted",
+        "archive": "file-card-muted",
+        "other": "file-card-muted",
+    }
+    file_card_class = file_card_tone_map.get(record.file_category, "file-card-muted")
+
+    with ui.card().classes(f"glass-card w-full {file_card_class}"):
         with ui.row().classes("w-full items-start gap-4 file-card-row"):
             # File icon based on category
             icon_map = {
@@ -318,17 +332,17 @@ def _file_card(record, state, refresh_page) -> None:
             # Main content
             with ui.column().classes("flex-1 gap-1 min-w-0"):
                 # Filename
-                ui.label(record.filename).classes("text-base font-medium text-slate-800 dark:text-slate-100 break-all")
+                ui.label(record.filename).classes("text-base font-medium break-all")
 
                 # Metadata row
                 with ui.row().classes("gap-4 flex-wrap"):
                     # File size
                     size_str = _format_file_size(record.file_size)
-                    ui.label(f"Size: {size_str}").classes("text-xs text-slate-500 dark:text-slate-400")
+                    ui.label(f"Size: {size_str}").classes("text-xs app-text-muted")
 
                     # First seen
                     first_seen_str = _format_relative_time(record.first_seen)
-                    ui.label(f"First seen: {first_seen_str}").classes("text-xs text-slate-500 dark:text-slate-400")
+                    ui.label(f"First seen: {first_seen_str}").classes("text-xs app-text-muted")
 
                     # Category badge
                     ui.badge(record.file_category).classes("text-xs app-badge app-badge-muted")
@@ -337,11 +351,11 @@ def _file_card(record, state, refresh_page) -> None:
                 if record.failure_summary:
                     with ui.row().classes("items-start gap-2 mt-2"):
                         ui.icon("warning").classes("app-text-warning text-sm mt-0.5")
-                        ui.label(record.failure_summary).classes("text-sm text-slate-600 dark:text-slate-400")
+                        ui.label(record.failure_summary).classes("text-sm app-text-muted")
                 elif record.best_match_sport:
                     # Fallback: show best match sport if no failure summary
                     with ui.row().classes("items-center gap-2 mt-2"):
-                        ui.label("Best match:").classes("text-xs text-slate-500 dark:text-slate-400")
+                        ui.label("Best match:").classes("text-xs app-text-muted")
                         ui.badge(record.best_match_sport).classes("text-xs app-badge app-badge-muted")
 
             # Action buttons
@@ -470,31 +484,29 @@ def _show_details_dialog(record) -> None:
         with ui.column().classes("w-full gap-4"):
             # Header
             with ui.row().classes("w-full items-center justify-between"):
-                ui.label("Match Analysis").classes("text-xl font-semibold text-slate-800 dark:text-slate-100")
+                ui.label("Match Analysis").classes("text-xl font-semibold")
                 neutralize_button_utilities(ui.button(icon="close", on_click=dialog.close).props("flat round dense"))
 
             ui.separator()
 
             # File info
             with ui.column().classes("gap-2"):
-                ui.label("File Information").classes("text-lg font-medium text-slate-700 dark:text-slate-200")
+                ui.label("File Information").classes("text-lg font-medium")
 
                 with ui.row().classes("gap-4"):
-                    ui.label("Filename:").classes("font-semibold w-24 text-slate-600 dark:text-slate-400")
-                    ui.label(record.filename).classes("text-slate-800 dark:text-slate-200 break-all")
+                    ui.label("Filename:").classes("font-semibold w-24 app-text-muted")
+                    ui.label(record.filename).classes("break-all")
 
                 with ui.row().classes("gap-4"):
-                    ui.label("Path:").classes("font-semibold w-24 text-slate-600 dark:text-slate-400")
-                    ui.label(record.source_path).classes(
-                        "text-sm text-slate-600 dark:text-slate-400 break-all font-mono"
-                    )
+                    ui.label("Path:").classes("font-semibold w-24 app-text-muted")
+                    ui.label(record.source_path).classes("text-sm app-text-muted break-all font-mono")
 
                 with ui.row().classes("gap-4"):
-                    ui.label("Size:").classes("font-semibold w-24 text-slate-600 dark:text-slate-400")
-                    ui.label(_format_file_size(record.file_size)).classes("text-slate-800 dark:text-slate-200")
+                    ui.label("Size:").classes("font-semibold w-24 app-text-muted")
+                    ui.label(_format_file_size(record.file_size))
 
                 with ui.row().classes("gap-4"):
-                    ui.label("Category:").classes("font-semibold w-24 text-slate-600 dark:text-slate-400")
+                    ui.label("Category:").classes("font-semibold w-24 app-text-muted")
                     ui.badge(record.file_category).classes("text-sm")
 
             ui.separator()
@@ -504,11 +516,11 @@ def _show_details_dialog(record) -> None:
                 attempts_count = len(record.match_attempts)
                 sports_count = len(record.attempted_sports)
                 ui.label(f"Match Attempts ({attempts_count} patterns across {sports_count} sports)").classes(
-                    "text-lg font-medium text-slate-700 dark:text-slate-200"
+                    "text-lg font-medium"
                 )
 
                 if not record.match_attempts:
-                    ui.label("No match attempts recorded").classes("text-slate-500 dark:text-slate-400 italic")
+                    ui.label("No match attempts recorded").classes("app-text-muted italic")
                 else:
                     for attempt in record.match_attempts:
                         _render_match_attempt(attempt)
@@ -517,7 +529,7 @@ def _show_details_dialog(record) -> None:
 
             # Suggestions
             with ui.column().classes("gap-2"):
-                ui.label("Suggestions").classes("text-lg font-medium text-slate-700 dark:text-slate-200")
+                ui.label("Suggestions").classes("text-lg font-medium")
                 _render_suggestions(record)
 
             # Close button
@@ -533,36 +545,40 @@ def _render_match_attempt(attempt) -> None:
 
     attempt: MatchAttempt
 
-    # Status icon and color
+    # Status icon and CSS class
     status_map = {
-        "matched": ("check_circle", "green"),
-        "episode-unresolved": ("warning", "amber"),
-        "season-unresolved": ("warning", "amber"),
-        "regex-no-match": ("close", "slate"),
-        "glob-excluded": ("block", "slate"),
-        "no-match": ("close", "slate"),
+        "matched": ("check_circle", "match-attempt-green"),
+        "episode-unresolved": ("warning", "match-attempt-amber"),
+        "season-unresolved": ("warning", "match-attempt-amber"),
+        "regex-no-match": ("close", "match-attempt-slate"),
+        "glob-excluded": ("block", "match-attempt-slate"),
+        "no-match": ("close", "match-attempt-slate"),
     }
-    icon_name, color = status_map.get(attempt.status, ("help", "slate"))
+    icon_name, card_class = status_map.get(attempt.status, ("help", "match-attempt-slate"))
 
-    with ui.card().classes(f"w-full border-l-4 border-{color}-400 bg-{color}-50 dark:bg-{color}-900/20"):
-        with ui.column().classes("gap-1 p-2"):
+    # Badge class mapping
+    badge_map = {
+        "match-attempt-green": "app-badge-success",
+        "match-attempt-amber": "app-badge-warning",
+        "match-attempt-slate": "app-badge-muted",
+    }
+    badge_class = badge_map.get(card_class, "app-badge-muted")
+
+    with ui.card().classes(f"w-full {card_class}"):
+        with ui.column().classes("gap-1"):
             # Header
             with ui.row().classes("items-center gap-2"):
-                ui.icon(icon_name).classes(f"text-{color}-500 dark:text-{color}-400")
-                ui.label(attempt.sport_name or attempt.sport_id).classes(
-                    "font-medium text-slate-800 dark:text-slate-200"
-                )
-                ui.badge(attempt.status, color=color).classes("text-xs")
+                ui.icon(icon_name).classes("match-attempt-icon")
+                ui.label(attempt.sport_name or attempt.sport_id).classes("font-medium")
+                ui.badge(attempt.status).classes(f"text-xs app-badge {badge_class}")
 
             # Pattern info
             if attempt.pattern_description:
-                ui.label(f"Pattern: {attempt.pattern_description}").classes(
-                    "text-sm text-slate-600 dark:text-slate-400"
-                )
+                ui.label(f"Pattern: {attempt.pattern_description}").classes("text-sm app-text-muted")
 
             # Failure reason
             if attempt.failure_reason:
-                ui.label(attempt.failure_reason).classes("text-sm text-slate-700 dark:text-slate-300 break-all")
+                ui.label(attempt.failure_reason).classes("text-sm break-all")
 
             # Captured groups (if any)
             if attempt.captured_groups:
@@ -570,8 +586,8 @@ def _render_match_attempt(attempt) -> None:
                     with ui.column().classes("gap-1 font-mono text-xs"):
                         for key, value in attempt.captured_groups.items():
                             with ui.row().classes("gap-2"):
-                                ui.label(f"{key}:").classes("text-slate-600 dark:text-slate-400 w-24")
-                                ui.label(str(value)).classes("text-slate-800 dark:text-slate-200")
+                                ui.label(f"{key}:").classes("app-text-muted w-24")
+                                ui.label(str(value))
 
 
 def _render_suggestions(record) -> None:
@@ -620,8 +636,8 @@ def _render_suggestions(record) -> None:
         with ui.row().classes("items-start gap-2"):
             ui.icon("lightbulb").classes("app-text-warning text-sm mt-0.5")
             with ui.column().classes("gap-0"):
-                ui.label(title).classes("font-medium text-slate-700 dark:text-slate-300")
-                ui.label(description).classes("text-sm text-slate-500 dark:text-slate-400")
+                ui.label(title).classes("font-medium")
+                ui.label(description).classes("text-sm app-text-muted")
 
 
 def _show_manual_match_dialog_v2(record, refresh_page) -> None:
@@ -875,13 +891,13 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
         with ui.column().classes("w-full gap-4"):
             # Header
             with ui.row().classes("w-full items-center justify-between"):
-                ui.label("Manual Match").classes("text-xl font-semibold text-slate-800 dark:text-slate-100")
+                ui.label("Manual Match").classes("text-xl font-semibold")
                 neutralize_button_utilities(ui.button(icon="close", on_click=dialog.close).props("flat round dense"))
 
             ui.separator()
 
             # File info
-            ui.label(f"File: {record.filename}").classes("text-sm text-slate-600 dark:text-slate-400 break-all")
+            ui.label(f"File: {record.filename}").classes("text-sm app-text-muted break-all")
 
             # Sport selector
             sport_options = [s.id for s in gui_state.config.sports if s.enabled]
@@ -934,10 +950,8 @@ def _show_manual_match_dialog_v2(record, refresh_page) -> None:
 
             # Preview
             with ui.column().classes("gap-1"):
-                ui.label("Destination Preview").classes("text-sm font-medium text-slate-600 dark:text-slate-400")
-                ui.label("(Destination will be computed on match)").classes(
-                    "text-sm text-slate-500 dark:text-slate-500 italic"
-                )
+                ui.label("Destination Preview").classes("text-sm font-medium app-text-muted")
+                ui.label("(Destination will be computed on match)").classes("text-sm app-text-muted italic")
 
             # Actions
             with ui.row().classes("w-full justify-end gap-2"):

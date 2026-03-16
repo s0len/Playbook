@@ -89,7 +89,7 @@ def _render_yaml_editor(state: SettingsFormState) -> None:
 
         # Help text
         with ui.expansion(text="YAML Syntax Help", icon="help").props("dense").classes("mt-2"):
-            with ui.column().classes("gap-1 text-xs text-slate-600 dark:text-slate-400"):
+            with ui.column().classes("gap-1 text-xs app-text-muted"):
                 ui.label("• Use 2-space indentation")
                 ui.label("• Strings with special characters should be quoted")
                 ui.label("• Lists use '- ' prefix")
@@ -113,11 +113,9 @@ def _render_backups_section(state: SettingsFormState) -> None:
                     _render_backup_row(state, backup)
 
                 if len(backups) > 10:
-                    ui.label(f"...and {len(backups) - 10} more").classes(
-                        "text-xs text-slate-500 dark:text-slate-400 italic"
-                    )
+                    ui.label(f"...and {len(backups) - 10} more").classes("text-xs app-text-muted italic")
         else:
-            ui.label("No backups found").classes("text-sm text-slate-500 dark:text-slate-400 italic")
+            ui.label("No backups found").classes("text-sm app-text-muted italic")
 
         with ui.row().classes("w-full gap-2 mt-4"):
             app_button(
@@ -150,8 +148,8 @@ def _render_backup_row(state: SettingsFormState, backup_path: Path) -> None:
 
     with ui.row().classes("w-full items-center gap-2 py-1 px-2 bg-slate-50 dark:bg-slate-800 rounded"):
         ui.icon("description").classes("text-slate-400")
-        ui.label(display_time).classes("flex-1 text-sm text-slate-700 dark:text-slate-200")
-        ui.label(f"{size_kb:.1f} KB").classes("text-xs text-slate-500 dark:text-slate-400")
+        ui.label(display_time).classes("flex-1 text-sm")
+        ui.label(f"{size_kb:.1f} KB").classes("text-xs app-text-muted")
         neutralize_button_utilities(
             ui.button(
                 icon="restore",
@@ -178,10 +176,8 @@ def _render_import_export_section(state: SettingsFormState) -> None:
         with ui.row().classes("w-full gap-4"):
             # Export
             with ui.column().classes("flex-1 gap-2"):
-                ui.label("Export Configuration").classes("text-sm font-medium text-slate-700 dark:text-slate-200")
-                ui.label("Download current configuration as YAML file").classes(
-                    "text-xs text-slate-500 dark:text-slate-400"
-                )
+                ui.label("Export Configuration").classes("text-sm font-medium")
+                ui.label("Download current configuration as YAML file").classes("text-xs app-text-muted")
                 app_button(
                     "Export",
                     icon="download",
@@ -192,8 +188,8 @@ def _render_import_export_section(state: SettingsFormState) -> None:
 
             # Import
             with ui.column().classes("flex-1 gap-2"):
-                ui.label("Import Configuration").classes("text-sm font-medium text-slate-700 dark:text-slate-200")
-                ui.label("Load configuration from YAML file").classes("text-xs text-slate-500 dark:text-slate-400")
+                ui.label("Import Configuration").classes("text-sm font-medium")
+                ui.label("Load configuration from YAML file").classes("text-xs app-text-muted")
                 ui.upload(
                     label="Choose File",
                     on_upload=lambda e: _import_config(state, e),
@@ -201,8 +197,8 @@ def _render_import_export_section(state: SettingsFormState) -> None:
 
             # Reset to sample
             with ui.column().classes("flex-1 gap-2"):
-                ui.label("Reset to Sample").classes("text-sm font-medium text-slate-700 dark:text-slate-200")
-                ui.label("Reset configuration to sample defaults").classes("text-xs text-slate-500 dark:text-slate-400")
+                ui.label("Reset to Sample").classes("text-sm font-medium")
+                ui.label("Reset configuration to sample defaults").classes("text-xs app-text-muted")
                 app_button(
                     "Reset",
                     icon="restart_alt",

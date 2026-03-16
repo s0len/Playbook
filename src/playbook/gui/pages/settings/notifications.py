@@ -70,9 +70,9 @@ def notifications_tab(state: SettingsFormState) -> None:
             # Help text
             with ui.expansion(text="Mention Format Help", icon="help").props("dense").classes("mt-2"):
                 with ui.column().classes("gap-1 text-xs"):
-                    ui.label("Discord user mention: <@USER_ID>").classes("text-slate-600 dark:text-slate-400")
-                    ui.label("Discord role mention: <@&ROLE_ID>").classes("text-slate-600 dark:text-slate-400")
-                    ui.label("Sport IDs: formula1, nhl, nba, ufc, etc.").classes("text-slate-600 dark:text-slate-400")
+                    ui.label("Discord user mention: <@USER_ID>").classes("app-text-muted")
+                    ui.label("Discord role mention: <@&ROLE_ID>").classes("app-text-muted")
+                    ui.label("Sport IDs: formula1, nhl, nba, ufc, etc.").classes("app-text-muted")
 
 
 def _get_base_sport_id(sport_id: str) -> str:
@@ -123,7 +123,7 @@ def _render_throttle_editor(state: SettingsFormState) -> None:
     throttle_data = state.get_value("settings.notifications.throttle", {}) or {}
     sport_ids = _get_sport_ids()
 
-    ui.label("Configure per-sport daily notification limits").classes("text-sm text-slate-600 dark:text-slate-400")
+    ui.label("Configure per-sport daily notification limits").classes("text-sm app-text-muted")
 
     # Default limit row
     with ui.row().classes("w-full items-center gap-2"):

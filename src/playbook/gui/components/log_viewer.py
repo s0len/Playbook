@@ -226,9 +226,7 @@ def _render_processing(time_str: str, level_key: str, badge_text: str, fields: d
 def _render_summary(time_str: str, level_key: str, badge_text: str, fields: dict[str, str]) -> None:
     """Render Summary as compact inline stats."""
     parts = [
-        f'<span class="log-summary-stat">'
-        f'<span class="log-pill-value">{_h(fields[k])}</span> {_h(k.lower())}'
-        f"</span>"
+        f'<span class="log-summary-stat"><span class="log-pill-value">{_h(fields[k])}</span> {_h(k.lower())}</span>'
         for k in ["Processed", "Skipped", "Ignored"]
         if k in fields
     ]
@@ -246,14 +244,10 @@ def _render_summary(time_str: str, level_key: str, badge_text: str, fields: dict
         ui.html(html, sanitize=False).classes("min-w-0 flex-1")
 
 
-def _render_generic_block(
-    time_str: str, level_key: str, badge_text: str, title: str, fields: dict[str, str]
-) -> None:
+def _render_generic_block(time_str: str, level_key: str, badge_text: str, title: str, fields: dict[str, str]) -> None:
     """Render any other structured block as title + inline key-value pairs."""
     parts = [
-        f'<span class="log-summary-stat">'
-        f'<span class="log-pill-value">{_h(v)}</span> {_h(k.lower())}'
-        f"</span>"
+        f'<span class="log-summary-stat"><span class="log-pill-value">{_h(v)}</span> {_h(k.lower())}</span>'
         for k, v in fields.items()
     ]
     sep = '<span class="log-sep">\u00b7</span>'

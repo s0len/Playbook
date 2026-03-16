@@ -50,7 +50,7 @@ def settings_select(
     with ui.column().classes(f"{width} gap-1"):
         # Label row
         with ui.row().classes("items-center gap-2"):
-            ui.label(label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
+            ui.label(label).classes("text-sm font-medium")
             if is_modified:
                 ui.icon("edit").classes("app-text-warning text-xs")
 
@@ -84,7 +84,7 @@ def settings_select(
             error_classes = "text-xs app-text-danger" if error.severity == "error" else "text-xs app-text-warning"
             ui.label(error.message).classes(error_classes)
         elif description:
-            ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400")
+            ui.label(description).classes("text-xs app-text-muted")
 
     return select
 
@@ -121,7 +121,7 @@ def settings_radio(
     with ui.column().classes("w-full gap-2"):
         # Label row
         with ui.row().classes("items-center gap-2"):
-            ui.label(label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
+            ui.label(label).classes("text-sm font-medium")
             if is_modified:
                 ui.icon("edit").classes("app-text-warning text-xs")
 
@@ -134,20 +134,16 @@ def settings_radio(
         if horizontal:
             radio_props += " inline"
 
-        radio = (
-            ui.radio(
-                options=options,
-                value=current_value,
-                on_change=handle_change,
-            )
-            .props(radio_props)
-            .classes("text-slate-700 dark:text-slate-200")
-        )
+        radio = ui.radio(
+            options=options,
+            value=current_value,
+            on_change=handle_change,
+        ).props(radio_props)
 
         if disabled:
             radio.disable()
 
         if description:
-            ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400")
+            ui.label(description).classes("text-xs app-text-muted")
 
     return radio

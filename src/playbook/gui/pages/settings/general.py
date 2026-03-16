@@ -136,14 +136,10 @@ def general_tab(state: SettingsFormState) -> None:
             # Template variable reference
             with ui.expansion(text="Template Variables Reference", icon="help").props("dense").classes("mt-2"):
                 with ui.column().classes("gap-1 text-xs font-mono"):
-                    ui.label("{show_title} - Show name").classes("text-slate-600 dark:text-slate-400")
-                    ui.label("{season_number} - Season number (use :02d for padding)").classes(
-                        "text-slate-600 dark:text-slate-400"
-                    )
-                    ui.label("{season_title} - Season title").classes("text-slate-600 dark:text-slate-400")
-                    ui.label("{episode_number} - Episode number (use :02d for padding)").classes(
-                        "text-slate-600 dark:text-slate-400"
-                    )
-                    ui.label("{episode_title} - Episode title").classes("text-slate-600 dark:text-slate-400")
-                    ui.label("{extension} - Original file extension").classes("text-slate-600 dark:text-slate-400")
-                    ui.label("{session} - Matched session name").classes("text-slate-600 dark:text-slate-400")
+                    ui.label("{show_title} - Show name").classes("app-text-muted")
+                    ui.label("{season_number} - Season number (use :02d for padding)").classes("app-text-muted")
+                    ui.label("{season_title} - Season title").classes("app-text-muted")
+                    ui.label("{episode_number} - Episode number (use :02d for padding)").classes("app-text-muted")
+                    ui.label("{episode_title} - Episode title").classes("app-text-muted")
+                    ui.label("{extension} - Original file extension").classes("app-text-muted")
+                    ui.label("{session} - Matched session name").classes("app-text-muted")

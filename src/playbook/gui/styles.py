@@ -184,7 +184,7 @@ body.body--dark .status-chip-error {
 .episode-row {
     padding: 12px 16px;
     border-radius: 8px;
-    transition: background-color 0.15s ease;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .episode-row:hover {
@@ -192,7 +192,7 @@ body.body--dark .status-chip-error {
 }
 
 .episode-row-matched {
-    border-left: 3px solid #22c55e;
+    border-left: 3px solid #4ade80;
 }
 
 .episode-row-missing {
@@ -300,20 +300,22 @@ body.body--dark .status-chip-error {
 }
 
 .modern-table tbody tr.cursor-pointer:hover {
-    background: rgba(0, 212, 212, 0.08);
+    background: var(--accent-soft);
 }
 
 /* Table header styling */
 .q-table thead th {
-    background: rgba(148, 163, 184, 0.08);
+    background: transparent;
     color: var(--text-muted);
     font-weight: 600;
-    font-size: 0.75rem;
-    letter-spacing: 0.02em;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border-color);
 }
 
 body.body--dark .q-table thead th {
-    background: rgba(148, 163, 184, 0.05);
+    background: transparent;
 }
 
 /* Table body text */
@@ -333,7 +335,7 @@ body.body--dark .q-table tbody tr:hover td {
 }
 
 body.body--dark .q-table tbody tr.cursor-pointer:hover td {
-    background: rgba(0, 212, 212, 0.12);
+    background: var(--accent-soft);
 }
 
 /* Table container in dark mode */
@@ -1201,7 +1203,7 @@ body.body--dark .q-btn--flat {
 }
 
 .app-text-muted {
-    color: rgba(255, 255, 255, 0.62);
+    color: var(--text-muted);
 }
 
 .app-link {
@@ -1303,6 +1305,142 @@ body.body--dark .list-editor-item {
 
 body.body--dark .list-editor-item:hover {
     background: rgba(148, 163, 184, 0.12);
+}
+
+/* ===== Global Text Color Overrides ===== */
+/* Override hardcoded Tailwind text-slate-* inside page shells and dialogs
+   so colors respond to light/dark mode via CSS variables. */
+.view-shell .text-slate-800,
+.view-shell .text-slate-700,
+.settings-page-shell .text-slate-800,
+.settings-page-shell .text-slate-700,
+.q-dialog .text-slate-800,
+.q-dialog .text-slate-700 {
+    color: var(--text-primary) !important;
+}
+
+.view-shell .text-slate-600,
+.settings-page-shell .text-slate-600,
+.q-dialog .text-slate-600 {
+    color: var(--text-secondary) !important;
+}
+
+.view-shell .text-slate-500,
+.view-shell .text-slate-400,
+.settings-page-shell .text-slate-500,
+.settings-page-shell .text-slate-400,
+.q-dialog .text-slate-500,
+.q-dialog .text-slate-400 {
+    color: var(--text-muted) !important;
+}
+
+.view-shell .text-slate-300,
+.view-shell .text-slate-200,
+.view-shell .text-slate-100,
+.settings-page-shell .text-slate-300,
+.settings-page-shell .text-slate-200,
+.settings-page-shell .text-slate-100,
+.q-dialog .text-slate-300,
+.q-dialog .text-slate-200,
+.q-dialog .text-slate-100 {
+    color: var(--text-primary) !important;
+}
+
+/* Divider color override */
+.view-shell .divide-slate-100 > :not(:first-child),
+.view-shell .divide-slate-800 > :not(:first-child) {
+    border-color: var(--border-color) !important;
+}
+
+/* ===== Stat Card Visual Hierarchy ===== */
+/* Colored top border per semantic tone */
+.stat-card.app-stat-surface-success { border-top: 3px solid #4ade80; }
+.stat-card.app-stat-surface-warning { border-top: 3px solid #fbbf24; }
+.stat-card.app-stat-surface-danger  { border-top: 3px solid #f87171; }
+.stat-card.app-stat-surface-accent  { border-top: 3px solid var(--accent-color); }
+.stat-card.app-stat-surface-muted   { border-top: 3px solid rgba(148, 163, 184, 0.4); }
+
+/* Large stat number inherits semantic color */
+.stat-card.app-stat-surface-success .stat-value { color: #4ade80; }
+.stat-card.app-stat-surface-warning .stat-value { color: #fbbf24; }
+.stat-card.app-stat-surface-danger  .stat-value { color: #f87171; }
+.stat-card.app-stat-surface-accent  .stat-value { color: var(--accent-color); }
+.stat-card.app-stat-surface-muted   .stat-value { color: var(--text-primary); }
+
+/* Icon gets a subtle background pill */
+.stat-card .app-stat-icon-accent,
+.stat-card .app-text-success,
+.stat-card .app-text-warning,
+.stat-card .app-text-danger,
+.stat-card .app-stat-icon-muted {
+    padding: 6px;
+    border-radius: 8px;
+    background: rgba(148, 163, 184, 0.08);
+}
+
+/* ===== Activity Feed Left Borders ===== */
+.app-alert-success { border-left: 3px solid #4ade80; }
+.app-alert-warning { border-left: 3px solid #fbbf24; }
+.app-alert-danger  { border-left: 3px solid #f87171; }
+.app-alert-info    { border-left: 3px solid var(--accent-color); }
+
+/* ===== Episode Row Hover Enhancements ===== */
+.episode-row-matched:hover {
+    background: rgba(74, 222, 128, 0.06);
+    box-shadow: inset 3px 0 0 #4ade80;
+}
+
+.episode-row-error:hover {
+    background: rgba(248, 113, 113, 0.06);
+    box-shadow: inset 3px 0 0 #f87171;
+}
+
+/* ===== Unmatched File Card Status Classes ===== */
+.file-card-warning { border-left: 3px solid #fbbf24; }
+.file-card-accent  { border-left: 3px solid var(--accent-color); }
+.file-card-muted   { border-left: 3px solid rgba(148, 163, 184, 0.4); }
+
+/* ===== Match Attempt Card Classes ===== */
+.match-attempt-green {
+    border-left: 4px solid #4ade80;
+    background: rgba(74, 222, 128, 0.06);
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.match-attempt-amber {
+    border-left: 4px solid #fbbf24;
+    background: rgba(251, 191, 36, 0.06);
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.match-attempt-slate {
+    border-left: 4px solid rgba(148, 163, 184, 0.4);
+    background: rgba(148, 163, 184, 0.04);
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.match-attempt-green .match-attempt-icon { color: #4ade80; }
+.match-attempt-amber .match-attempt-icon { color: #fbbf24; }
+.match-attempt-slate .match-attempt-icon { color: #94a3b8; }
+
+/* ===== Global Hover / Transition Polish ===== */
+/* Glass cards get hover shadow lift (preserve theme transitions from .theme-ready *) */
+.glass-card {
+    transition: background-color 0.3s ease, border-color 0.3s ease,
+                color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Expansion panel headers get subtle hover bg */
+.q-expansion-item .q-item:hover {
+    background: rgba(148, 163, 184, 0.06);
+}
+
+/* Badges/chips get transition */
+.app-badge, .app-chip, .status-chip {
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 /* ===== Mobile Hamburger Button ===== */

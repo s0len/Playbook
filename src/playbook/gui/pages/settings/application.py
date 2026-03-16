@@ -23,8 +23,8 @@ if TYPE_CHECKING:
 def _info_row(label: str, value: str) -> None:
     """Render a label-value row."""
     with ui.row().classes("w-full items-center justify-between py-1"):
-        ui.label(label).classes("text-xs font-medium tracking-wide text-slate-500 dark:text-slate-400")
-        ui.label(value).classes("text-sm font-semibold text-slate-800 dark:text-slate-100 select-all")
+        ui.label(label).classes("text-xs font-medium tracking-wide app-text-muted")
+        ui.label(value).classes("text-sm font-semibold select-all")
 
 
 def _get_git_sha() -> str:

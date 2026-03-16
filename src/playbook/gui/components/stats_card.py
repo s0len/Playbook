@@ -64,7 +64,7 @@ def stats_card(
             if icon:
                 ui.icon(icon).classes(f"text-3xl {icon_class}")
 
-            value_label = ui.label(str(value_fn())).classes("text-3xl font-bold")
+            value_label = ui.label(str(value_fn())).classes("text-3xl font-bold stat-value")
             ui.label(title).classes("text-sm font-medium opacity-80")
 
             if subtitle:

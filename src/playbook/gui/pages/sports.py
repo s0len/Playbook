@@ -30,12 +30,12 @@ def sports_page() -> None:
     """Render the sports management page with list view."""
     with ui.column().classes("w-full p-6 gap-6 view-shell"):
         # Page title
-        ui.label("Sports").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
+        ui.label("Sports").classes("text-3xl font-bold")
 
         # Sports table with progress
         with ui.card().classes("glass-card w-full"):
             with ui.row().classes("items-center justify-between mb-4"):
-                ui.label("Configured Sports").classes("text-xl font-semibold text-slate-700 dark:text-slate-200")
+                ui.label("Configured Sports").classes("text-xl font-semibold")
                 neutralize_button_utilities(
                     ui.button(icon="refresh", on_click=lambda: ui.navigate.to("/sports")).props("flat round dense")
                 ).classes("text-slate-500")
@@ -44,7 +44,7 @@ def sports_page() -> None:
 
         # Pattern tester
         with ui.card().classes("glass-card w-full"):
-            ui.label("Pattern Tester").classes("text-xl font-semibold text-slate-700 dark:text-slate-200 mb-3")
+            ui.label("Pattern Tester").classes("text-xl font-semibold mb-3")
             _pattern_tester()
 
 
@@ -67,15 +67,15 @@ def sport_detail_page(sport_id: str) -> None:
         with ui.row().classes("w-full items-center gap-4"):
             neutralize_button_utilities(
                 ui.button(icon="arrow_back", on_click=lambda: ui.navigate.to("/sports")).props("flat round")
-            ).classes("text-slate-600 dark:text-slate-400")
-            ui.label(sport_name).classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
+            ).classes("app-text-muted")
+            ui.label(sport_name).classes("text-3xl font-bold")
 
         content_container = ui.column().classes("w-full gap-6")
         with content_container:
             with ui.card().classes("glass-card w-full"):
                 with ui.row().classes("items-center gap-3 py-2"):
                     ui.spinner(size="md")
-                    ui.label("Loading sport details...").classes("text-slate-600 dark:text-slate-300")
+                    ui.label("Loading sport details...").classes("app-text-muted")
 
         client = context.client
 
@@ -108,9 +108,7 @@ def sport_detail_page(sport_id: str) -> None:
 def _render_sport_detail_content(sport_id: str, detail) -> None:
     if not detail:
         with ui.card().classes("glass-card w-full"):
-            ui.label(f"Sport '{sport_id}' not found in configuration.").classes(
-                "text-slate-600 dark:text-slate-400 py-4"
-            )
+            ui.label(f"Sport '{sport_id}' not found in configuration.").classes("app-text-muted py-4")
         return
 
     # Overview card
@@ -119,16 +117,16 @@ def _render_sport_detail_content(sport_id: str, detail) -> None:
             # Info column
             with ui.column().classes("gap-1"):
                 with ui.row().classes("items-center gap-2"):
-                    ui.label("Show:").classes("text-sm text-slate-500 dark:text-slate-400")
-                    ui.label(detail.show_slug).classes("text-sm font-mono text-slate-700 dark:text-slate-300")
+                    ui.label("Show:").classes("text-sm app-text-muted")
+                    ui.label(detail.show_slug).classes("text-sm font-mono")
 
                 with ui.row().classes("items-center gap-2"):
                     status_chip("enabled" if detail.enabled else "disabled")
-                    ui.label(f"{detail.link_mode}").classes("text-sm text-slate-500 dark:text-slate-400")
+                    ui.label(f"{detail.link_mode}").classes("text-sm app-text-muted")
 
             # Overall progress
             with ui.column().classes("gap-1 min-w-64"):
-                ui.label("Overall Progress").classes("text-sm text-slate-500 dark:text-slate-400")
+                ui.label("Overall Progress").classes("text-sm app-text-muted")
                 with ui.row().classes("items-center gap-3 w-full"):
                     _progress_variant = _get_progress_variant(detail.overall_progress)
                     progress_bar(
@@ -136,16 +134,14 @@ def _render_sport_detail_content(sport_id: str, detail) -> None:
                         variant=_progress_variant,
                         show_value=False,
                     )
-                    ui.label(f"{detail.overall_matched}/{detail.overall_total}").classes(
-                        "text-lg font-semibold text-slate-700 dark:text-slate-300"
-                    )
+                    ui.label(f"{detail.overall_matched}/{detail.overall_total}").classes("text-lg font-semibold")
 
     # Source Globs
     _source_globs_card(sport_id, detail)
 
     # Seasons
     with ui.card().classes("glass-card w-full"):
-        ui.label("Seasons").classes("text-xl font-semibold text-slate-700 dark:text-slate-200 mb-4")
+        ui.label("Seasons").classes("text-xl font-semibold mb-4")
         if detail.metadata_error:
             with ui.row().classes("w-full items-center gap-2 py-2 px-3 rounded app-alert app-alert-danger"):
                 ui.icon("error_outline").classes("app-text-danger text-lg")
@@ -334,7 +330,7 @@ def _sports_table() -> None:
     overviews = get_sports_overview()
 
     if not overviews:
-        ui.label("No sports configured").classes("text-slate-500 dark:text-slate-400 italic py-4")
+        ui.label("No sports configured").classes("app-text-muted italic py-4")
         return
 
     # State for tracking selected rows
@@ -345,7 +341,7 @@ def _sports_table() -> None:
     action_bar.set_visibility(False)
 
     with action_bar:
-        selection_label = ui.label("0 selected").classes("font-medium text-slate-700 dark:text-slate-200 mr-4")
+        selection_label = ui.label("0 selected").classes("font-medium mr-4")
 
         app_button(
             "Enable",
@@ -562,12 +558,8 @@ def _bulk_action(action: str, sport_ids: list[str]) -> None:
         # Confirm before clearing
         with ui.dialog() as dialog, ui.card().classes("p-4"):
             ui.label(f"Clear history for {count} sports?").classes("text-lg font-semibold mb-2")
-            ui.label("This will delete all processed file records for these sports.").classes(
-                "text-slate-600 dark:text-slate-400 mb-4"
-            )
-            ui.label("Files will be re-matched on the next processing run.").classes(
-                "text-sm text-slate-500 dark:text-slate-500 mb-4"
-            )
+            ui.label("This will delete all processed file records for these sports.").classes("app-text-muted mb-4")
+            ui.label("Files will be re-matched on the next processing run.").classes("text-sm app-text-muted mb-4")
 
             with ui.row().classes("w-full justify-end gap-2"):
                 neutralize_button_utilities(ui.button("Cancel", on_click=dialog.close).props("flat"))
@@ -579,13 +571,11 @@ def _bulk_action(action: str, sport_ids: list[str]) -> None:
         # Clear history then trigger run
         with ui.dialog() as dialog, ui.card().classes("p-4"):
             ui.label(f"Reprocess {count} sports?").classes("text-lg font-semibold mb-2")
-            ui.label("This will:").classes("text-slate-600 dark:text-slate-400")
+            ui.label("This will:").classes("app-text-muted")
             with ui.column().classes("ml-4 mb-4"):
                 ui.label("1. Clear processed history for selected sports").classes("text-sm text-slate-500")
                 ui.label("2. Run a full processing scan").classes("text-sm text-slate-500")
-            ui.label("Selected sports will be re-matched from scratch.").classes(
-                "text-sm text-slate-500 dark:text-slate-500 mb-4"
-            )
+            ui.label("Selected sports will be re-matched from scratch.").classes("text-sm app-text-muted mb-4")
 
             with ui.row().classes("w-full justify-end gap-2"):
                 neutralize_button_utilities(ui.button("Cancel", on_click=dialog.close).props("flat"))
@@ -803,9 +793,9 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
         with container:
             # Default globs section
             if default_globs:
-                ui.label("Default Patterns").classes("text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2")
+                ui.label("Default Patterns").classes("text-sm font-semibold app-text-muted mb-2")
                 ui.label("From pattern templates - these are shared with all users").classes(
-                    "text-xs text-slate-500 dark:text-slate-500 mb-2"
+                    "text-xs app-text-muted mb-2"
                 )
 
                 for pattern in default_globs:
@@ -821,9 +811,7 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
 
                         # Pattern text
                         pattern_class = (
-                            "font-mono text-sm text-slate-400 dark:text-slate-600 line-through"
-                            if is_disabled
-                            else "font-mono text-sm text-slate-700 dark:text-slate-300"
+                            "font-mono text-sm app-text-muted line-through" if is_disabled else "font-mono text-sm"
                         )
                         ui.label(pattern).classes(pattern_class + " flex-1")
 
@@ -831,10 +819,8 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
                         ui.badge("default").classes("flex-none app-badge app-badge-muted")
 
             # Custom globs section
-            ui.label("Custom Patterns").classes("text-sm font-semibold text-slate-600 dark:text-slate-400 mt-4 mb-2")
-            ui.label("Your own patterns - only in your config").classes(
-                "text-xs text-slate-500 dark:text-slate-500 mb-2"
-            )
+            ui.label("Custom Patterns").classes("text-sm font-semibold app-text-muted mt-4 mb-2")
+            ui.label("Your own patterns - only in your config").classes("text-xs app-text-muted mb-2")
 
             if sport_config.extra_source_globs:
                 for pattern in sport_config.extra_source_globs:
@@ -850,9 +836,7 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
 
                         # Pattern text
                         pattern_class = (
-                            "font-mono text-sm text-slate-400 dark:text-slate-600 line-through"
-                            if is_disabled
-                            else "font-mono text-sm text-slate-700 dark:text-slate-300"
+                            "font-mono text-sm app-text-muted line-through" if is_disabled else "font-mono text-sm"
                         )
                         ui.label(pattern).classes(pattern_class + " flex-1")
 
@@ -867,7 +851,7 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
                             ).props("flat round dense size=sm")
                         ).classes("app-text-danger")
             else:
-                ui.label("No custom patterns added yet").classes("text-sm text-slate-400 dark:text-slate-500 italic")
+                ui.label("No custom patterns added yet").classes("text-sm app-text-muted italic")
 
             # Add new pattern input
             with ui.row().classes("w-full items-end gap-2 mt-4"):
@@ -889,11 +873,9 @@ def _source_globs_card(sport_id: str, detail: Any) -> None:
     # Render the card
     with ui.card().classes("glass-card w-full"):
         with ui.row().classes("w-full items-center justify-between mb-4"):
-            ui.label("Source Globs").classes("text-xl font-semibold text-slate-700 dark:text-slate-200")
+            ui.label("Source Globs").classes("text-xl font-semibold")
             if detail.pattern_set_names:
-                ui.label(f"Pattern sets: {', '.join(detail.pattern_set_names)}").classes(
-                    "text-sm text-slate-500 dark:text-slate-400"
-                )
+                ui.label(f"Pattern sets: {', '.join(detail.pattern_set_names)}").classes("text-sm app-text-muted")
 
         with ui.expansion("Manage Source Patterns", icon="tune", value=False).classes("w-full"):
             globs_container = ui.column().classes("w-full gap-1")
@@ -928,7 +910,7 @@ def _recent_matches_card(sport_id: str) -> None:
         return
 
     with ui.card().classes("glass-card w-full"):
-        ui.label("Recent Matches").classes("text-xl font-semibold text-slate-700 dark:text-slate-200 mb-4")
+        ui.label("Recent Matches").classes("text-xl font-semibold mb-4")
 
         with ui.column().classes("w-full gap-2"):
             for record in recent:
@@ -943,17 +925,17 @@ def _recent_matches_card(sport_id: str) -> None:
 
                     # Episode code
                     code = f"S{record.season_index:02d}E{record.episode_index:02d}"
-                    ui.label(code).classes("font-mono text-sm text-slate-500 dark:text-slate-400 w-16")
+                    ui.label(code).classes("font-mono text-sm app-text-muted w-16")
 
                     # Source filename
                     from pathlib import Path
 
                     filename = Path(record.source_path).name
-                    ui.label(filename).classes("flex-1 text-sm text-slate-700 dark:text-slate-300 truncate")
+                    ui.label(filename).classes("flex-1 text-sm truncate")
 
                     # Timestamp
                     time_str = record.processed_at.strftime("%H:%M")
-                    ui.label(time_str).classes("text-xs text-slate-400 dark:text-slate-500")
+                    ui.label(time_str).classes("text-xs app-text-muted")
 
 
 def _pattern_tester() -> None:
@@ -963,7 +945,7 @@ def _pattern_tester() -> None:
         sport_ids = [sport.id for sport in gui_state.config.sports if sport.enabled]
 
     if not sport_ids:
-        ui.label("No enabled sports available for testing").classes("text-slate-500 dark:text-slate-400 italic")
+        ui.label("No enabled sports available for testing").classes("app-text-muted italic")
         return
 
     state = {
@@ -1024,7 +1006,7 @@ def _test_pattern(filename: str, sport_id: str, container: ui.column) -> None:
     with container:
         with ui.row().classes("items-center gap-2"):
             ui.spinner(size="sm")
-            ui.label("Testing pattern...").classes("text-slate-500 dark:text-slate-400")
+            ui.label("Testing pattern...").classes("app-text-muted")
 
     def run_pattern_test():
         """Run the pattern test in a background thread."""
@@ -1097,21 +1079,21 @@ def _render_match_result(
             season = detection.get("season")
             if season:
                 with ui.row().classes("gap-2"):
-                    ui.label("Season:").classes("font-semibold w-24 text-slate-700 dark:text-slate-300")
-                    ui.label(f"S{season.index:02d} - {season.title}").classes("text-slate-700 dark:text-slate-300")
+                    ui.label("Season:").classes("font-semibold w-24")
+                    ui.label(f"S{season.index:02d} - {season.title}")
 
             episode = detection.get("episode")
             if episode:
                 with ui.row().classes("gap-2"):
-                    ui.label("Episode:").classes("font-semibold w-24 text-slate-700 dark:text-slate-300")
-                    ui.label(f"E{episode.index:02d} - {episode.title}").classes("text-slate-700 dark:text-slate-300")
+                    ui.label("Episode:").classes("font-semibold w-24")
+                    ui.label(f"E{episode.index:02d} - {episode.title}")
 
             pattern = detection.get("pattern")
             if pattern:
                 with ui.row().classes("gap-2"):
-                    ui.label("Pattern:").classes("font-semibold w-24 text-slate-700 dark:text-slate-300")
+                    ui.label("Pattern:").classes("font-semibold w-24")
                     desc = pattern.config.description or "No description"
-                    ui.label(desc).classes("text-slate-600 dark:text-slate-400 text-sm")
+                    ui.label(desc).classes("app-text-muted text-sm")
 
             groups = detection.get("groups", {})
             if groups:
@@ -1119,7 +1101,7 @@ def _render_match_result(
                     with ui.column().classes("gap-1"):
                         for key, value in groups.items():
                             with ui.row().classes("gap-2"):
-                                ui.label(f"{key}:").classes("font-mono text-sm w-32 text-slate-600 dark:text-slate-400")
+                                ui.label(f"{key}:").classes("font-mono text-sm w-32 app-text-muted")
                                 ui.label(str(value)).classes("font-mono text-sm")
 
     if diagnostics:
@@ -1136,9 +1118,7 @@ def _render_no_match(
             ui.icon("warning").classes("app-text-warning text-2xl")
             ui.label("No Match").classes("text-xl font-semibold text-slate-100")
 
-        ui.label("The filename did not match any patterns for this sport.").classes(
-            "text-slate-600 dark:text-slate-400"
-        )
+        ui.label("The filename did not match any patterns for this sport.").classes("app-text-muted")
 
     _render_diagnostics(diagnostics)
 
@@ -1148,8 +1128,8 @@ def _render_no_match(
                 for key, value in trace.items():
                     if key not in ("diagnostics",):
                         with ui.row().classes("gap-2"):
-                            ui.label(f"{key}:").classes("text-slate-600 dark:text-slate-400 w-32")
-                            ui.label(str(value)[:100]).classes("text-slate-800 dark:text-slate-200 truncate")
+                            ui.label(f"{key}:").classes("app-text-muted w-32")
+                            ui.label(str(value)[:100]).classes("truncate")
 
 
 def _render_diagnostics(diagnostics: list[tuple[str, str]]) -> None:
@@ -1168,4 +1148,4 @@ def _render_diagnostics(diagnostics: list[tuple[str, str]]) -> None:
 
                 with ui.row().classes("gap-2"):
                     ui.label(f"[{severity.title()}]").classes(f"font-mono text-xs w-20 {color}")
-                    ui.label(message).classes("text-sm text-slate-700 dark:text-slate-300")
+                    ui.label(message).classes("text-sm")
