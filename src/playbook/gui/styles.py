@@ -11,51 +11,75 @@ from nicegui import ui
 
 # Main CSS stylesheet - uses body.body--dark for Quasar dark mode compatibility
 PLAYBOOK_CSS = """
+/* ===== Custom Fonts ===== */
+/* Anybody: Bold display font for headings — sporty, geometric, distinctive */
+/* DM Sans: Clean body font — modern, readable, pairs well */
+
 /* ===== CSS Variables for Theming ===== */
 :root {
-    --bg-primary: #f8fafc;
-    --bg-card: rgba(255, 255, 255, 0.85);
+    --font-display: 'Anybody', 'DM Sans', system-ui, sans-serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --bg-primary: #f0f2f5;
+    --bg-card: rgba(255, 255, 255, 0.92);
     --bg-card-solid: #ffffff;
+    --bg-surface: rgba(255, 255, 255, 0.5);
     --text-primary: #0f172a;
     --text-secondary: #334155;
     --text-muted: #64748b;
-    --border-color: rgba(148, 163, 184, 0.2);
-    --shadow-color: rgba(31, 38, 135, 0.1);
+    --border-color: rgba(148, 163, 184, 0.18);
+    --shadow-color: rgba(31, 38, 135, 0.08);
     --accent-color: #34d399;
     --accent-hover: #2cb783;
-    --accent-soft: rgba(52, 211, 153, 0.2);
+    --accent-soft: rgba(52, 211, 153, 0.15);
+    --card-radius: 16px;
+    --glow-accent: 0 0 20px rgba(52, 211, 153, 0.15);
 }
 
 body.body--dark {
-    --bg-primary: #141416;
-    --bg-card: #2a2a2d;
-    --bg-card-solid: #252528;
-    --text-primary: #e7e7ea;
-    --text-secondary: #b5b5bc;
-    --text-muted: #8f8f98;
-    --border-color: rgba(255, 255, 255, 0.07);
-    --shadow-color: rgba(0, 0, 0, 0.5);
+    --bg-primary: #0c0c0e;
+    --bg-card: rgba(22, 22, 26, 0.85);
+    --bg-card-solid: #16161a;
+    --bg-surface: rgba(255, 255, 255, 0.03);
+    --text-primary: #eeeff2;
+    --text-secondary: #a0a0ab;
+    --text-muted: #6b6b76;
+    --border-color: rgba(255, 255, 255, 0.06);
+    --shadow-color: rgba(0, 0, 0, 0.6);
     --accent-color: #34d399;
     --accent-hover: #2cb783;
-    --accent-soft: rgba(52, 211, 153, 0.2);
+    --accent-soft: rgba(52, 211, 153, 0.12);
+    --glow-accent: 0 0 30px rgba(52, 211, 153, 0.08);
 }
 
 body.body--dark.theme-swizzin {
     --accent-color: #34d399;
     --accent-hover: #2cb783;
-    --accent-soft: rgba(52, 211, 153, 0.2);
+    --accent-soft: rgba(52, 211, 153, 0.12);
+    --glow-accent: 0 0 30px rgba(52, 211, 153, 0.08);
 }
 
 body.body--dark.theme-catppuccin {
     --accent-color: #cba6f7;
     --accent-hover: #b78de8;
-    --accent-soft: rgba(203, 166, 247, 0.24);
+    --accent-soft: rgba(203, 166, 247, 0.16);
+    --glow-accent: 0 0 30px rgba(203, 166, 247, 0.08);
 }
 
 /* ===== Theme Transitions ===== */
-/* Transitions are disabled initially to prevent FOUC, enabled via JS after load */
 .theme-ready *, .theme-ready *::before, .theme-ready *::after {
     transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease;
+}
+
+/* ===== Global Typography ===== */
+body, .q-page, .q-page-container, .q-drawer, .q-card, .q-dialog {
+    font-family: var(--font-body) !important;
+    letter-spacing: -0.01em;
+}
+
+/* Display font for headings */
+.text-3xl, .text-2xl, .text-xl, .text-lg,
+.font-semibold, .font-bold {
+    font-family: var(--font-display) !important;
 }
 
 /* ===== Page Background ===== */
@@ -63,23 +87,35 @@ body {
     background: var(--bg-primary) !important;
 }
 
+body.body--dark {
+    background: var(--bg-primary) !important;
+    /* Subtle radial glow behind content */
+    background-image: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(52, 211, 153, 0.04) 0%, transparent 70%) !important;
+}
+
+body.body--dark.theme-catppuccin {
+    background-image: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(203, 166, 247, 0.04) 0%, transparent 70%) !important;
+}
+
 /* ===== Main Content Text ===== */
 .q-page, .q-page-container {
     color: var(--text-primary);
 }
 
-/* ===== Glassmorphism Cards ===== */
+/* ===== Card System ===== */
 .glass-card {
     background: var(--bg-card) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
-    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px var(--shadow-color);
+    border-radius: var(--card-radius);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 body.body--dark .glass-card {
-    background: #2a2a2d !important;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+    background: var(--bg-card) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
 }
 
 .glass-card.q-card {
@@ -100,10 +136,14 @@ body.body--dark .glass-card {
 /* ===== Page titles ===== */
 .text-3xl.font-bold {
     color: var(--text-primary) !important;
+    letter-spacing: -0.03em;
+    font-weight: 800 !important;
 }
 
 .text-xl.font-semibold {
     color: var(--text-secondary) !important;
+    letter-spacing: -0.02em;
+    font-weight: 700 !important;
 }
 
 /* ===== Modern Progress Bar ===== */
@@ -183,7 +223,7 @@ body.body--dark .status-chip-error {
 /* ===== Episode Row ===== */
 .episode-row {
     padding: 12px 16px;
-    border-radius: 8px;
+    border-radius: 10px;
     transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -228,9 +268,9 @@ body.body--dark .status-chip-error {
 
 /* ===== Left Sidebar ===== */
 .playbook-sidebar .q-drawer__content {
-    background: #0e0e16 !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
-    box-shadow: none !important;
+    background: #09090b !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.04) !important;
+    box-shadow: 1px 0 40px rgba(0, 0, 0, 0.3) !important;
 }
 
 /* Nav item base */
@@ -253,6 +293,7 @@ body.body--dark .status-chip-error {
 .sidebar-nav-item-active {
     background: var(--accent-soft) !important;
     color: var(--accent-color) !important;
+    box-shadow: inset 3px 0 0 var(--accent-color);
 }
 
 /* Sidebar separator */
@@ -274,14 +315,33 @@ body.body--dark .status-chip-error {
 
 /* ===== Stats Card Enhancements ===== */
 .stat-card {
-    border-radius: 12px;
+    border-radius: var(--card-radius);
     padding: 20px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%);
+    pointer-events: none;
 }
 
 .stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 40px var(--shadow-color);
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 16px 48px var(--shadow-color), var(--glow-accent);
+}
+
+/* Stat value numbers — display font, tighter tracking */
+.stat-card .text-3xl,
+.stat-card .text-2xl {
+    font-family: var(--font-display) !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.04em;
 }
 
 /* ===== Tables ===== */
@@ -351,9 +411,10 @@ body.body--dark .q-table__container {
 
 /* ===== Enhanced Log Viewer ===== */
 .log-container {
-    background: rgba(0, 0, 0, 0.18) !important;
-    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.25) !important;
+    border-radius: 12px;
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 /* Log entry row — colored left border per level */
@@ -646,18 +707,18 @@ body.body--dark .q-table__container {
 
 /* ===== Expansion Panels ===== */
 .q-expansion-item {
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
 }
 
 .q-expansion-item__container {
-    border-radius: 8px;
+    border-radius: 12px;
 }
 
 /* ===== Scrollbar Styling ===== */
 ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -690,6 +751,7 @@ body.body--dark *:focus-visible {
 /* ===== Quasar Component Overrides for Dark Mode ===== */
 body.body--dark .q-card {
     background: var(--bg-card-solid);
+    border-radius: var(--card-radius);
 }
 
 body.body--dark .q-table {
@@ -822,10 +884,10 @@ body.body--dark .settings-subnav-item-active {
 }
 
 .settings-surface {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.06)) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 12px !important;
-    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.25) !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: var(--card-radius) !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 14px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255,255,255,0.03) !important;
 }
 
 .view-shell {
@@ -938,9 +1000,10 @@ body.body--dark .settings-toggle .q-toggle__inner {
 
 /* App-wide semantic button system */
 .app-btn {
-    border-radius: 8px;
+    border-radius: 10px;
+    font-family: var(--font-display) !important;
     font-weight: 600;
-    letter-spacing: 0.01em;
+    letter-spacing: -0.01em;
     align-items: flex-start !important;
 }
 
@@ -1021,7 +1084,8 @@ body.body--dark .settings-toggle .q-toggle__inner {
 
 .q-btn .q-btn__content {
     text-transform: none !important;
-    letter-spacing: normal !important;
+    letter-spacing: -0.01em !important;
+    font-family: var(--font-display) !important;
 }
 
 body.body--dark .q-btn--outline,
@@ -1416,10 +1480,14 @@ body.body--dark .list-editor-item:hover {
 .match-attempt-slate .match-attempt-icon { color: #94a3b8; }
 
 /* ===== Global Hover / Transition Polish ===== */
-/* Glass cards get hover shadow lift (preserve theme transitions from .theme-ready *) */
 .glass-card {
     transition: background-color 0.3s ease, border-color 0.3s ease,
-                color 0.2s ease, box-shadow 0.2s ease;
+                color 0.2s ease, box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.glass-card:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 12px 40px var(--shadow-color);
 }
 
 /* Expansion panel headers get subtle hover bg */
@@ -1665,8 +1733,13 @@ body.body--dark .list-editor-item:hover {
 
 
 def inject_styles() -> None:
-    """Inject the Playbook CSS styles into the page head."""
-    ui.add_head_html(f"<style>{PLAYBOOK_CSS}</style>")
+    """Inject the Playbook CSS styles and custom fonts into the page head."""
+    ui.add_head_html(
+        '<link rel="preconnect" href="https://fonts.googleapis.com">'
+        '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+        '<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&family=Anybody:wght@600..900&display=swap" rel="stylesheet">'
+        f"<style>{PLAYBOOK_CSS}</style>"
+    )
 
 
 # Script to apply dark mode immediately and prevent FOUC
