@@ -123,12 +123,12 @@ def _render_stats_content() -> None:
 def _stat_card(label: str, value: int, icon: str, tone: str) -> None:
     """Render a statistics card with left accent bar using Quasar color vars."""
     color_map = {
-        "accent": "--q-primary",
+        "accent": "--pb-primary",
         "warning": "--pb-warning",
         "danger": "--pb-negative",
         "muted": "--pb-text-muted",
     }
-    color_var = color_map.get(tone, "--q-primary")
+    color_var = color_map.get(tone, "--pb-primary")
 
     with ui.card().classes("stat-card p-4 min-w-32").style(f"border-left: 4px solid var({color_var})"):
         with ui.row().classes("w-full items-start justify-between"):
@@ -161,36 +161,17 @@ def _filters_section_v2(state, on_filter_change) -> None:
         with toggle_container:
             _render_category_toggles(state, on_filter_change, refresh_toggles)
 
-        # Search and sport filter
-        with ui.row().classes("w-full gap-4 flex-wrap filter-row"):
-            # Use on_change parameter for real-time filtering as user types
-            def on_search_change(e):
-                state.search_query = e.sender.value or ""
-                state.page = 0  # Reset to first page on search
-                on_filter_change()
+        # Search filter
+        def on_search_change(e):
+            state.search_query = e.sender.value or ""
+            state.page = 0
+            on_filter_change()
 
-            ui.input(
-                label="Search filename",
-                placeholder="e.g., Formula.1",
-                on_change=on_search_change,
-            ).classes("flex-1 min-w-48").props('debounce="300"')
-
-            # Sport filter dropdown
-            sport_options = ["All Sports"]
-            if gui_state.config:
-                sport_options.extend([s.id for s in gui_state.config.sports if s.enabled])
-
-            def on_sport_change(e):
-                state.sport_filter = "" if e.value == "All Sports" else e.value
-                state.page = 0  # Reset to first page on filter change
-                on_filter_change()
-
-            ui.select(
-                sport_options,
-                value="All Sports",
-                label="Sport",
-                on_change=on_sport_change,
-            ).classes("w-48")
+        ui.input(
+            label="Search filename",
+            placeholder="e.g., Formula.1",
+            on_change=on_search_change,
+        ).classes("w-full").props('debounce="300"')
 
 
 def _render_category_toggles(state, on_filter_change, refresh_toggles) -> None:
@@ -220,9 +201,12 @@ def _render_category_toggles(state, on_filter_change, refresh_toggles) -> None:
 
             return handler
 
-        btn = neutralize_button_utilities(ui.button(label, icon=icon, on_click=make_toggle_handler(category, state)))
-        btn.props("flat dense no-caps")
-        btn.classes(f"text-sm app-chip {'app-chip-active' if is_active else ''}")
+        btn = ui.button(label, icon=icon, on_click=make_toggle_handler(category, state))
+        if is_active:
+            btn.props('no-caps color="primary" unelevated')
+        else:
+            btn.props('no-caps outline color="primary"')
+        btn.style("padding: 6px 16px; font-size: 0.8125rem")
 
 
 def _render_results_content(state, refresh_results, refresh_page) -> None:

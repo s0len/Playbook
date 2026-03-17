@@ -53,10 +53,13 @@ def season_section(
                 # Progress bar
                 mini_progress_bar(progress, variant=variant, width="w-32")
 
-                # Count
-                ui.label(f"{season.matched_count}/{season.total_count}").classes(
-                    "text-sm app-text-muted w-16 text-right"
-                )
+                # Count — colored based on progress
+                count_text = f"{season.matched_count}/{season.total_count}"
+                if season.matched_count > 0:
+                    count_color = "var(--pb-positive)" if progress >= 1.0 else "var(--q-primary)"
+                    ui.label(count_text).classes("text-sm font-semibold w-16 text-right").style(f"color: {count_color}")
+                else:
+                    ui.label(count_text).classes("text-sm app-text-muted w-16 text-right")
 
         # Episode list
         with ui.column().classes("w-full divide-y divide-slate-100"):

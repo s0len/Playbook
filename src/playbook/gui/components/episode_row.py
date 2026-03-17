@@ -48,12 +48,12 @@ def episode_row(
         # Status icon
         status_icon(episode.status)
 
-        # Episode code
+        # Episode code — monospace, slightly brighter than muted
         code = f"S{season_index:02d}{episode.formatted_code}"
-        ui.label(code).classes("font-mono text-sm app-text-muted w-16 shrink-0")
+        ui.label(code).classes("font-mono text-sm w-16 shrink-0").style("color: var(--pb-text-secondary)")
 
         # Episode title
-        ui.label(episode.episode_title).classes("flex-1 truncate")
+        ui.label(episode.episode_title).classes("flex-1 truncate text-sm")
 
         # Quality score badge (if matched and has score)
         if episode.status == "matched" and episode.record and episode.record.quality_score is not None:

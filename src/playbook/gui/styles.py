@@ -98,28 +98,29 @@ body {
 }
 
 /* ===== Page titles ===== */
+/* No !important on color — allows inline .style() on stat cards to win */
 .text-3xl.font-bold {
-    color: var(--pb-text-primary) !important;
+    color: var(--pb-text-primary);
     letter-spacing: -0.025em;
     font-weight: 700 !important;
 }
 
 .text-xl.font-semibold {
-    color: var(--pb-text-primary) !important;
+    color: var(--pb-text-primary);
     letter-spacing: -0.015em;
     font-weight: 600 !important;
 }
 
 /* ===== Modern Progress Bar ===== */
 .modern-progress {
-    height: 8px;
-    border-radius: 4px;
-    background: rgba(148, 163, 184, 0.2);
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(148, 163, 184, 0.12);
     overflow: hidden;
 }
 
 .modern-progress .q-linear-progress__track {
-    background: transparent;
+    background: rgba(148, 163, 184, 0.08);
 }
 
 .modern-progress .q-linear-progress__model {
@@ -188,25 +189,35 @@ body.body--dark .status-chip-error {
 
 /* ===== Episode Row ===== */
 .episode-row {
-    padding: 10px 14px;
+    padding: 8px 14px;
     border-radius: var(--radius);
     transition: background-color 0.12s ease;
+    border-left: 3px solid transparent;
 }
 
 .episode-row:hover {
-    background: rgba(148, 163, 184, 0.1);
+    background: rgba(148, 163, 184, 0.06);
+}
+
+/* Alternate row subtle tinting */
+.episode-row:nth-child(even) {
+    background: rgba(148, 163, 184, 0.02);
+}
+
+.episode-row:nth-child(even):hover {
+    background: rgba(148, 163, 184, 0.07);
 }
 
 .episode-row-matched {
-    border-left: 3px solid var(--pb-positive);
+    border-left-color: var(--pb-positive);
 }
 
 .episode-row-missing {
-    border-left: 3px solid var(--pb-text-muted);
+    border-left-color: rgba(148, 163, 184, 0.2);
 }
 
 .episode-row-error {
-    border-left: 3px solid var(--pb-negative);
+    border-left-color: var(--pb-negative);
 }
 
 .episode-row .q-btn.episode-row-action-btn.bg-primary {
@@ -223,13 +234,18 @@ body.body--dark .status-chip-error {
 /* ===== Season Section ===== */
 .season-section {
     border: 1px solid var(--pb-border-color);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius);
     overflow: hidden;
+    margin-bottom: 2px;
+}
+
+.season-section:hover {
+    border-color: rgba(255, 255, 255, 0.12);
 }
 
 .season-header {
-    background: rgba(148, 163, 184, 0.05);
-    padding: 16px;
+    background: rgba(148, 163, 184, 0.03);
+    padding: 12px 16px;
 }
 
 /* ===== Left Sidebar ===== */
@@ -1343,6 +1359,11 @@ body.body--dark .list-editor-item:hover {
 /* Expansion panel headers get subtle hover bg */
 .q-expansion-item .q-item:hover {
     background: rgba(148, 163, 184, 0.06);
+}
+
+.season-section .q-expansion-item .q-item {
+    padding: 8px 16px;
+    min-height: 48px;
 }
 
 /* Badges/chips get transition */

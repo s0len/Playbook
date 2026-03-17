@@ -27,7 +27,7 @@ def logs_page() -> None:
         "paused": False,
     }
 
-    with ui.column().classes("w-full p-6 gap-4 view-shell"):
+    with ui.column().classes("w-full p-6 gap-4 view-shell").style("height: 100vh; max-height: 100vh; overflow: hidden"):
         # Header
         ui.label("Logs").classes("text-3xl font-bold")
         ui.label("Real-time application logs.").classes("text-sm app-text-muted -mt-2")
@@ -82,9 +82,9 @@ def logs_page() -> None:
                     ).props("dense")
                     ui.label("Auto-scroll").classes("text-xs app-text-muted")
 
-        # Log viewport
-        with ui.card().classes("glass-card w-full"):
-            log_scroll = ui.scroll_area().classes("w-full log-container").style("height: 600px; max-height: 70vh;")
+        # Log viewport — fills remaining space, scrolls internally
+        with ui.card().classes("glass-card w-full").style("flex: 1; min-height: 0; overflow: hidden"):
+            log_scroll = ui.scroll_area().classes("w-full log-container").style("height: 100%")
             with log_scroll:
                 log_container = ui.column().classes("w-full p-3 gap-0")
 

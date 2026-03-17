@@ -13,20 +13,22 @@ from nicegui import ui
 
 from ..utils import safe_timer
 
-# Map semantic tones to Quasar CSS variable names
-_QUASAR_COLOR_MAP: dict[str, str] = {
-    "accent": "--q-primary",
+# Map semantic tones to CSS variable names.
+# Uses --pb-* (set in :root with defaults) rather than --q-* (set by JS later)
+# so inline styles resolve immediately on first render.
+_COLOR_VAR_MAP: dict[str, str] = {
+    "accent": "--pb-primary",
     "success": "--pb-positive",
     "warning": "--pb-warning",
     "danger": "--pb-negative",
     "muted": "--pb-text-muted",
     # Backward compat aliases
-    "blue": "--q-primary",
+    "blue": "--pb-primary",
     "green": "--pb-positive",
     "yellow": "--pb-warning",
     "red": "--pb-negative",
     "gray": "--pb-text-muted",
-    "purple": "--q-primary",
+    "purple": "--pb-primary",
 }
 
 
@@ -49,7 +51,7 @@ def stats_card(
     Returns:
         The created card element
     """
-    color_var = _QUASAR_COLOR_MAP.get(color, "--q-primary")
+    color_var = _COLOR_VAR_MAP.get(color, "--pb-primary")
 
     with ui.card().classes("stat-card w-48").style(f"border-left: 4px solid var({color_var})") as card:
         with ui.row().classes("w-full items-start justify-between"):

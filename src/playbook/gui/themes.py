@@ -73,8 +73,24 @@ QUASAR_KEYS = frozenset(
     {"primary", "secondary", "accent", "dark", "dark_page", "positive", "negative", "info", "warning"}
 )
 
-# CSS extension keys — these are synced to --pb-{key} custom properties
-CSS_KEYS = frozenset({"primary_soft", "text_primary", "text_secondary", "text_muted", "border_color", "surface"})
+# CSS extension keys — these are synced to --pb-{key} custom properties.
+# Includes status colors so inline .style() references resolve immediately
+# (--q-* vars are set by Quasar JS which runs after initial render).
+CSS_KEYS = frozenset(
+    {
+        "primary_soft",
+        "text_primary",
+        "text_secondary",
+        "text_muted",
+        "border_color",
+        "surface",
+        "primary",
+        "positive",
+        "negative",
+        "warning",
+        "info",
+    }
+)
 
 
 def get_theme(name: str) -> dict[str, Any]:
