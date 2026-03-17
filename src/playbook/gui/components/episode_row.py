@@ -213,24 +213,31 @@ def _file_candidate_row(
     bg_class = "app-alert app-alert-success" if is_active else ""
 
     with ui.column().classes(f"w-full p-3 rounded {border_class} {bg_class} gap-2 mb-1"):
-        # Top row: rank, filename, score
-        with ui.row().classes("w-full items-center gap-2"):
-            # Rank badge
+        # Row 1: rank icon + full filename (no truncation)
+        with ui.row().classes("w-full items-start gap-2"):
             if is_active:
-                ui.icon("check_circle").classes("app-text-success text-lg")
+                ui.icon("check_circle").classes("app-text-success text-lg mt-0.5")
             else:
-                ui.label(f"#{rank}").classes("text-xs font-mono app-text-muted w-6 text-center")
+                ui.label(f"#{rank}").classes("text-xs font-mono app-text-muted w-6 text-center mt-1")
 
-            # Filename (just the name, not full path)
             filename = Path(record.source_path).name
-            ui.label(filename).classes("flex-1 text-sm font-mono truncate")
+            ui.label(filename).classes("flex-1 text-sm font-mono break-all")
 
-            # Quality score
+        # Row 2: quality tags + score + status badge
+        with ui.row().classes("flex-wrap gap-1 items-center ml-8"):
+            # Quality tags
+            quality = _parse_quality_info(record)
+            if quality:
+                tags = _format_quality_tags(quality)
+                for label, color in tags:
+                    ui.badge(label).classes(f"text-xs app-badge {color}")
+
+            # Score badge
             if record.quality_score is not None:
                 score_class = _quality_score_class(record.quality_score)
                 ui.badge(f"Score: {record.quality_score}").classes(f"app-badge {score_class}")
 
-            # Status chip
+            # Status badge
             status_classes = {
                 "linked": "app-badge-success",
                 "copied": "app-badge-muted",
@@ -242,24 +249,13 @@ def _file_candidate_row(
             chip_class = status_classes.get(record.status, "app-badge-muted")
             ui.badge(record.status).classes(f"app-badge {chip_class}")
 
-            # Make Primary button for non-active candidates
-            if on_promote:
-                neutralize_button_utilities(
-                    ui.button("Make Primary", icon="swap_horiz", on_click=on_promote).props("flat dense no-caps")
-                ).classes("text-xs text-slate-400 hover:text-slate-200")
-
-        # Quality tags row
-        quality = _parse_quality_info(record)
-        if quality:
-            tags = _format_quality_tags(quality)
-            if tags:
-                with ui.row().classes("flex-wrap gap-1 ml-8"):
-                    for label, color in tags:
-                        ui.badge(label).classes(f"text-xs app-badge {color}")
-
-        # Metadata row
-        with ui.row().classes("ml-8 gap-4"):
+        # Row 3: date + Make Primary action
+        with ui.row().classes("ml-8 gap-4 items-center"):
             ui.label(record.processed_at.strftime("%Y-%m-%d %H:%M")).classes("text-xs app-text-muted")
+            if on_promote:
+                ui.button("Make Primary", icon="swap_horiz", on_click=on_promote).props(
+                    'flat dense no-caps color="primary" size="sm"'
+                )
             if record.error_message:
                 ui.label(record.error_message).classes("text-xs app-text-danger")
 
