@@ -97,6 +97,13 @@ body {
     color: var(--pb-text-muted) !important;
 }
 
+/* ===== Primary color contrast ===== */
+/* Our accent colors (#34d399 green, #cba6f7 mauve) are light — dark text reads better */
+.bg-primary.text-white,
+.bg-primary .text-white {
+    color: #111 !important;
+}
+
 /* ===== Page titles ===== */
 /* No !important on color — allows inline .style() on stat cards to win */
 .text-3xl.font-bold {
