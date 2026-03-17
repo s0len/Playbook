@@ -97,13 +97,6 @@ body {
     color: var(--pb-text-muted) !important;
 }
 
-/* ===== Primary color contrast ===== */
-/* Our accent colors (#34d399 green, #cba6f7 mauve) are light — dark text reads better */
-.bg-primary.text-white,
-.bg-primary .text-white {
-    color: #111 !important;
-}
-
 /* ===== Page titles ===== */
 /* No !important on color — allows inline .style() on stat cards to win */
 .text-3xl.font-bold {
@@ -1617,12 +1610,14 @@ def inject_styles() -> None:
 THEME_INIT_SCRIPT = """
 <script>
 (function() {
-    // Strip bg-primary from app-badge elements — Quasar adds it automatically
-    // and its !important background overrides our variant colors.
+    // Fix Quasar class issues on dynamically added elements:
+    // 1. Strip bg-primary from app-badge (our variant CSS handles colors)
+    // 2. Replace text-white with text-black on bg-primary buttons (better contrast)
     new MutationObserver(function(mutations) {
         mutations.forEach(function(m) {
             m.addedNodes.forEach(function(node) {
                 if (node.nodeType === 1) {
+                    // Fix badges: remove bg-primary so variant classes work
                     node.querySelectorAll && node.querySelectorAll('.app-badge.bg-primary').forEach(function(el) {
                         el.classList.remove('bg-primary');
                         el.classList.remove('text-white');
@@ -1630,6 +1625,15 @@ THEME_INIT_SCRIPT = """
                     if (node.classList && node.classList.contains('app-badge') && node.classList.contains('bg-primary')) {
                         node.classList.remove('bg-primary');
                         node.classList.remove('text-white');
+                    }
+                    // Fix buttons: dark text on primary background
+                    node.querySelectorAll && node.querySelectorAll('.bg-primary.text-white').forEach(function(el) {
+                        el.classList.remove('text-white');
+                        el.classList.add('text-black');
+                    });
+                    if (node.classList && node.classList.contains('bg-primary') && node.classList.contains('text-white')) {
+                        node.classList.remove('text-white');
+                        node.classList.add('text-black');
                     }
                 }
             });
