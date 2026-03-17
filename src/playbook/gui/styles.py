@@ -12,8 +12,8 @@ from nicegui import ui
 # Main CSS stylesheet - uses body.body--dark for Quasar dark mode compatibility
 PLAYBOOK_CSS = """
 /* ===== Custom Fonts ===== */
-/* Anybody: Bold display font for headings — sporty, geometric, distinctive */
-/* DM Sans: Clean body font — modern, readable, pairs well */
+/* Anybody: Bold condensed display — sporty, geometric, editorial */
+/* DM Sans: Clean optical-size body — modern, sharp readability */
 
 /* ===== CSS Variables for Theming ===== */
 :root {
@@ -31,38 +31,39 @@ PLAYBOOK_CSS = """
     --accent-color: #34d399;
     --accent-hover: #2cb783;
     --accent-soft: rgba(52, 211, 153, 0.15);
-    --card-radius: 16px;
+    --radius: 6px;
+    --radius-lg: 10px;
     --glow-accent: 0 0 20px rgba(52, 211, 153, 0.15);
 }
 
 body.body--dark {
-    --bg-primary: #0c0c0e;
-    --bg-card: rgba(22, 22, 26, 0.85);
-    --bg-card-solid: #16161a;
-    --bg-surface: rgba(255, 255, 255, 0.03);
-    --text-primary: #eeeff2;
-    --text-secondary: #a0a0ab;
-    --text-muted: #6b6b76;
-    --border-color: rgba(255, 255, 255, 0.06);
-    --shadow-color: rgba(0, 0, 0, 0.6);
+    --bg-primary: #0a0a0c;
+    --bg-card: rgba(18, 18, 22, 0.9);
+    --bg-card-solid: #111114;
+    --bg-surface: rgba(255, 255, 255, 0.025);
+    --text-primary: #e8e8ec;
+    --text-secondary: #9898a4;
+    --text-muted: #5c5c68;
+    --border-color: rgba(255, 255, 255, 0.07);
+    --shadow-color: rgba(0, 0, 0, 0.7);
     --accent-color: #34d399;
-    --accent-hover: #2cb783;
-    --accent-soft: rgba(52, 211, 153, 0.12);
-    --glow-accent: 0 0 30px rgba(52, 211, 153, 0.08);
+    --accent-hover: #5eead4;
+    --accent-soft: rgba(52, 211, 153, 0.10);
+    --glow-accent: 0 0 24px rgba(52, 211, 153, 0.06);
 }
 
 body.body--dark.theme-swizzin {
     --accent-color: #34d399;
-    --accent-hover: #2cb783;
-    --accent-soft: rgba(52, 211, 153, 0.12);
-    --glow-accent: 0 0 30px rgba(52, 211, 153, 0.08);
+    --accent-hover: #5eead4;
+    --accent-soft: rgba(52, 211, 153, 0.10);
+    --glow-accent: 0 0 24px rgba(52, 211, 153, 0.06);
 }
 
 body.body--dark.theme-catppuccin {
     --accent-color: #cba6f7;
-    --accent-hover: #b78de8;
-    --accent-soft: rgba(203, 166, 247, 0.16);
-    --glow-accent: 0 0 30px rgba(203, 166, 247, 0.08);
+    --accent-hover: #ddbfff;
+    --accent-soft: rgba(203, 166, 247, 0.12);
+    --glow-accent: 0 0 24px rgba(203, 166, 247, 0.06);
 }
 
 /* ===== Theme Transitions ===== */
@@ -104,12 +105,6 @@ body {
 
 body.body--dark {
     background: var(--bg-primary) !important;
-    /* Subtle radial glow behind content */
-    background-image: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(52, 211, 153, 0.04) 0%, transparent 70%) !important;
-}
-
-body.body--dark.theme-catppuccin {
-    background-image: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(203, 166, 247, 0.04) 0%, transparent 70%) !important;
 }
 
 /* ===== Main Content Text ===== */
@@ -121,16 +116,14 @@ body.body--dark.theme-catppuccin {
 .glass-card {
     background: var(--bg-card) !important;
     border: 1px solid var(--border-color);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px var(--shadow-color);
-    border-radius: var(--card-radius);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    border-radius: var(--radius-lg);
 }
 
 body.body--dark .glass-card {
     background: var(--bg-card) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 2px 8px rgba(0,0,0,0.4);
 }
 
 .glass-card.q-card {
@@ -151,14 +144,14 @@ body.body--dark .glass-card {
 /* ===== Page titles ===== */
 .text-3xl.font-bold {
     color: var(--text-primary) !important;
-    letter-spacing: -0.03em;
-    font-weight: 800 !important;
+    letter-spacing: -0.025em;
+    font-weight: 700 !important;
 }
 
 .text-xl.font-semibold {
-    color: var(--text-secondary) !important;
-    letter-spacing: -0.02em;
-    font-weight: 700 !important;
+    color: var(--text-primary) !important;
+    letter-spacing: -0.015em;
+    font-weight: 600 !important;
 }
 
 /* ===== Modern Progress Bar ===== */
@@ -196,13 +189,15 @@ body.body--dark .glass-card {
 
 /* ===== Status Chips ===== */
 .status-chip {
-    padding: 4px 12px;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
 .status-chip-matched {
@@ -237,9 +232,9 @@ body.body--dark .status-chip-error {
 
 /* ===== Episode Row ===== */
 .episode-row {
-    padding: 12px 16px;
-    border-radius: 10px;
-    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    transition: background-color 0.12s ease;
 }
 
 .episode-row:hover {
@@ -272,7 +267,7 @@ body.body--dark .status-chip-error {
 /* ===== Season Section ===== */
 .season-section {
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
 }
 
@@ -283,32 +278,32 @@ body.body--dark .status-chip-error {
 
 /* ===== Left Sidebar ===== */
 .playbook-sidebar .q-drawer__content {
-    background: #09090b !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.04) !important;
-    box-shadow: 1px 0 40px rgba(0, 0, 0, 0.3) !important;
+    background: var(--bg-primary) !important;
+    border-right: 1px solid var(--border-color) !important;
+    box-shadow: none !important;
 }
 
 /* Nav item base */
 .sidebar-nav-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
-    border-radius: 8px;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: var(--radius);
     width: 100%;
-    transition: all 0.15s ease;
-    color: rgba(255, 255, 255, 0.3);
+    transition: color 0.12s ease, background 0.12s ease;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
 }
 
 .sidebar-nav-item:hover {
-    background: rgba(255, 255, 255, 0.07);
-    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
 }
 
 .sidebar-nav-item-active {
     background: var(--accent-soft) !important;
     color: var(--accent-color) !important;
-    box-shadow: inset 3px 0 0 var(--accent-color);
 }
 
 /* Sidebar separator */
@@ -330,38 +325,26 @@ body.body--dark .status-chip-error {
 
 /* ===== Stats Card Enhancements ===== */
 .stat-card {
-    border-radius: var(--card-radius);
-    padding: 20px;
-    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-                box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1);
-    position: relative;
-    overflow: hidden;
-}
-
-.stat-card::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%);
-    pointer-events: none;
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    transition: border-color 0.15s ease;
 }
 
 .stat-card:hover {
-    transform: translateY(-3px) scale(1.01);
-    box-shadow: 0 16px 48px var(--shadow-color), var(--glow-accent);
+    border-color: rgba(255, 255, 255, 0.12);
 }
 
 /* Stat value numbers — display font, tighter tracking */
 .stat-card .text-3xl:not(.q-icon),
 .stat-card .text-2xl:not(.q-icon) {
     font-family: var(--font-display) !important;
-    font-weight: 800 !important;
-    letter-spacing: -0.04em;
+    font-weight: 700 !important;
+    letter-spacing: -0.03em;
 }
 
 /* ===== Tables ===== */
 .modern-table {
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
 }
 
@@ -426,10 +409,10 @@ body.body--dark .q-table__container {
 
 /* ===== Enhanced Log Viewer ===== */
 .log-container {
-    background: rgba(0, 0, 0, 0.25) !important;
-    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.2) !important;
+    border-radius: var(--radius-lg);
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-    border: 1px solid rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
 }
 
 /* Log entry row — colored left border per level */
@@ -722,12 +705,12 @@ body.body--dark .q-table__container {
 
 /* ===== Expansion Panels ===== */
 .q-expansion-item {
-    border-radius: 12px;
+    border-radius: var(--radius);
     overflow: hidden;
 }
 
 .q-expansion-item__container {
-    border-radius: 12px;
+    border-radius: var(--radius);
 }
 
 /* ===== Scrollbar Styling ===== */
@@ -766,7 +749,7 @@ body.body--dark *:focus-visible {
 /* ===== Quasar Component Overrides for Dark Mode ===== */
 body.body--dark .q-card {
     background: var(--bg-card-solid);
-    border-radius: var(--card-radius);
+    border-radius: var(--radius-lg);
 }
 
 body.body--dark .q-table {
@@ -829,13 +812,14 @@ a:hover {
 .settings-subnav-item {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
-    transition: all 0.15s ease;
-    border-radius: 8px;
-    color: rgba(255, 255, 255, 0.62) !important;
+    transition: color 0.12s ease, background 0.12s ease;
+    border-radius: var(--radius);
+    color: var(--text-muted) !important;
     background: transparent !important;
     border: 1px solid transparent;
+    font-size: 0.8125rem;
 }
 
 .settings-subnav-item .q-btn__content,
@@ -899,10 +883,10 @@ body.body--dark .settings-subnav-item-active {
 }
 
 .settings-surface {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03)) !important;
-    border: 1px solid rgba(255, 255, 255, 0.06) !important;
-    border-radius: var(--card-radius) !important;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 14px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255,255,255,0.03) !important;
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
 }
 
 .view-shell {
@@ -915,20 +899,20 @@ body.body--dark .settings-subnav-item-active {
 }
 
 .settings-inline-card {
-    background: rgba(255, 255, 255, 0.06) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 10px !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: var(--radius) !important;
     box-shadow: none !important;
 }
 
 .settings-modal-card {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.08)) !important;
+    background: var(--bg-card) !important;
 }
 
 .settings-theme-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-lg);
     box-shadow: none;
 }
 
@@ -939,9 +923,9 @@ body.body--dark .settings-subnav-item-active {
 
 /* Settings form inputs */
 .settings-input .q-field__control {
-    min-height: 40px;
+    min-height: 36px;
     background: rgba(255, 255, 255, 0.02);
-    border-radius: 8px;
+    border-radius: var(--radius);
 }
 
 .settings-input .q-field__label {
@@ -1015,9 +999,9 @@ body.body--dark .settings-toggle .q-toggle__inner {
 
 /* App-wide semantic button system */
 .app-btn {
-    border-radius: 10px;
-    font-family: var(--font-display) !important;
-    font-weight: 600;
+    border-radius: var(--radius) !important;
+    font-family: var(--font-body) !important;
+    font-weight: 500;
     letter-spacing: -0.01em;
     align-items: flex-start !important;
 }
@@ -1099,8 +1083,9 @@ body.body--dark .settings-toggle .q-toggle__inner {
 
 .q-btn .q-btn__content {
     text-transform: none !important;
-    letter-spacing: -0.01em !important;
-    font-family: var(--font-display) !important;
+    letter-spacing: -0.005em !important;
+    font-family: var(--font-body) !important;
+    font-weight: 500 !important;
 }
 
 body.body--dark .q-btn--outline,
@@ -1110,11 +1095,12 @@ body.body--dark .q-btn--flat {
 
 /* App-wide chips and badges */
 .app-chip {
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.72) !important;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    color: var(--text-secondary) !important;
     background: transparent !important;
-    padding: 4px 8px;
+    padding: 3px 8px;
+    font-size: 0.8125rem;
 }
 
 /* Quasar may inject text/bg utility classes on chip-like buttons. */
@@ -1160,7 +1146,7 @@ body.body--dark .q-btn--flat {
 }
 
 .app-badge {
-    border-radius: 6px;
+    border-radius: 4px;
     border: 1px solid transparent;
 }
 
@@ -1470,23 +1456,23 @@ body.body--dark .list-editor-item:hover {
 
 /* ===== Match Attempt Card Classes ===== */
 .match-attempt-green {
-    border-left: 4px solid #4ade80;
-    background: rgba(74, 222, 128, 0.06);
-    border-radius: 8px;
+    border-left: 3px solid #4ade80;
+    background: rgba(74, 222, 128, 0.05);
+    border-radius: var(--radius);
     padding: 8px;
 }
 
 .match-attempt-amber {
-    border-left: 4px solid #fbbf24;
-    background: rgba(251, 191, 36, 0.06);
-    border-radius: 8px;
+    border-left: 3px solid #fbbf24;
+    background: rgba(251, 191, 36, 0.05);
+    border-radius: var(--radius);
     padding: 8px;
 }
 
 .match-attempt-slate {
-    border-left: 4px solid rgba(148, 163, 184, 0.4);
-    background: rgba(148, 163, 184, 0.04);
-    border-radius: 8px;
+    border-left: 3px solid rgba(148, 163, 184, 0.3);
+    background: rgba(148, 163, 184, 0.03);
+    border-radius: var(--radius);
     padding: 8px;
 }
 
@@ -1496,13 +1482,7 @@ body.body--dark .list-editor-item:hover {
 
 /* ===== Global Hover / Transition Polish ===== */
 .glass-card {
-    transition: background-color 0.3s ease, border-color 0.3s ease,
-                color 0.2s ease, box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-                transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.glass-card:hover {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 12px 40px var(--shadow-color);
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
 }
 
 /* Expansion panel headers get subtle hover bg */
