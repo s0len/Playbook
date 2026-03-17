@@ -1606,6 +1606,25 @@ def inject_styles() -> None:
 THEME_INIT_SCRIPT = """
 <script>
 (function() {
+    // Strip bg-primary from app-badge elements — Quasar adds it automatically
+    // and its !important background overrides our variant colors.
+    new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+            m.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1) {
+                    node.querySelectorAll && node.querySelectorAll('.app-badge.bg-primary').forEach(function(el) {
+                        el.classList.remove('bg-primary');
+                        el.classList.remove('text-white');
+                    });
+                    if (node.classList && node.classList.contains('app-badge') && node.classList.contains('bg-primary')) {
+                        node.classList.remove('bg-primary');
+                        node.classList.remove('text-white');
+                    }
+                }
+            });
+        });
+    }).observe(document.body || document.documentElement, { childList: true, subtree: true });
+
     var theme = localStorage.getItem('playbook-color-theme') || 'swizzin';
     // Theme-specific Quasar dark colors (must match themes.py definitions)
     var themes = {
