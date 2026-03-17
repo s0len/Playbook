@@ -1074,6 +1074,10 @@ body.body--dark .settings-toggle .q-toggle__inner {
 .app-badge {
     border-radius: 4px;
     border: 1px solid transparent;
+    padding: 3px 8px !important;
+    font-size: 0.75rem !important;
+    line-height: 1.2 !important;
+    font-weight: 500;
 }
 
 /* Reset Quasar's badge background for app-badge elements.

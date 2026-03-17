@@ -223,31 +223,32 @@ def _file_candidate_row(
             filename = Path(record.source_path).name
             ui.label(filename).classes("flex-1 text-sm font-mono break-all")
 
-        # Row 2: quality tags + score + status badge
-        with ui.row().classes("flex-wrap gap-1 items-center ml-8"):
-            # Quality tags
-            quality = _parse_quality_info(record)
-            if quality:
-                tags = _format_quality_tags(quality)
-                for label, color in tags:
-                    ui.badge(label).classes(f"text-xs app-badge {color}")
+        # Row 2: quality tags (left) | score + status (right)
+        with ui.row().classes("w-full items-center ml-8 gap-2"):
+            # Quality tags — left group
+            with ui.row().classes("flex-wrap gap-1 items-center flex-1"):
+                quality = _parse_quality_info(record)
+                if quality:
+                    tags = _format_quality_tags(quality)
+                    for label, color in tags:
+                        ui.badge(label).classes(f"app-badge {color}")
 
-            # Score badge
-            if record.quality_score is not None:
-                score_class = _quality_score_class(record.quality_score)
-                ui.badge(f"Score: {record.quality_score}").classes(f"app-badge {score_class}")
+            # Score + status — right group
+            with ui.row().classes("gap-1 items-center shrink-0"):
+                if record.quality_score is not None:
+                    score_class = _quality_score_class(record.quality_score)
+                    ui.badge(f"{record.quality_score}").classes(f"app-badge {score_class}")
 
-            # Status badge
-            status_classes = {
-                "linked": "app-badge-success",
-                "copied": "app-badge-muted",
-                "symlinked": "app-badge-muted",
-                "skipped": "app-badge-warning",
-                "superseded": "app-badge-warning",
-                "error": "app-badge-danger",
-            }
-            chip_class = status_classes.get(record.status, "app-badge-muted")
-            ui.badge(record.status).classes(f"app-badge {chip_class}")
+                status_classes = {
+                    "linked": "app-badge-success",
+                    "copied": "app-badge-muted",
+                    "symlinked": "app-badge-muted",
+                    "skipped": "app-badge-warning",
+                    "superseded": "app-badge-warning",
+                    "error": "app-badge-danger",
+                }
+                chip_class = status_classes.get(record.status, "app-badge-muted")
+                ui.badge(record.status).classes(f"app-badge {chip_class}")
 
         # Row 3: date + Make Primary action
         with ui.row().classes("ml-8 gap-4 items-center"):
