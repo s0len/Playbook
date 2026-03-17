@@ -131,6 +131,10 @@ def _page_wrapper(page_fn: callable, current_path: str = "/") -> None:
     # Force dark mode (light mode removed)
     ui.dark_mode(True)
 
+    # Override badge default: remove color="primary" which adds bg-primary class
+    # and fights our semantic badge variant classes (app-badge-success etc.)
+    ui.badge.default_props(remove="color")
+
     # Apply selected GUI color theme
     selected_theme = "swizzin"
     if gui_state.config and gui_state.config.settings:
