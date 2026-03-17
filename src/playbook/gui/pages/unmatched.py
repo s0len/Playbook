@@ -121,39 +121,23 @@ def _render_stats_content() -> None:
 
 
 def _stat_card(label: str, value: int, icon: str, tone: str) -> None:
-    """Render a statistics card."""
-    surface_map = {
-        "accent": "app-stat-surface-accent",
-        "warning": "app-stat-surface-warning",
-        "danger": "app-stat-surface-danger",
-        "muted": "app-stat-surface-muted",
+    """Render a statistics card with left accent bar using Quasar color vars."""
+    color_map = {
+        "accent": "--q-primary",
+        "warning": "--pb-warning",
+        "danger": "--pb-negative",
+        "muted": "--pb-text-muted",
     }
-    value_colors = {
-        "accent": "var(--accent-color)",
-        "warning": "#fbbf24",
-        "danger": "#f87171",
-        "muted": "var(--text-primary)",
-    }
-    border_colors = {
-        "accent": "var(--accent-color)",
-        "warning": "#fbbf24",
-        "danger": "#f87171",
-        "muted": "rgba(148, 163, 184, 0.4)",
-    }
-    surface_class = surface_map.get(tone, "app-stat-surface-accent")
-    value_color = value_colors.get(tone, "var(--accent-color)")
-    border_color = border_colors.get(tone, "var(--accent-color)")
+    color_var = color_map.get(tone, "--q-primary")
 
-    with (
-        ui.card()
-        .classes(f"stat-card border {surface_class} p-4 min-w-32")
-        .style(f"border-top: 3px solid {border_color}")
-    ):
-        with ui.row().classes("items-center gap-2"):
-            ui.icon(icon).classes(f"text-xl app-stat-icon app-stat-icon-{tone}")
+    with ui.card().classes("stat-card p-4 min-w-32").style(f"border-left: 4px solid var({color_var})"):
+        with ui.row().classes("w-full items-start justify-between"):
             with ui.column().classes("gap-0"):
-                ui.label(str(value)).classes("text-2xl font-bold").style(f"color: {value_color}")
-                ui.label(label).classes("text-sm app-text-muted")
+                ui.label(label).classes("text-xs font-medium uppercase tracking-wide").style(
+                    "color: var(--pb-text-muted)"
+                )
+                ui.label(str(value)).classes("text-2xl font-bold").style(f"color: var({color_var})")
+            ui.icon(icon).classes("text-xl opacity-30")
 
 
 def _filters_section_v2(state, on_filter_change) -> None:

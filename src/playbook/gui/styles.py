@@ -15,60 +15,26 @@ PLAYBOOK_CSS = """
 /* Anybody: Bold condensed display — sporty, geometric, editorial */
 /* DM Sans: Clean optical-size body — modern, sharp readability */
 
-/* ===== CSS Variables for Theming ===== */
+/* ===== CSS Variables ===== */
+/* Quasar colors (--q-primary, --q-dark, etc.) are set by ui.colors() in Python.
+   The --pb-* properties below are synced by apply_color_theme() JS. */
 :root {
     --font-display: 'Anybody', 'DM Sans', system-ui, sans-serif;
     --font-body: 'DM Sans', system-ui, sans-serif;
-    --bg-primary: #f0f2f5;
-    --bg-card: rgba(255, 255, 255, 0.92);
-    --bg-card-solid: #ffffff;
-    --bg-surface: rgba(255, 255, 255, 0.5);
-    --text-primary: #0f172a;
-    --text-secondary: #334155;
-    --text-muted: #64748b;
-    --border-color: rgba(148, 163, 184, 0.18);
-    --shadow-color: rgba(31, 38, 135, 0.08);
-    --accent-color: #34d399;
-    --accent-hover: #2cb783;
-    --accent-soft: rgba(52, 211, 153, 0.15);
     --radius: 6px;
     --radius-lg: 10px;
-    --glow-accent: 0 0 20px rgba(52, 211, 153, 0.15);
-}
-
-body.body--dark {
-    --bg-primary: #0a0a0c;
-    --bg-card: rgba(18, 18, 22, 0.9);
-    --bg-card-solid: #111114;
-    --bg-surface: rgba(255, 255, 255, 0.025);
-    --text-primary: #e8e8ec;
-    --text-secondary: #9898a4;
-    --text-muted: #5c5c68;
-    --border-color: rgba(255, 255, 255, 0.07);
-    --shadow-color: rgba(0, 0, 0, 0.7);
-    --accent-color: #34d399;
-    --accent-hover: #5eead4;
-    --accent-soft: rgba(52, 211, 153, 0.10);
-    --glow-accent: 0 0 24px rgba(52, 211, 153, 0.06);
-}
-
-body.body--dark.theme-swizzin {
-    --accent-color: #34d399;
-    --accent-hover: #5eead4;
-    --accent-soft: rgba(52, 211, 153, 0.10);
-    --glow-accent: 0 0 24px rgba(52, 211, 153, 0.06);
-}
-
-body.body--dark.theme-catppuccin {
-    --accent-color: #cba6f7;
-    --accent-hover: #ddbfff;
-    --accent-soft: rgba(203, 166, 247, 0.12);
-    --glow-accent: 0 0 24px rgba(203, 166, 247, 0.06);
-}
-
-/* ===== Theme Transitions ===== */
-.theme-ready *, .theme-ready *::before, .theme-ready *::after {
-    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease;
+    /* Defaults overridden by apply_color_theme() JS */
+    --pb-primary: #34d399;
+    --pb-primary-soft: rgba(52, 211, 153, 0.10);
+    --pb-text-primary: #e8e8ec;
+    --pb-text-secondary: #9898a4;
+    --pb-text-muted: #5c5c68;
+    --pb-border-color: rgba(255, 255, 255, 0.07);
+    --pb-surface: #18181b;
+    --pb-positive: #4ade80;
+    --pb-negative: #f87171;
+    --pb-warning: #fbbf24;
+    --pb-info: #38bdf8;
 }
 
 /* ===== Global Typography ===== */
@@ -100,56 +66,46 @@ body, .q-page, .q-page-container, .q-drawer, .q-card, .q-dialog {
 
 /* ===== Page Background ===== */
 body {
-    background: var(--bg-primary) !important;
-}
-
-body.body--dark {
-    background: var(--bg-primary) !important;
+    background: var(--q-dark-page) !important;
 }
 
 /* ===== Main Content Text ===== */
 .q-page, .q-page-container {
-    color: var(--text-primary);
+    color: var(--pb-text-primary);
 }
 
 /* ===== Card System ===== */
 .glass-card {
-    background: var(--bg-card) !important;
-    border: 1px solid var(--border-color);
+    background: var(--q-dark) !important;
+    border: 1px solid var(--pb-border-color);
     box-shadow: 0 1px 2px rgba(0,0,0,0.06);
     border-radius: var(--radius-lg);
 }
 
-body.body--dark .glass-card {
-    background: var(--bg-card) !important;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 2px 8px rgba(0,0,0,0.4);
-}
-
 .glass-card.q-card {
-    background: var(--bg-card) !important;
+    background: var(--q-dark) !important;
 }
 
 /* ===== Card text colors ===== */
 .glass-card .text-slate-800,
 .glass-card .text-slate-700 {
-    color: var(--text-primary) !important;
+    color: var(--pb-text-primary) !important;
 }
 
 .glass-card .text-slate-600,
 .glass-card .text-slate-500 {
-    color: var(--text-muted) !important;
+    color: var(--pb-text-muted) !important;
 }
 
 /* ===== Page titles ===== */
 .text-3xl.font-bold {
-    color: var(--text-primary) !important;
+    color: var(--pb-text-primary) !important;
     letter-spacing: -0.025em;
     font-weight: 700 !important;
 }
 
 .text-xl.font-semibold {
-    color: var(--text-primary) !important;
+    color: var(--pb-text-primary) !important;
     letter-spacing: -0.015em;
     font-weight: 600 !important;
 }
@@ -172,19 +128,19 @@ body.body--dark .glass-card {
 
 /* Progress bar color variants */
 .modern-progress.progress-success .q-linear-progress__model {
-    background: linear-gradient(90deg, #22c55e, #4ade80);
+    background: linear-gradient(90deg, var(--pb-positive), var(--pb-positive));
 }
 
 .modern-progress.progress-warning .q-linear-progress__model {
-    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    background: linear-gradient(90deg, var(--pb-warning), var(--pb-warning));
 }
 
 .modern-progress.progress-info .q-linear-progress__model {
-    background: linear-gradient(90deg, var(--accent-color), var(--accent-hover));
+    background: linear-gradient(90deg, var(--q-primary), var(--q-primary));
 }
 
 .modern-progress.progress-error .q-linear-progress__model {
-    background: linear-gradient(90deg, #ef4444, #f87171);
+    background: linear-gradient(90deg, var(--pb-negative), var(--pb-negative));
 }
 
 /* ===== Status Chips ===== */
@@ -207,7 +163,7 @@ body.body--dark .glass-card {
 
 body.body--dark .status-chip-matched {
     background: rgba(34, 197, 94, 0.25);
-    color: #4ade80;
+    color: var(--pb-positive);
 }
 
 .status-chip-missing {
@@ -217,7 +173,7 @@ body.body--dark .status-chip-matched {
 
 body.body--dark .status-chip-missing {
     background: rgba(148, 163, 184, 0.2);
-    color: #94a3b8;
+    color: var(--pb-text-muted);
 }
 
 .status-chip-error {
@@ -227,7 +183,7 @@ body.body--dark .status-chip-missing {
 
 body.body--dark .status-chip-error {
     background: rgba(239, 68, 68, 0.25);
-    color: #f87171;
+    color: var(--pb-negative);
 }
 
 /* ===== Episode Row ===== */
@@ -242,15 +198,15 @@ body.body--dark .status-chip-error {
 }
 
 .episode-row-matched {
-    border-left: 3px solid #4ade80;
+    border-left: 3px solid var(--pb-positive);
 }
 
 .episode-row-missing {
-    border-left: 3px solid #94a3b8;
+    border-left: 3px solid var(--pb-text-muted);
 }
 
 .episode-row-error {
-    border-left: 3px solid #ef4444;
+    border-left: 3px solid var(--pb-negative);
 }
 
 .episode-row .q-btn.episode-row-action-btn.bg-primary {
@@ -266,7 +222,7 @@ body.body--dark .status-chip-error {
 
 /* ===== Season Section ===== */
 .season-section {
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--pb-border-color);
     border-radius: var(--radius-lg);
     overflow: hidden;
 }
@@ -278,8 +234,8 @@ body.body--dark .status-chip-error {
 
 /* ===== Left Sidebar ===== */
 .playbook-sidebar .q-drawer__content {
-    background: var(--bg-primary) !important;
-    border-right: 1px solid var(--border-color) !important;
+    background: var(--q-dark-page) !important;
+    border-right: 1px solid var(--pb-border-color) !important;
     box-shadow: none !important;
 }
 
@@ -292,18 +248,18 @@ body.body--dark .status-chip-error {
     border-radius: var(--radius);
     width: 100%;
     transition: color 0.12s ease, background 0.12s ease;
-    color: var(--text-muted);
+    color: var(--pb-text-muted);
     font-size: 0.8125rem;
 }
 
 .sidebar-nav-item:hover {
     background: rgba(255, 255, 255, 0.05);
-    color: var(--text-primary);
+    color: var(--pb-text-primary);
 }
 
 .sidebar-nav-item-active {
-    background: var(--accent-soft) !important;
-    color: var(--accent-color) !important;
+    background: var(--pb-primary-soft) !important;
+    color: var(--q-primary) !important;
 }
 
 /* Sidebar separator */
@@ -358,18 +314,18 @@ body.body--dark .status-chip-error {
 }
 
 .modern-table tbody tr.cursor-pointer:hover {
-    background: var(--accent-soft);
+    background: var(--pb-primary-soft);
 }
 
 /* Table header styling */
 .q-table thead th {
     background: transparent;
-    color: var(--text-muted);
+    color: var(--pb-text-muted);
     font-weight: 600;
     font-size: 0.7rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--pb-border-color);
 }
 
 body.body--dark .q-table thead th {
@@ -378,8 +334,8 @@ body.body--dark .q-table thead th {
 
 /* Table body text */
 .q-table tbody td {
-    color: var(--text-primary);
-    border-bottom: 1px solid var(--border-color);
+    color: var(--pb-text-primary);
+    border-bottom: 1px solid var(--pb-border-color);
 }
 
 /* Table row hover */
@@ -393,7 +349,7 @@ body.body--dark .q-table tbody tr:hover td {
 }
 
 body.body--dark .q-table tbody tr.cursor-pointer:hover td {
-    background: var(--accent-soft);
+    background: var(--pb-primary-soft);
 }
 
 /* Table container in dark mode */
@@ -404,7 +360,7 @@ body.body--dark .q-table__container {
 /* Remove default table borders */
 .q-table--bordered thead th,
 .q-table--bordered tbody td {
-    border-color: var(--border-color);
+    border-color: var(--pb-border-color);
 }
 
 /* ===== Enhanced Log Viewer ===== */
@@ -412,7 +368,7 @@ body.body--dark .q-table__container {
     background: rgba(0, 0, 0, 0.2) !important;
     border-radius: var(--radius-lg);
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--pb-border-color);
 }
 
 /* Log entry row — colored left border per level */
@@ -430,12 +386,12 @@ body.body--dark .q-table__container {
 
 /* Info: accent-colored border (changes with theme) */
 .log-entry-info {
-    border-left-color: var(--accent-color);
+    border-left-color: var(--q-primary);
 }
 
 /* Warning: amber tint */
 .log-entry-warning {
-    border-left-color: #fbbf24;
+    border-left-color: var(--pb-warning);
     background: rgba(251, 191, 36, 0.03);
 }
 
@@ -445,7 +401,7 @@ body.body--dark .q-table__container {
 
 /* Error: red tint */
 .log-entry-error {
-    border-left-color: #f87171;
+    border-left-color: var(--pb-negative);
     background: rgba(248, 113, 113, 0.04);
 }
 
@@ -466,8 +422,8 @@ body.body--dark .q-table__container {
 /* Run Recap / Summary — prominent accent band */
 .log-entry-recap {
     border-left-width: 3px !important;
-    border-left-color: var(--accent-color) !important;
-    background: var(--accent-soft) !important;
+    border-left-color: var(--q-primary) !important;
+    background: var(--pb-primary-soft) !important;
     padding-top: 6px !important;
     padding-bottom: 6px !important;
     margin: 2px 0;
@@ -479,13 +435,13 @@ body.body--dark .q-table__container {
 }
 
 .log-entry-recap .log-msg {
-    color: var(--text-primary) !important;
+    color: var(--pb-text-primary) !important;
     font-weight: 500;
 }
 
 /* Timestamp */
 .log-timestamp {
-    color: var(--text-muted);
+    color: var(--pb-text-muted);
     font-size: 11px;
     flex-shrink: 0;
     min-width: 56px;
@@ -509,22 +465,22 @@ body.body--dark .q-table__container {
 }
 
 .log-badge-info {
-    color: var(--accent-color);
-    background: var(--accent-soft);
+    color: var(--q-primary);
+    background: var(--pb-primary-soft);
 }
 
 .log-badge-warning {
-    color: #fbbf24;
+    color: var(--pb-warning);
     background: rgba(251, 191, 36, 0.14);
 }
 
 .log-badge-error {
-    color: #f87171;
+    color: var(--pb-negative);
     background: rgba(248, 113, 113, 0.14);
 }
 
 .log-badge-debug {
-    color: var(--text-muted);
+    color: var(--pb-text-muted);
     background: rgba(148, 163, 184, 0.1);
 }
 
@@ -532,13 +488,13 @@ body.body--dark .q-table__container {
 .log-msg {
     font-size: 12px;
     line-height: 20px;
-    color: var(--text-secondary);
+    color: var(--pb-text-secondary);
     white-space: nowrap;
     min-width: 0;
 }
 
 .log-msg-info {
-    color: var(--text-primary);
+    color: var(--pb-text-primary);
 }
 
 .log-msg-warning {
@@ -550,15 +506,15 @@ body.body--dark .q-table__container {
 }
 
 .log-msg-debug {
-    color: var(--text-muted);
+    color: var(--pb-text-muted);
 }
 
 .log-empty {
-    color: var(--text-muted);
+    color: var(--pb-text-muted);
 }
 
 .log-footer {
-    color: var(--text-muted);
+    color: var(--pb-text-muted);
 }
 
 /* ===== Structured Log Blocks ===== */
@@ -575,7 +531,7 @@ body.body--dark .q-table__container {
 .log-block-title {
     font-size: 11px;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--pb-text-primary);
     letter-spacing: 0.02em;
 }
 
@@ -602,22 +558,22 @@ body.body--dark .q-table__container {
 .log-pill-value {
     font-size: 12px;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--pb-text-primary);
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
 .log-pill-label {
     font-size: 9px;
-    color: var(--text-muted);
+    color: var(--pb-text-muted);
 }
 
 .log-pill-accent {
-    background: var(--accent-soft);
+    background: var(--pb-primary-soft);
     border-color: transparent;
 }
 
 .log-pill-accent .log-pill-value {
-    color: var(--accent-color);
+    color: var(--q-primary);
 }
 
 .log-pill-warning {
@@ -626,7 +582,7 @@ body.body--dark .q-table__container {
 }
 
 .log-pill-warning .log-pill-value {
-    color: #fbbf24;
+    color: var(--pb-warning);
 }
 
 .log-pill-error {
@@ -635,14 +591,14 @@ body.body--dark .q-table__container {
 }
 
 .log-pill-error .log-pill-value {
-    color: #f87171;
+    color: var(--pb-negative);
 }
 
 /* Processing Details — source file + destination meta */
 .log-processing-source {
     font-size: 12px;
     font-weight: 500;
-    color: var(--text-primary);
+    color: var(--pb-text-primary);
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
     white-space: nowrap;
     overflow: hidden;
@@ -651,14 +607,14 @@ body.body--dark .q-table__container {
 
 .log-processing-meta {
     font-size: 11px;
-    color: var(--text-muted);
+    color: var(--pb-text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .log-detail-dest {
-    color: var(--text-secondary);
+    color: var(--pb-text-secondary);
 }
 
 .log-detail-tag {
@@ -666,17 +622,17 @@ body.body--dark .q-table__container {
     padding: 0 5px;
     border-radius: 3px;
     background: rgba(148, 163, 184, 0.08);
-    color: var(--text-muted);
+    color: var(--pb-text-muted);
     font-size: 10px;
 }
 
 .log-detail-upgrade {
-    background: var(--accent-soft);
-    color: var(--accent-color);
+    background: var(--pb-primary-soft);
+    color: var(--q-primary);
 }
 
 .log-detail-action {
-    color: var(--text-muted);
+    color: var(--pb-text-muted);
     font-size: 10px;
 }
 
@@ -686,7 +642,7 @@ body.body--dark .q-table__container {
     align-items: center;
     gap: 8px;
     font-size: 12px;
-    color: var(--text-secondary);
+    color: var(--pb-text-secondary);
     line-height: 20px;
 }
 
@@ -699,7 +655,7 @@ body.body--dark .q-table__container {
 
 /* Separator dot / dash */
 .log-sep {
-    color: var(--text-muted);
+    color: var(--pb-text-muted);
     opacity: 0.4;
 }
 
@@ -738,50 +694,45 @@ body.body--dark ::-webkit-scrollbar-thumb {
 
 /* ===== Focus States ===== */
 *:focus-visible {
-    outline: 2px solid var(--accent-color);
+    outline: 2px solid var(--q-primary);
     outline-offset: 2px;
 }
 
 body.body--dark *:focus-visible {
-    outline-color: var(--accent-color);
+    outline-color: var(--q-primary);
 }
 
 /* ===== Quasar Component Overrides for Dark Mode ===== */
-body.body--dark .q-card {
-    background: var(--bg-card-solid);
-    border-radius: var(--radius-lg);
-}
-
 body.body--dark .q-table {
     background: transparent;
 }
 
 body.body--dark .q-table th,
 body.body--dark .q-table td {
-    color: var(--text-primary);
+    color: var(--pb-text-primary);
 }
 
 body.body--dark .q-field__label,
 body.body--dark .q-field__native,
 body.body--dark .q-select__dropdown-icon {
-    color: var(--text-primary);
+    color: var(--pb-text-primary);
 }
 
 body.body--dark .q-checkbox__label {
-    color: var(--text-primary);
+    color: var(--pb-text-primary);
 }
 
 body.body--dark .q-expansion-item__toggle-icon {
-    color: var(--text-muted);
+    color: var(--pb-text-muted);
 }
 
 /* ===== Link Colors ===== */
 a {
-    color: var(--accent-color);
+    color: var(--q-primary);
 }
 
 a:hover {
-    color: var(--accent-hover);
+    color: var(--q-primary);
 }
 
 /* ===== Settings Page Styles ===== */
@@ -794,7 +745,7 @@ a:hover {
 }
 
 .settings-sidebar {
-    border-right: 1px solid var(--border-color);
+    border-right: 1px solid var(--pb-border-color);
     padding-right: 14px;
     min-height: 70vh;
     align-items: stretch;
@@ -816,7 +767,7 @@ a:hover {
     width: 100%;
     transition: color 0.12s ease, background 0.12s ease;
     border-radius: var(--radius);
-    color: var(--text-muted) !important;
+    color: var(--pb-text-muted) !important;
     background: transparent !important;
     border: 1px solid transparent;
     font-size: 0.8125rem;
@@ -846,16 +797,6 @@ a:hover {
     color: inherit !important;
 }
 
-@layer quasar_importants {
-    .settings-subnav-item.text-primary,
-    .settings-subnav-item .text-primary,
-    .settings-subnav-item .q-icon,
-    .settings-subnav-item .q-btn__content,
-    .settings-subnav-item .q-btn__content span {
-        color: inherit !important;
-    }
-}
-
 .settings-sidebar .q-btn.settings-subnav-item.text-primary,
 .settings-sidebar .q-btn.settings-subnav-item .text-primary {
     color: inherit !important;
@@ -883,8 +824,8 @@ body.body--dark .settings-subnav-item-active {
 }
 
 .settings-surface {
-    background: var(--bg-card) !important;
-    border: 1px solid var(--border-color) !important;
+    background: var(--q-dark) !important;
+    border: 1px solid var(--pb-border-color) !important;
     border-radius: var(--radius-lg) !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
 }
@@ -906,7 +847,7 @@ body.body--dark .settings-subnav-item-active {
 }
 
 .settings-modal-card {
-    background: var(--bg-card) !important;
+    background: var(--q-dark) !important;
 }
 
 .settings-theme-card {
@@ -917,8 +858,8 @@ body.body--dark .settings-subnav-item-active {
 }
 
 .settings-theme-card-active {
-    border-color: var(--accent-color) !important;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 0 0 1px var(--accent-soft) !important;
+    border-color: var(--q-primary) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 0 0 1px var(--pb-primary-soft) !important;
 }
 
 /* Settings form inputs */
@@ -938,7 +879,7 @@ body.body--dark .settings-input .q-field__control::before {
 
 body.body--dark .settings-input.q-field--focused .q-field__control::before,
 body.body--dark .settings-input.q-field--focused .q-field__control::after {
-    border-color: var(--accent-color) !important;
+    border-color: var(--q-primary) !important;
 }
 
 body.body--dark .settings-input .q-field__native,
@@ -954,18 +895,18 @@ body.body--dark .settings-input .q-select__dropdown-icon {
 }
 
 body.body--dark .settings-toggle .q-toggle__inner {
-    color: var(--accent-color);
+    color: var(--q-primary);
 }
 
 /* Buttons scoped to settings header actions */
 .settings-action-primary {
-    background: var(--accent-color) !important;
+    background: var(--q-primary) !important;
     color: #f8fafc !important;
-    border: 1px solid var(--accent-color) !important;
+    border: 1px solid var(--q-primary) !important;
 }
 
 .settings-action-primary.bg-primary {
-    background: var(--accent-color) !important;
+    background: var(--q-primary) !important;
 }
 
 .settings-action-primary .q-btn__content,
@@ -974,8 +915,8 @@ body.body--dark .settings-toggle .q-toggle__inner {
 }
 
 .settings-action-primary:hover {
-    background: var(--accent-hover) !important;
-    border-color: var(--accent-hover) !important;
+    background: var(--q-primary) !important;
+    border-color: var(--q-primary) !important;
 }
 
 .settings-action-secondary {
@@ -1023,13 +964,13 @@ body.body--dark .settings-toggle .q-toggle__inner {
 }
 
 .app-btn-primary {
-    background: var(--accent-color) !important;
-    border: 1px solid var(--accent-color) !important;
+    background: var(--q-primary) !important;
+    border: 1px solid var(--q-primary) !important;
     color: #f8fafc !important;
 }
 
 .app-btn-primary.bg-primary {
-    background: var(--accent-color) !important;
+    background: var(--q-primary) !important;
 }
 
 .app-btn-primary .q-btn__content,
@@ -1038,8 +979,8 @@ body.body--dark .settings-toggle .q-toggle__inner {
 }
 
 .app-btn-primary:hover {
-    background: var(--accent-hover) !important;
-    border-color: var(--accent-hover) !important;
+    background: var(--q-primary) !important;
+    border-color: var(--q-primary) !important;
 }
 
 .app-btn-danger {
@@ -1088,45 +1029,14 @@ body.body--dark .settings-toggle .q-toggle__inner {
     font-weight: 500 !important;
 }
 
-body.body--dark .q-btn--outline,
-body.body--dark .q-btn--flat {
-    color: var(--text-primary);
-}
-
 /* App-wide chips and badges */
 .app-chip {
     border-radius: 4px;
     border: 1px solid rgba(255, 255, 255, 0.10);
-    color: var(--text-secondary) !important;
+    color: var(--pb-text-secondary) !important;
     background: transparent !important;
     padding: 3px 8px;
     font-size: 0.8125rem;
-}
-
-/* Quasar may inject text/bg utility classes on chip-like buttons. */
-@layer quasar_importants {
-    .q-btn.text-primary,
-    .q-btn .text-primary {
-        color: inherit !important;
-    }
-
-    .q-btn.bg-primary:not(.app-btn) {
-        background: transparent !important;
-        background-color: transparent !important;
-    }
-
-    .q-btn.app-chip.text-primary,
-    .q-btn.app-chip .text-primary,
-    .q-chip.app-chip.text-primary,
-    .q-chip.app-chip .text-primary {
-        color: inherit !important;
-    }
-
-    .q-btn.app-chip.bg-primary,
-    .q-chip.app-chip.bg-primary {
-        background: transparent !important;
-        background-color: transparent !important;
-    }
 }
 
 .app-chip .q-btn__content,
@@ -1140,9 +1050,9 @@ body.body--dark .q-btn--flat {
 }
 
 .app-chip-active {
-    background: var(--accent-soft) !important;
+    background: var(--pb-primary-soft) !important;
     border-color: rgba(255, 255, 255, 0.2) !important;
-    color: var(--accent-color) !important;
+    color: var(--q-primary) !important;
 }
 
 .app-badge {
@@ -1162,49 +1072,6 @@ body.body--dark .q-btn--flat {
 .q-badge.app-badge.text-primary,
 .q-badge.app-badge .text-primary {
     color: inherit !important;
-}
-
-/* Force semantic badge variants in the same high-priority layer. */
-@layer quasar_importants {
-    .q-badge.app-badge.bg-primary {
-        background: transparent !important;
-        background-color: transparent !important;
-    }
-
-    .q-badge.app-badge.app-chip-active {
-        background: var(--accent-soft) !important;
-        background-color: var(--accent-soft) !important;
-        border-color: rgba(255, 255, 255, 0.2) !important;
-        color: var(--accent-color) !important;
-    }
-
-    .q-badge.app-badge.app-badge-muted {
-        background: rgba(255, 255, 255, 0.12) !important;
-        background-color: rgba(255, 255, 255, 0.12) !important;
-        border-color: rgba(255, 255, 255, 0.2) !important;
-        color: rgba(255, 255, 255, 0.86) !important;
-    }
-
-    .q-badge.app-badge.app-badge-warning {
-        background: rgba(251, 191, 36, 0.14) !important;
-        background-color: rgba(251, 191, 36, 0.14) !important;
-        border-color: rgba(251, 191, 36, 0.28) !important;
-        color: #fcd34d !important;
-    }
-
-    .q-badge.app-badge.app-badge-success {
-        background: rgba(74, 222, 128, 0.14) !important;
-        background-color: rgba(74, 222, 128, 0.14) !important;
-        border-color: rgba(74, 222, 128, 0.3) !important;
-        color: #86efac !important;
-    }
-
-    .q-badge.app-badge.app-badge-danger {
-        background: rgba(248, 113, 113, 0.14) !important;
-        background-color: rgba(248, 113, 113, 0.14) !important;
-        border-color: rgba(248, 113, 113, 0.3) !important;
-        color: #fca5a5 !important;
-    }
 }
 
 .app-badge-muted {
@@ -1240,11 +1107,11 @@ body.body--dark .q-btn--flat {
 
 /* Semantic icon tones */
 .app-stat-icon-accent {
-    color: var(--accent-color);
+    color: var(--q-primary);
 }
 
 .app-stat-icon-warning {
-    color: #fbbf24;
+    color: var(--pb-warning);
 }
 
 .app-stat-icon-muted {
@@ -1252,31 +1119,31 @@ body.body--dark .q-btn--flat {
 }
 
 .app-text-accent {
-    color: var(--accent-color);
+    color: var(--q-primary);
 }
 
 .app-text-success {
-    color: #4ade80;
+    color: var(--pb-positive);
 }
 
 .app-text-warning {
-    color: #fbbf24;
+    color: var(--pb-warning);
 }
 
 .app-text-danger {
-    color: #f87171;
+    color: var(--pb-negative);
 }
 
 .app-text-muted {
-    color: var(--text-muted);
+    color: var(--pb-text-muted);
 }
 
 .app-link {
-    color: var(--accent-color);
+    color: var(--q-primary);
 }
 
 .app-link:hover {
-    color: var(--accent-hover);
+    color: var(--q-primary);
 }
 
 .app-alert {
@@ -1330,18 +1197,6 @@ body.body--dark .q-btn--flat {
     border-color: rgba(255, 255, 255, 0.12);
 }
 
-body.body--dark .q-toggle__inner,
-body.body--dark .q-radio__inner,
-body.body--dark .q-checkbox__inner {
-    color: rgba(255, 255, 255, 0.6) !important;
-}
-
-body.body--dark .q-toggle__inner--truthy,
-body.body--dark .q-radio__inner--truthy,
-body.body--dark .q-checkbox__inner--truthy {
-    color: var(--accent-color) !important;
-}
-
 /* Key-value editor */
 .kv-editor-row {
     background: rgba(148, 163, 184, 0.05);
@@ -1381,13 +1236,13 @@ body.body--dark .list-editor-item:hover {
 .settings-page-shell .text-slate-700,
 .q-dialog .text-slate-800,
 .q-dialog .text-slate-700 {
-    color: var(--text-primary) !important;
+    color: var(--pb-text-primary) !important;
 }
 
 .view-shell .text-slate-600,
 .settings-page-shell .text-slate-600,
 .q-dialog .text-slate-600 {
-    color: var(--text-secondary) !important;
+    color: var(--pb-text-secondary) !important;
 }
 
 .view-shell .text-slate-500,
@@ -1396,7 +1251,7 @@ body.body--dark .list-editor-item:hover {
 .settings-page-shell .text-slate-400,
 .q-dialog .text-slate-500,
 .q-dialog .text-slate-400 {
-    color: var(--text-muted) !important;
+    color: var(--pb-text-muted) !important;
 }
 
 .view-shell .text-slate-300,
@@ -1408,13 +1263,13 @@ body.body--dark .list-editor-item:hover {
 .q-dialog .text-slate-300,
 .q-dialog .text-slate-200,
 .q-dialog .text-slate-100 {
-    color: var(--text-primary) !important;
+    color: var(--pb-text-primary) !important;
 }
 
 /* Divider color override */
 .view-shell .divide-slate-100 > :not(:first-child),
 .view-shell .divide-slate-800 > :not(:first-child) {
-    border-color: var(--border-color) !important;
+    border-color: var(--pb-border-color) !important;
 }
 
 /* ===== Stat Card Visual Hierarchy ===== */
@@ -1433,37 +1288,37 @@ body.body--dark .list-editor-item:hover {
 }
 
 /* ===== Activity Feed Left Borders ===== */
-.app-alert-success { border-left: 3px solid #4ade80; }
-.app-alert-warning { border-left: 3px solid #fbbf24; }
-.app-alert-danger  { border-left: 3px solid #f87171; }
-.app-alert-info    { border-left: 3px solid var(--accent-color); }
+.app-alert-success { border-left: 3px solid var(--pb-positive); }
+.app-alert-warning { border-left: 3px solid var(--pb-warning); }
+.app-alert-danger  { border-left: 3px solid var(--pb-negative); }
+.app-alert-info    { border-left: 3px solid var(--q-primary); }
 
 /* ===== Episode Row Hover Enhancements ===== */
 .episode-row-matched:hover {
     background: rgba(74, 222, 128, 0.06);
-    box-shadow: inset 3px 0 0 #4ade80;
+    box-shadow: inset 3px 0 0 var(--pb-positive);
 }
 
 .episode-row-error:hover {
     background: rgba(248, 113, 113, 0.06);
-    box-shadow: inset 3px 0 0 #f87171;
+    box-shadow: inset 3px 0 0 var(--pb-negative);
 }
 
 /* ===== Unmatched File Card Status Classes ===== */
-.file-card-warning { border-left: 3px solid #fbbf24; }
-.file-card-accent  { border-left: 3px solid var(--accent-color); }
+.file-card-warning { border-left: 3px solid var(--pb-warning); }
+.file-card-accent  { border-left: 3px solid var(--q-primary); }
 .file-card-muted   { border-left: 3px solid rgba(148, 163, 184, 0.4); }
 
 /* ===== Match Attempt Card Classes ===== */
 .match-attempt-green {
-    border-left: 3px solid #4ade80;
+    border-left: 3px solid var(--pb-positive);
     background: rgba(74, 222, 128, 0.05);
     border-radius: var(--radius);
     padding: 8px;
 }
 
 .match-attempt-amber {
-    border-left: 3px solid #fbbf24;
+    border-left: 3px solid var(--pb-warning);
     background: rgba(251, 191, 36, 0.05);
     border-radius: var(--radius);
     padding: 8px;
@@ -1476,9 +1331,9 @@ body.body--dark .list-editor-item:hover {
     padding: 8px;
 }
 
-.match-attempt-green .match-attempt-icon { color: #4ade80; }
-.match-attempt-amber .match-attempt-icon { color: #fbbf24; }
-.match-attempt-slate .match-attempt-icon { color: #94a3b8; }
+.match-attempt-green .match-attempt-icon { color: var(--pb-positive); }
+.match-attempt-amber .match-attempt-icon { color: var(--pb-warning); }
+.match-attempt-slate .match-attempt-icon { color: var(--pb-text-muted); }
 
 /* ===== Global Hover / Transition Polish ===== */
 .glass-card {
@@ -1534,7 +1389,7 @@ body.body--dark .list-editor-item:hover {
         width: 100% !important;
         min-height: auto !important;
         border-right: none !important;
-        border-bottom: 1px solid var(--border-color) !important;
+        border-bottom: 1px solid var(--pb-border-color) !important;
         padding-right: 0 !important;
         padding-bottom: 12px !important;
         flex-direction: row !important;
@@ -1652,7 +1507,7 @@ body.body--dark .list-editor-item:hover {
         width: 100% !important;
         gap: 6px !important;
         padding-top: 8px !important;
-        border-top: 1px solid var(--border-color);
+        border-top: 1px solid var(--pb-border-color);
         margin-top: 8px;
     }
 
@@ -1737,26 +1592,21 @@ def inject_styles() -> None:
     )
 
 
-# Script to apply dark mode immediately and prevent FOUC
+# Script to apply dark mode and theme colors immediately to prevent FOUC.
+# Sets --q-dark-page and --q-dark from localStorage BEFORE NiceGUI connects.
 THEME_INIT_SCRIPT = """
 <script>
 (function() {
-    // Check localStorage for theme preference (default to dark)
-    var theme = localStorage.getItem('playbook-theme');
-    var colorTheme = localStorage.getItem('playbook-color-theme') || 'swizzin';
-    if (theme !== 'light') {
-        // Default to dark mode if no preference or preference is 'dark'
-        document.body.classList.add('body--dark');
-    }
-    if (colorTheme === 'catppuccin') {
-        document.body.classList.add('theme-catppuccin');
-    } else {
-        document.body.classList.add('theme-swizzin');
-    }
-    // Enable transitions after a brief delay to prevent FOUC
-    setTimeout(function() {
-        document.body.classList.add('theme-ready');
-    }, 50);
+    var theme = localStorage.getItem('playbook-color-theme') || 'swizzin';
+    // Theme-specific Quasar dark colors (must match themes.py definitions)
+    var themes = {
+        'swizzin':    { darkPage: '#0a0a0c', dark: '#111114' },
+        'catppuccin': { darkPage: '#181825', dark: '#1e1e2e' },
+    };
+    var c = themes[theme] || themes['swizzin'];
+    document.body.classList.add('body--dark');
+    document.documentElement.style.setProperty('--q-dark-page', c.darkPage);
+    document.documentElement.style.setProperty('--q-dark', c.dark);
 })();
 </script>
 """
@@ -1774,18 +1624,29 @@ def setup_page_styles() -> None:
 
 
 def apply_color_theme(theme_name: str) -> None:
-    """Apply GUI color theme class to document body."""
-    normalized = theme_name.strip().lower() if theme_name else "swizzin"
-    if normalized not in {"swizzin", "catppuccin"}:
-        normalized = "swizzin"
-    ui.run_javascript(
-        """
-        document.body.classList.remove('theme-swizzin', 'theme-catppuccin');
-        document.body.classList.add('theme-"""
-        + normalized
-        + """');
-        localStorage.setItem('playbook-color-theme', '"""
-        + normalized
-        + """');
-        """
-    )
+    """Apply a complete GUI theme using Quasar's color system + CSS extensions.
+
+    This calls ui.colors() to set Quasar brand colors (--q-primary, --q-dark, etc.)
+    so that ALL Quasar components (buttons, drawers, toggles, cards) automatically
+    follow the theme. Then syncs --pb-* CSS custom properties for things Quasar
+    doesn't cover natively (text colors, borders, soft backgrounds).
+    """
+    from .themes import CSS_KEYS, get_quasar_colors, get_theme
+
+    theme = get_theme(theme_name)
+
+    # 1. Set Quasar brand colors — this is what makes everything shift
+    ui.colors(**get_quasar_colors(theme))
+
+    # 2. Sync CSS custom properties for non-Quasar styling
+    css_props = {k: v for k, v in theme.items() if k in CSS_KEYS}
+    js_lines = []
+    for key, value in css_props.items():
+        prop_name = f"--pb-{key.replace('_', '-')}"
+        js_lines.append(f"s.setProperty('{prop_name}', '{value}');")
+
+    name = theme_name.strip().lower() if theme_name else "swizzin"
+    js_lines.append(f"localStorage.setItem('playbook-color-theme', '{name}');")
+
+    js_code = "const s = document.documentElement.style;\n" + "\n".join(js_lines)
+    ui.run_javascript(js_code)

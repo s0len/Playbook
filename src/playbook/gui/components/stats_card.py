@@ -1,5 +1,7 @@
 """
 Statistics display card component for the Playbook GUI.
+
+Redesigned: left accent bar, title-on-top, icon top-right, Quasar color vars.
 """
 
 from __future__ import annotations
@@ -11,6 +13,22 @@ from nicegui import ui
 
 from ..utils import safe_timer
 
+# Map semantic tones to Quasar CSS variable names
+_QUASAR_COLOR_MAP: dict[str, str] = {
+    "accent": "--q-primary",
+    "success": "--pb-positive",
+    "warning": "--pb-warning",
+    "danger": "--pb-negative",
+    "muted": "--pb-text-muted",
+    # Backward compat aliases
+    "blue": "--q-primary",
+    "green": "--pb-positive",
+    "yellow": "--pb-warning",
+    "red": "--pb-negative",
+    "gray": "--pb-text-muted",
+    "purple": "--q-primary",
+}
+
 
 def stats_card(
     title: str,
@@ -19,81 +37,38 @@ def stats_card(
     icon: str | None = None,
     subtitle: str | None = None,
 ) -> ui.card:
-    """Create a statistics card with auto-updating value.
+    """Create a statistics card with left accent bar, icon top-right, and auto-updating value.
 
     Args:
         title: Card title/label
         value_fn: Callable that returns the current value
-        color: Tailwind color name (blue, green, yellow, red, gray, purple)
-        icon: Optional icon name
+        color: Semantic color tone (accent, success, warning, danger, muted)
+        icon: Optional Material icon name
         subtitle: Optional subtitle text
 
     Returns:
         The created card element
     """
-    surface_classes = {
-        "accent": "app-stat-surface-accent",
-        "success": "app-stat-surface-success",
-        "warning": "app-stat-surface-warning",
-        "danger": "app-stat-surface-danger",
-        "muted": "app-stat-surface-muted",
-    }
-    icon_classes = {
-        "accent": "app-stat-icon-accent",
-        "success": "app-text-success",
-        "warning": "app-text-warning",
-        "danger": "app-text-danger",
-        "muted": "app-stat-icon-muted",
-    }
-    # Inline style colors — bypasses all CSS specificity issues with Quasar/NiceGUI
-    value_colors = {
-        "accent": "var(--accent-color)",
-        "success": "#4ade80",
-        "warning": "#fbbf24",
-        "danger": "#f87171",
-        "muted": "var(--text-primary)",
-    }
-    border_colors = {
-        "accent": "var(--accent-color)",
-        "success": "#4ade80",
-        "warning": "#fbbf24",
-        "danger": "#f87171",
-        "muted": "rgba(148, 163, 184, 0.4)",
-    }
+    color_var = _QUASAR_COLOR_MAP.get(color, "--q-primary")
 
-    # Backward compatibility aliases
-    alias_map = {
-        "blue": "accent",
-        "green": "success",
-        "yellow": "warning",
-        "red": "danger",
-        "gray": "muted",
-        "purple": "muted",
-    }
-    tone = alias_map.get(color, color)
-    base_class = surface_classes.get(tone, surface_classes["accent"])
-    icon_class = icon_classes.get(tone, icon_classes["accent"])
-    value_color = value_colors.get(tone, value_colors["accent"])
-    border_color = border_colors.get(tone, border_colors["accent"])
-
-    with (
-        ui.card().classes(f"stat-card w-40 border {base_class}").style(f"border-top: 3px solid {border_color}") as card
-    ):
-        with ui.column().classes("items-center py-2 px-3"):
+    with ui.card().classes("stat-card w-48").style(f"border-left: 4px solid var({color_var})") as card:
+        with ui.row().classes("w-full items-start justify-between"):
+            # Left: title + value
+            with ui.column().classes("gap-1 flex-1"):
+                ui.label(title).classes("text-xs font-medium uppercase tracking-wide").style(
+                    "color: var(--pb-text-muted)"
+                )
+                value_label = ui.label(str(value_fn())).classes("text-3xl font-bold").style(f"color: var({color_var})")
+                if subtitle:
+                    ui.label(subtitle).classes("text-xs").style("color: var(--pb-text-muted)")
+            # Right: icon
             if icon:
-                ui.icon(icon).classes(f"text-3xl {icon_class}")
-
-            value_label = ui.label(str(value_fn())).classes("text-3xl font-bold").style(f"color: {value_color}")
-            ui.label(title).classes("text-sm font-medium opacity-80")
-
-            if subtitle:
-                ui.label(subtitle).classes("text-xs opacity-60")
+                ui.icon(icon).classes("text-2xl opacity-30")
 
         def update_value() -> None:
             try:
                 value_label.text = str(value_fn())
             except (RuntimeError, KeyError):
-                # Client disconnected or element deleted - timer will be cleaned up
                 pass
             except Exception:
                 value_label.text = "?"
