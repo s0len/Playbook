@@ -64,7 +64,7 @@ def settings_input(
     with ui.column().classes(f"{width} gap-1"):
         # Label row
         with ui.row().classes("items-center gap-2"):
-            ui.label(label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
+            ui.label(label).classes("text-sm font-medium")
             if required:
                 ui.label("*").classes("app-text-danger text-sm")
             if is_modified:
@@ -77,7 +77,7 @@ def settings_input(
 
         with ui.row().classes("w-full items-center gap-1"):
             if prefix:
-                ui.label(prefix).classes("text-sm text-slate-500 dark:text-slate-400")
+                ui.label(prefix).classes("text-sm app-text-muted")
 
             def handle_change(e) -> None:
                 value = e.value
@@ -117,14 +117,14 @@ def settings_input(
                 input_elem.disable()
 
             if suffix:
-                ui.label(suffix).classes("text-sm text-slate-500 dark:text-slate-400")
+                ui.label(suffix).classes("text-sm app-text-muted")
 
         # Description or error
         if error:
             error_classes = "text-xs app-text-danger" if error.severity == "error" else "text-xs app-text-warning"
             ui.label(error.message).classes(error_classes)
         elif description:
-            ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400")
+            ui.label(description).classes("text-xs app-text-muted")
 
     return input_elem
 
@@ -168,7 +168,7 @@ def settings_path_input(
         # Label row
         with ui.row().classes("items-center gap-2"):
             ui.icon("folder").classes("text-slate-400 text-sm")
-            ui.label(label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
+            ui.label(label).classes("text-sm font-medium")
             if required:
                 ui.label("*").classes("app-text-danger text-sm")
             if is_modified:
@@ -202,7 +202,7 @@ def settings_path_input(
             error_classes = "text-xs app-text-danger" if error.severity == "error" else "text-xs app-text-warning"
             ui.label(error.message).classes(error_classes)
         elif description:
-            ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400")
+            ui.label(description).classes("text-xs app-text-muted")
 
     return input_elem
 
@@ -241,7 +241,7 @@ def settings_textarea(
 
     with ui.column().classes("w-full gap-1"):
         with ui.row().classes("items-center gap-2"):
-            ui.label(label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
+            ui.label(label).classes("text-sm font-medium")
             if is_modified:
                 ui.icon("edit").classes("app-text-warning text-xs")
 
@@ -260,6 +260,6 @@ def settings_textarea(
             textarea.disable()
 
         if description:
-            ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400")
+            ui.label(description).classes("text-xs app-text-muted")
 
     return textarea

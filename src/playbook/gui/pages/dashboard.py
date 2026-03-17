@@ -35,7 +35,7 @@ def dashboard_page() -> None:
     """Render the main dashboard page."""
     with ui.column().classes("w-full p-6 gap-6 view-shell"):
         # Page title
-        ui.label("Dashboard").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
+        ui.label("Dashboard").classes("text-3xl font-bold")
 
         # Stats cards row
         with ui.row().classes("w-full gap-4 flex-wrap stats-grid"):
@@ -46,7 +46,7 @@ def dashboard_page() -> None:
             # Activity feed (left, wider)
             with ui.card().classes("glass-card flex-1"):
                 with ui.row().classes("items-center justify-between mb-2"):
-                    ui.label("Recent Activity").classes("text-xl font-semibold text-slate-700 dark:text-slate-200")
+                    ui.label("Recent Activity").classes("text-xl font-semibold")
                     _refresh_button()
                 activity_feed(max_items=15)
 
@@ -96,7 +96,7 @@ def _stats_cards() -> None:
 def _quick_actions_card() -> None:
     """Create the quick actions card."""
     with ui.card().classes("glass-card w-full"):
-        ui.label("Quick Actions").classes("text-xl font-semibold text-slate-700 dark:text-slate-200 mb-3")
+        ui.label("Quick Actions").classes("text-xl font-semibold mb-3")
 
         with ui.column().classes("w-full gap-2"):
             # Run/Stop button (dynamic based on processing state)
@@ -169,13 +169,13 @@ def _quick_actions_card() -> None:
 def _status_card() -> None:
     """Create the status/info card."""
     with ui.card().classes("glass-card w-full"):
-        ui.label("Status").classes("text-xl font-semibold text-slate-700 dark:text-slate-200 mb-3")
+        ui.label("Status").classes("text-xl font-semibold mb-3")
 
         with ui.column().classes("w-full gap-2"):
             # Processing status
             with ui.row().classes("items-center gap-2"):
                 status_icon = ui.icon("circle").classes("text-sm")
-                status_label = ui.label("Idle").classes("text-slate-700 dark:text-slate-300")
+                status_label = ui.label("Idle")
 
                 # Track last state to avoid unnecessary updates
                 last_status = [None]
@@ -189,7 +189,7 @@ def _status_card() -> None:
                                 status_icon.classes(replace="app-text-success animate-pulse text-sm")
                                 status_label.text = "Processing..."
                             else:
-                                status_icon.classes(replace="text-slate-400 text-sm")
+                                status_icon.classes(replace="app-text-muted text-sm")
                                 status_label.text = "Idle"
                     except (RuntimeError, KeyError):
                         # Client disconnected - timer will be cleaned up
@@ -199,7 +199,7 @@ def _status_card() -> None:
                 update_status()
 
             # Last run time
-            with ui.row().classes("items-center gap-2 text-sm text-slate-600 dark:text-slate-400"):
+            with ui.row().classes("items-center gap-2 text-sm app-text-muted"):
                 ui.icon("schedule").classes("text-lg")
                 last_run_label = ui.label("Never")
 
@@ -222,7 +222,7 @@ def _status_card() -> None:
                 update_last_run()
 
             # Run count
-            with ui.row().classes("items-center gap-2 text-sm text-slate-600 dark:text-slate-400"):
+            with ui.row().classes("items-center gap-2 text-sm app-text-muted"):
                 ui.icon("replay").classes("text-lg")
                 run_count_label = ui.label("0 runs")
 
@@ -243,7 +243,7 @@ def _status_card() -> None:
 
             # Config path
             if gui_state.config_path:
-                with ui.row().classes("items-center gap-2 text-sm text-slate-600 dark:text-slate-400"):
+                with ui.row().classes("items-center gap-2 text-sm app-text-muted"):
                     ui.icon("description").classes("text-lg")
                     ui.label(str(gui_state.config_path.name)).classes("truncate")
 
@@ -251,7 +251,7 @@ def _status_card() -> None:
 def _refresh_button() -> None:
     """Create a small refresh button."""
     neutralize_button_utilities(ui.button(icon="refresh", on_click=lambda: None).props("flat dense")).classes(
-        "text-slate-500 dark:text-slate-400"
+        "app-text-muted"
     )
 
 

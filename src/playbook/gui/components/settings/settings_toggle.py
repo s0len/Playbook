@@ -43,11 +43,11 @@ def settings_toggle(
     with ui.row().classes("w-full items-start justify-between py-1"):
         with ui.column().classes("gap-0 flex-1"):
             with ui.row().classes("items-center gap-2"):
-                ui.label(label).classes("text-sm font-medium text-slate-700 dark:text-slate-200")
+                ui.label(label).classes("text-sm font-medium")
                 if is_modified:
                     ui.icon("edit").classes("app-text-warning text-xs")
             if description:
-                ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400")
+                ui.label(description).classes("text-xs app-text-muted")
 
         def handle_change(e) -> None:
             state.set_value(path, e.value)
@@ -90,7 +90,7 @@ def settings_toggle_inline(
 
     with ui.row().classes("items-center gap-2"):
         switch = ui.switch(label, value=current_value, on_change=handle_change)
-        switch.classes("text-sm text-slate-700 dark:text-slate-200 settings-toggle")
+        switch.classes("text-sm settings-toggle")
         if disabled:
             switch.disable()
 

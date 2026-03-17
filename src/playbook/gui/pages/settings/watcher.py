@@ -51,9 +51,7 @@ def watcher_tab(state: SettingsFormState) -> None:
             else:
                 with ui.row().classes("w-full items-center gap-2 mt-2 p-2 bg-slate-50 dark:bg-slate-800 rounded"):
                     ui.icon("info").classes("text-slate-500")
-                    ui.label("Enable file watcher to automatically process new files").classes(
-                        "text-sm text-slate-600 dark:text-slate-400"
-                    )
+                    ui.label("Enable file watcher to automatically process new files").classes("text-sm app-text-muted")
 
         # Watch Paths Section
         with settings_card(
@@ -104,8 +102,8 @@ def watcher_tab(state: SettingsFormState) -> None:
 
             # Explanation
             with ui.column().classes("mt-4 gap-1"):
-                ui.label("Timing Explained:").classes("text-sm font-medium text-slate-700 dark:text-slate-300")
-                with ui.column().classes("gap-1 text-xs text-slate-600 dark:text-slate-400"):
+                ui.label("Timing Explained:").classes("text-sm font-medium")
+                with ui.column().classes("gap-1 text-xs app-text-muted"):
                     ui.label(
                         "• Debounce: Prevents processing the same file multiple times during active copying/downloading"
                     )

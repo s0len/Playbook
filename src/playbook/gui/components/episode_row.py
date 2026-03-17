@@ -48,12 +48,12 @@ def episode_row(
         # Status icon
         status_icon(episode.status)
 
-        # Episode code
+        # Episode code — monospace, slightly brighter than muted
         code = f"S{season_index:02d}{episode.formatted_code}"
-        ui.label(code).classes("font-mono text-sm text-slate-500 dark:text-slate-400 w-16 shrink-0")
+        ui.label(code).classes("font-mono text-sm w-16 shrink-0").style("color: var(--pb-text-secondary)")
 
         # Episode title
-        ui.label(episode.episode_title).classes("flex-1 text-slate-800 dark:text-slate-200 truncate")
+        ui.label(episode.episode_title).classes("flex-1 truncate text-sm")
 
         # Quality score badge (if matched and has score)
         if episode.status == "matched" and episode.record and episode.record.quality_score is not None:
@@ -68,14 +68,14 @@ def episode_row(
         # Air date
         if episode.air_date:
             date_str = episode.air_date.strftime("%b %d, %Y")
-            ui.label(date_str).classes("text-sm text-slate-500 dark:text-slate-400 w-28 shrink-0 text-right")
+            ui.label(date_str).classes("text-sm app-text-muted w-28 shrink-0 text-right")
 
         # View button for matched episodes
         if episode.status == "matched" and on_click:
             view_button = neutralize_button_utilities(
                 ui.button(icon="visibility", on_click=lambda: on_click(episode)).props("flat dense round")
             )
-            view_button.classes("episode-row-action-btn text-slate-500 dark:text-slate-400")
+            view_button.classes("episode-row-action-btn app-text-muted")
 
     if on_click and episode.status == "matched":
         row.on("click", lambda: on_click(episode))
@@ -160,15 +160,13 @@ def episode_detail_dialog(episode: EpisodeMatchStatus) -> None:
 
     all_records = episode.all_records if episode.all_records else [episode.record]
 
-    with ui.dialog() as dialog, ui.card().classes("glass-card w-[800px] max-w-full max-h-[80vh]"):
+    with ui.dialog() as dialog, ui.card().classes("glass-card w-[800px] max-w-full max-h-[80vh] view-shell"):
         # Header
         with ui.row().classes("w-full items-center justify-between mb-4"):
             with ui.column().classes("gap-0"):
-                ui.label(episode.episode_title).classes("text-xl font-semibold text-slate-800 dark:text-slate-200")
+                ui.label(episode.episode_title).classes("text-xl font-semibold")
                 if episode.air_date:
-                    ui.label(episode.air_date.strftime("%b %d, %Y")).classes(
-                        "text-sm text-slate-500 dark:text-slate-400"
-                    )
+                    ui.label(episode.air_date.strftime("%b %d, %Y")).classes("text-sm app-text-muted")
             neutralize_button_utilities(ui.button(icon="close", on_click=dialog.close).props("flat round dense"))
 
         # Destination
@@ -182,7 +180,7 @@ def episode_detail_dialog(episode: EpisodeMatchStatus) -> None:
             candidates_container.clear()
             with candidates_container:
                 header_text = f"Tracked Files ({len(all_records)})" if len(all_records) > 1 else "Source File"
-                ui.label(header_text).classes("text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2")
+                ui.label(header_text).classes("text-sm font-semibold app-text-muted mb-2")
 
                 for idx, record in enumerate(all_records):
                     is_active = record.source_path == episode.record.source_path
@@ -215,55 +213,52 @@ def _file_candidate_row(
     bg_class = "app-alert app-alert-success" if is_active else ""
 
     with ui.column().classes(f"w-full p-3 rounded {border_class} {bg_class} gap-2 mb-1"):
-        # Top row: rank, filename, score
-        with ui.row().classes("w-full items-center gap-2"):
-            # Rank badge
+        # Row 1: rank icon + full filename (no truncation)
+        with ui.row().classes("w-full items-start gap-2"):
             if is_active:
-                ui.icon("check_circle").classes("app-text-success text-lg")
+                ui.icon("check_circle").classes("app-text-success text-lg mt-0.5")
             else:
-                ui.label(f"#{rank}").classes("text-xs font-mono text-slate-500 dark:text-slate-400 w-6 text-center")
+                ui.label(f"#{rank}").classes("text-xs font-mono app-text-muted w-6 text-center mt-1")
 
-            # Filename (just the name, not full path)
             filename = Path(record.source_path).name
-            ui.label(filename).classes("flex-1 text-sm font-mono text-slate-800 dark:text-slate-200 truncate")
+            ui.label(filename).classes("flex-1 text-sm font-mono break-all")
 
-            # Quality score
-            if record.quality_score is not None:
-                score_class = _quality_score_class(record.quality_score)
-                ui.badge(f"Score: {record.quality_score}").classes(f"app-badge {score_class}")
-
-            # Status chip
-            status_classes = {
-                "linked": "app-badge-success",
-                "copied": "app-badge-muted",
-                "symlinked": "app-badge-muted",
-                "skipped": "app-badge-warning",
-                "superseded": "app-badge-warning",
-                "error": "app-badge-danger",
-            }
-            chip_class = status_classes.get(record.status, "app-badge-muted")
-            ui.badge(record.status).classes(f"app-badge {chip_class}")
-
-            # Make Primary button for non-active candidates
-            if on_promote:
-                neutralize_button_utilities(
-                    ui.button("Make Primary", icon="swap_horiz", on_click=on_promote).props("flat dense no-caps")
-                ).classes("text-xs text-slate-400 hover:text-slate-200")
-
-        # Quality tags row
-        quality = _parse_quality_info(record)
-        if quality:
-            tags = _format_quality_tags(quality)
-            if tags:
-                with ui.row().classes("flex-wrap gap-1 ml-8"):
+        # Row 2: quality tags (left) | score + status (right)
+        with ui.row().classes("items-center gap-2").style(
+            "margin-left: 2rem; max-width: calc(100% - 2rem); width: 100%; flex-wrap: nowrap"
+        ):
+            # Quality tags — left group
+            with ui.row().classes("flex-wrap gap-1 items-center flex-1 min-w-0"):
+                quality = _parse_quality_info(record)
+                if quality:
+                    tags = _format_quality_tags(quality)
                     for label, color in tags:
-                        ui.badge(label).classes(f"text-xs app-badge {color}")
+                        ui.badge(label).classes(f"app-badge {color}")
 
-        # Metadata row
-        with ui.row().classes("ml-8 gap-4"):
-            ui.label(record.processed_at.strftime("%Y-%m-%d %H:%M")).classes(
-                "text-xs text-slate-500 dark:text-slate-400"
-            )
+            # Score + status — right group
+            with ui.row().classes("gap-1 items-center"):
+                if record.quality_score is not None:
+                    score_class = _quality_score_class(record.quality_score)
+                    ui.badge(f"{record.quality_score}").classes(f"app-badge {score_class}")
+
+                status_classes = {
+                    "linked": "app-badge-success",
+                    "copied": "app-badge-muted",
+                    "symlinked": "app-badge-muted",
+                    "skipped": "app-badge-warning",
+                    "superseded": "app-badge-warning",
+                    "error": "app-badge-danger",
+                }
+                chip_class = status_classes.get(record.status, "app-badge-muted")
+                ui.badge(record.status).classes(f"app-badge {chip_class}")
+
+        # Row 3: date + Make Primary action
+        with ui.row().classes("gap-4 items-center").style("margin-left: 2rem"):
+            ui.label(record.processed_at.strftime("%Y-%m-%d %H:%M")).classes("text-xs app-text-muted")
+            if on_promote:
+                ui.button("Make Primary", icon="swap_horiz", on_click=on_promote).props(
+                    'flat dense no-caps color="primary" size="sm"'
+                )
             if record.error_message:
                 ui.label(record.error_message).classes("text-xs app-text-danger")
 
@@ -323,8 +318,8 @@ def _promote_file(record: ProcessedFileRecord, episode: EpisodeMatchStatus, dial
 def _detail_row(label: str, value: str, *, mono: bool = False) -> None:
     """Create a detail row with label and value."""
     with ui.row().classes("w-full items-start gap-2"):
-        ui.label(f"{label}:").classes("text-sm font-medium text-slate-600 dark:text-slate-400 w-24 shrink-0")
-        value_classes = "text-sm text-slate-800 dark:text-slate-200 break-all"
+        ui.label(f"{label}:").classes("text-sm font-medium app-text-muted w-24 shrink-0")
+        value_classes = "text-sm break-all"
         if mono:
             value_classes += " font-mono"
         ui.label(value).classes(value_classes)

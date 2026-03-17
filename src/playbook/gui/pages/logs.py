@@ -27,10 +27,10 @@ def logs_page() -> None:
         "paused": False,
     }
 
-    with ui.column().classes("w-full p-6 gap-4 view-shell"):
+    with ui.column().classes("w-full p-6 gap-4 view-shell").style("height: 100vh; max-height: 100vh; overflow: hidden"):
         # Header
-        ui.label("Logs").classes("text-3xl font-bold text-slate-800 dark:text-slate-100")
-        ui.label("Real-time application logs.").classes("text-sm text-slate-500 dark:text-slate-400 -mt-2")
+        ui.label("Logs").classes("text-3xl font-bold")
+        ui.label("Real-time application logs.").classes("text-sm app-text-muted -mt-2")
 
         # Toolbar
         with ui.card().classes("glass-card w-full"):
@@ -72,7 +72,7 @@ def logs_page() -> None:
                         "Clear",
                         on_click=lambda: _clear_logs(),
                     ).props("flat dense")
-                ).classes("text-slate-500 dark:text-slate-400 text-xs")
+                ).classes("app-text-muted text-xs")
 
                 # Auto-scroll toggle
                 with ui.row().classes("items-center gap-1.5"):
@@ -80,20 +80,16 @@ def logs_page() -> None:
                         value=state["auto_scroll"],
                         on_change=lambda e: _update_filter(state, "auto_scroll", e.value),
                     ).props("dense")
-                    ui.label("Auto-scroll").classes("text-xs text-slate-500 dark:text-slate-400")
+                    ui.label("Auto-scroll").classes("text-xs app-text-muted")
 
-        # Log viewport
-        with ui.card().classes("glass-card w-full"):
-            log_scroll = (
-                ui.scroll_area()
-                .classes("w-full font-mono text-xs log-container text-slate-100 rounded-lg")
-                .style("height: 600px; max-height: 70vh;")
-            )
+        # Log viewport — fills remaining space, scrolls internally
+        with ui.card().classes("glass-card w-full").style("flex: 1; min-height: 0; overflow: hidden"):
+            log_scroll = ui.scroll_area().classes("w-full log-container").style("height: 100%")
             with log_scroll:
                 log_container = ui.column().classes("w-full p-3 gap-0")
 
             # Footer
-            with ui.row().classes("w-full justify-center items-center mt-2 text-xs text-slate-500 dark:text-slate-400"):
+            with ui.row().classes("w-full justify-center items-center mt-2 text-xs log-footer"):
                 log_count_label = ui.label(f"Showing 0 of 0 entries ({MAX_LOG_LINES} max)")
 
             def refresh_logs() -> None:
@@ -111,7 +107,9 @@ def logs_page() -> None:
                     log_container.clear()
                     with log_container:
                         if not logs:
-                            ui.label("No logs matching filters").classes("text-slate-500 italic py-4")
+                            with ui.column().classes("w-full items-center justify-center py-12 gap-2"):
+                                ui.icon("terminal").classes("text-3xl log-empty")
+                                ui.label("No logs matching filters").classes("text-sm italic log-empty")
                         else:
                             for entry in logs:
                                 log_line(entry)

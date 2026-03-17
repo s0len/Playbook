@@ -48,18 +48,21 @@ def season_section(
         with expansion.add_slot("header"):
             with ui.row().classes("w-full items-center gap-4 py-2"):
                 # Season title
-                ui.label(header_text).classes("font-medium text-slate-800 dark:text-slate-200 flex-1")
+                ui.label(header_text).classes("font-medium flex-1")
 
                 # Progress bar
                 mini_progress_bar(progress, variant=variant, width="w-32")
 
-                # Count
-                ui.label(f"{season.matched_count}/{season.total_count}").classes(
-                    "text-sm text-slate-600 dark:text-slate-400 w-16 text-right"
-                )
+                # Count — colored based on progress
+                count_text = f"{season.matched_count}/{season.total_count}"
+                if season.matched_count > 0:
+                    count_color = "var(--pb-positive)" if progress >= 1.0 else "var(--q-primary)"
+                    ui.label(count_text).classes("text-sm font-semibold w-16 text-right").style(f"color: {count_color}")
+                else:
+                    ui.label(count_text).classes("text-sm app-text-muted w-16 text-right")
 
         # Episode list
-        with ui.column().classes("w-full divide-y divide-slate-100 dark:divide-slate-800"):
+        with ui.column().classes("w-full divide-y divide-slate-100"):
             for episode in season.episodes:
                 episode_row(
                     episode,
@@ -92,7 +95,7 @@ def seasons_list(
         collapse_year_groups: Whether to collapse each year into an expansion panel
     """
     if not seasons:
-        ui.label("No seasons available").classes("text-slate-500 dark:text-slate-400 italic py-4")
+        ui.label("No seasons available").classes("app-text-muted italic py-4")
         return
 
     with ui.column().classes("w-full gap-4"):
@@ -122,7 +125,7 @@ def seasons_list(
                 current_year = season.year_label
                 with ui.row().classes("w-full items-center gap-3 mt-2"):
                     ui.separator().classes("flex-1")
-                    ui.label(current_year).classes("text-lg font-bold text-slate-600 dark:text-slate-300 px-2")
+                    ui.label(current_year).classes("text-lg font-bold px-2")
                     ui.separator().classes("flex-1")
 
         _render_season_group(seasons, expand_recent=expand_recent)

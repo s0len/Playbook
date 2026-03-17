@@ -68,13 +68,13 @@ def list_editor(
         # Header
         with ui.row().classes("w-full items-center justify-between"):
             with ui.row().classes("items-center gap-2"):
-                ui.label(label).classes("text-sm font-semibold text-slate-700 dark:text-slate-200")
+                ui.label(label).classes("text-sm font-semibold")
                 ui.badge(str(len(items))).classes("text-xs app-badge app-badge-muted")
                 if is_modified:
                     ui.icon("edit").classes("app-text-warning text-xs")
 
         if description:
-            ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400")
+            ui.label(description).classes("text-xs app-text-muted")
 
         # Current items
         if items:
@@ -82,7 +82,7 @@ def list_editor(
                 for idx, item in enumerate(items):
                     _render_item(idx, item)
         else:
-            ui.label("No items").classes("text-sm text-slate-500 dark:text-slate-400 italic py-2")
+            ui.label("No items").classes("text-sm app-text-muted italic py-2")
 
         # Add new item
         if not disabled and (max_items is None or len(items) < max_items):
@@ -114,7 +114,7 @@ def list_editor(
     def _render_item(idx: int, item: str) -> None:
         """Render a single list item."""
         with ui.row().classes("w-full items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded px-2 py-1"):
-            ui.label(str(item)).classes("flex-1 text-sm text-slate-700 dark:text-slate-200 font-mono")
+            ui.label(str(item)).classes("flex-1 text-sm font-mono")
             if not disabled:
                 # Move up
                 if idx > 0:

@@ -75,7 +75,7 @@ def key_value_editor(
         # Header
         with ui.row().classes("w-full items-center justify-between"):
             with ui.row().classes("items-center gap-2"):
-                ui.label(label).classes("text-sm font-semibold text-slate-700 dark:text-slate-200")
+                ui.label(label).classes("text-sm font-semibold")
                 if is_modified:
                     ui.icon("edit").classes("app-text-warning text-xs")
             if not disabled:
@@ -87,7 +87,7 @@ def key_value_editor(
                 ).classes("app-text-accent")
 
         if description:
-            ui.label(description).classes("text-xs text-slate-500 dark:text-slate-400")
+            ui.label(description).classes("text-xs app-text-muted")
 
         # Preset buttons
         if presets and not disabled:
@@ -105,9 +105,7 @@ def key_value_editor(
         if data:
             with ui.column().classes("w-full gap-1"):
                 # Header row
-                with ui.row().classes(
-                    "w-full items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400"
-                ):
+                with ui.row().classes("w-full items-center gap-2 text-xs font-medium app-text-muted"):
                     ui.label(key_label).classes("flex-1")
                     ui.label(value_label).classes("w-24")
                     ui.label("").classes("w-8")  # Action column
@@ -116,7 +114,7 @@ def key_value_editor(
                 for key, value in data.items():
                     _render_row(key, value)
         else:
-            ui.label("No entries").classes("text-sm text-slate-500 dark:text-slate-400 italic py-2")
+            ui.label("No entries").classes("text-sm app-text-muted italic py-2")
 
     def _render_row(key: str, value: Any) -> None:
         """Render a single key-value row."""

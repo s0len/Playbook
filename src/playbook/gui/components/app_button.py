@@ -1,4 +1,4 @@
-"""Semantic button helper to avoid framework default color bleed."""
+"""Semantic button helper using Quasar's native color system."""
 
 from __future__ import annotations
 
@@ -6,6 +6,15 @@ from collections.abc import Callable
 from typing import Any
 
 from nicegui import ui
+
+# Quasar color props per variant — ui.colors() sets --q-primary etc.
+# so these automatically follow the active theme.
+_VARIANT_PROPS: dict[str, str] = {
+    "primary": 'color="primary"',
+    "danger": 'color="negative"',
+    "outline": 'outline color="primary"',
+    "flat": "flat",
+}
 
 
 def app_button(
@@ -17,31 +26,22 @@ def app_button(
     classes: str = "",
     props: str = "",
 ) -> ui.button:
-    """Create a button with semantic Playbook styling.
+    """Create a button using Quasar's color system.
 
-    This strips NiceGUI's default `bg-primary text-white` classes to prevent
-    accidental Quasar primary styling from leaking into custom themes.
+    With ui.colors(primary=...) set by the theme, Quasar's color="primary"
+    automatically uses the theme's accent color. No need to strip classes.
     """
     button = ui.button(text, icon=icon, on_click=on_click)
-    # Force flat button mode so Quasar does not inject standard primary skin.
-    button.props("flat")
-
-    neutralize_button_utilities(button)
-    button.props("no-caps")
-    if props:
-        button.props(props)
-    button.classes(f"app-btn app-btn-{variant} {classes}".strip())
+    variant_prop = _VARIANT_PROPS.get(variant, "flat")
+    button.props(f"no-caps {variant_prop} {props}".strip())
+    button.classes(f"app-btn {classes}".strip())
     return button
 
 
 def neutralize_button_utilities(button: ui.button) -> ui.button:
-    """Strip Quasar default utility classes from a button instance."""
+    """No-op kept for backward compatibility.
 
-    def strip_framework_classes() -> None:
-        button.classes(remove="bg-primary")
-        button.classes(remove="text-white")
-        button.classes(remove="text-primary")
-
-    strip_framework_classes()
-    ui.timer(0.05, strip_framework_classes, once=True)
+    With ui.colors() properly set, bg-primary IS the correct color
+    so there's nothing to neutralize.
+    """
     return button

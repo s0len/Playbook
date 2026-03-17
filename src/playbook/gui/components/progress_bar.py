@@ -62,7 +62,7 @@ def progress_bar(
 
     with ui.row().classes("w-full items-center gap-3"):
         if label:
-            ui.label(label).classes("text-sm text-slate-600 dark:text-slate-400 w-24 shrink-0")
+            ui.label(label).classes("text-sm app-text-muted w-24 shrink-0")
 
         progress = (
             ui.linear_progress(value=value, show_value=False)
@@ -72,7 +72,7 @@ def progress_bar(
 
         if show_value:
             percentage = int(value * 100)
-            ui.label(f"{percentage}%").classes("text-sm font-medium text-slate-700 dark:text-slate-300 w-12 text-right")
+            ui.label(f"{percentage}%").classes("text-sm font-medium w-12 text-right")
 
     return progress
 
@@ -149,4 +149,4 @@ def progress_with_counts(
 
     with ui.row().classes("w-full items-center gap-3"):
         progress_bar(value, variant=variant, show_value=False, size=size)
-        ui.label(f"{matched}/{total}").classes("text-sm font-medium text-slate-600 dark:text-slate-400 shrink-0")
+        ui.label(f"{matched}/{total}").classes("text-sm font-medium app-text-muted shrink-0")

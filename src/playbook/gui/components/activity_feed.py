@@ -32,7 +32,7 @@ def activity_feed(max_items: int = 20) -> ui.column:
             events = list(gui_state.recent_events)[:max_items]
             with feed_container:
                 if not events:
-                    ui.label("No recent activity").classes("text-slate-500 dark:text-slate-400 italic py-4 text-center")
+                    ui.label("No recent activity").classes("app-text-muted italic py-4 text-center")
                 else:
                     for event in events:
                         activity_item(event)

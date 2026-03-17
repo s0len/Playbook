@@ -220,6 +220,15 @@ def run_with_gui(
     gui_state.unmatched_store = processor.unmatched_store
     gui_state.manual_override_store = processor.manual_override_store
 
+    # Forward notification events to GUI activity feed
+    _original_notify = processor.notification_service.notify
+
+    def _gui_notify(event):
+        gui_state.add_event(event)
+        _original_notify(event)
+
+    processor.notification_service.notify = _gui_notify
+
     # Set NiceGUI storage path to persistent state directory
     state_dir = app_config.settings.state_dir or app_config.settings.cache_dir
     storage_path = state_dir / ".nicegui"
