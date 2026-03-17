@@ -1076,29 +1076,36 @@ body.body--dark .settings-toggle .q-toggle__inner {
     border: 1px solid transparent;
 }
 
-/* Badge variants — use high specificity to beat Quasar's .bg-primary !important.
-   The .q-badge.app-badge prefix ensures we win over .bg-primary { background: var(--q-primary) !important } */
-.q-badge.app-badge.app-badge-muted {
-    background: rgba(255, 255, 255, 0.12) !important;
-    border-color: rgba(255, 255, 255, 0.2);
-    color: rgba(255, 255, 255, 0.86) !important;
+/* Reset Quasar's badge background for app-badge elements.
+   Quasar sets background-color: var(--q-primary) on .q-badge and
+   background: var(--q-primary) !important on .bg-primary.
+   This single rule resets both, then variant classes below set the right colors. */
+.q-badge.app-badge {
+    background: transparent !important;
+    color: var(--pb-text-primary);
 }
 
-.q-badge.app-badge.app-badge-warning {
+.app-badge-muted {
+    background: rgba(255, 255, 255, 0.10) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.app-badge-warning {
     background: rgba(251, 191, 36, 0.14) !important;
-    border-color: rgba(251, 191, 36, 0.28);
+    border: 1px solid rgba(251, 191, 36, 0.25);
     color: #fcd34d !important;
 }
 
-.q-badge.app-badge.app-badge-success {
+.app-badge-success {
     background: rgba(74, 222, 128, 0.14) !important;
-    border-color: rgba(74, 222, 128, 0.3);
+    border: 1px solid rgba(74, 222, 128, 0.25);
     color: #86efac !important;
 }
 
-.q-badge.app-badge.app-badge-danger {
+.app-badge-danger {
     background: rgba(248, 113, 113, 0.14) !important;
-    border-color: rgba(248, 113, 113, 0.3);
+    border: 1px solid rgba(248, 113, 113, 0.25);
     color: #fca5a5 !important;
 }
 
