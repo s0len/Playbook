@@ -225,7 +225,7 @@ def _file_candidate_row(
 
         # Row 2: quality tags (left) | score + status (right)
         with ui.row().classes("items-center gap-2").style(
-            "margin-left: 2rem; max-width: calc(100% - 2rem); flex-wrap: nowrap"
+            "margin-left: 2rem; max-width: calc(100% - 2rem); width: 100%; flex-wrap: nowrap"
         ):
             # Quality tags — left group
             with ui.row().classes("flex-wrap gap-1 items-center flex-1 min-w-0"):
