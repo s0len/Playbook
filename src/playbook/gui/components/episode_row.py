@@ -224,9 +224,9 @@ def _file_candidate_row(
             ui.label(filename).classes("flex-1 text-sm font-mono break-all")
 
         # Row 2: quality tags (left) | score + status (right)
-        with ui.row().classes("w-full items-center ml-8 gap-2"):
+        with ui.row().classes("items-center gap-2 flex-wrap").style("margin-left: 2rem; max-width: calc(100% - 2rem)"):
             # Quality tags — left group
-            with ui.row().classes("flex-wrap gap-1 items-center flex-1"):
+            with ui.row().classes("flex-wrap gap-1 items-center flex-1 min-w-0"):
                 quality = _parse_quality_info(record)
                 if quality:
                     tags = _format_quality_tags(quality)
@@ -234,7 +234,7 @@ def _file_candidate_row(
                         ui.badge(label).classes(f"app-badge {color}")
 
             # Score + status — right group
-            with ui.row().classes("gap-1 items-center shrink-0"):
+            with ui.row().classes("gap-1 items-center"):
                 if record.quality_score is not None:
                     score_class = _quality_score_class(record.quality_score)
                     ui.badge(f"{record.quality_score}").classes(f"app-badge {score_class}")
@@ -251,7 +251,7 @@ def _file_candidate_row(
                 ui.badge(record.status).classes(f"app-badge {chip_class}")
 
         # Row 3: date + Make Primary action
-        with ui.row().classes("ml-8 gap-4 items-center"):
+        with ui.row().classes("gap-4 items-center").style("margin-left: 2rem"):
             ui.label(record.processed_at.strftime("%Y-%m-%d %H:%M")).classes("text-xs app-text-muted")
             if on_promote:
                 ui.button("Make Primary", icon="swap_horiz", on_click=on_promote).props(
