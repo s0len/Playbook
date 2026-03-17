@@ -224,7 +224,9 @@ def _file_candidate_row(
             ui.label(filename).classes("flex-1 text-sm font-mono break-all")
 
         # Row 2: quality tags (left) | score + status (right)
-        with ui.row().classes("items-center gap-2 flex-wrap").style("margin-left: 2rem; max-width: calc(100% - 2rem)"):
+        with ui.row().classes("items-center gap-2").style(
+            "margin-left: 2rem; max-width: calc(100% - 2rem); flex-wrap: nowrap"
+        ):
             # Quality tags — left group
             with ui.row().classes("flex-wrap gap-1 items-center flex-1 min-w-0"):
                 quality = _parse_quality_info(record)
