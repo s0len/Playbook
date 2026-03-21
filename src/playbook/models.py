@@ -70,6 +70,7 @@ class ProcessingStats:
     warnings_by_sport: dict[str, int] = field(default_factory=dict)
     ignored_by_sport: dict[str, int] = field(default_factory=dict)
     processed_by_sport: dict[str, int] = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
     def register_processed(self, *, sport_id: str | None = None) -> None:
         self.processed += 1

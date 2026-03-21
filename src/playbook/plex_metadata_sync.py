@@ -571,6 +571,9 @@ class PlexMetadataSync:
         Returns:
             Show model if successful, None otherwise
         """
+        if not sport.show_slug:
+            LOGGER.debug("Skipping metadata load for %s: no show_slug configured", sport.name)
+            return None
         try:
             response = self.tvsportsdb_client.get_show(sport.show_slug, include_episodes=True)
             show = self.tvsportsdb_adapter.to_show(response)
