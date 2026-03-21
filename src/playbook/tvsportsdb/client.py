@@ -63,7 +63,7 @@ class TVSportsDBClient:
         """
         self.base_url = API_BASE_URL
         self.cache = TVSportsDBCache(cache_dir / "tvsportsdb", ttl_hours)
-        self._client = httpx.Client(timeout=timeout)
+        self._client = httpx.Client(timeout=timeout, follow_redirects=True)
         self._owns_client = True
 
     def _request(
