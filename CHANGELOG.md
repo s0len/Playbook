@@ -1,3 +1,13 @@
+## [2.20.0] - 2026-04-25
+
+### Added
+- Multi-arch Docker images: `ghcr.io/s0len/playbook` is now published for both `linux/amd64` and `linux/arm64` (fixes #151).
+
+### Changed
+- Dependency updates: `rapidfuzz` 3.14.5, `nicegui` 3.10.0, `rich` 15.0.0, `browser-use` >=0.12.6.
+- Dev dependency updates: `pytest` >=9.0.3, `pre-commit` >=4.5.1, `setuptools` >=82.0.1, `mkdocs-material` >=9.7.6.
+- CI: `aquasecurity/trivy-action` 0.36.0, `softprops/action-gh-release` v3.
+
 ## [2.7.0] - 2026-02-03
 
 ### Added
