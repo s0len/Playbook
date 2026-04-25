@@ -1,3 +1,8 @@
+## [2.20.1] - 2026-04-25
+
+### Fixed
+- GUI logging: `playbook.*` log records were silently dropped from the file log shortly after startup. NiceGUI's `ui.run()` triggers uvicorn's `dictConfig`, which closes every existing handler; our `mode='w'` `FileHandler` then refused to reopen and silently swallowed every subsequent record. Pass `log_config=None` to `ui.run()` so uvicorn skips `dictConfig` and our root handlers survive.
+
 ## [2.20.0] - 2026-04-25
 
 ### Added
