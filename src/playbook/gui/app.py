@@ -266,6 +266,10 @@ def run_with_gui(
         reload=False,
         show=False,  # Don't auto-open browser
         storage_secret="playbook-gui-storage",  # Enable persistent user storage
+        # Skip uvicorn's dictConfig — it calls _clearExistingHandlers() which closes
+        # our FileHandler. Combined with mode='w', the handler refuses to reopen and
+        # silently drops every record after this call. See cli.configure_logging.
+        log_config=None,
     )
 
 
@@ -336,6 +340,7 @@ def run_gui_standalone(port: int = 8765, host: str = "0.0.0.0") -> None:
         reload=True,
         show=True,
         storage_secret="playbook-gui-storage",  # Enable persistent user storage
+        log_config=None,  # See run_with_gui — preserves our root file handler.
     )
 
 
