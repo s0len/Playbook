@@ -126,12 +126,32 @@ jobs:
             ${{ startsWith(github.ref, 'refs/tags/v') && format('ghcr.io/s0len/playbook:{0}', env.VERSION) || '' }}
             ${{ startsWith(github.ref, 'refs/tags/v') && 'ghcr.io/s0len/playbook:latest' || '' }}
 
+      - name: Extract release notes from CHANGELOG
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          {
+            awk -v ver="${VERSION}" '
+              $0 ~ "^## \\["ver"\\]" { found=1; next }
+              found && /^## \[/ { exit }
+              found { print }
+            ' CHANGELOG.md
+            echo
+            echo "## Docker"
+            echo '```'
+            echo "docker pull ghcr.io/s0len/playbook:${VERSION}"
+            echo '```'
+            echo "Image published for \`linux/amd64\` and \`linux/arm64\`."
+          } > /tmp/release-notes.md
+          echo "--- Generated release notes ---"
+          cat /tmp/release-notes.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/v')
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
+          body_path: /tmp/release-notes.md
           draft: false
           prerelease: false
         env:
