@@ -1,3 +1,13 @@
+## [2.20.2] - 2026-05-16
+
+### Changed
+- Dependency updates: `requests` 2.34.2, `pydantic` 2.13.4, `nicegui` 3.12.0 (includes upstream security fixes for `ui.restructured_text` and dynamic resource routes).
+- Dev dependency updates: `ruff` >=0.15.13, `pre-commit` >=4.6.0, `pip-audit` >=2.10.0.
+- CI: `docker/setup-qemu-action` v4.
+
+### Added
+- GitHub Release notes are now auto-populated from the matching `CHANGELOG.md` section on tag push.
+
 ## [2.20.1] - 2026-04-25
 
 ### Fixed
