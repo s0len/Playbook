@@ -1,3 +1,8 @@
+## [2.20.3] - 2026-05-16
+
+### Fixed
+- README Docker Compose example: replaced the split `/data/source` + `/data/destination` mounts with a single `/data` mount so hardlink suggestions work out of the box (source and destination must share a filesystem).
+
 ## [2.20.2] - 2026-05-16
 
 ### Changed
