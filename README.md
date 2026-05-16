@@ -41,8 +41,7 @@ services:
       - "8765:8765"
     volumes:
       - ./config:/config              # config + persistent state db
-      - /path/to/downloads:/data/source
-      - /path/to/library:/data/destination
+      - ./path/to/media:/data         # source and destination directories, choose the folder that contains both
       - ./cache:/data/cache           # metadata cache (can be tmpfs if desired)
 ```
 
