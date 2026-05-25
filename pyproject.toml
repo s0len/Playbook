@@ -35,7 +35,7 @@ dependencies = [
     "kubernetes==35.0.0",
     "httpx==0.28.1",
     "pydantic==2.13.4",
-    "browser-use>=0.12.6",
+    "browser-use>=0.12.8",
 ]
 
 [project.optional-dependencies]
