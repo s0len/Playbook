@@ -3,4 +3,4 @@ pytest>=8,<10
 mkdocs-material>=9.5,<10
 ruff>=0.15.13
 pre-commit>=4.6.0
-pip-audit>=2.10.0,<3
+pip-audit>=2.10.1,<3
