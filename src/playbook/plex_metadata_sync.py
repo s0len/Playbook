@@ -31,6 +31,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 from .config import AppConfig, SportConfig
+from .local_assets import LocalAssetResolver, asset_content_type
 from .metadata import (
     MetadataChangeResult,
     MetadataFingerprintStore,
@@ -65,6 +66,9 @@ class MappedMetadata:
     summary: str | None
     poster_url: str | None
     background_url: str | None
+    # Local fallback artwork, uploaded when the API provides no URL
+    poster_file: Path | None = None
+    background_file: Path | None = None
 
 
 def _as_int(value: object) -> int | None:
@@ -427,27 +431,31 @@ def _apply_metadata(
                 stats.errors.append(f"Metadata update failed: {' | '.join(context_parts)}: {exc}")
 
     # Handle assets: poster -> 'thumb', background -> 'art'
+    # A URL from the API takes precedence; a local fallback file is uploaded
+    # only when the API provided no artwork.
     asset_mappings = [
-        ("poster_url", "thumb", "poster"),
-        ("background_url", "art", "background"),
+        ("poster_url", "poster_file", "thumb", "poster"),
+        ("background_url", "background_file", "art", "background"),
     ]
-    for attr, element, display_name in asset_mappings:
-        asset_url = getattr(mapped, attr)
-        if not asset_url:
+    for url_attr, file_attr, element, display_name in asset_mappings:
+        asset_url = getattr(mapped, url_attr)
+        asset_file: Path | None = getattr(mapped, file_attr)
+        if not asset_url and not asset_file:
             LOGGER.debug("No %s URL found for %s (%s)", display_name, label, rating_key)
             continue
 
+        asset_source = asset_url or str(asset_file)
         LOGGER.debug(
-            "Attempting to set %s for %s (key=%s): url=%s, element=%s",
+            "Attempting to set %s for %s (key=%s): source=%s, element=%s",
             display_name,
             label,
             rating_key,
-            asset_url,
+            asset_source,
             element,
         )
 
         if dry_run:
-            LOGGER.debug("Dry-run: would set %s %s %s to %s", label, rating_key, display_name, asset_url)
+            LOGGER.debug("Dry-run: would set %s %s %s to %s", label, rating_key, display_name, asset_source)
         else:
             try:
                 # Unlock field before upload to ensure Plex accepts the update
@@ -456,7 +464,16 @@ def _apply_metadata(
                 stats.api_calls += 1
 
                 # Upload the asset
-                client.set_asset(rating_key, element, asset_url)
+                if asset_url:
+                    client.set_asset(rating_key, element, asset_url)
+                else:
+                    assert asset_file is not None
+                    client.upload_asset(
+                        rating_key,
+                        element,
+                        asset_file.read_bytes(),
+                        content_type=asset_content_type(asset_file),
+                    )
                 LOGGER.debug("Successfully set %s for %s (key=%s)", display_name, label, rating_key)
                 stats.assets_updated += 1
                 stats.api_calls += 1
@@ -467,7 +484,7 @@ def _apply_metadata(
                 stats.api_calls += 1
 
                 updated = True
-            except PlexApiError as exc:
+            except (PlexApiError, OSError) as exc:
                 LOGGER.error("Failed to set %s for %s (key=%s): %s", display_name, label, rating_key, exc)
                 stats.assets_failed += 1
                 # Build error with actionable context
@@ -476,8 +493,8 @@ def _apply_metadata(
                     context_parts.append(f"library={library_id}")
                 if metadata_url:
                     context_parts.append(f"source={metadata_url}")
-                if asset_url:
-                    context_parts.append(f"asset_url={asset_url}")
+                if asset_source:
+                    context_parts.append(f"asset_source={asset_source}")
                 stats.errors.append(f"Asset update failed: {' | '.join(context_parts)}: {exc}")
 
     return updated
@@ -536,6 +553,10 @@ class PlexMetadataSync:
 
         default_scan_wait = plex_sync_cfg.scan_wait if plex_sync_cfg.scan_wait != 5.0 else legacy_cfg.scan_wait
         self.scan_wait = scan_wait if scan_wait is not None else default_scan_wait
+
+        # Local fallback artwork, used when the API has none: env > config
+        fallback_assets_dir = os.getenv("PLEX_SYNC_FALLBACK_ASSETS_DIR") or plex_sync_cfg.fallback_assets_dir
+        self.asset_resolver = LocalAssetResolver(fallback_assets_dir)
 
         self._client: PlexClient | None = None
         self._library_id_resolved: str | None = None
@@ -914,6 +935,11 @@ class PlexMetadataSync:
             return
 
         mapped = _map_show_metadata(show, base_url)
+        if self.asset_resolver.enabled:
+            if not mapped.poster_url:
+                mapped.poster_file = self.asset_resolver.show_poster(show)
+            if not mapped.background_url:
+                mapped.background_file = self.asset_resolver.show_background(show)
         # Apply metadata with lock_fields=True to preserve original title casing
         if _apply_metadata(
             self.client,
@@ -993,6 +1019,8 @@ class PlexMetadataSync:
 
             if season_id in seasons_to_update:
                 mapped = _map_season_metadata(season, base_url)
+                if self.asset_resolver.enabled and not mapped.poster_url:
+                    mapped.poster_file = self.asset_resolver.season_poster(show, season)
                 if _apply_metadata(
                     self.client,
                     rating_key,
@@ -1083,6 +1111,8 @@ class PlexMetadataSync:
                     continue
 
                 mapped = _map_episode_metadata(episode, base_url)
+                if self.asset_resolver.enabled and not mapped.poster_url:
+                    mapped.poster_file = self.asset_resolver.episode_poster(show, season, episode)
                 if _apply_metadata(
                     self.client,
                     episode_rating,
