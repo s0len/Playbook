@@ -3,12 +3,34 @@ from __future__ import annotations
 import fnmatch
 import logging
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from requests import Response
 
 from .types import NotificationEvent
 
 LOGGER = logging.getLogger(__name__)
+
+
+def redact_url(url: str | None) -> str:
+    """Reduce a URL to ``scheme://host[:port]/…`` so secrets aren't logged.
+
+    Webhook URLs (Discord/Slack/ntfy) are capability URLs — the secret token
+    lives in the path or query string, so only scheme and host are safe to log.
+    """
+    if not url:
+        return "<none>"
+    try:
+        parts = urlsplit(url)
+        if not parts.scheme or not parts.hostname:
+            return "<redacted-url>"
+        # Re-bracket IPv6 literals (urlsplit strips the brackets from .hostname).
+        host = f"[{parts.hostname}]" if ":" in parts.hostname else parts.hostname
+        netloc = f"{host}:{parts.port}" if parts.port else host
+    except ValueError:
+        # Malformed URL (e.g. a non-numeric port) — never risk leaking it.
+        return "<redacted-url>"
+    return urlunsplit((parts.scheme, netloc, "", "", "")) + "/…"
 
 
 # Shared constants and helpers used across notification targets

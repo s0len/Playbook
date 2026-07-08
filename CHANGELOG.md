@@ -1,3 +1,24 @@
+## [2.22.0] - 2026-07-08
+
+### Security
+- Web GUI now supports **opt-in authentication**. Set `GUI_PASSWORD` (and optionally `GUI_USERNAME`, default `admin`) to require login; all pages redirect to a login screen and `/api/*` returns 401 until authenticated. When no password is set the GUI stays unauthenticated as before, but logs a warning at startup (#209).
+- The GUI session-cookie signing key is now randomized per process (or set via `GUI_STORAGE_SECRET`) instead of a hardcoded value, so session cookies can no longer be forged (#209).
+- GUI settings editors no longer send stored secrets (Plex token, SMTP/autoscan passwords) to the browser. Password fields render blank; leave one blank on save to keep the existing value (#209).
+- Kometa Docker trigger: the container runtime (`kometa_trigger.docker.binary`) is now restricted to `docker`, `podman`, or `nerdctl`, so a config cannot invoke an arbitrary interpreter (#209).
+- Local fallback artwork: the TVSportsDB show slug is sanitized and path-contained before use, so a malicious API response cannot read files outside the assets directory (#209).
+- Email notifications now verify TLS certificates on SMTP STARTTLS (#209).
+- Webhook, Discord, and Slack failure logs no longer include the full webhook URL (which can contain a secret token) (#209).
+- Plex metadata sync only relays `http(s)` artwork URLs to the Plex server, rejecting other schemes from the metadata source (#209).
+- The container image now runs as a non-root user (#209).
+
+### Changed
+- **The web GUI now binds to `127.0.0.1` by default** (was `0.0.0.0`). The Docker image keeps `GUI_HOST=0.0.0.0` so container/Kubernetes access is unchanged; bare-metal users who expose the GUI must set `GUI_HOST` explicitly (#209).
+- Removed the unused `browser-use` dependency (declared in 2.21.0 but never imported) (#209).
+- `NICEGUI_STORAGE_PATH` now defaults to `<STATE_DIR>/.nicegui` in the container entrypoint so GUI storage (and login sessions) work for the non-root user (#210).
+
+### Notes
+- SMTP TLS verification may now reject internal relays that use self-signed or hostname-mismatched certificates; use a valid certificate or a trusted CA if affected.
+
 ## [2.21.0] - 2026-07-08
 
 ### Added

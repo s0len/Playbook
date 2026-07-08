@@ -150,6 +150,12 @@ fi
 
 : "${DRY_RUN:=false}"
 
-export CONFIG_PATH SOURCE_DIR DESTINATION_DIR CACHE_DIR STATE_DIR DRY_RUN
+# NiceGUI persists app.storage (including GUI login sessions) to a directory it
+# resolves at import time, defaulting to ./.nicegui under the workdir (/app),
+# which the non-root user cannot create. Point it at the writable state volume
+# unless the operator set it explicitly.
+: "${NICEGUI_STORAGE_PATH:=${STATE_DIR}/.nicegui}"
+
+export CONFIG_PATH SOURCE_DIR DESTINATION_DIR CACHE_DIR STATE_DIR DRY_RUN NICEGUI_STORAGE_PATH
 
 exec python3 -m playbook.cli "$@"

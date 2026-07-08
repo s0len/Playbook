@@ -246,8 +246,9 @@ def _add_run_subparser(subparsers) -> None:
     run_parser.add_argument(
         "--gui-host",
         type=str,
-        default=os.getenv("GUI_HOST", "0.0.0.0"),
-        help="Host to bind web GUI to (default: 0.0.0.0 or GUI_HOST env var)",
+        default=os.getenv("GUI_HOST", "127.0.0.1"),
+        help="Host to bind web GUI to (default: 127.0.0.1 or GUI_HOST env var; "
+        "use 0.0.0.0 to expose beyond localhost, e.g. in a container)",
     )
 
 
@@ -578,7 +579,7 @@ def _execute_gui_run(args: argparse.Namespace, verbose: bool) -> int:
         return 1
 
     gui_port = getattr(args, "gui_port", DEFAULT_GUI_PORT)
-    gui_host = getattr(args, "gui_host", "0.0.0.0")
+    gui_host = getattr(args, "gui_host", "127.0.0.1")
 
     LOGGER.info("Starting Playbook with GUI on http://%s:%d", gui_host, gui_port)
 

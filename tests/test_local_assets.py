@@ -120,6 +120,45 @@ class TestLocalAssetResolver:
         assert resolver.season_poster(_make_show("ufc-2026"), _make_season(3)) is None
 
 
+class TestPathTraversal:
+    """show.key is API-supplied and must not escape the assets directory (fix #3)."""
+
+    def test_parent_traversal_key_neutralized(self, tmp_path: Path) -> None:
+        assets = tmp_path / "assets"
+        assets.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "poster.jpg").write_bytes(b"secret")
+
+        resolver = LocalAssetResolver(assets)
+        # A naive `assets / "../outside"` would reach outside/poster.jpg.
+        assert resolver.show_poster(_make_show("../outside")) is None
+
+    def test_absolute_key_stays_within_assets(self, tmp_path: Path) -> None:
+        assets = tmp_path / "assets"
+        (assets / "etc").mkdir(parents=True)
+        (assets / "etc" / "poster.jpg").write_bytes(b"contained")
+
+        resolver = LocalAssetResolver(assets)
+        # "/etc" is sanitized to the relative component "etc" *inside* assets,
+        # so it resolves to the contained file, never the real /etc.
+        found = resolver.show_poster(_make_show("/etc"))
+        assert found == assets / "etc" / "poster.jpg"
+
+    def test_symlink_escape_blocked(self, tmp_path: Path) -> None:
+        assets = tmp_path / "assets"
+        assets.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "poster.jpg").write_bytes(b"secret")
+        # A symlink inside assets pointing out would pass is_file() but must be
+        # rejected by the resolved-path containment check.
+        (assets / "evil").symlink_to(outside, target_is_directory=True)
+
+        resolver = LocalAssetResolver(assets)
+        assert resolver.show_poster(_make_show("evil")) is None
+
+
 class TestApplyMetadataWithLocalAssets:
     def _mapped(self, **overrides: object) -> MappedMetadata:
         defaults: dict[str, object] = {

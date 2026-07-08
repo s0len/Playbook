@@ -7,7 +7,7 @@ import requests
 from requests.exceptions import RequestException
 
 from .types import NotificationEvent, NotificationTarget
-from .utils import _flatten_event, _render_template
+from .utils import _excerpt_response, _flatten_event, _render_template, redact_url
 
 LOGGER = logging.getLogger(__name__)
 
@@ -46,11 +46,16 @@ class GenericWebhookTarget(NotificationTarget):
                 timeout=10,
             )
         except RequestException as exc:
-            LOGGER.warning("Failed to send webhook notification: %s", exc)
+            LOGGER.warning("Failed to send webhook notification to %s: %s", redact_url(self.url), type(exc).__name__)
             return
 
         if response.status_code >= 400:
-            LOGGER.warning("Webhook %s responded with %s: %s", self.url, response.status_code, response.text)
+            LOGGER.warning(
+                "Webhook %s responded with %s: %s",
+                redact_url(self.url),
+                response.status_code,
+                _excerpt_response(response),
+            )
 
     def _build_payload(self, event: NotificationEvent) -> Any:
         data = _flatten_event(event)

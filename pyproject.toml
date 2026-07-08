@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "playbook"
-version = "2.21.0"
+version = "2.22.0"
 description = "Automated file matching, renaming, and metadata for sports content in Plex"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -35,7 +35,6 @@ dependencies = [
     "kubernetes==36.0.2",
     "httpx==0.28.1",
     "pydantic==2.13.4",
-    "browser-use>=0.13.1",
 ]
 
 [project.optional-dependencies]
