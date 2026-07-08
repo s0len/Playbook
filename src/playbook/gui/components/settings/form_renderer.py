@@ -14,6 +14,38 @@ from nicegui import ui
 from ..app_button import neutralize_button_utilities
 
 # ---------------------------------------------------------------------------
+# Secret masking helpers
+# ---------------------------------------------------------------------------
+
+# Shown in place of a stored secret so the user knows one is set without the
+# value ever being sent to the browser.
+MASKED_SECRET_PLACEHOLDER = "•••••••• (set — leave blank to keep)"
+
+
+def secret_display_value(current: Any, is_password: bool) -> str:
+    """Value to prefill an input with.
+
+    Password fields always render blank so a stored secret is never sent to the
+    browser; other fields render their current value.
+    """
+    if is_password:
+        return ""
+    return str(current) if current else ""
+
+
+def apply_field_change(new_value: Any, is_password: bool) -> bool:
+    """Whether an on-change edit should be written back to ``working``.
+
+    A blank password field means "keep the existing value" — so we skip the
+    write and leave the already-loaded secret in ``working`` untouched. This is
+    what makes masking safe: it can never overwrite a secret with an empty
+    string on save.
+    """
+    # Skip only the blank-password case; every other edit is written back.
+    return not (is_password and not new_value)
+
+
+# ---------------------------------------------------------------------------
 # Nested dict helpers
 # ---------------------------------------------------------------------------
 
@@ -127,19 +159,28 @@ def render_single_field(working: dict[str, Any], field_def: dict[str, Any]) -> N
     if env_var:
         placeholder = get_env_placeholder(env_var, placeholder, mask=(ftype == "password"))
     current = nested_get(working, key, "")
+    is_password = ftype == "password"
 
     input_props = "outlined dense"
-    if ftype == "password":
+    if is_password:
         input_props += ' type="password"'
     elif ftype == "number":
         input_props += ' type="number"'
 
-    def on_change(e, k=key):
-        nested_set(working, k, e.value)
+    # Never send a stored secret to the browser (see secret_display_value /
+    # apply_field_change): password fields render blank, and a blank field on
+    # save keeps the value already loaded in `working`.
+    display_value = secret_display_value(current, is_password)
+    if is_password and current and not placeholder:
+        placeholder = MASKED_SECRET_PLACEHOLDER
+
+    def on_change(e, k=key, password=is_password):
+        if apply_field_change(e.value, password):
+            nested_set(working, k, e.value)
 
     width = field_def.get("width", "flex-1")
     ui.input(
-        value=str(current) if current else "",
+        value=display_value,
         label=label,
         placeholder=placeholder,
         on_change=on_change,

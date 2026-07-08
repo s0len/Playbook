@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 from nicegui import ui
 
 from ..app_button import app_button, neutralize_button_utilities
+from .form_renderer import MASKED_SECRET_PLACEHOLDER, apply_field_change, secret_display_value
 
 if TYPE_CHECKING:
     from playbook.gui.settings_state.settings_state import SettingsFormState
@@ -194,17 +195,25 @@ def notification_target_editor(
                             ).classes("w-full settings-input").props(f"outlined dense label='{label}'")
                             continue
 
+                        is_password = field_type == "password"
                         input_props = "outlined dense"
-                        if field_type == "password":
+                        if is_password:
                             input_props += ' type="password"'
                         elif field_type == "number":
                             input_props += ' type="number"'
 
-                        def on_input_change(e, k=key) -> None:
-                            working[k] = e.value
+                        # Don't send stored secrets to the browser; a blank
+                        # password field on save keeps the existing value.
+                        display_value = secret_display_value(current_value, is_password)
+                        if is_password and current_value and not placeholder:
+                            placeholder = MASKED_SECRET_PLACEHOLDER
+
+                        def on_input_change(e, k=key, password=is_password) -> None:
+                            if apply_field_change(e.value, password):
+                                working[k] = e.value
 
                         ui.input(
-                            value=str(current_value) if current_value else "",
+                            value=display_value,
                             label=label,
                             placeholder=placeholder,
                             on_change=on_input_change,
