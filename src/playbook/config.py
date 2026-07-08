@@ -65,6 +65,7 @@ class PlexMetadataSyncSettings:
     sports: list[str] = field(default_factory=list)
     scan_wait: float = 5.0  # Seconds to wait after triggering library scan
     lock_poster_fields: bool = False  # Whether to lock poster fields to prevent updates
+    fallback_assets_dir: str | None = None  # Local artwork used when TVSportsDB has none
 
 
 @dataclass
@@ -1142,6 +1143,11 @@ def _build_plex_metadata_sync_settings(data: dict[str, Any]) -> PlexMetadataSync
 
     sports = _ensure_string_list(data.get("sports"), field_name="integrations.plex.metadata_sync.sports")
 
+    fallback_assets_dir_raw = data.get("fallback_assets_dir")
+    if fallback_assets_dir_raw is not None and not isinstance(fallback_assets_dir_raw, str):
+        raise ValueError("'integrations.plex.metadata_sync.fallback_assets_dir' must be a string path")
+    fallback_assets_dir = fallback_assets_dir_raw or None
+
     return PlexMetadataSyncSettings(
         enabled=bool(data.get("enabled", False)),
         timeout=timeout,
@@ -1150,6 +1156,7 @@ def _build_plex_metadata_sync_settings(data: dict[str, Any]) -> PlexMetadataSync
         sports=sports,
         scan_wait=scan_wait,
         lock_poster_fields=bool(data.get("lock_poster_fields", False)),
+        fallback_assets_dir=fallback_assets_dir,
     )
 
 

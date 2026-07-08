@@ -1,3 +1,8 @@
+## [Unreleased]
+
+### Added
+- Plex metadata sync: new `fallback_assets_dir` option (`integrations.plex.metadata_sync`) for local fallback artwork. When TVSportsDB has no poster/background for a show, season, or episode, Playbook uploads a matching local image (`<dir>/<show_slug>/poster.jpg`, `season-NN.jpg`, `sNNeNN.jpg`) to Plex instead of leaving the generic show poster. API artwork always takes precedence (fixes #181).
+
 ## [2.20.3] - 2026-05-16
 
 ### Fixed

@@ -124,6 +124,39 @@ class TestPlexClient:
             # art is the correct name for background
             client.set_asset("12345", "art", "http://example.com/bg.jpg")
 
+    def test_upload_asset_validates_element(self) -> None:
+        """Verify invalid asset element names are rejected for uploads."""
+        client = PlexClient("http://localhost:32400", "token")
+        with pytest.raises(PlexApiError, match="Invalid asset element"):
+            client.upload_asset("12345", "banner", b"image-bytes")
+
+    def test_upload_asset_posts_image_bytes(self) -> None:
+        """Verify upload_asset POSTs raw bytes to the correct endpoint."""
+        client = PlexClient("http://localhost:32400", "token")
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+
+        with patch.object(client.session, "request", return_value=mock_response) as mock_req:
+            client.upload_asset("12345", "thumb", b"image-bytes", content_type="image/png")
+
+            args, kwargs = mock_req.call_args
+            assert args[0] == "POST"
+            assert args[1].endswith("/library/metadata/12345/posters")
+            assert kwargs.get("data") == b"image-bytes"
+            assert kwargs.get("headers", {}).get("Content-Type") == "image/png"
+
+    def test_upload_asset_background_endpoint(self) -> None:
+        """Verify backgrounds go to the arts endpoint."""
+        client = PlexClient("http://localhost:32400", "token")
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+
+        with patch.object(client.session, "request", return_value=mock_response) as mock_req:
+            client.upload_asset("12345", "art", b"image-bytes")
+
+            args, _ = mock_req.call_args
+            assert args[1].endswith("/library/metadata/12345/arts")
+
     def test_unlock_field(self) -> None:
         """Verify unlock_field sends correct parameters."""
         client = PlexClient("http://localhost:32400", "token")

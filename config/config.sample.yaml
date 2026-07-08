@@ -44,6 +44,9 @@ settings:
         enabled: false
         timeout: 15
         scan_wait: 5
+        # Local artwork used when TVSportsDB has no poster/background.
+        # Layout: <dir>/<show_slug>/poster.jpg, season-03.jpg, s03e02.jpg
+        # fallback_assets_dir: /config/assets
 
       # Trigger Plex library scan when files are linked
       scan_on_activity:
