@@ -142,7 +142,10 @@ RUN_COMMAND_HELP = CommandHelp(
         ("GUI_HOST", "Host to bind web GUI (default: 127.0.0.1; use 0.0.0.0 to expose, e.g. in a container)"),
         ("GUI_PASSWORD", "Enable GUI login with this password (unset = no auth; keep the GUI on a trusted network)"),
         ("GUI_USERNAME", "GUI login username when GUI_PASSWORD is set (default: admin)"),
-        ("GUI_STORAGE_SECRET", "Session cookie signing key; random per start if unset (set to keep logins across restarts)"),
+        (
+            "GUI_STORAGE_SECRET",
+            "Session cookie signing key; random per start if unset (set to keep logins across restarts)",
+        ),
         ("WATCH_MODE", "Enable filesystem watcher mode to continuously process new files (true/false/1/0)"),
         ("CLEAR_PROCESSED_CACHE", "Clear processed file cache before running (true/false/1/0)"),
         ("PLAIN_CONSOLE_LOGS", "Force plain text console output without Rich formatting (true/false/1/0)"),

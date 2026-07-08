@@ -141,9 +141,8 @@ def register_login_page() -> None:
             ui.label("Playbook").classes("text-2xl font-bold text-center")
             ui.label("Sign in to continue").classes("text-sm text-center opacity-70")
             username = ui.input("Username").on("keydown.enter", attempt_login)
-            password = (
-                ui.input("Password", password=True, password_toggle_button=True)
-                .on("keydown.enter", attempt_login)
+            password = ui.input("Password", password=True, password_toggle_button=True).on(
+                "keydown.enter", attempt_login
             )
             ui.button("Log in", on_click=attempt_login).classes("w-full")
         return None
