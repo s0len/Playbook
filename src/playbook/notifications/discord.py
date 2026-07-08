@@ -13,7 +13,7 @@ from requests.exceptions import RequestException
 
 from ..config import NotificationSettings
 from .types import NotificationEvent, NotificationTarget
-from .utils import _excerpt_response, _trim, normalize_mention, replace_reason_label, resolve_sport_match
+from .utils import _excerpt_response, _trim, normalize_mention, redact_url, replace_reason_label, resolve_sport_match
 
 LOGGER = logging.getLogger(__name__)
 
@@ -174,7 +174,7 @@ class DiscordTarget(NotificationTarget):
             try:
                 response = requests.request(method, url, json=payload, timeout=10)
             except RequestException as exc:
-                LOGGER.warning("Failed to send Discord notification: %s", exc)
+                LOGGER.warning("Failed to send Discord notification to %s: %s", redact_url(url), type(exc).__name__)
                 return None
 
             if response.status_code == 429:

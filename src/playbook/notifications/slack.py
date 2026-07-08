@@ -6,7 +6,7 @@ import requests
 from requests.exceptions import RequestException
 
 from .types import NotificationEvent, NotificationTarget
-from .utils import _flatten_event, replace_reason_label
+from .utils import _excerpt_response, _flatten_event, redact_url, replace_reason_label
 
 LOGGER = logging.getLogger(__name__)
 
@@ -30,11 +30,20 @@ class SlackTarget(NotificationTarget):
         try:
             response = requests.post(self.webhook_url, json=payload, timeout=10)
         except RequestException as exc:
-            LOGGER.warning("Failed to send Slack notification: %s", exc)
+            LOGGER.warning(
+                "Failed to send Slack notification to %s: %s",
+                redact_url(self.webhook_url),
+                type(exc).__name__,
+            )
             return
 
         if response.status_code >= 400:
-            LOGGER.warning("Slack webhook responded with %s: %s", response.status_code, response.text)
+            LOGGER.warning(
+                "Slack webhook %s responded with %s: %s",
+                redact_url(self.webhook_url),
+                response.status_code,
+                _excerpt_response(response),
+            )
 
     def _render(self, event: NotificationEvent) -> str:
         if self.template:

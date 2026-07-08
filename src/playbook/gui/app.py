@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 from nicegui import app, ui
 
+from .auth import apply_auth, register_login_page, resolve_storage_secret
 from .components.header import header
 from .log_handler import install_gui_log_handler
 from .pages import dashboard, logs, settings, sports, unmatched
@@ -63,6 +64,9 @@ def create_app() -> None:
     _icon_path = Path(__file__).parent.parent.parent.parent / "icon.png"
     if _icon_path.exists():
         app.add_static_file(local_file=str(_icon_path), url_path="/icon.png")
+
+    # Login page + auth guard (a no-op when GUI_PASSWORD is unset).
+    register_login_page()
 
     @ui.page("/")
     def index_page() -> None:
@@ -147,7 +151,7 @@ def _page_wrapper(page_fn: callable, current_path: str = "/") -> None:
 def run_with_gui(
     config_path: Path,
     port: int = 8765,
-    host: str = "0.0.0.0",
+    host: str = "127.0.0.1",
     *,
     dry_run: bool = False,
     enable_notifications: bool = True,
@@ -164,7 +168,8 @@ def run_with_gui(
     Args:
         config_path: Path to the Playbook configuration file
         port: Port to run the web server on (default: 8765)
-        host: Host to bind the web server to (default: 0.0.0.0)
+        host: Host to bind the web server to (default: 127.0.0.1;
+            set GUI_HOST=0.0.0.0 to expose beyond localhost, e.g. in a container)
         dry_run: Enable dry-run mode
         enable_notifications: Enable notification delivery
         watch_mode: Enable file watcher mode
@@ -242,6 +247,9 @@ def run_with_gui(
     # Create NiceGUI app
     create_app()
 
+    # Install authentication guard (opt-in; a no-op unless GUI_PASSWORD is set)
+    apply_auth()
+
     # Set up shutdown handler
     @app.on_shutdown
     async def on_shutdown() -> None:
@@ -265,7 +273,7 @@ def run_with_gui(
         dark=False,
         reload=False,
         show=False,  # Don't auto-open browser
-        storage_secret="playbook-gui-storage",  # Enable persistent user storage
+        storage_secret=resolve_storage_secret(),  # Signs session cookies (never hardcoded)
         # Skip uvicorn's dictConfig — it calls _clearExistingHandlers() which closes
         # our FileHandler. Combined with mode='w', the handler refuses to reopen and
         # silently drops every record after this call. See cli.configure_logging.
@@ -319,7 +327,7 @@ def _start_watcher_thread(processor: Processor, app_config: AppConfig) -> thread
     return thread
 
 
-def run_gui_standalone(port: int = 8765, host: str = "0.0.0.0") -> None:
+def run_gui_standalone(port: int = 8765, host: str = "127.0.0.1") -> None:
     """Run the GUI in standalone mode without a processor.
 
     This is useful for development and testing the GUI
@@ -327,11 +335,12 @@ def run_gui_standalone(port: int = 8765, host: str = "0.0.0.0") -> None:
 
     Args:
         port: Port to run the web server on
-        host: Host to bind the web server to
+        host: Host to bind the web server to (default: 127.0.0.1)
     """
     suppress_nicegui_disconnect_errors()
     LOGGER.info("Running GUI in standalone mode (no processor)")
     create_app()
+    apply_auth()
     ui.run(
         host=host,
         port=port,
@@ -339,7 +348,7 @@ def run_gui_standalone(port: int = 8765, host: str = "0.0.0.0") -> None:
         dark=False,
         reload=True,
         show=True,
-        storage_secret="playbook-gui-storage",  # Enable persistent user storage
+        storage_secret=resolve_storage_secret(),  # Signs session cookies (never hardcoded)
         log_config=None,  # See run_with_gui — preserves our root file handler.
     )
 

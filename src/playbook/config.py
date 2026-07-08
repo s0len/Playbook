@@ -797,6 +797,24 @@ def _build_plex_sync_settings(data: dict[str, Any]) -> PlexSyncSettings:
     )
 
 
+# Container runtimes accepted for the Kometa docker trigger. Restricting the
+# binary (by filename) blocks swapping it for an arbitrary interpreter such as
+# /bin/sh, which — combined with extra_args/exec_command — would otherwise be
+# arbitrary command execution.
+_ALLOWED_CONTAINER_BINARIES = frozenset({"docker", "podman", "nerdctl"})
+
+
+def _validate_container_binary(raw: str) -> str:
+    binary = raw.strip() or "docker"
+    if Path(binary).name not in _ALLOWED_CONTAINER_BINARIES:
+        allowed = ", ".join(sorted(_ALLOWED_CONTAINER_BINARIES))
+        raise ValueError(
+            f"'kometa_trigger.docker.binary' must be one of: {allowed} (got {binary!r}). "
+            "A full path is allowed as long as its filename is one of these."
+        )
+    return binary
+
+
 def _build_kometa_trigger_settings(data: dict[str, Any]) -> KometaTriggerSettings:
     if not data:
         return KometaTriggerSettings()
@@ -869,7 +887,7 @@ def _build_kometa_trigger_settings(data: dict[str, Any]) -> KometaTriggerSetting
         namespace=namespace,
         cronjob_name=cronjob_name,
         job_name_prefix=job_name_prefix,
-        docker_binary=str(docker_raw.get("binary", "docker")).strip() or "docker",
+        docker_binary=_validate_container_binary(str(docker_raw.get("binary", "docker"))),
         docker_image=str(docker_raw.get("image", "kometateam/kometa")).strip() or "kometateam/kometa",
         docker_config_path=docker_config_path,
         docker_config_container_path=container_path_raw,

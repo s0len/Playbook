@@ -28,7 +28,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 from .config import AppConfig, SportConfig
 from .local_assets import LocalAssetResolver, asset_content_type
@@ -116,25 +116,31 @@ def _resolve_asset_url(base_url: str, value: str | None) -> str | None:
     if not value:
         return None
     if value.startswith(("http://", "https://")):
-        return value
+        resolved = value
+    elif value.startswith("/"):
+        # Relative to domain root.
+        resolved = urljoin(base_url, value)
+    elif base_url.endswith("/"):
+        # base_url is already a directory URL.
+        resolved = urljoin(base_url, value)
+    else:
+        # base_url is a file path; resolve relative to its directory.
+        # Handle bare domain URLs (no path component after scheme://host).
+        scheme_end = base_url.find("://")
+        if scheme_end >= 0 and "/" not in base_url[scheme_end + 3 :]:
+            resolved = urljoin(base_url + "/", value)
+        else:
+            base_dir = base_url.rsplit("/", 1)[0] + "/"
+            resolved = urljoin(base_dir, value)
 
-    # If value starts with /, it's relative to domain root
-    if value.startswith("/"):
-        return urljoin(base_url, value)
-
-    # For relative paths, resolve relative to base_url's directory
-    # If base_url ends with /, it's already a directory URL
-    if base_url.endswith("/"):
-        return urljoin(base_url, value)
-
-    # Otherwise, base_url is a file path; get its directory
-    # Handle bare domain URLs (no path component after scheme://host)
-    scheme_end = base_url.find("://")
-    if scheme_end >= 0 and "/" not in base_url[scheme_end + 3 :]:
-        return urljoin(base_url + "/", value)
-
-    base_dir = base_url.rsplit("/", 1)[0] + "/"
-    return urljoin(base_dir, value)
+    # Only ever hand http(s) URLs to the Plex server (which fetches them). A
+    # compromised metadata source could otherwise supply file://, gopher://,
+    # etc., or a value that urljoin passes through with a non-http scheme.
+    scheme = urlsplit(resolved).scheme.lower()
+    if scheme not in ("http", "https"):
+        LOGGER.warning("Ignoring artwork asset with unsupported URL scheme: %r", value)
+        return None
+    return resolved
 
 
 def _map_show_metadata(show: Show, base_url: str) -> MappedMetadata:

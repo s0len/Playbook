@@ -140,3 +140,44 @@ def test_docker_trigger_execs_into_container(monkeypatch) -> None:
     assert trigger.trigger() is True
     assert recorded["cmd"][:3] == ["docker", "exec", "kometa"]
     assert recorded["cmd"][3:5] == ["python3", "/app/kometa/kometa.py"]
+
+
+class TestContainerBinaryAllowlist:
+    """The Kometa docker binary must be a known container runtime (fix #2)."""
+
+    @pytest.mark.parametrize("binary", ["docker", "podman", "nerdctl", "/usr/local/bin/docker"])
+    def test_config_accepts_allowed_binaries(self, binary: str) -> None:
+        from playbook.config import _build_kometa_trigger_settings
+
+        settings = _build_kometa_trigger_settings({"mode": "docker", "docker": {"binary": binary}})
+        assert settings.docker_binary == binary
+
+    def test_config_defaults_to_docker(self) -> None:
+        from playbook.config import _build_kometa_trigger_settings
+
+        settings = _build_kometa_trigger_settings({"mode": "docker", "docker": {}})
+        assert settings.docker_binary == "docker"
+
+    @pytest.mark.parametrize("binary", ["sh", "/bin/sh", "bash", "python3", "docker; rm -rf /"])
+    def test_config_rejects_disallowed_binaries(self, binary: str) -> None:
+        from playbook.config import _build_kometa_trigger_settings
+
+        with pytest.raises(ValueError, match="docker.binary"):
+            _build_kometa_trigger_settings({"mode": "docker", "docker": {"binary": binary}})
+
+    def test_runtime_guard_refuses_disallowed_binary(self, monkeypatch) -> None:
+        # Settings constructed directly bypass config validation; the trigger must
+        # still refuse and never reach subprocess.
+        settings = KometaTriggerSettings(
+            enabled=True,
+            mode="docker",
+            docker_binary="/bin/sh",
+            docker_config_path="/srv/kometa/config",
+        )
+        trigger = KometaDockerTrigger(settings)
+
+        def explode(*_args, **_kwargs):
+            raise AssertionError("subprocess.Popen must not be called for a disallowed binary")
+
+        monkeypatch.setattr("playbook.kometa_trigger.subprocess.Popen", explode)
+        assert trigger.trigger() is False

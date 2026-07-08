@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import smtplib
+import ssl
 from email.message import EmailMessage
 from typing import Any
 
@@ -48,7 +49,10 @@ class EmailTarget(NotificationTarget):
         try:
             with smtplib.SMTP(self.host, self.port, timeout=self.timeout) as server:
                 if self.use_tls:
-                    server.starttls()
+                    # smtplib does NOT verify certificates by default; pass an
+                    # explicit verifying context so credentials can't be captured
+                    # by an on-path attacker presenting a bogus cert.
+                    server.starttls(context=ssl.create_default_context())
                 if self.username and self.password:
                     server.login(self.username, self.password)
                 server.send_message(message)
