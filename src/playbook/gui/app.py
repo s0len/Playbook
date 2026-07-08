@@ -234,7 +234,10 @@ def run_with_gui(
 
     processor.notification_service.notify = _gui_notify
 
-    # Set NiceGUI storage path to persistent state directory
+    # Ensure the persistent NiceGUI storage directory exists. NiceGUI resolves
+    # the actual storage location from NICEGUI_STORAGE_PATH at import time (set
+    # by entrypoint.sh to STATE_DIR/.nicegui); assigning app.storage.path here
+    # does not relocate the file store, so the env var is the real control.
     state_dir = app_config.settings.state_dir or app_config.settings.cache_dir
     storage_path = state_dir / ".nicegui"
     storage_path.mkdir(parents=True, exist_ok=True)
