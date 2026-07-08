@@ -506,6 +506,34 @@ class PlexClient:
         self._request("PUT", f"/library/metadata/{rating_key}/{element}", params=params)
         return True
 
+    def upload_asset(self, rating_key: str, element: str, data: bytes, *, content_type: str = "image/jpeg") -> bool:
+        """Upload an artwork asset (poster/thumb, art/background) from raw image bytes.
+
+        Unlike set_asset, this pushes a local image directly to Plex instead of
+        having Plex download it from a URL.
+
+        Args:
+            rating_key: The Plex rating key of the item.
+            element: Asset type - use 'thumb' for poster, 'art' for background.
+            data: Raw image bytes.
+            content_type: MIME type of the image (e.g. 'image/jpeg', 'image/png').
+
+        Returns:
+            True if successful.
+        """
+        endpoints = {"thumb": "posters", "art": "arts"}
+        endpoint = endpoints.get(element)
+        if endpoint is None:
+            raise PlexApiError(f"Invalid asset element '{element}'; valid: {set(endpoints)}")
+
+        self._request(
+            "POST",
+            f"/library/metadata/{rating_key}/{endpoint}",
+            headers={"Content-Type": content_type},
+            data=data,
+        )
+        return True
+
     def refresh_metadata(self, rating_key: str) -> None:
         """Trigger a metadata refresh for an item."""
         self._request("PUT", f"/library/metadata/{rating_key}/refresh")

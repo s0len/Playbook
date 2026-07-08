@@ -2,6 +2,15 @@
 .cursor/mcp.json
 .cursor/
 
+# Claude Code local state (settings, skills, worktrees)
+.claude/
+
+# Auto-generated config backups
+config/backups/
+
+# uv lockfile (project uses pip + requirements.txt)
+uv.lock
+
 # General files to ignore
 .DS_Store
 node_modules/

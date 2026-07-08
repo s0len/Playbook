@@ -115,6 +115,13 @@ _SECTIONS = [
                 "description": "Prevent Plex from overwriting posters",
             },
             {
+                "key": "metadata_sync.fallback_assets_dir",
+                "label": "Fallback Assets Directory",
+                "type": "text",
+                "description": "Local artwork used when TVSportsDB has none (e.g. /config/assets)",
+                "placeholder": "/config/assets",
+            },
+            {
                 "key": "metadata_sync.sports",
                 "label": "Sports Filter",
                 "type": "list",

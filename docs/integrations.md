@@ -47,6 +47,41 @@ settings:
 3. **First-time sync** - Sports that have never been synced will auto-sync on first run
 4. **Field locking** - Locks Plex fields after updating to prevent metadata refresh from overwriting
 
+### Fallback Artwork
+
+Some events have no artwork in TVSportsDB yet (`url_poster: null`). By default Playbook leaves
+those items untouched, so Plex falls back to the generic show poster for the season. To fill the
+gaps with your own artwork, point `fallback_assets_dir` at a directory of local images:
+
+```yaml
+settings:
+  integrations:
+    plex:
+      metadata_sync:
+        enabled: true
+        fallback_assets_dir: /config/assets
+```
+
+Files are matched per show slug (the same `show_slug` as in the sport config):
+
+```
+/config/assets/
+  ufc-2026/
+    poster.jpg        # Show poster
+    background.jpg    # Show background
+    season-03.jpg     # Poster for season 3 (season-3.jpg also works)
+    s03e02.jpg        # Poster for season 3, episode 2
+```
+
+Supported extensions: `.jpg`, `.jpeg`, `.png`, `.webp`.
+
+Local files are a **fallback only** - artwork from TVSportsDB always takes precedence, so
+once real artwork is uploaded upstream it replaces the local fallback on the next sync.
+Because syncs are fingerprint-based, artwork added for an *already synced* item is applied
+on the next forced sync (`force: true` or `PLEX_FORCE=1`). The cleanest long-term fix is
+still to upload proper artwork to [tvsportsdb.com](https://tvsportsdb.com) so everyone
+benefits.
+
 ### Environment Variables
 
 | Variable | Purpose |
@@ -59,6 +94,7 @@ settings:
 | `PLEX_FORCE` | Force all updates |
 | `PLEX_SYNC_DRY_RUN` | Dry-run mode |
 | `PLEX_SPORTS` | Comma-separated sport IDs to sync |
+| `PLEX_SYNC_FALLBACK_ASSETS_DIR` | Local fallback artwork directory |
 
 ### Relationship with Kometa
 
