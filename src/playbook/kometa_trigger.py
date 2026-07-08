@@ -12,7 +12,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from .config import KometaTriggerSettings
+from .config import _ALLOWED_CONTAINER_BINARIES, KometaTriggerSettings
 
 try:  # pragma: no cover - exercised in production environments
     from kubernetes import client, config
@@ -290,6 +290,13 @@ class KometaDockerTrigger(_BaseKometaTrigger):
         return True
 
     def _ensure_binary(self, binary: str) -> bool:
+        if Path(binary).name not in _ALLOWED_CONTAINER_BINARIES:
+            LOGGER.error(
+                "Refusing to run Kometa docker trigger: binary %r is not an allowed container runtime (%s).",
+                binary,
+                ", ".join(sorted(_ALLOWED_CONTAINER_BINARIES)),
+            )
+            return False
         if shutil.which(binary) is None:
             LOGGER.error(
                 "Docker binary '%s' not found on PATH. Mount it into the container"

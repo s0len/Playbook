@@ -23,6 +23,8 @@ import mimetypes
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from .utils import sanitize_component
+
 if TYPE_CHECKING:
     from .models import Episode, Season, Show
 
@@ -65,13 +67,24 @@ class LocalAssetResolver:
         """Return the first existing image file matching any stem for the show."""
         if not self.assets_dir or not show.key:
             return None
-        show_dir = self.assets_dir / show.key
+        # show.key is the API-supplied slug (untrusted); sanitize it into a single
+        # path component so it can never escape the assets directory via "../" or
+        # an absolute path.
+        show_dir = self.assets_dir / sanitize_component(show.key)
         for stem in stems:
             for ext in IMAGE_EXTENSIONS:
                 candidate = show_dir / f"{stem}{ext}"
-                if candidate.is_file():
+                if candidate.is_file() and self._within_assets_dir(candidate):
                     return candidate
         return None
+
+    def _within_assets_dir(self, candidate: Path) -> bool:
+        """Defense in depth: reject paths that resolve outside the assets dir."""
+        assert self.assets_dir is not None
+        try:
+            return candidate.resolve().is_relative_to(self.assets_dir.resolve())
+        except OSError:
+            return False
 
     def show_poster(self, show: Show) -> Path | None:
         return self._find(show, ["poster"])

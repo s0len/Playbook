@@ -195,7 +195,9 @@ class NotificationService:
             try:
                 target.send(event)
             except Exception as exc:  # pragma: no cover - defensive logging
-                LOGGER.warning("Notification target %s failed: %s", target.name, exc)
+                # Log the exception type only; the message may embed a webhook
+                # URL (capability token). Targets log their own redacted details.
+                LOGGER.warning("Notification target %s failed: %s", target.name, type(exc).__name__)
             else:
                 successes.append(target.name)
 
