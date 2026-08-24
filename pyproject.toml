@@ -39,7 +39,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=9.0.3,<10",
+    "pytest>=9.1.1,<10",
     "mkdocs-material>=9.7.6,<10",
     "ruff>=0.15.16",
     "pre-commit>=4.6.0",
