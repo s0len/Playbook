@@ -17,6 +17,8 @@ on:
     paths:
       - 'requirements.txt'
       - 'requirements-dev.txt'
+      - 'requirements.lock'
+      - 'requirements-dev.lock'
       - 'Dockerfile'
       - '.trivyignore'
       - '.trivyignore.yaml'
@@ -25,6 +27,8 @@ on:
     paths:
       - 'requirements.txt'
       - 'requirements-dev.txt'
+      - 'requirements.lock'
+      - 'requirements-dev.lock'
       - 'Dockerfile'
       - '.trivyignore'
       - '.trivyignore.yaml'
@@ -58,6 +62,12 @@ jobs:
 
       - name: Scan requirements-dev.txt for vulnerabilities
         run: pip-audit -r requirements-dev.txt --desc
+
+      # requirements.lock is the file the Docker image installs
+      # (Dockerfile: pip install --require-hashes -r /app/requirements.lock),
+      # so it is the one that must be clean for the shipped artifact.
+      - name: Scan requirements.lock for vulnerabilities
+        run: pip-audit -r requirements.lock --desc
 
   # Note: Docker image scan reports vulnerabilities for visibility but does not
   # block builds. Base image vulnerabilities (Debian bookworm) are third-party
