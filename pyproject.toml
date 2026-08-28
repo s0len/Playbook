@@ -45,7 +45,7 @@ dev = [
     "pre-commit>=4.6.0",
 ]
 gui = [
-    "nicegui>=3.14.0",
+    "nicegui>=3.16.0",
 ]
 
 [project.urls]
