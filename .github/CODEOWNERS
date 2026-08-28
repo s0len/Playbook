@@ -1,0 +1,5 @@
+# Default owner for everything in this repository.
+# Replaces the deprecated `reviewers:` key in .github/dependabot.yml --
+# in CODEOWNERS the leading @ IS required (unlike dependabot.yml, where
+# "@solen" silently never resolved to a user).
+* @solen
