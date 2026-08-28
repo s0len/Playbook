@@ -1,6 +1,12 @@
 version: 2
 updates:
   # Python dependencies in pip
+  #
+  # NOTE: Dependabot's pip ecosystem parses pyproject.toml and requirements
+  # files ending in .txt / .in only. It does NOT read requirements.lock or
+  # requirements-dev.lock (pip-compile output) -- and requirements.lock is what
+  # the Docker image installs. Re-run pip-compile whenever a PR here bumps
+  # requirements.txt, or the shipped image keeps the old versions.
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -12,8 +18,6 @@ updates:
       - "python"
       - "security"
     open-pull-requests-limit: 5
-    reviewers:
-      - "@solen"
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"
@@ -30,7 +34,20 @@ updates:
       - "github-actions"
       - "security"
     open-pull-requests-limit: 5
-    reviewers:
-      - "@solen"
     commit-message:
       prefix: "ci"
+
+  # Docker base image (Dockerfile: FROM python:3.12-slim-bookworm)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "09:00"
+    target-branch: "develop"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "security"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "docker"

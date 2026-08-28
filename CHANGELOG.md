@@ -1,3 +1,23 @@
+## [2.23.0] - 2026-08-28
+
+### Fixed
+- **The published Docker image was installing badly outdated dependencies.** `requirements.lock` is what the image installs (`pip install --require-hashes -r /app/requirements.lock`), but Dependabot's pip ecosystem only parses `pyproject.toml` and `.txt`/`.in` files and cannot see a `.lock` — so every merged dependency PR left the shipped artifact untouched. Both locks are regenerated, and the image now ships `nicegui` 3.16.0 (was 3.6.1), `kubernetes` 36.0.3 (was 35.0.0), `requests` 2.34.2 (was 2.32.5), `pydantic` 2.13.4 (was 2.12.5), `rich` 15.0.0 (was 14.3.1), `tenacity` 9.1.4, and `rapidfuzz` 3.14.5, plus 36 refreshed transitive packages including `fastapi` 0.141.1 (was 0.128.0), `starlette` 1.6.0 (was 0.50.0), and `uvicorn` 0.52.4 (was 0.40.0) (#225).
+- Both lock files are now compiled under Python 3.12, matching the `python:3.12-slim-bookworm` runtime. `requirements.lock` had been generated under Python 3.14 and `requirements-dev.lock` under Python 3.9 — the latter below the project's own `requires-python = ">=3.12"`. Environment markers and wheel selection are resolved at compile time, so under `--require-hashes` a mismatch fails the image build outright rather than warning (#225).
+- Dependabot's `target-branch: "develop"` existed only on `main` and had never been merged back into `develop`, so the next release merge would have overwritten it and sent dependency PRs to `main` again. Both branches now agree (#226).
+- Dependabot review requests were never actually sent: the `reviewers:` key was set to `"@solen"`, but the field expects a bare username and the `@` prefix silently never resolved to a user. Replaced with `.github/CODEOWNERS`, where the `@` is required (#226).
+
+### Changed
+- Dependency updates: `nicegui` 3.16.0 (#206, #222), `kubernetes` 36.0.3 (#213).
+- Dev dependency updates: `pytest` >=9.1.1 (#207), `ruff` >=0.16.4 (#212, #218), `setuptools` >=84.0.0 (#204, #220), `mkdocs-material` >=9.7.7 (#219), `pre-commit` >=4.6.2 (#221).
+- CI: `actions/setup-python` v7 (#214), `docker/login-action` 4.6.0 (#216, #224), `github/codeql-action` 4.37.8 (#217, #223).
+- Dependabot now tracks the Docker base image (`python:3.12-slim-bookworm`), which had never been offered an update (#226).
+- Security scanning now covers the lock files: `requirements.lock` and `requirements-dev.lock` are in the workflow's path filters, so a lock-only change no longer slips through unscanned, and `pip-audit` runs against `requirements.lock` — the file the image actually installs (#225).
+
+### Notes
+- No application code changed in this release; `src/` is untouched. The web GUI stack did move substantially inside the image (`starlette` crosses 0.x→1.x, `rich` 14→15, `nicegui` gains ten minor versions), so a quick smoke test of the GUI after upgrading is worthwhile.
+- `pip-audit` reports no known vulnerabilities in either regenerated lock.
+- Nothing regenerates the locks automatically yet, so they can drift again. Tracking a follow-up to either enforce `pip-compile` in CI or rename the locks so Dependabot maintains them directly.
+
 ## [2.22.0] - 2026-07-08
 
 ### Security
