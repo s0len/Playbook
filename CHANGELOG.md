@@ -1,3 +1,28 @@
+## [Unreleased]
+
+### Fixed
+- **Premier League fixtures from a new season were silently filed into the previous one.** The `Premier League matchweek releases` pattern read `EPL.2026.08.28.Crystal.Palace.vs.Manchester.City` as year=2026 + matchweek=08 and hardlinked it into Matchweek 8 of the 2025-26 show, picking whichever fixture in that week shared a team. The pattern now carries a negative lookahead so it can no longer swallow a `YYYY.MM.DD` release.
+- **Two-legged ties resolved to the wrong leg.** The session-lookup index maps both orderings of a matchup to the same entry, so a lookup hit cannot tell the home leg from the away leg, and `select_episode` returned it without checking the date. On the real library this mis-filed 12 Champions League fixtures - `2026.03.17.Chelsea.vs.PSG` landed on the 2026-03-10 Paris Saint-Germain home leg, and so on. A lookup hit whose date contradicts the filename now re-points to the occurrence the date supports.
+- Team names containing letters outside ASCII were truncated before comparison: `TEAM_PATTERN` was `[A-Za-z0-9 .&'/-]`, so "Atlético Madrid" was extracted as "tico Madrid", "Bayern München" as "nchen", and "Beşiktaş vs Porto" not at all. The truncated name then tripped the partial-overlap rejection and scored zero.
+- `normalize_token` now folds Latin letters that NFD cannot decompose (ø, đ, ð, ł, ħ, ı, æ, œ, ß, þ). These were deleted outright by the combining-mark strip, so metadata "Bodø/Glimt" normalized to `bodglimt` and never matched a release named "Bodo-Glimt".
+- `find_episode_across_seasons` ignored the date and returned whichever season came first, even though league teams meet home and away and players meet again at another tournament. It now skips occurrences the filename's date contradicts.
+- `parse_date_from_groups` now also reads `season_year`, which several competition patterns use to name the leading YYYY of a `YYYY.MM.DD` date. Because a date also requires day and month, a genuine season label can never be read as one.
+- WTA: `WTA Finals | Riyadh | ...` parsed as level=Finals, tournament=Riyadh, resolved to no season, and then fell through to the first season holding that matchup - filing the Riyadh final under the Australian Open. `level` is now the tour tier only (1000/500/250/125); the dedicated Finals pattern handles the rest.
+- Added a pattern for the bare `CL - Home vs Away DD.MM.YYYY` shape, which the structured parser cannot split (it glues the prefix onto the home team as "CL - Qarabag").
+
+### Changed
+- Premier League, Champions League and NFL now offer every season's show as a match candidate instead of mapping a calendar year to one show. A season spans two calendar years, so the captured year cannot pick the right show on its own - January 2026 is the 2025 season while September 2026 is the 2026 season. Variants use `id_suffix` (the season's starting year) rather than `year`, which leaves `variant_year` unset so the date in the filename decides. Existing sport ids are unchanged, so no persisted state is orphaned. Premier League and Champions League now reach their 2026-27 shows and NFL reaches `nfl-2026`.
+- The structured matcher's date term is monotonic (0.40 exact, 0.30 at one day, 0.20 at two) instead of a flat 0.40 anywhere within the window, so two fixtures between the same teams a day or two apart can no longer tie on the date alone.
+- The structured matcher now refuses when several episodes tie at the top score and name different fixtures, instead of silently taking the first. This surfaces duplicated metadata (a game listed in both a pre-season and a regular-season season) and dateless filenames whose teams meet several times a season as unmatched rather than mis-filed.
+- An episode whose date is known and outside the tolerance is no longer accepted just because it was the only candidate. A lone candidate with an *unknown* date is still accepted.
+- CI now runs the test suite, and a push to `develop` cannot build and publish an image unless it passes. Previously only ruff, docs and a security scan ran, while Renovate auto-bumped the deployed digest.
+
+### Notes
+- Measured against the live library (944 files, real TVSportsDB metadata): 14 files that resolved to the wrong fixture now resolve correctly, no file changed to a wrong answer, and one file stopped matching - `NHL.2025.RS.Blue.Jackets.vs.Devils` carries no date and those teams meet four times that season, so the previous match was a one-in-four guess.
+- NHL is deliberately *not* pointed at `nhl-2026-2027` yet: in that show season 0 ("Pre-Season") duplicates the entire regular season, 1403 episodes spanning 2026-09-19..2027-04-10, so 414 of 2332 fixtures exist in more than one season. Repoint it once the duplicate season is removed upstream.
+- `wta-2025` does not exist and has 404'd silently for months (the API publishes this family as `wta-tour-<year>`). It is left as-is on purpose: repointing it at `wta-tour-2026` made a 2020 file match an unrelated 2026 fixture, so WTA episode selection needs tightening first.
+- `tests/data/pattern_samples.yaml` silently ignored 24 filename entries (they use the key `files:` rather than `filenames:`) and every `expect_season` assertion. Both are now honoured, and a sample declaring no filenames is an error rather than a vacuous pass.
+
 ## [2.23.0] - 2026-08-28
 
 ### Fixed

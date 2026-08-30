@@ -497,3 +497,127 @@ def test_structured_match_with_provider_plus_and_trailing_date_tokens() -> None:
     result = match_file_to_episode(filename, sport, show, patterns=[])
     assert result is not None
     assert result["episode"].title == "Chicago Blackhawks vs Los Angeles Kings"
+
+
+def _dated_season(key: str, title: str, episodes: list[Episode], index: int = 1) -> Season:
+    season = _season(key, title, episodes)
+    season.index = index
+    return season
+
+
+class TestDateProximityScoring:
+    """The date term is monotonic, so the closest fixture wins outright."""
+
+    def test_exact_date_beats_two_days_away(self) -> None:
+        sport = _sport("nba", alias_map="nba")
+        season = _dated_season(
+            "jan",
+            "January",
+            [
+                _episode("Boston Celtics vs Miami Heat", dt.date(2026, 1, 10), index=1),
+                _episode("Boston Celtics vs Miami Heat", dt.date(2026, 1, 12), index=2),
+            ],
+        )
+        show = _show("NBA 2025-26", [season])
+
+        result = match_file_to_episode(
+            "NBA RS 2026 Boston Celtics vs Miami Heat 10 01 720pEN60fps.mkv", sport, show, patterns=[]
+        )
+        assert result is not None
+        assert result["episode"].index == 1
+
+    def test_closest_of_two_nearby_fixtures_wins(self) -> None:
+        sport = _sport("nba", alias_map="nba")
+        season = _dated_season(
+            "jan",
+            "January",
+            [
+                _episode("Boston Celtics vs Miami Heat", dt.date(2026, 1, 10), index=1),
+                _episode("Boston Celtics vs Miami Heat", dt.date(2026, 1, 12), index=2),
+            ],
+        )
+        show = _show("NBA 2025-26", [season])
+
+        result = match_file_to_episode(
+            "NBA RS 2026 Boston Celtics vs Miami Heat 12 01 720pEN60fps.mkv", sport, show, patterns=[]
+        )
+        assert result is not None
+        assert result["episode"].index == 2
+
+    def test_fixture_outside_tolerance_is_rejected(self) -> None:
+        sport = _sport("nba", alias_map="nba")
+        season = _dated_season(
+            "jan", "January", [_episode("Boston Celtics vs Miami Heat", dt.date(2026, 1, 20), index=1)]
+        )
+        show = _show("NBA 2025-26", [season])
+
+        result = match_file_to_episode(
+            "NBA RS 2026 Boston Celtics vs Miami Heat 10 01 720pEN60fps.mkv", sport, show, patterns=[]
+        )
+        assert result is None
+
+
+class TestAmbiguousMatchRefusal:
+    """Equally-scoring candidates naming different episodes must refuse, not guess."""
+
+    def test_fixture_duplicated_across_seasons_refuses(self) -> None:
+        """Mirrors nhl-2026-2027, where season 0 duplicates the whole regular season."""
+        sport = _sport("nhl", alias_map="nhl")
+        pre_season = _dated_season(
+            "s0",
+            "Pre-Season",
+            [_episode("Edmonton Oilers vs Calgary Flames", dt.date(2026, 10, 8), index=1)],
+            index=0,
+        )
+        week_one = _dated_season(
+            "s1",
+            "Week 1",
+            [_episode("Edmonton Oilers vs Calgary Flames", dt.date(2026, 10, 8), index=1)],
+            index=1,
+        )
+        show = _show("NHL 2026-27", [pre_season, week_one])
+
+        diagnostics: list[tuple[str, str]] = []
+        result = match_file_to_episode(
+            "NHL RS 2026 Edmonton Oilers vs Calgary Flames 08 10 720pEN60fps.mkv",
+            sport,
+            show,
+            patterns=[],
+            diagnostics=diagnostics,
+        )
+        assert result is None
+        assert any("Ambiguous structured match" in message for _, message in diagnostics)
+
+    def test_single_season_still_resolves(self) -> None:
+        sport = _sport("nhl", alias_map="nhl")
+        week_one = _dated_season(
+            "s1", "Week 1", [_episode("Edmonton Oilers vs Calgary Flames", dt.date(2026, 10, 8), index=1)], index=1
+        )
+        show = _show("NHL 2026-27", [week_one])
+
+        result = match_file_to_episode(
+            "NHL RS 2026 Edmonton Oilers vs Calgary Flames 08 10 720pEN60fps.mkv", sport, show, patterns=[]
+        )
+        assert result is not None
+        assert result["season"].title == "Week 1"
+
+
+class TestNonAsciiTeamNames:
+    """Episode titles with accented team names must still resolve."""
+
+    def test_accented_metadata_matches_ascii_filename(self) -> None:
+        sport = _sport("uefa_champions_league")
+        season = _dated_season(
+            "mw1", "Matchweek 1", [_episode("Atlético Madrid vs Club Brugge", dt.date(2026, 9, 16), index=1)]
+        )
+        show = _show("UEFA Champions League 2026-2027", [season])
+
+        result = match_file_to_episode(
+            "UCL.2026.09.16.Atletico.Madrid.vs.Club.Brugge.1080p.WEB.mkv", sport, show, patterns=[]
+        )
+        assert result is not None
+        assert result["episode"].title == "Atlético Madrid vs Club Brugge"
+
+    def test_extract_teams_handles_non_ascii(self) -> None:
+        teams = _extract_teams_from_text("Bayern München vs Beşiktaş", {})
+        assert teams == ["Bayern München", "Beşiktaş"]

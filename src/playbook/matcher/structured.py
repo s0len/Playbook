@@ -17,9 +17,24 @@ from ..session_index import SessionLookupIndex
 from ..team_aliases import get_team_alias_map
 from ..utils import normalize_token
 from .core import PatternRuntime
-from .date_utils import dates_within_proximity
 from .similarity import token_similarity
 from .team_resolver import build_team_alias_lookup, extract_teams_from_text
+
+# Maximum distance (in days) between a filename date and an episode date for the
+# two to describe the same fixture.
+DATE_TOLERANCE_DAYS = 2
+
+# Score awarded for the date term, by absolute day distance. The term is monotonic
+# rather than flat so that two fixtures between the same teams a day or two apart
+# cannot tie on the date alone - the closer date always wins outright.
+DATE_PROXIMITY_SCORES = {0: 0.40, 1: 0.30, 2: 0.20}
+
+# Minimum score for a structured match to be accepted.
+MATCH_THRESHOLD = 0.6
+
+# Scores are sums of float literals, so equal candidates compare exactly; the
+# epsilon only guards against accumulated representation error.
+_SCORE_EPSILON = 1e-9
 
 
 def score_structured_match(
@@ -55,11 +70,13 @@ def score_structured_match(
     # Date proximity check - critical for sports where same teams play multiple times
     # If both dates are available, they MUST be within proximity for a valid match
     if structured.date and episode.originally_available:
-        if not dates_within_proximity(structured.date, episode.originally_available, tolerance_days=2):
+        distance = abs((structured.date - episode.originally_available).days)
+        if distance > DATE_TOLERANCE_DAYS:
             # Dates are too far apart - this is likely a different game between the same teams
             return 0.0
-        # Dates match within proximity - this is a strong indicator
-        score += 0.4
+        # Dates match within proximity - this is a strong indicator, weighted by how
+        # close they are so a back-to-back fixture cannot tie with the exact date.
+        score += DATE_PROXIMITY_SCORES[distance]
 
     if structured_tokens and episode_tokens:
         if structured_tokens == episode_tokens:
@@ -131,18 +148,54 @@ def structured_match(
                 # Skip structured matching and fall back to pattern-based matching
                 return None
 
-    best: tuple[Season, Episode] | None = None
+    best_candidates: list[tuple[Season, Episode]] = []
     best_score = 0.0
 
     for season in show.seasons:
         for episode in season.episodes:
             score = score_structured_match(structured, season, episode, alias_lookup)
-            if score > best_score:
+            if score <= 0.0:
+                continue
+            if score > best_score + _SCORE_EPSILON:
                 best_score = score
-                best = (season, episode)
+                best_candidates = [(season, episode)]
+            elif score >= best_score - _SCORE_EPSILON:
+                best_candidates.append((season, episode))
 
-    if best and best_score >= 0.6:
-        season, episode = best
+    if best_candidates and best_score >= MATCH_THRESHOLD:
+        # Several episodes tied at the top score means the filename does not identify a
+        # single fixture - most often duplicated metadata (the same game listed in both a
+        # pre-season and a regular-season season). Refusing turns a silent mis-file into a
+        # visible unmatched file, which is the safer failure.
+        distinct = {(s.index, s.title, e.index, e.title) for s, e in best_candidates}
+        if len(distinct) > 1:
+            summary = ", ".join(f"{s.title} / {e.title}" for s, e in best_candidates[:4])
+            if len(best_candidates) > 4:
+                summary += ", ..."
+            if diagnostics is not None:
+                diagnostics.append(
+                    (
+                        "warning",
+                        f"Ambiguous structured match: {len(distinct)} candidates tied at "
+                        f"score {best_score:.2f} ({summary})",
+                    )
+                )
+            if trace is not None:
+                trace.setdefault("attempts", [])
+                trace["attempts"].append(
+                    {
+                        "pattern": "structured",
+                        "status": "ambiguous",
+                        "score": best_score,
+                        "candidates": [
+                            {"season": s.title, "episode": e.title, "season_index": s.index}
+                            for s, e in best_candidates[:8]
+                        ],
+                    }
+                )
+            return None
+
+        season, episode = best_candidates[0]
         groups: dict[str, object] = {
             "structured_competition": structured.competition,
             "structured_date": structured.date.isoformat() if structured.date else None,

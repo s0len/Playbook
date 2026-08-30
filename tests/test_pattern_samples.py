@@ -25,6 +25,8 @@ DATA_PATH = Path(__file__).resolve().parent / "data" / "pattern_samples.yaml"
 class FilenameExpectation:
     value: str
     expect_episode: str | None = None
+    expect_season: str | None = None
+    expect_no_match: bool = False
 
 
 @dataclass
@@ -127,12 +129,17 @@ def _build_filenames(entries: Iterable[object]) -> list[FilenameExpectation]:
             expectations.append(FilenameExpectation(value=entry))
             continue
         if isinstance(entry, dict):
+            unknown = set(entry) - {"value", "expect_episode", "expect_season", "expect_no_match"}
+            if unknown:
+                raise AssertionError(f"Unknown key(s) {sorted(unknown)} in filename entry: {entry!r}")
             expectations.append(
                 FilenameExpectation(
                     value=str(entry.get("value")),
                     expect_episode=(
                         str(entry.get("expect_episode")) if entry.get("expect_episode") is not None else None
                     ),
+                    expect_season=(str(entry.get("expect_season")) if entry.get("expect_season") is not None else None),
+                    expect_no_match=bool(entry.get("expect_no_match", False)),
                 )
             )
             continue
@@ -146,8 +153,12 @@ def _load_samples() -> list[PatternSample]:
     for entry in raw.get("samples", []):
         sport_data = entry.get("sport") or {}
         show_data = entry.get("show") or {}
-        filenames = entry.get("filenames") or []
         description = str(entry.get("description") or sport_data.get("id") or "pattern-sample")
+        # "files" is a long-standing typo for "filenames" in this file. Accept both rather
+        # than silently treating a typo'd sample as an empty (and therefore passing) one.
+        filenames = entry.get("filenames") or entry.get("files") or []
+        if not filenames:
+            raise AssertionError(f"Sample {description!r} declares no filenames - it would pass vacuously")
 
         sample = PatternSample(
             description=description,
@@ -175,10 +186,21 @@ def test_pattern_samples(sample: PatternSample) -> None:
             diagnostics=diagnostics,
             relative_path=expectation.value,
         )
+        if expectation.expect_no_match:
+            assert result is None, (
+                f"{sample.description}: '{expectation.value}' was expected not to resolve against this show, "
+                f"but matched season {result['season'].title!r} / episode {result['episode'].title!r}"
+            )
+            continue
         assert result is not None, (
             f"{sample.description}: '{expectation.value}' did not resolve. Diagnostics: {diagnostics}"
         )
         if expectation.expect_episode is not None:
             assert result["episode"].title == expectation.expect_episode, (
                 f"{sample.description}: '{expectation.value}' matched {result['episode'].title!r}, expected {expectation.expect_episode!r}"
+            )
+        if expectation.expect_season is not None:
+            assert result["season"].title == expectation.expect_season, (
+                f"{sample.description}: '{expectation.value}' matched season {result['season'].title!r}, "
+                f"expected {expectation.expect_season!r}"
             )

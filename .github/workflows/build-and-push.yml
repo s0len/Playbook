@@ -15,6 +15,25 @@ permissions:
   security-events: write
 
 jobs:
+  # A push to develop auto-deploys via Renovate digest bumps, so the suite has to gate
+  # the image build - not just run alongside it on pull requests.
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install the package with dev and GUI extras
+        run: pip install -e '.[dev,gui]'
+
+      - name: Run pytest
+        run: pytest -q
+
   # Security scan must pass before building and pushing
   python-dependency-scan:
     runs-on: ubuntu-latest
@@ -78,7 +97,7 @@ jobs:
           severity: 'HIGH,CRITICAL'
 
   build-and-push:
-    needs: [python-dependency-scan, docker-image-scan]
+    needs: [pytest, python-dependency-scan, docker-image-scan]
     runs-on: ubuntu-latest
 
     steps:

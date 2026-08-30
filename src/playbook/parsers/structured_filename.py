@@ -164,7 +164,7 @@ def _trim_noise_reverse(segment: str) -> str:
 
 def _extract_matchup(text: str) -> tuple[list[str], str | None, str | None]:
     normalized = _clean_tokens(text)
-    pattern = re.compile(r"(?P<a>[A-Za-z0-9 .&'/-]+?)\s+(?:vs|v|at|@)\s+(?P<b>[A-Za-z0-9 .&'/-]+)", re.IGNORECASE)
+    pattern = re.compile(r"(?P<a>[\w .&'/-]+?)\s+(?:vs|v|at|@)\s+(?P<b>[\w .&'/-]+)", re.IGNORECASE)
     match = pattern.search(normalized)
     if not match:
         return [], None, None

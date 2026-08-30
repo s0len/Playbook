@@ -4281,6 +4281,22 @@ pattern_sets:
           team_alias_map: uefa_champions_league
         session_aliases: *uefa_cl_aliases
 
+      - description: Champions League CL-prefixed with trailing dotted date
+        # Example: CL - Qarabag vs Newcastle United 18.02.2026.mkv
+        # The bare "CL - " prefix is not separable by the structured parser, which glues it
+        # onto the home team ("CL - Qarabag"), so this shape needs an explicit pattern.
+        regex: >-
+          (?i)^CL[\s._-]+(?:-[\s._-]+)?(?P<matchup>(?P<home><matchup_team>)[\s._-]+(?:vs\.?|v|at|@)[\s._-]+(?P<away><matchup_team>))[\s._-]+(?P<day>\d{1,2})[._-](?P<month>\d{1,2})[._-](?P<date_year>\d{4})(?:[\s._-]+(?:<suffix_token>|[A-Za-z0-9]+))*\.(?P<extension><extension>)$
+        season_selector:
+          mode: date
+          value_template: "{date_year}-{month}-{day}"
+        episode_selector:
+          group: matchup
+          allow_fallback_to_title: true
+        metadata_filters:
+          team_alias_map: uefa_champions_league
+        session_aliases: *uefa_cl_aliases
+
       - description: UCL abbreviated with date and matchday
         # Example: UCL.2026.01.28.MD8.Liverpool.vs.Qarabag.1080p50.x264.EN.TNT.mp4
         regex: >-
@@ -4415,8 +4431,11 @@ pattern_sets:
         filename_template: "{show_title} - S{season_number:02d}E{episode_number:02d} - {episode_title}.{extension}"
       - description: Premier League matchweek releases
         # Example: EPL.2025.26.Arsenal.vs.Tottenham.1080pEN50fps.mkv
+        # The negative lookahead stops this from swallowing dated releases such as
+        # EPL.2026.08.28.Crystal.Palace.vs.Manchester.City, which it would otherwise read
+        # as year=2026 + matchweek=08 and file under the wrong season.
         regex: >-
-          (?i)^(?:EPL|English\.?Premier\.?League|Premier\.?League)\.(?P<year>\d{4})\.(?P<matchweek>\d{1,2})\.(?P<matchup>(?P<away>[A-Za-z0-9&'-]+(?:\.[A-Za-z0-9&'-]+){0,5})\.(?P<separator>Vs|vs|VS|V|v)\.(?P<home>[A-Za-z0-9&'-]+(?:\.(?!(?:<suffix_token>|<extension>)(?:$|\.))[A-Za-z0-9&'-]+){0,5}))(?:\.(?:<suffix_token>|[^.]+))*\.(?P<extension><extension>)$
+          (?i)^(?:EPL|English\.?Premier\.?League|Premier\.?League)\.(?P<year>\d{4})\.(?P<matchweek>\d{1,2})\.(?!\d{1,2}\.)(?P<matchup>(?P<away>[A-Za-z0-9&'-]+(?:\.[A-Za-z0-9&'-]+){0,5})\.(?P<separator>Vs|vs|VS|V|v)\.(?P<home>[A-Za-z0-9&'-]+(?:\.(?!(?:<suffix_token>|<extension>)(?:$|\.))[A-Za-z0-9&'-]+){0,5}))(?:\.(?:<suffix_token>|[^.]+))*\.(?P<extension><extension>)$
         season_selector:
           mode: round
           group: matchweek
@@ -5150,8 +5169,12 @@ pattern_sets:
       # Example: WTA 1000 | Wuhan, China | Quarterfinals | Sabalenka, Aryna Vs Rybakina, Elena | 10/10/2025
       # Example: WTA 500 | Tokyo | Final | Osaka, Naomi Vs Gauff, Coco | 22/09/2025
       - description: WTA pipe-delimited with level and location
+        # 'level' is the tour tier only (1000/500/250/125). "Finals" is a tournament, not a
+        # tier - accepting it here made "WTA Finals | Riyadh | ..." parse as level=Finals,
+        # tournament=Riyadh, which resolved to no season and then fell through to the first
+        # season holding that matchup. The dedicated Finals pattern below handles it.
         regex: >-
-          (?i)^WTA[\s._-]*(?P<level>1000|500|250|125|Finals?)?\s*\|\s*(?P<tournament>[^|]+?)(?:,[\s._-]*[A-Za-z]+)?\s*\|\s*(?:(?P<round_name>First[\s._-]?Round|Second[\s._-]?Round|Third[\s._-]?Round|Fourth[\s._-]?Round|R(?:ound[\s._-]?)?(?:of[\s._-]?)?(?:16|32|64|128)|Quarterfinal[s]?|QF|Semi[\s._-]?Final[s]?|SF|Final[s]?|F)\s*\|)?\s*(?P<session>(?P<player1>[A-Za-z''À-ÖØ-öø-ÿ]+(?:,[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)?(?:[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)*)[\s._-]+(?:vs?|VS?|V|-)[\s._-]+(?P<player2>[A-Za-z''À-ÖØ-öø-ÿ]+(?:,[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)?(?:[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)*))\s*(?:\|\s*(?P<date>(?P<day>\d{1,2})[/._-](?P<month>\d{1,2})[/._-](?P<year>\d{4})))?\s*(?:\|.*)?(?:\.(?P<extension><extension>))?$
+          (?i)^WTA[\s._-]*(?P<level>1000|500|250|125)?\s*\|\s*(?P<tournament>[^|]+?)(?:,[\s._-]*[A-Za-z]+)?\s*\|\s*(?:(?P<round_name>First[\s._-]?Round|Second[\s._-]?Round|Third[\s._-]?Round|Fourth[\s._-]?Round|R(?:ound[\s._-]?)?(?:of[\s._-]?)?(?:16|32|64|128)|Quarterfinal[s]?|QF|Semi[\s._-]?Final[s]?|SF|Final[s]?|F)\s*\|)?\s*(?P<session>(?P<player1>[A-Za-z''À-ÖØ-öø-ÿ]+(?:,[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)?(?:[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)*)[\s._-]+(?:vs?|VS?|V|-)[\s._-]+(?P<player2>[A-Za-z''À-ÖØ-öø-ÿ]+(?:,[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)?(?:[\s._-]+[A-Za-z''À-ÖØ-öø-ÿ]+)*))\s*(?:\|\s*(?P<date>(?P<day>\d{1,2})[/._-](?P<month>\d{1,2})[/._-](?P<year>\d{4})))?\s*(?:\|.*)?(?:\.(?P<extension><extension>))?$
         season_selector:
           mode: title
           group: tournament
@@ -5368,13 +5391,16 @@ default_sports:
     name: NFL
     pattern_sets:
       - nfl
-    # NFL season spans two calendar years (Sept-Feb), so both years
-    # must point to the same show slug for the season.
+    # A season spans two calendar years, so a captured calendar year cannot pick the
+    # right show on its own (January 2026 is the 2025 season; September 2026 is the 2026
+    # season). Using id_suffix instead of year leaves variant_year unset, so every season
+    # show is offered as a candidate and the date in the filename decides which one wins.
+    # The suffix is the season's starting year, matching the existing sport ids.
     variants:
-      - year: 2025
+      - id_suffix: 2025
         show_slug: "nfl-2025"
-      - year: 2026
-        show_slug: "nfl-2025"
+      - id_suffix: 2026
+        show_slug: "nfl-2026"
 
   - id: nba
     name: NBA
@@ -5391,6 +5417,11 @@ default_sports:
     team_alias_map: nhl
     pattern_sets:
       - nhl
+    # Deliberately NOT migrated to id_suffix candidates yet. In nhl-2026-2027 season 0
+    # ("Pre-Season") duplicates the entire regular season - 1403 episodes spanning
+    # 2026-09-19..2027-04-10 - so 414 of 2332 fixtures exist in more than one season.
+    # Offering that show as a candidate makes every fixture ambiguous. Point year 2026 at
+    # nhl-2026-2027 once the duplicate season is removed upstream.
     variants:
       - year: 2025
         show_slug: "nhl-2025-2026"
@@ -5405,21 +5436,24 @@ default_sports:
     team_alias_map: premier_league
     pattern_sets:
       - premier_league
+    # See the NFL note above: id_suffix (season start year) rather than year, so both
+    # season shows stay candidates and the fixture date picks the right one.
     variants:
-      - year: 2025
+      - id_suffix: 2025
         show_slug: "english-premier-league-2025-2026"
-      - year: 2026
-        show_slug: "english-premier-league-2025-2026"
+      - id_suffix: 2026
+        show_slug: "english-premier-league-2026-2027"
 
   - id: uefa_champions_league
     name: UEFA Champions League
     pattern_sets:
       - uefa_champions_league
+    # See the NFL note above.
     variants:
-      - year: 2025
+      - id_suffix: 2025
         show_slug: "uefa-champions-league-2025-2026"
-      - year: 2026
-        show_slug: "uefa-champions-league-2025-2026"
+      - id_suffix: 2026
+        show_slug: "uefa-champions-league-2026-2027"
 
   # ------------------------------------------------------------------
   # Figure Skating
@@ -5443,6 +5477,11 @@ default_sports:
     pattern_sets:
       - wta
     allow_unmatched: true  # Many filename formats exist; avoid noisy warnings
+    # NOTE: "wta-2025" does not exist - the API publishes this family as wta-tour-<year>,
+    # so this 404s silently (allow_unmatched suppresses the warning) and no WTA file has
+    # matched for months. Repointing at wta-tour-2026 is deliberately NOT done here: the
+    # WTA episode selectors are loose enough that a 2020 file matched an unrelated 2026
+    # fixture once a real show finally loaded. Tighten WTA matching first, then repoint.
     variants:
       - year: 2025
         show_slug: "wta-2025"

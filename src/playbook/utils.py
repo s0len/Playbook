@@ -22,10 +22,38 @@ _TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
 _FALSE_VALUES = frozenset({"0", "false", "no", "off"})
 
 
+# Latin letters that NFD cannot decompose into a base letter plus a combining mark, so
+# stripping marks would delete them outright. "Bodø/Glimt" would normalize to "bodglimt"
+# and never match a release named "Bodo-Glimt".
+_NON_DECOMPOSABLE_FOLDS = str.maketrans(
+    {
+        "ø": "o",
+        "Ø": "O",
+        "đ": "d",
+        "Đ": "D",
+        "ð": "d",
+        "Ð": "D",
+        "ł": "l",
+        "Ł": "L",
+        "ħ": "h",
+        "Ħ": "H",
+        "ı": "i",
+        "æ": "ae",
+        "Æ": "AE",
+        "œ": "oe",
+        "Œ": "OE",
+        "ß": "ss",
+        "þ": "th",
+        "Þ": "TH",
+    }
+)
+
+
 @functools.lru_cache(maxsize=2048)
 def normalize_token(value: str) -> str:
     """Return a normalized token suitable for fuzzy comparisons."""
-    decomposed = unicodedata.normalize("NFD", value)
+    folded = value.translate(_NON_DECOMPOSABLE_FOLDS)
+    decomposed = unicodedata.normalize("NFD", folded)
     lowered = decomposed.lower()
     stripped = NORMALIZE_PATTERN.sub("", lowered)
     return stripped

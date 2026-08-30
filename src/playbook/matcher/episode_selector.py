@@ -21,6 +21,47 @@ from .session_resolver import build_session_lookup, resolve_session_lookup
 from .similarity import location_matches_title, tokens_close
 from .team_resolver import canonicalize_team, strip_team_noise
 
+_MATCHUP_SPLIT = re.compile(r"\s+(?:vs\.?|v|at|@)\s+", re.IGNORECASE)
+
+
+def _matchup_sides(title: str) -> frozenset[str] | None:
+    """Return the two normalized sides of a "Home vs Away" title, or None."""
+    parts = _MATCHUP_SPLIT.split(title)
+    if len(parts) != 2:
+        return None
+    sides = {normalize_token(part) for part in parts}
+    if len(sides) != 2 or not all(sides):
+        return None
+    return frozenset(sides)
+
+
+def _same_matchup_on_date(season: Season, episode: Episode, parsed_date) -> Episode | None:
+    """Find the occurrence of episode's matchup that the parsed date actually supports.
+
+    The session-lookup index maps both orderings of a matchup to the same entry, so a
+    lookup hit cannot tell the home leg from the away leg. Only the date can.
+    """
+    sides = _matchup_sides(episode.title)
+    if sides is None:
+        return None
+    for other in season.episodes:
+        if other is episode or other.originally_available is None:
+            continue
+        if _matchup_sides(other.title) == sides and _episode_date_compatible(parsed_date, other):
+            return other
+    return None
+
+
+def _episode_date_compatible(parsed_date, episode: Episode) -> bool:
+    """Whether an episode's air date contradicts the date parsed from the filename.
+
+    Unknown on either side is not a contradiction - only two known dates further apart
+    than the tolerance are.
+    """
+    if parsed_date is None or episode.originally_available is None:
+        return True
+    return dates_within_proximity(parsed_date, episode.originally_available)
+
 
 def _strip_noise(normalized: str) -> str:
     """Strip noise tokens from a normalized session string."""
@@ -272,9 +313,11 @@ def select_episode(
                         abs((parsed_date - ep.originally_available).days) if ep.originally_available else 999
                     ),
                 )
-            # No date-matching episodes found - this is likely a mismatch
-            # Only return a match if there's exactly one candidate (no ambiguity)
-            if len(matching_episodes) == 1:
+            # No date-matching episodes found - this is likely a mismatch. A lone candidate
+            # is still acceptable when its date is unknown, since nothing contradicts it,
+            # but a known date outside the window means this is a different occurrence of
+            # the same matchup (the second leg of a tie, the return fixture, a rematch).
+            if len(matching_episodes) == 1 and matching_episodes[0].originally_available is None:
                 return matching_episodes[0]
             return None
 
@@ -304,6 +347,15 @@ def select_episode(
                     (item for item in season.episodes if normalize_token(item.title) == metadata_token),
                     None,
                 )
+                # A session-lookup hit is not proof on its own: the index maps both legs of
+                # a two-legged tie to the same normalized matchup, so it can point at the
+                # return fixture. When the date contradicts it, re-point to the occurrence
+                # the date does support - but never discard the hit outright, or the file
+                # falls through to far looser fallbacks below.
+                if episode and not _episode_date_compatible(parsed_date, episode):
+                    by_date = _same_matchup_on_date(season, episode, parsed_date)
+                    if by_date is not None:
+                        episode = by_date
                 if episode:
                     if trace is not None:
                         trace["match"] = {
@@ -451,6 +503,11 @@ def find_episode_across_seasons(
     Returns:
         Tuple of (season, episode, groups, session_lookup, trace) or None
     """
+    # The same matchup usually occurs several times across a show's seasons - league teams
+    # meet home and away, players meet again at another tournament. Without the date this
+    # search returns whichever season happens to come first, so honour it when present.
+    file_date = parse_date_from_groups(match_groups)
+
     for candidate in show.seasons:
         if exclude_season and candidate is exclude_season:
             continue
@@ -464,6 +521,14 @@ def find_episode_across_seasons(
             candidate_groups,
             trace=episode_trace,
         )
-        if episode:
-            return candidate, episode, candidate_groups, session_lookup, episode_trace
+        if not episode:
+            continue
+        if (
+            file_date
+            and episode.originally_available
+            and not dates_within_proximity(file_date, episode.originally_available)
+        ):
+            # Right matchup, wrong occurrence of it - keep looking.
+            continue
+        return candidate, episode, candidate_groups, session_lookup, episode_trace
     return None
