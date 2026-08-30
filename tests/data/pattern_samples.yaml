@@ -789,6 +789,14 @@ samples:
       key: "premier_league_2025_26"
       title: "Premier League 2025-26"
       seasons:
+        # Present so the mis-parse this sample guards against has somewhere to land: read
+        # as year=2026 + matchweek=08, EPL.2026.08.28 resolved to this season and picked
+        # the fixture sharing a team. Without it the expect_no_match below proves nothing.
+        - title: "Matchweek 8"
+          display_number: 8
+          episodes:
+            - title: "Crystal Palace vs Bournemouth"
+              originally_available: "2025-10-25"
         - title: "Matchweek 25"
           display_number: 25
           episodes:

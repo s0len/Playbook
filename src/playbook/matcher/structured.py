@@ -76,7 +76,7 @@ def score_structured_match(
             return 0.0
         # Dates match within proximity - this is a strong indicator, weighted by how
         # close they are so a back-to-back fixture cannot tie with the exact date.
-        score += DATE_PROXIMITY_SCORES[distance]
+        score += DATE_PROXIMITY_SCORES.get(distance, min(DATE_PROXIMITY_SCORES.values()))
 
     if structured_tokens and episode_tokens:
         if structured_tokens == episode_tokens:
@@ -165,8 +165,9 @@ def structured_match(
     if best_candidates and best_score >= MATCH_THRESHOLD:
         # Several episodes tied at the top score means the filename does not identify a
         # single fixture - most often duplicated metadata (the same game listed in both a
-        # pre-season and a regular-season season). Refusing turns a silent mis-file into a
-        # visible unmatched file, which is the safer failure.
+        # pre-season and a regular-season season), or a dateless filename whose teams meet
+        # several times a season. Declining hands the file to the pattern loop rather than
+        # picking one at random; if no pattern claims it either, it surfaces as unmatched.
         distinct = {(s.index, s.title, e.index, e.title) for s, e in best_candidates}
         if len(distinct) > 1:
             summary = ", ".join(f"{s.title} / {e.title}" for s, e in best_candidates[:4])

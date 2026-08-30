@@ -2080,6 +2080,9 @@ pattern_sets:
       - "UEFA-Champions-League-*"
       - "UCL.*"
       - "UCL *"
+      - "CL - *"
+      - "CL.*"
+      - "CL-*"
       - "ucl.*"
       - "ucl *"
       - "Champions League *"
@@ -5397,20 +5400,21 @@ default_sports:
     # show is offered as a candidate and the date in the filename decides which one wins.
     # The suffix is the season's starting year, matching the existing sport ids.
     variants:
-      - id_suffix: 2025
+      - id_suffix: "2025"
         show_slug: "nfl-2025"
-      - id_suffix: 2026
+      - id_suffix: "2026"
         show_slug: "nfl-2026"
 
   - id: nba
     name: NBA
     pattern_sets:
       - nba
+    # See the NFL note above.
     variants:
-      - year: 2025
+      - id_suffix: "2025"
         show_slug: "nba-2025-2026"
-      - year: 2026
-        show_slug: "nba-2025-2026"
+      - id_suffix: "2026"
+        show_slug: "nba-2026-2027"
 
   - id: nhl
     name: NHL
@@ -5439,9 +5443,9 @@ default_sports:
     # See the NFL note above: id_suffix (season start year) rather than year, so both
     # season shows stay candidates and the fixture date picks the right one.
     variants:
-      - id_suffix: 2025
+      - id_suffix: "2025"
         show_slug: "english-premier-league-2025-2026"
-      - id_suffix: 2026
+      - id_suffix: "2026"
         show_slug: "english-premier-league-2026-2027"
 
   - id: uefa_champions_league
@@ -5450,9 +5454,9 @@ default_sports:
       - uefa_champions_league
     # See the NFL note above.
     variants:
-      - id_suffix: 2025
+      - id_suffix: "2025"
         show_slug: "uefa-champions-league-2025-2026"
-      - id_suffix: 2026
+      - id_suffix: "2026"
         show_slug: "uefa-champions-league-2026-2027"
 
   # ------------------------------------------------------------------

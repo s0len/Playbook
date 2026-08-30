@@ -44,12 +44,19 @@ def _same_matchup_on_date(season: Season, episode: Episode, parsed_date) -> Epis
     sides = _matchup_sides(episode.title)
     if sides is None:
         return None
-    for other in season.episodes:
-        if other is episode or other.originally_available is None:
-            continue
-        if _matchup_sides(other.title) == sides and _episode_date_compatible(parsed_date, other):
-            return other
-    return None
+    candidates = [
+        other
+        for other in season.episodes
+        if other is not episode
+        and other.originally_available is not None
+        and _matchup_sides(other.title) == sides
+        and _episode_date_compatible(parsed_date, other)
+    ]
+    if not candidates:
+        return None
+    # A playoff series can put three meetings inside the tolerance window, so take the
+    # closest rather than whichever comes first in the season.
+    return min(candidates, key=lambda other: abs((parsed_date - other.originally_available).days))
 
 
 def _episode_date_compatible(parsed_date, episode: Episode) -> bool:
