@@ -41,7 +41,7 @@ dependencies = [
 dev = [
     "pytest>=9.1.1,<10",
     "mkdocs-material>=9.7.7,<10",
-    "ruff>=0.16.4",
+    "ruff>=0.16.5",
     "pre-commit>=4.6.2",
 ]
 gui = [
