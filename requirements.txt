@@ -4,7 +4,7 @@ requests==2.34.2
 python-dateutil==2.9.0.post0
 rich==15.0.0
 tenacity==9.1.4
-rapidfuzz==3.14.5
+rapidfuzz==3.14.6
 watchdog==6.0.0
 kubernetes==36.0.3
 httpx==0.28.1
