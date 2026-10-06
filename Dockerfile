@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 # Build arguments for version info (set by CI/CD)
 ARG BUILD_VERSION
