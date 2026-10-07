@@ -9,4 +9,4 @@ watchdog==6.0.0
 kubernetes==36.0.3
 httpx==0.28.1
 pydantic==2.13.5
-nicegui==3.16.0
+nicegui==3.17.1
