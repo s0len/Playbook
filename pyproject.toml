@@ -42,7 +42,7 @@ dev = [
     "pytest>=9.1.1,<10",
     "mkdocs-material>=9.7.7,<10",
     "ruff>=0.17.0",
-    "pre-commit>=4.6.2",
+    "pre-commit>=4.7.0",
 ]
 gui = [
     "nicegui>=3.18.0",
