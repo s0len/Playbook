@@ -6,7 +6,7 @@ rich==15.0.0
 tenacity==9.1.4
 rapidfuzz==3.14.6
 watchdog==6.0.0
-kubernetes==36.0.3
+kubernetes==37.0.1
 httpx==0.28.1
 pydantic==2.13.5
 nicegui==3.18.0
