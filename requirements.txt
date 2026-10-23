@@ -8,5 +8,5 @@ rapidfuzz==3.14.6
 watchdog==6.0.0
 kubernetes==37.0.1
 httpx==0.28.1
-pydantic==2.13.5
+pydantic==2.14.1
 nicegui==3.18.0
