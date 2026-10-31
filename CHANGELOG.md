@@ -20,6 +20,16 @@
 - An episode whose date is known and outside the tolerance is no longer accepted just because it was the only candidate. A lone candidate with an *unknown* date is still accepted.
 - CI now runs the test suite, and a push to `develop` cannot build and publish an image unless it passes. Previously only ruff, docs and a security scan ran, while Renovate auto-bumped the deployed digest.
 
+### Security
+- **The Docker image now builds on Debian 13 (trixie) instead of bookworm.** bookworm is oldstable and carries CVEs Debian no longer backports fixes for. Trivy (HIGH/CRITICAL) on the published `develop` image found 3 CRITICAL and 77 HIGH, 8 of them fixable; the new image has 0 CRITICAL and 44 HIGH, none fixable - every remaining finding is a Debian package with no upstream fix yet (util-linux, ncurses, systemd libs, acl, perl-base). Across all severities: 376 findings down to 166.
+- `curl` is no longer installed in the image. Nothing in Playbook or `entrypoint.sh` calls it, and it pulled in libcurl, krb5, openldap and sasl, which accounted for a large share of the findings.
+- pip is uninstalled once the locked dependencies are in. pip vendors its own `urllib3`, `msgpack` and `setuptools`, and Trivy reads them from pip's SBOM, so the image shipped vulnerable copies of those even though the app's own versions were patched.
+- Dependency refresh: `pydantic` 2.14.2, `watchdog` 7.0.0, `python-dateutil` 3.0.0, plus transitive updates including `certifi` 2026.10.23, `starlette` 1.10.0, `fastapi` 0.162.0, `multidict` 7.2.1, `oauthlib` 4.0.1 and `websockets` 17.4. `pip-audit` finds no known vulnerabilities in any requirements or lock file.
+- Dev dependencies: `mkdocs-material` >=9.8.0, `ruff` >=0.17.2, `pre-commit` >=4.7.0, `setuptools` >=84.2.1; CI: `docker/login-action` 4.7.0, `github/codeql-action` 4.39.1.
+- Every GitHub Action is pinned to a full commit SHA (with the version in a comment, which Dependabot keeps updated). A tag can be moved to point at different code; a SHA cannot.
+- `build-and-push` now grants write permissions per job instead of to the whole workflow, so the test and scan jobs, which run third-party code via `pip install`, only get a read-only token.
+- `build-and-push` now runs `pip-audit` on `requirements.lock` before publishing. The image installs that file, but the gate only audited `requirements.txt` and `requirements-dev.txt`.
+
 ### Notes
 - Measured against the live library (944 files, real TVSportsDB metadata): 14 files that resolved to the wrong fixture now resolve correctly, no file changed to a wrong answer, and one file stopped matching - `NHL.2025.RS.Blue.Jackets.vs.Devils` carries no date and those teams meet four times that season, so the previous match was a one-in-four guess.
 - NHL is deliberately *not* pointed at `nhl-2026-2027` yet: in that show season 0 ("Pre-Season") duplicates the entire regular season, 1403 episodes spanning 2026-09-19..2027-04-10, so 414 of 2332 fixtures exist in more than one season. Repoint it once the duplicate season is removed upstream.

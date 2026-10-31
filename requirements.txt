@@ -1,12 +1,12 @@
 PyYAML==6.0.3
 jsonschema==4.26.0
 requests==2.34.2
-python-dateutil==2.9.0.post0
+python-dateutil==3.0.0
 rich==15.0.0
 tenacity==9.2.1
 rapidfuzz==3.14.6
-watchdog==6.0.0
+watchdog==7.0.0
 kubernetes==37.0.1
 httpx==0.28.1
-pydantic==2.14.1
+pydantic==2.14.2
 nicegui==3.18.0

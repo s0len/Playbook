@@ -1,4 +1,6 @@
-FROM python:3.14-slim-bookworm
+# Debian 13 (trixie) is the current stable release. bookworm (oldstable) carries
+# CVEs Debian no longer backports fixes for (sqlite, util-linux, krb5, ...).
+FROM python:3.14-slim-trixie
 
 # Build arguments for version info (set by CI/CD)
 ARG BUILD_VERSION
@@ -16,13 +18,15 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         tzdata \
-        curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
+# pip is only needed to install the locked dependencies. Remove it afterwards so
+# its vendored libraries (urllib3, msgpack, ...) don't ship in the runtime image.
 COPY requirements.lock /app/requirements.lock
-RUN pip install --require-hashes -r /app/requirements.lock
+RUN pip install --require-hashes -r /app/requirements.lock \
+    && pip uninstall -y pip
 
 COPY src /app/src
 COPY entrypoint.sh /entrypoint.sh

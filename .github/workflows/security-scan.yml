@@ -47,10 +47,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
 
@@ -70,7 +70,7 @@ jobs:
         run: pip-audit -r requirements.lock --desc
 
   # Note: Docker image scan reports vulnerabilities for visibility but does not
-  # block builds. Base image vulnerabilities (Debian bookworm) are third-party
+  # block builds. Base image vulnerabilities (Debian trixie) are third-party
   # issues outside our control. Python dependency vulnerabilities are caught by
   # pip-audit in the python-dependency-scan job which DOES block on issues.
   #
@@ -79,13 +79,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Build Docker image for scanning
         run: docker build -t playbook:scan .
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: 'playbook:scan'
           format: 'sarif'
@@ -97,13 +97,13 @@ jobs:
           trivyignores: '.trivyignore'
 
       - name: Upload Trivy results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4.39.0
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
 
       - name: Run Trivy scanner for detailed output
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         if: always()
         with:
           image-ref: 'playbook:scan'
