@@ -1,6 +1,6 @@
 # Debian 13 (trixie) is the current stable release. bookworm (oldstable) carries
 # CVEs Debian no longer backports fixes for (sqlite, util-linux, krb5, ...).
-FROM python:3.14-slim-trixie
+FROM python:3.15-slim-trixie
 
 # Build arguments for version info (set by CI/CD)
 ARG BUILD_VERSION
