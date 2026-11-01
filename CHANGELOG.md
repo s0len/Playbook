@@ -29,6 +29,7 @@
 - Every GitHub Action is pinned to a full commit SHA (with the version in a comment, which Dependabot keeps updated). A tag can be moved to point at different code; a SHA cannot.
 - `build-and-push` now grants write permissions per job instead of to the whole workflow, so the test and scan jobs, which run third-party code via `pip install`, only get a read-only token.
 - `build-and-push` now runs `pip-audit` on `requirements.lock` before publishing. The image installs that file, but the gate only audited `requirements.txt` and `requirements-dev.txt`.
+- **`LOG_LEVEL=DEBUG` no longer writes webhook tokens to the log.** urllib3, which `requests` uses for Discord, Slack and generic webhooks, logs each request's full URL at DEBUG, and for a webhook that URL contains the secret token. The `urllib3` and `watchdog` loggers are now held at WARNING, as `httpx` and `httpcore` already were, so DEBUG only raises Playbook's own output. This also drops watchdog's per-inotify-event lines, which made up about a third of a DEBUG log. If you have run with DEBUG and Discord or Slack notifications enabled, rotate those webhooks: the old URLs are in your logs and anything that collected them.
 
 ### Notes
 - Measured against the live library (944 files, real TVSportsDB metadata): 14 files that resolved to the wrong fixture now resolve correctly, no file changed to a wrong answer, and one file stopped matching - `NHL.2025.RS.Blue.Jackets.vs.Devils` carries no date and those teams meet four times that season, so the previous match was a one-in-four guess.

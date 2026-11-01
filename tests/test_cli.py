@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import logging
 from pathlib import Path
 from unittest import mock
 
@@ -269,3 +270,44 @@ def test_help_mentions_examples_flag(capsys) -> None:
 
     # Help should mention --examples flag
     assert "--examples" in help_output
+
+
+@pytest.fixture
+def restore_logging():
+    """configure_logging() rewires the root logger; put it back so other tests are unaffected."""
+    root = logging.getLogger()
+    saved_handlers = root.handlers[:]
+    saved_level = root.level
+    clamped = ("httpx", "httpcore", "urllib3", "watchdog")
+    saved_levels = {name: logging.getLogger(name).level for name in clamped}
+    yield
+    for handler in root.handlers[:]:
+        root.removeHandler(handler)
+        handler.close()
+    for handler in saved_handlers:
+        root.addHandler(handler)
+    root.setLevel(saved_level)
+    for name, level in saved_levels.items():
+        logging.getLogger(name).setLevel(level)
+    logging.captureWarnings(False)
+
+
+def test_configure_logging_keeps_third_party_debug_out_of_logs(tmp_path, monkeypatch, restore_logging) -> None:
+    """urllib3 logs full request URLs at DEBUG, which would leak webhook tokens into the log."""
+    monkeypatch.setenv("PLAIN_CONSOLE_LOGS", "true")
+    log_file = tmp_path / "playbook.log"
+    cli.configure_logging("DEBUG", log_file, "DEBUG")
+
+    logging.getLogger("urllib3.connectionpool").debug(
+        'https://discord.com:443 "POST /api/webhooks/123/secret-token HTTP/1.1" 204 0'
+    )
+    logging.getLogger("watchdog.observers.inotify_buffer").debug("in-event <InotifyEvent>")
+    logging.getLogger("playbook.processor").debug("playbook debug still logged")
+
+    for handler in logging.getLogger().handlers:
+        handler.flush()
+    contents = log_file.read_text(encoding="utf-8")
+
+    assert "secret-token" not in contents
+    assert "in-event" not in contents
+    assert "playbook debug still logged" in contents
