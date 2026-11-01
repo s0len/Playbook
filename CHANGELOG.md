@@ -1,4 +1,4 @@
-## [Unreleased]
+## [2.24.0] - 2026-11-01
 
 ### Fixed
 - **Premier League fixtures from a new season were silently filed into the previous one.** The `Premier League matchweek releases` pattern read `EPL.2026.08.28.Crystal.Palace.vs.Manchester.City` as year=2026 + matchweek=08 and hardlinked it into Matchweek 8 of the 2025-26 show, picking whichever fixture in that week shared a team. The pattern now carries a negative lookahead so it can no longer swallow a `YYYY.MM.DD` release.
@@ -19,6 +19,8 @@
 - The structured matcher now declines when several episodes tie at the top score and name different fixtures, instead of silently taking the first. It hands the file to the pattern loop rather than picking at random; a file no pattern claims either then surfaces as unmatched. This covers duplicated metadata (a game listed in both a pre-season and a regular-season season) and dateless filenames whose teams meet several times a season.
 - An episode whose date is known and outside the tolerance is no longer accepted just because it was the only candidate. A lone candidate with an *unknown* date is still accepted.
 - CI now runs the test suite, and a push to `develop` cannot build and publish an image unless it passes. Previously only ruff, docs and a security scan ran, while Renovate auto-bumped the deployed digest.
+- The Docker image runs Python 3.14 instead of 3.12 (#228). Both lock files are compiled under 3.14 to match.
+- Dependency updates: `nicegui` 3.18.0 (#240, #244), `kubernetes` 37.0.1 (#247), `tenacity` 9.2.1 (#246), `rapidfuzz` 3.14.6 (#233).
 
 ### Security
 - **The Docker image now builds on Debian 13 (trixie) instead of bookworm.** bookworm is oldstable and carries CVEs Debian no longer backports fixes for. Trivy (HIGH/CRITICAL) on the published `develop` image found 3 CRITICAL and 77 HIGH, 8 of them fixable; the new image has 0 CRITICAL and 44 HIGH, none fixable - every remaining finding is a Debian package with no upstream fix yet (util-linux, ncurses, systemd libs, acl, perl-base). Across all severities: 376 findings down to 166.
@@ -32,6 +34,7 @@
 - **`LOG_LEVEL=DEBUG` no longer writes webhook tokens to the log.** urllib3, which `requests` uses for Discord, Slack and generic webhooks, logs each request's full URL at DEBUG, and for a webhook that URL contains the secret token. The `urllib3` and `watchdog` loggers are now held at WARNING, as `httpx` and `httpcore` already were, so DEBUG only raises Playbook's own output. This also drops watchdog's per-inotify-event lines, which made up about a third of a DEBUG log. If you have run with DEBUG and Discord or Slack notifications enabled, rotate those webhooks: the old URLs are in your logs and anything that collected them.
 
 ### Notes
+- **Upgrading:** the image moves from Debian 12 / Python 3.12 to Debian 13 / Python 3.14 and no longer ships `curl` or `pip`. A container healthcheck that calls `curl` has to change, for example to `python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/healthz')"`. Kubernetes `httpGet` probes are unaffected.
 - Measured against the live library (944 files, real TVSportsDB metadata): 14 files that resolved to the wrong fixture now resolve correctly, no file changed to a wrong answer, and one file stopped matching - `NHL.2025.RS.Blue.Jackets.vs.Devils` carries no date and those teams meet four times that season, so the previous match was a one-in-four guess.
 - NHL is deliberately *not* pointed at `nhl-2026-2027` yet: in that show season 0 ("Pre-Season") duplicates the entire regular season, 1403 episodes spanning 2026-09-19..2027-04-10, so 414 of 2332 fixtures exist in more than one season. Repoint it once the duplicate season is removed upstream.
 - `wta-2025` does not exist and has 404'd silently for months (the API publishes this family as `wta-tour-<year>`). It is left as-is on purpose: repointing it at `wta-tour-2026` made a 2020 file match an unrelated 2026 fixture, so WTA episode selection needs tightening first.
