@@ -31,7 +31,11 @@ def dates_within_proximity(date1: dt.date | None, date2: dt.date | None, toleran
 
 
 def parse_date_from_groups(match_groups: dict[str, str]) -> dt.date | None:
-    """Extract a date from match groups (day, month, year/date_year).
+    """Extract a date from match groups (day, month, year/date_year/season_year).
+
+    'season_year' is only consulted as a last resort. Several competition patterns name
+    the leading YYYY of a YYYY.MM.DD date 'season_year'; because a date also requires day
+    and month, a genuine season label (which never carries them) can never be read here.
 
     Args:
         match_groups: Dictionary of regex capture groups
@@ -41,7 +45,7 @@ def parse_date_from_groups(match_groups: dict[str, str]) -> dt.date | None:
     """
     day_str = match_groups.get("day")
     month_str = match_groups.get("month")
-    year_str = match_groups.get("date_year") or match_groups.get("year")
+    year_str = match_groups.get("date_year") or match_groups.get("year") or match_groups.get("season_year")
 
     if not (day_str and month_str and year_str):
         return None

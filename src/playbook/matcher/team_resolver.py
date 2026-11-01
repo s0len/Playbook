@@ -11,7 +11,7 @@ import re
 from ..utils import normalize_token
 
 # Regex pattern to extract teams from matchup strings
-TEAM_PATTERN = re.compile(r"(?P<a>[A-Za-z0-9 .&'/-]+?)\s+(?:vs|v|at|@)\s+(?P<b>[A-Za-z0-9 .&'/-]+)", re.IGNORECASE)
+TEAM_PATTERN = re.compile(r"(?P<a>[\w .&'/-]+?)\s+(?:vs|v|at|@)\s+(?P<b>[\w .&'/-]+)", re.IGNORECASE)
 
 # Noise provider tokens to strip from team names
 NOISE_PROVIDERS = {"sky", "fubo", "espn", "espn+", "espnplus", "tsn", "nbcsn", "fox", "verum"}

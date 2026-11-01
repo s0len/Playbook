@@ -393,9 +393,11 @@ def configure_logging(log_level_name: str, log_file: Path, console_level_name: s
 
     logging.captureWarnings(True)
 
-    # Silence noisy third-party loggers at INFO level
-    logging.getLogger("httpx").setLevel(logging.WARNING)
-    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    # Clamp third-party loggers so LOG_LEVEL=DEBUG only raises Playbook's own output.
+    # urllib3 (behind requests) logs full request URLs at DEBUG, which would write
+    # Discord/Slack webhook tokens to the log; watchdog logs every inotify event.
+    for name in ("httpx", "httpcore", "urllib3", "watchdog"):
+        logging.getLogger(name).setLevel(logging.WARNING)
 
     if rotated:
         LOGGER.debug("Rotated previous log to %s", previous_log)
