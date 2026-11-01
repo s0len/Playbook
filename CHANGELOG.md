@@ -3,6 +3,10 @@
 ### Fixed
 - Partial dates such as `16.11`, where the year comes from elsewhere in the filename, are now parsed with that year in place. `strptime` without a year assumes 1900, a common year, so a 29 February date never parsed. Python 3.15 goes further and rejects a day of month without a year outright (deprecated since 3.13), which would have stopped every partial-date pattern, such as Figure Skating Grand Prix releases, from resolving.
 
+### Changed
+- CI runs the test suite on Python 3.12 and 3.14 instead of only 3.12. 3.12 is the lowest version `requires-python` allows, and 3.14 is what the Docker image runs.
+- A `DeprecationWarning` raised from Playbook's own code now fails the tests. CPython deprecates behaviour a release or two before removing it, and that warning is the only notice: the partial-date bug above warned on 3.13 and 3.14 before it broke on 3.15. With this filter, the old code fails 20 tests on 3.14.
+
 ## [2.24.0] - 2026-11-01
 
 ### Fixed

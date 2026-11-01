@@ -18,6 +18,11 @@ jobs:
   # the image build - not just run alongside it on pull requests.
   pytest:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.12 is the floor in requires-python; 3.14 is what the Docker image runs.
+        python-version: ['3.12', '3.14']
     steps:
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -25,7 +30,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
 
       - name: Install the package with dev and GUI extras
         run: pip install -e '.[dev,gui]'
