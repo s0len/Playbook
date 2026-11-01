@@ -1,3 +1,8 @@
+## [Unreleased]
+
+### Fixed
+- Partial dates such as `16.11`, where the year comes from elsewhere in the filename, are now parsed with that year in place. `strptime` without a year assumes 1900, a common year, so a 29 February date never parsed. Python 3.15 goes further and rejects a day of month without a year outright (deprecated since 3.13), which would have stopped every partial-date pattern, such as Figure Skating Grand Prix releases, from resolving.
+
 ## [2.24.0] - 2026-11-01
 
 ### Fixed

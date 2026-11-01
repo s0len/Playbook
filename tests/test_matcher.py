@@ -1317,6 +1317,16 @@ class TestParseDateStringPartialDates:
         result = _parse_date_string("16 13", reference_year=2025)
         assert result is None
 
+    def test_parse_partial_date_leap_day_in_leap_year(self) -> None:
+        """29.02 resolves against the reference year, so it exists when that year is a leap year."""
+        result = _parse_date_string("29.02", reference_year=2028)
+        assert result == dt.date(2028, 2, 29)
+
+    def test_parse_partial_date_leap_day_in_common_year(self) -> None:
+        """29.02 does not exist in a common year."""
+        result = _parse_date_string("29.02", reference_year=2027)
+        assert result is None
+
     def test_parse_full_date_ignores_reference_year(self) -> None:
         """Full date should use its own year, not reference year."""
         result = _parse_date_string("16 11 2024", reference_year=2025)
