@@ -246,6 +246,19 @@ class MetadataCacheStore:
             expires_at=datetime.fromisoformat(row["expires_at"]),
         )
 
+        # The store's TTL is the upper bound on freshness. An expiry further out than now + TTL
+        # was seeded by hand, written before ttl_hours was lowered, or given a longer per-entry
+        # override. Treat it as expired so it gets revalidated instead of pinning stale metadata.
+        now = datetime.now(UTC)
+        if entry.expires_at > now + self._ttl:
+            LOGGER.debug(
+                "Cache entry %s expires %s, beyond the %sh TTL; treating as expired",
+                key,
+                row["expires_at"],
+                self.ttl_hours,
+            )
+            entry.expires_at = now - timedelta(seconds=1)
+
         if not include_expired and entry.is_expired:
             return None
 
@@ -267,7 +280,8 @@ class MetadataCacheStore:
             content: The content to cache (will be JSON serialized)
             etag: Optional ETag header from the response
             last_modified: Optional Last-Modified header from the response
-            ttl_hours: Override the default TTL for this entry
+            ttl_hours: Override the default TTL for this entry. get() caps freshness at the
+                store's TTL, so only a shorter override has an effect.
         """
         now = datetime.now(UTC)
         ttl = timedelta(hours=ttl_hours) if ttl_hours is not None else self._ttl
@@ -299,7 +313,7 @@ class MetadataCacheStore:
 
         Args:
             key: The cache key
-            ttl_hours: Override the default TTL
+            ttl_hours: Override the default TTL. As with set(), only a shorter one has an effect.
 
         Returns:
             True if the entry was found and updated, False otherwise

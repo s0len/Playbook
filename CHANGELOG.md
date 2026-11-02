@@ -2,6 +2,7 @@
 
 ### Fixed
 - Partial dates such as `16.11`, where the year comes from elsewhere in the filename, are now parsed with that year in place. `strptime` without a year assumes 1900, a common year, so a 29 February date never parsed. Python 3.15 goes further and rejects a day of month without a year outright (deprecated since 3.13), which would have stopped every partial-date pattern, such as Figure Skating Grand Prix releases, from resolving.
+- A cached TVSportsDB entry can no longer stay fresh for longer than `tvsportsdb.ttl_hours`. Playbook only writes entries with that TTL, so an entry that expires further out was written some other way. It is now treated as expired and revalidated. On a live install, 15 hand-seeded entries for `uefa-champions-league-2026-2027` carried a one-year expiry from 30 August. They held the show at its pre-draw state, with placeholder July dates and empty matchdays, so every 2026-27 Champions League release failed with "season not found". Lowering `ttl_hours` now also takes effect on entries that are already cached.
 
 ### Changed
 - CI runs the test suite on Python 3.12 and 3.14 instead of only 3.12. 3.12 is the lowest version `requires-python` allows, and 3.14 is what the Docker image runs.
