@@ -644,6 +644,33 @@ class TestMetadataCacheStore:
         result = cache.refresh_ttl("shows/nonexistent")
         assert result is False
 
+    def test_entry_outliving_the_configured_ttl_is_expired(self, cache) -> None:
+        """An expiry beyond now + TTL was not written under this TTL, so it is not trusted."""
+        content = {"name": "UEFA Champions League 2026-2027"}
+        cache.set("shows/test", content, ttl_hours=8760)
+
+        assert cache.get("shows/test") is None
+        entry = cache.get("shows/test", include_expired=True)
+        assert entry is not None
+        assert entry.content == content
+        assert entry.is_expired
+
+    def test_entry_revalidated_long_after_fetch_stays_fresh(self, cache) -> None:
+        """refresh_ttl after a 304 moves expires_at but not fetched_at, and the entry stays fresh."""
+        cache.set("shows/test", {"name": "Test"})
+        conn = cache._get_connection()
+        conn.execute(
+            "UPDATE metadata_cache SET fetched_at = ? WHERE key = ?",
+            ("2026-01-01T00:00:00+00:00", "shows/test"),
+        )
+        conn.commit()
+
+        cache.refresh_ttl("shows/test")
+
+        entry = cache.get("shows/test")
+        assert entry is not None
+        assert entry.is_fresh
+
     def test_delete(self, cache) -> None:
         """Test deletion of entries."""
         cache.set("shows/test", {"name": "Test"})

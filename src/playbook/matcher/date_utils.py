@@ -103,12 +103,13 @@ def parse_date_string(value: str, reference_year: int | None = None) -> dt.date 
         except ValueError:
             continue
 
-    # Try partial date formats (DD MM without year) if reference_year is provided
+    # Try partial date formats (DD MM without year) if reference_year is provided.
+    # The year is appended before parsing: strptime with %d but no %Y assumes 1900, so
+    # 29 Feb never parsed, and Python 3.15 rejects a year-less %d outright.
     if reference_year is not None:
         for fmt in PARTIAL_DATE_FORMATS:
             try:
-                parsed = dt.datetime.strptime(stripped, fmt)
-                return dt.date(reference_year, parsed.month, parsed.day)
+                return dt.datetime.strptime(f"{stripped} {reference_year}", f"{fmt} %Y").date()
             except ValueError:
                 continue
 

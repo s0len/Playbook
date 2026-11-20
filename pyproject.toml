@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "playbook"
-version = "2.24.0"
+version = "2.25.0"
 description = "Automated file matching, renaming, and metadata for sports content in Plex"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -27,25 +27,25 @@ dependencies = [
     "PyYAML==6.0.3",
     "jsonschema==4.26.0",
     "requests==2.34.2",
-    "python-dateutil==3.0.0",
+    "python-dateutil==4.0.0",
     "rich==15.0.0",
     "tenacity==9.2.1",
     "rapidfuzz==3.14.6",
-    "watchdog==7.0.0",
-    "kubernetes==37.0.1",
+    "watchdog==7.1.0",
+    "kubernetes==37.0.3",
     "httpx==0.28.1",
-    "pydantic==2.14.2",
+    "pydantic==2.14.4",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=9.1.1,<10",
-    "mkdocs-material>=9.8.0,<10",
-    "ruff>=0.17.2",
+    "pytest>=9.2.0,<10",
+    "mkdocs-material>=9.8.2,<10",
+    "ruff>=0.17.6",
     "pre-commit>=4.7.0",
 ]
 gui = [
-    "nicegui>=3.18.0",
+    "nicegui>=4.0.0",
 ]
 
 [project.urls]
@@ -116,3 +116,11 @@ indent-style = "space"
 
 # Format code snippets in docstrings
 docstring-code-format = true
+
+[tool.pytest.ini_options]
+# A DeprecationWarning raised from Playbook's own code fails the run. CPython deprecates
+# behaviour a release or two before removing it, so the warning is the only notice: a
+# year-less strptime("%d %m") warned on 3.13 and 3.14 and raises on 3.15.
+filterwarnings = [
+    'error::DeprecationWarning:playbook\..*',
+]

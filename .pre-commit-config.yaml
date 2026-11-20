@@ -5,8 +5,8 @@
 repos:
   # Ruff linter and formatter
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ruff version should match requirements-dev.txt (>=0.17.2)
-    rev: v0.17.3
+    # Ruff version should match requirements-dev.txt (>=0.17.6)
+    rev: v0.17.6
     hooks:
       # Run the ruff linter
       - id: ruff
